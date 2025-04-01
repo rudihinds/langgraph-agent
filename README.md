@@ -1,86 +1,96 @@
-# LangGraph Agent Project
+# LangGraph Agent
 
-A sophisticated agent system built with LangGraph, designed for scalable and maintainable AI agent workflows.
+This is a starter project for building LangGraph agents using TypeScript. It provides a minimal setup with:
 
-## 🚀 Features
+- TypeScript configuration
+- ESM module support
+- Vitest for testing
+- Basic LangGraph example
 
-- Modular agent architecture
-- State persistence and checkpointing
-- Human-in-the-loop capabilities
-- Comprehensive error handling
-- Performance optimization
-- Secure API key management
+## Prerequisites
 
-## 📋 Prerequisites
+- Node.js 18 or higher
+- NPM 8 or higher
 
-- Node.js (v18 or higher)
-- TypeScript
-- OpenAI API key
-- Tavily API key
+## Installation
 
-## 🛠️ Installation
-
-1. Clone the repository:
+Clone the repository and install dependencies:
 
 ```bash
-git clone [your-repo-url]
+# Clone the repository
+git clone https://github.com/your-username/langgraph-agent.git
 cd langgraph-agent
-```
 
-2. Install dependencies:
-
-```bash
+# Install dependencies
 npm install
 ```
 
-3. Set up environment variables:
-   Create a `.env` file in the root directory with:
+## Environment Setup
 
-```env
-OPENAI_API_KEY=your_openai_api_key
-TAVILY_API_KEY=your_tavily_api_key
+Create a `.env` file in the root directory and add your API keys:
+
+```
+OPENAI_API_KEY=sk-...
+TAVILY_API_KEY=tvly-...
+# Add other API keys as needed
 ```
 
-## 🏃‍♂️ Running the Project
+## Structure
 
-Start the development server:
+The project follows this structure:
+
+- `/src` - Source code
+  - `/agents` - Agent implementations
+  - `/tools` - Custom tools
+  - `/state` - State definitions
+  - `/tests` - Test files
+
+## Running the Tests
 
 ```bash
-tsx agent.ts
+# Run all tests
+npm test
+
+# Run only unit tests
+npm run test:unit
+
+# Run only integration tests
+npm run test:integration
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
-## 📖 Project Structure
+## Building an Agent
 
+To create a simple ReAct agent that can search the web:
+
+```typescript
+import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
+import { ChatOpenAI } from "@langchain/openai";
+import { MemorySaver } from "@langchain/langgraph";
+import { HumanMessage } from "@langchain/core/messages";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+
+// Define the tools for the agent to use
+const agentTools = [new TavilySearchResults({ maxResults: 3 })];
+const agentModel = new ChatOpenAI({ temperature: 0 });
+
+// Initialize memory to persist state between graph runs
+const agentCheckpointer = new MemorySaver();
+const agent = createReactAgent({
+  llm: agentModel,
+  tools: agentTools,
+  checkpointSaver: agentCheckpointer,
+});
+
+// Now use it!
+const agentFinalState = await agent.invoke(
+  { messages: [new HumanMessage("what is the current weather in sf")] },
+  { configurable: { thread_id: "42" } }
+);
 ```
-langgraph-agent/
-├── agent.ts           # Main agent implementation
-├── .env              # Environment variables
-├── package.json      # Project dependencies
-└── .cursorrules      # Development guidelines
-```
 
-## 🤝 Contributing
+## License
 
-1. Follow the development guidelines in `.cursorrules`
-2. Ensure all tests pass
-3. Submit pull requests with comprehensive descriptions
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🔒 Security
-
-- Never commit API keys or sensitive information
-- Use environment variables for all secrets
-- Follow security best practices outlined in `.cursorrules`
-
-## 🏗️ Development Guidelines
-
-Refer to `.cursorrules` for comprehensive development guidelines including:
-
-- Code structure and organization
-- State management patterns
-- Testing requirements
-- Performance considerations
-- Security protocols
+MIT
