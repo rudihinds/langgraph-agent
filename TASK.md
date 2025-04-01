@@ -11,15 +11,16 @@
 
 ### Supabase Configuration
 
-- [ ] Create Supabase project
+- [x] Create Supabase project
 - [ ] Configure authentication with Google OAuth
-- [ ] Design and create database schema:
-  - [ ] Users table
-  - [ ] Proposals table
-  - [ ] Proposal states table
-  - [ ] Proposal documents table
-- [ ] Set up Row Level Security policies
-- [ ] Create storage buckets for documents
+- [x] Design and create database schema:
+  - [x] Users table
+  - [x] Proposals table
+  - [x] Proposal states table
+  - [x] Proposal documents table
+- [x] Set up Row Level Security policies
+- [ ] Create Supabase Storage bucket for proposal documents
+- [ ] Configure Storage bucket permissions
 - [ ] Test authentication flow
 
 ### LangGraph Initial Setup
