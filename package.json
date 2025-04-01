@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@langchain/community": "^0.3.37",
+    "@langchain/core": "^0.3.43",
+    "@langchain/langgraph": "^0.2.60",
+    "@langchain/openai": "^0.5.1",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  }
+}
