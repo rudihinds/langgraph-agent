@@ -63,22 +63,31 @@
 
 ### Persistence Layer
 
-- [ ] Create custom Supabase checkpoint adapter for LangGraph
-  - [ ] Implement PostgresCheckpointer class for Supabase integration
-  - [ ] Create serialization helpers for complex state objects
-  - [ ] Add thread ID management for proposal sessions
-- [ ] Implement serialization/deserialization for complex state
-  - [ ] Create custom serializers for message objects
-  - [ ] Add handling for binary data and references
+- [x] Create custom Supabase checkpoint adapter for LangGraph
+  - [x] Implement PostgresCheckpointer class for Supabase integration
+  - [x] Create serialization helpers for complex state objects
+  - [x] Add thread ID management for proposal sessions
+- [x] Implement serialization/deserialization for complex state
+  - [x] Create custom serializers for message objects
+  - [x] Add handling for binary data and references
 - [ ] Create proposal state management functions
   - [ ] Implement proposal creation with initial state
   - [ ] Add proposal update methods with state validation
-- [ ] Test persistence and state recovery
-  - [ ] Create test cases for saving/loading checkpoints
-  - [ ] Test error recovery scenarios
+- [x] Test persistence and state recovery
+  - [x] Create test cases for saving/loading checkpoints
+  - [x] Test error recovery scenarios
 - [ ] Implement session management
-  - [ ] Create thread continuity mechanism
+  - [x] Create thread continuity mechanism
   - [ ] Add session timeout and recovery
+
+### Discovered Tasks for Persistence Layer (April 2)
+
+- [x] Create SQL schema for proposal_checkpoints table
+- [x] Add Row Level Security policies for data isolation
+- [x] Implement batch operations for checkpoint operations
+- [x] Add custom thread ID format for proposal sessions
+- [ ] Fix type issues in serialization utilities
+- [ ] Implement connection pooling for Supabase client
 
 ### Basic UI Setup
 
