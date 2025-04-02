@@ -70,9 +70,9 @@
 - [x] Implement serialization/deserialization for complex state
   - [x] Create custom serializers for message objects
   - [x] Add handling for binary data and references
-- [ ] Create proposal state management functions
-  - [ ] Implement proposal creation with initial state
-  - [ ] Add proposal update methods with state validation
+- [x] Create proposal state management functions
+  - [x] Implement proposal creation with initial state
+  - [x] Add proposal update methods with state validation
 - [x] Test persistence and state recovery
   - [x] Create test cases for saving/loading checkpoints
   - [x] Test error recovery scenarios
