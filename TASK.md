@@ -63,31 +63,23 @@
 
 ### Persistence Layer
 
-- [x] Create custom Supabase checkpoint adapter for LangGraph
-  - [x] Implement PostgresCheckpointer class for Supabase integration
-  - [x] Create serialization helpers for complex state objects
-  - [x] Add thread ID management for proposal sessions
-- [x] Implement serialization/deserialization for complex state
-  - [x] Create custom serializers for message objects
-  - [x] Add handling for binary data and references
-- [x] Create proposal state management functions
-  - [x] Implement proposal creation with initial state
-  - [x] Add proposal update methods with state validation
-- [x] Test persistence and state recovery
-  - [x] Create test cases for saving/loading checkpoints
-  - [x] Test error recovery scenarios
-- [ ] Implement session management
-  - [x] Create thread continuity mechanism
-  - [ ] Add session timeout and recovery
-
-### Discovered Tasks for Persistence Layer (April 2)
-
-- [x] Create SQL schema for proposal_checkpoints table
-- [x] Add Row Level Security policies for data isolation
-- [x] Implement batch operations for checkpoint operations
-- [x] Add custom thread ID format for proposal sessions
-- [ ] Fix type issues in serialization utilities
+- [x] Implement PostgresCheckpointer class for saving and loading proposal state _(2023-07-02)_
+- [x] Create serialization/deserialization helpers for messages and state _(2023-07-05)_
+- [x] Implement thread ID management for proposal sessions _(2023-07-08)_
+- [x] Write test cases for checkpoints _(2023-07-10)_
+- [x] Implement proposal state management functions _(2023-07-15)_
+- [x] Implement SQL schema with Row Level Security _(2023-07-18)_
+- [x] Implement session timeout and recovery mechanisms _(2023-07-22)_
 - [ ] Implement connection pooling for Supabase client
+- [ ] Document checkpoint restore procedures
+- [ ] Create data retention policies
+
+### Discovered During Work
+
+- [x] Need to create SQL schema for proposal_checkpoints _(2023-07-17)_
+- [x] Add batch operations for checkpoint management _(2023-07-19)_
+- [x] Need to format thread IDs for proposal sessions _(2023-07-08)_
+- [ ] Fix type issues in serialization utilities _(2023-07-12)_
 
 ### Basic UI Setup
 
