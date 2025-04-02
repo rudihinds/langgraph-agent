@@ -19,7 +19,7 @@
   - [x] Proposal states table
   - [x] Proposal documents table
 - [x] Set up Row Level Security policies
-- [ ] Create Supabase Storage bucket for proposal documents
+- [x] Create Supabase Storage bucket for proposal documents
 - [ ] Configure Storage bucket permissions
 - [ ] Test authentication flow
 

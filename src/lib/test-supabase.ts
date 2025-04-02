@@ -1,5 +1,18 @@
-import { supabase } from "./supabase.js";
+import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
+
+// Use regular anon key for basic tests
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+// Create standard client with anon key
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Create admin client with service role key if available
+const supabaseAdmin = supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : supabase;
 
 // Function to test Supabase connection
 async function testSupabaseConnection() {
@@ -38,11 +51,16 @@ async function testSupabaseConnection() {
       }
     }
 
-    // Check if storage bucket exists
+    // Check if storage bucket exists - using admin client for storage operations
     console.log("\nChecking storage bucket...");
     try {
+      console.log(
+        supabaseServiceKey
+          ? "(Using service role key for storage checks)"
+          : "(Using anon key for storage checks)"
+      );
       const { data: buckets, error: bucketsError } =
-        await supabase.storage.listBuckets();
+        await supabaseAdmin.storage.listBuckets();
 
       if (bucketsError) {
         console.error(
@@ -68,13 +86,18 @@ async function testSupabaseConnection() {
     }
 
     console.log("\nSuggested next steps:");
-    console.log(
-      "1. If any tables are missing, run the SQL script in schema.sql"
-    );
-    console.log(
-      "2. If storage bucket is missing, create it in the Supabase dashboard"
-    );
-    console.log("3. Test authentication flow with Google OAuth");
+    if (supabaseServiceKey) {
+      console.log("1. Run the bucket policies SQL in the Supabase dashboard");
+      console.log("2. Configure Google OAuth for authentication");
+    } else {
+      console.log(
+        "1. If any tables are missing, run the SQL script in schema.sql"
+      );
+      console.log(
+        "2. If storage bucket is missing, create it in the Supabase dashboard or using the service role key"
+      );
+      console.log("3. Test authentication flow with Google OAuth");
+    }
 
     return true;
   } catch (error) {
