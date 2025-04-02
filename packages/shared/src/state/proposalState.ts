@@ -6,17 +6,13 @@
  * connection pairs, proposal sections, and workflow state.
  */
 
-import { Annotation } from "@langchain/langgraph";
+import { createRemoteExecutor, StateGraph } from "@langchain/langgraph";
 import { BaseMessage } from "@langchain/core/messages";
 
-// We'll extend the base MessagesAnnotation with our custom state
-// First, let's define it to ensure we control its structure
-const MessagesAnnotation = Annotation.Root({
-  messages: Annotation<BaseMessage[]>({
-    reducer: (current, update) => current.concat(update),
-    default: () => [],
-  }),
-});
+// Define the base MessagesState structure
+interface MessagesState {
+  messages: BaseMessage[];
+}
 
 // Define types for RFP Analysis results
 export interface RFPAnalysisResult {
@@ -149,6 +145,17 @@ export type WorkflowPhase =
   | "review"
   | "finalization";
 
+// Define the complete state interface
+export interface ProposalStateType extends MessagesState {
+  rfpAnalysis: RFPAnalysisResult | null;
+  solutionSought: SolutionSoughtAnalysis | null;
+  connectionPairs: ConnectionPair[];
+  proposalSections: ProposalSections;
+  sectionStatus: Record<string, SectionStatus>;
+  currentPhase: WorkflowPhase;
+  metadata: Record<string, any>;
+}
+
 // Custom reducer for connection pairs to prevent duplicates and update existing entries
 const connectionPairsReducer = (
   current: ConnectionPair[],
@@ -179,36 +186,69 @@ const proposalSectionsReducer = (
   current: ProposalSections,
   update: Partial<ProposalSections>
 ): ProposalSections => {
-  return {
-    ...current,
-    ...Object.entries(update).reduce<ProposalSections>(
-      (acc, [key, section]) => {
-        // If section already exists, increment version and merge
-        if (current[key]) {
-          acc[key] = {
-            ...current[key],
-            ...section,
-            version: current[key].version + 1,
-          };
-        } else {
-          // Otherwise, add new section with version 1
-          acc[key] = {
-            ...section,
-            version: 1,
-          };
-        }
-        return acc;
-      },
-      {}
-    ),
-  };
+  // Create a copy of the current state
+  const result: ProposalSections = { ...current };
+
+  // Process each update
+  Object.entries(update).forEach(([key, section]) => {
+    if (!section) return;
+
+    if (current[key]) {
+      // If section exists, update and increment version
+      result[key] = {
+        ...current[key],
+        ...(section as ProposalSection),
+        version: current[key].version + 1,
+      };
+    } else if (isCompleteSection(section)) {
+      // If section doesn't exist but is complete, add with version 1
+      result[key] = {
+        ...section,
+        version: 1,
+      };
+    }
+    // Ignore incomplete sections for new entries
+  });
+
+  return result;
 };
+
+// Type guard to check if a section is complete
+function isCompleteSection(
+  section: Partial<ProposalSection>
+): section is ProposalSection {
+  return (
+    typeof section.content === "string" &&
+    typeof section.status === "string" &&
+    section.metadata !== undefined
+  );
+}
 
 // SectionStatus reducer for tracking section progress
 const sectionStatusReducer = (
   current: Record<string, SectionStatus>,
   update: Partial<Record<string, SectionStatus>>
 ): Record<string, SectionStatus> => {
+  // Filter out any undefined values from update
+  const validUpdates: Record<string, SectionStatus> = {};
+
+  Object.entries(update).forEach(([key, status]) => {
+    if (status !== undefined) {
+      validUpdates[key] = status;
+    }
+  });
+
+  return {
+    ...current,
+    ...validUpdates,
+  };
+};
+
+// Metadata reducer
+const metadataReducer = (
+  current: Record<string, any>,
+  update: Record<string, any>
+): Record<string, any> => {
   return {
     ...current,
     ...update,
@@ -216,70 +256,94 @@ const sectionStatusReducer = (
 };
 
 /**
- * The main Proposal State Annotation
- * Contains the complete state structure for the Proposal Agent System
+ * Default state for the proposal
  */
-export const ProposalState = Annotation.Root({
-  // Include messages from MessagesAnnotation
-  ...MessagesAnnotation.spec,
+export const defaultProposalState: ProposalStateType = {
+  messages: [],
+  rfpAnalysis: null,
+  solutionSought: null,
+  connectionPairs: [],
+  proposalSections: {},
+  sectionStatus: {
+    problem_statement: "not_started",
+    solution: "not_started",
+    organizational_capacity: "not_started",
+    implementation_plan: "not_started",
+    evaluation: "not_started",
+    budget: "not_started",
+    executive_summary: "not_started",
+    conclusion: "not_started",
+  },
+  currentPhase: "research",
+  metadata: {
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    proposalId: "",
+    userId: "",
+    proposalTitle: "",
+  },
+};
 
-  // RFP analysis results
-  rfpAnalysis: Annotation<RFPAnalysisResult | null>({
-    default: () => null,
-  }),
-
-  // Solution sought analysis
-  solutionSought: Annotation<SolutionSoughtAnalysis | null>({
-    default: () => null,
-  }),
-
-  // Connection pairs with custom reducer to handle updates and additions
-  connectionPairs: Annotation<ConnectionPair[]>({
-    reducer: connectionPairsReducer,
-    default: () => [],
-  }),
-
-  // Proposal sections content with versioning and metadata
-  proposalSections: Annotation<ProposalSections>({
-    reducer: proposalSectionsReducer,
-    default: () => ({}),
-  }),
-
-  // Section status tracking
-  sectionStatus: Annotation<Record<string, SectionStatus>>({
-    reducer: sectionStatusReducer,
-    default: () => ({
-      problem_statement: "not_started",
-      solution: "not_started",
-      organizational_capacity: "not_started",
-      implementation_plan: "not_started",
-      evaluation: "not_started",
-      budget: "not_started",
-      executive_summary: "not_started",
-      conclusion: "not_started",
-    }),
-  }),
-
-  // Overall workflow tracking
-  currentPhase: Annotation<WorkflowPhase>({
-    default: () => "research",
-  }),
-
-  // Additional metadata
-  metadata: Annotation<Record<string, any>>({
-    reducer: (current, update) => ({ ...current, ...update }),
-    default: () => ({
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      proposalId: "",
-      userId: "",
-      proposalTitle: "",
-    }),
-  }),
-});
-
-// Export type for use in node functions
-export type ProposalStateType = typeof ProposalState.State;
+/**
+ * Create the proposal state graph with proper reducers
+ */
+export const ProposalState = {
+  channelDescriptions: {
+    messages: {
+      value: (x: ProposalStateType) => x.messages,
+      reducer: (current: BaseMessage[], update: BaseMessage[]) =>
+        current.concat(update),
+      default: () => [],
+    },
+    rfpAnalysis: {
+      value: (x: ProposalStateType) => x.rfpAnalysis,
+      default: () => null,
+    },
+    solutionSought: {
+      value: (x: ProposalStateType) => x.solutionSought,
+      default: () => null,
+    },
+    connectionPairs: {
+      value: (x: ProposalStateType) => x.connectionPairs,
+      reducer: connectionPairsReducer,
+      default: () => [],
+    },
+    proposalSections: {
+      value: (x: ProposalStateType) => x.proposalSections,
+      reducer: proposalSectionsReducer,
+      default: () => ({}),
+    },
+    sectionStatus: {
+      value: (x: ProposalStateType) => x.sectionStatus,
+      reducer: sectionStatusReducer,
+      default: () => ({
+        problem_statement: "not_started",
+        solution: "not_started",
+        organizational_capacity: "not_started",
+        implementation_plan: "not_started",
+        evaluation: "not_started",
+        budget: "not_started",
+        executive_summary: "not_started",
+        conclusion: "not_started",
+      }),
+    },
+    currentPhase: {
+      value: (x: ProposalStateType) => x.currentPhase,
+      default: () => "research",
+    },
+    metadata: {
+      value: (x: ProposalStateType) => x.metadata,
+      reducer: metadataReducer,
+      default: () => ({
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        proposalId: "",
+        userId: "",
+        proposalTitle: "",
+      }),
+    },
+  },
+};
 
 /**
  * Example usage:
