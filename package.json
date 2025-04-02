@@ -21,7 +21,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "install:all": "npm install && cd web && npm install",
-    "clean": "rm -rf node_modules .turbo dist coverage"
+    "clean": "rm -rf node_modules .turbo dist coverage",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@langchain/community": "^0.0.36",
@@ -34,6 +35,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@types/node": "^20.11.24",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",
