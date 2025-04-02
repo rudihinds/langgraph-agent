@@ -1,12 +1,34 @@
-import { supabase } from "./supabase.js";
+import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
+
+// Use the service role key if available, otherwise use anon key
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+
+// Create a special admin client with the service role key
+const supabaseAdmin = supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : createClient(supabaseUrl, supabaseAnonKey);
 
 async function createStorageBucket() {
   try {
     console.log("Creating proposal-documents storage bucket...");
 
-    // Create the bucket
-    const { data, error } = await supabase.storage.createBucket(
+    if (!supabaseServiceKey) {
+      console.warn(
+        "⚠️ No service role key found. Using anon key which might not have permission to create buckets."
+      );
+      console.warn(
+        "To use service role key, add SUPABASE_SERVICE_ROLE_KEY to your .env file."
+      );
+      console.warn(
+        "You can find this key in Supabase Dashboard -> Project Settings -> API -> service_role key"
+      );
+    }
+
+    // Create the bucket using the admin client
+    const { data, error } = await supabaseAdmin.storage.createBucket(
       "proposal-documents",
       {
         public: false,
@@ -23,8 +45,7 @@ async function createStorageBucket() {
     // Now set up the bucket policies
     console.log("\nSetting up storage bucket policies...");
 
-    // We need to run SQL for the policies, which requires admin access
-    // Let's provide the SQL to run in the dashboard
+    // We need to run SQL for the policies, which requires admin access through the dashboard
     console.log(`
 Please run the following SQL in the Supabase SQL Editor to set up proper policies:
 
@@ -72,6 +93,14 @@ USING (
     return true;
   } catch (error) {
     console.error("Error creating storage bucket:", error);
+    console.log(
+      "\nAlternative: Create the bucket manually in the Supabase dashboard:"
+    );
+    console.log("1. Go to Storage in the Supabase dashboard");
+    console.log('2. Click "Create new bucket"');
+    console.log('3. Enter "proposal-documents" as the name');
+    console.log('4. Ensure "Private bucket" is selected');
+    console.log('5. Click "Create bucket"');
     return false;
   }
 }

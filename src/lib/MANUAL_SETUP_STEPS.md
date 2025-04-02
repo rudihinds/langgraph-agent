@@ -86,3 +86,22 @@ npx tsx src/lib/test-supabase.ts
 ```
 
 You should see successful checks for both the database tables and the storage bucket.
+
+## Programmatic Storage Bucket Creation (Alternative to Manual Creation)
+
+By default, Supabase applies Row Level Security (RLS) to storage buckets just like database tables. This means that the anonymous key usually doesn't have permission to create storage buckets.
+
+To programmatically create a storage bucket, you need to use the service role key:
+
+1. Get your service role key from Supabase Dashboard:
+
+   - Go to **Project Settings** > **API**
+   - Copy the **service_role** key (secret key)
+   - Add it to your .env file as `SUPABASE_SERVICE_ROLE_KEY`
+
+2. Run the storage bucket creation script:
+   ```sh
+   npx tsx src/lib/create-storage-bucket.ts
+   ```
+
+**Important Security Note**: The service role key bypasses RLS and has full admin privileges. Never expose it in client-side code or commit it to your repository. It should only be used in secure server environments.
