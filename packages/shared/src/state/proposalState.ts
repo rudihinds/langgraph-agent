@@ -6,13 +6,8 @@
  * connection pairs, proposal sections, and workflow state.
  */
 
-import { createRemoteExecutor, StateGraph } from "@langchain/langgraph";
 import { BaseMessage } from "@langchain/core/messages";
-
-// Define the base MessagesState structure
-interface MessagesState {
-  messages: BaseMessage[];
-}
+import type { StateGraph } from "@langchain/langgraph";
 
 // Define types for RFP Analysis results
 export interface RFPAnalysisResult {
@@ -145,8 +140,12 @@ export type WorkflowPhase =
   | "review"
   | "finalization";
 
-// Define the complete state interface
-export interface ProposalStateType extends MessagesState {
+/**
+ * Extended MessageState interface to include all proposal-specific fields
+ * This is the state that will be passed to node functions
+ */
+export interface ProposalStateType {
+  messages: BaseMessage[];
   rfpAnalysis: RFPAnalysisResult | null;
   solutionSought: SolutionSoughtAnalysis | null;
   connectionPairs: ConnectionPair[];
@@ -256,8 +255,89 @@ const metadataReducer = (
 };
 
 /**
- * Default state for the proposal
+ * ProposalState object to be used as a state type when creating a StateGraph
+ *
+ * Note: The actual MessagesAnnotation import is used in the actual implementation
+ * when creating the StateGraph. This interface just provides type definitions
+ * for the state that will be used in node functions.
+ *
+ * Example:
+ * ```
+ * import { StateGraph, MessagesAnnotation } from "@langchain/langgraph";
+ * import { ProposalStateType } from "./proposalState";
+ *
+ * const graph = new StateGraph<ProposalStateType>(MessagesAnnotation);
+ * ```
  */
+export const ProposalState = {
+  // Define a placeholder that's compatible with StateGraph
+  channelDescriptions: {
+    // We use this for typing but this will be replaced by MessagesAnnotation
+    messages: {
+      value: (x: ProposalStateType) => x.messages,
+      reducer: (current: BaseMessage[], update: BaseMessage[]) =>
+        current.concat(update),
+      default: () => [],
+    },
+
+    // Custom channel descriptions for proposal state
+    rfpAnalysis: {
+      value: (x: ProposalStateType) => x.rfpAnalysis,
+      default: () => null,
+    },
+
+    solutionSought: {
+      value: (x: ProposalStateType) => x.solutionSought,
+      default: () => null,
+    },
+
+    connectionPairs: {
+      value: (x: ProposalStateType) => x.connectionPairs,
+      reducer: connectionPairsReducer,
+      default: () => [],
+    },
+
+    proposalSections: {
+      value: (x: ProposalStateType) => x.proposalSections,
+      reducer: proposalSectionsReducer,
+      default: () => ({}),
+    },
+
+    sectionStatus: {
+      value: (x: ProposalStateType) => x.sectionStatus,
+      reducer: sectionStatusReducer,
+      default: () => ({
+        problem_statement: "not_started",
+        solution: "not_started",
+        organizational_capacity: "not_started",
+        implementation_plan: "not_started",
+        evaluation: "not_started",
+        budget: "not_started",
+        executive_summary: "not_started",
+        conclusion: "not_started",
+      }),
+    },
+
+    currentPhase: {
+      value: (x: ProposalStateType) => x.currentPhase,
+      default: () => "research",
+    },
+
+    metadata: {
+      value: (x: ProposalStateType) => x.metadata,
+      reducer: metadataReducer,
+      default: () => ({
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        proposalId: "",
+        userId: "",
+        proposalTitle: "",
+      }),
+    },
+  },
+};
+
+// Default state for testing purposes
 export const defaultProposalState: ProposalStateType = {
   messages: [],
   rfpAnalysis: null,
@@ -285,72 +365,11 @@ export const defaultProposalState: ProposalStateType = {
 };
 
 /**
- * Create the proposal state graph with proper reducers
- */
-export const ProposalState = {
-  channelDescriptions: {
-    messages: {
-      value: (x: ProposalStateType) => x.messages,
-      reducer: (current: BaseMessage[], update: BaseMessage[]) =>
-        current.concat(update),
-      default: () => [],
-    },
-    rfpAnalysis: {
-      value: (x: ProposalStateType) => x.rfpAnalysis,
-      default: () => null,
-    },
-    solutionSought: {
-      value: (x: ProposalStateType) => x.solutionSought,
-      default: () => null,
-    },
-    connectionPairs: {
-      value: (x: ProposalStateType) => x.connectionPairs,
-      reducer: connectionPairsReducer,
-      default: () => [],
-    },
-    proposalSections: {
-      value: (x: ProposalStateType) => x.proposalSections,
-      reducer: proposalSectionsReducer,
-      default: () => ({}),
-    },
-    sectionStatus: {
-      value: (x: ProposalStateType) => x.sectionStatus,
-      reducer: sectionStatusReducer,
-      default: () => ({
-        problem_statement: "not_started",
-        solution: "not_started",
-        organizational_capacity: "not_started",
-        implementation_plan: "not_started",
-        evaluation: "not_started",
-        budget: "not_started",
-        executive_summary: "not_started",
-        conclusion: "not_started",
-      }),
-    },
-    currentPhase: {
-      value: (x: ProposalStateType) => x.currentPhase,
-      default: () => "research",
-    },
-    metadata: {
-      value: (x: ProposalStateType) => x.metadata,
-      reducer: metadataReducer,
-      default: () => ({
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        proposalId: "",
-        userId: "",
-        proposalTitle: "",
-      }),
-    },
-  },
-};
-
-/**
  * Example usage:
  *
  * ```typescript
- * import { StateGraph, START, END } from "@langchain/langgraph";
- * import { ProposalState, ProposalStateType } from "./proposalState";
+ * import { StateGraph, MessagesAnnotation, START, END } from "@langchain/langgraph";
+ * import { ProposalStateType } from "./proposalState";
  *
  * // Define a node function that works with the proposal state
  * const analyzeRfp = async (state: ProposalStateType) => {
@@ -373,7 +392,7 @@ export const ProposalState = {
  * };
  *
  * // Create a graph with our proposal state
- * const builder = new StateGraph(ProposalState)
+ * const builder = new StateGraph<ProposalStateType>(MessagesAnnotation)
  *   .addNode("analyzeRfp", analyzeRfp)
  *   .addEdge(START, "analyzeRfp")
  *   .addEdge("analyzeRfp", END);

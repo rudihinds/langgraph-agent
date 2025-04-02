@@ -22,9 +22,9 @@ describe("ProposalState", () => {
       // Create an update
       const newMessages = [new AIMessage("Hi there!")];
 
-      // Get the updated state
-      const messagesChannel = ProposalState.channelDescriptions.messages;
-      const updatedMessages = messagesChannel.reducer(
+      // Use the reducer directly from the state object
+      const messages = ProposalState.channelDescriptions.messages;
+      const updatedMessages = messages.reducer(
         initialState.messages,
         newMessages
       );
@@ -99,10 +99,10 @@ describe("ProposalState", () => {
         },
       ];
 
-      // Get the updated state
-      const connectionPairsChannel =
-        ProposalState.channelDescriptions.connectionPairs;
-      const updatedPairs = connectionPairsChannel.reducer(
+      // Use the reducer directly from the state object
+      const connectionPairsReducer =
+        ProposalState.channelDescriptions.connectionPairs.reducer;
+      const updatedPairs = connectionPairsReducer(
         initialState.connectionPairs,
         newPairs
       );
@@ -147,10 +147,10 @@ describe("ProposalState", () => {
         },
       ];
 
-      // Get the updated state
-      const connectionPairsChannel =
-        ProposalState.channelDescriptions.connectionPairs;
-      const updatedPairs = connectionPairsChannel.reducer(
+      // Use the reducer directly from the state object
+      const connectionPairsReducer =
+        ProposalState.channelDescriptions.connectionPairs.reducer;
+      const updatedPairs = connectionPairsReducer(
         initialState.connectionPairs,
         updatedPair
       );
@@ -209,10 +209,10 @@ describe("ProposalState", () => {
         },
       ];
 
-      // Get the updated state
-      const connectionPairsChannel =
-        ProposalState.channelDescriptions.connectionPairs;
-      const updatedPairs = connectionPairsChannel.reducer(
+      // Use the reducer directly from the state object
+      const connectionPairsReducer =
+        ProposalState.channelDescriptions.connectionPairs.reducer;
+      const updatedPairs = connectionPairsReducer(
         initialState.connectionPairs,
         newPairs
       );
@@ -258,10 +258,10 @@ describe("ProposalState", () => {
         version: 1,
       };
 
-      // Get the updated proposal sections
-      const proposalSectionsChannel =
-        ProposalState.channelDescriptions.proposalSections;
-      const updatedSections = proposalSectionsChannel.reducer(
+      // Use the reducer directly from the state object
+      const proposalSectionsReducer =
+        ProposalState.channelDescriptions.proposalSections.reducer;
+      const updatedSections = proposalSectionsReducer(
         initialState.proposalSections,
         { problem_statement: newSection }
       );
@@ -304,10 +304,10 @@ describe("ProposalState", () => {
         status: "reviewed" as SectionStatus,
       };
 
-      // Get the updated proposal sections
-      const proposalSectionsChannel =
-        ProposalState.channelDescriptions.proposalSections;
-      const updatedSections = proposalSectionsChannel.reducer(
+      // Use the reducer directly from the state object
+      const proposalSectionsReducer =
+        ProposalState.channelDescriptions.proposalSections.reducer;
+      const updatedSections = proposalSectionsReducer(
         initialState.proposalSections,
         { problem_statement: updatedSection }
       );
@@ -380,10 +380,10 @@ describe("ProposalState", () => {
         },
       };
 
-      // Get the updated proposal sections
-      const proposalSectionsChannel =
-        ProposalState.channelDescriptions.proposalSections;
-      const updatedSections = proposalSectionsChannel.reducer(
+      // Use the reducer directly from the state object
+      const proposalSectionsReducer =
+        ProposalState.channelDescriptions.proposalSections.reducer;
+      const updatedSections = proposalSectionsReducer(
         initialState.proposalSections,
         updates
       );
@@ -431,10 +431,10 @@ describe("ProposalState", () => {
         solution: "draft_complete" as SectionStatus,
       };
 
-      // Get the updated section status
-      const sectionStatusChannel =
-        ProposalState.channelDescriptions.sectionStatus;
-      const updatedStatus = sectionStatusChannel.reducer(
+      // Use the reducer directly from the state object
+      const sectionStatusReducer =
+        ProposalState.channelDescriptions.sectionStatus.reducer;
+      const updatedStatus = sectionStatusReducer(
         initialState.sectionStatus,
         statusUpdates
       );
@@ -492,9 +492,10 @@ describe("ProposalState", () => {
         customField: "custom value",
       };
 
-      // Get the updated metadata
-      const metadataChannel = ProposalState.channelDescriptions.metadata;
-      const updatedMetadata = metadataChannel.reducer(
+      // Use the reducer directly from the state object
+      const metadataReducer =
+        ProposalState.channelDescriptions.metadata.reducer;
+      const updatedMetadata = metadataReducer(
         initialState.metadata,
         metadataUpdates
       );
