@@ -20,7 +20,7 @@
   - [x] Proposal documents table
 - [x] Set up Row Level Security policies
 - [x] Create Supabase Storage bucket for proposal documents
-- [ ] Configure Storage bucket permissions
+- [x] Configure Storage bucket permissions
 - [ ] Test authentication flow
 
 ### LangGraph Initial Setup

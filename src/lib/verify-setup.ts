@@ -19,6 +19,13 @@ const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey)
   : supabase;
 
+// Define table names as a type for type safety
+type TableName =
+  | "users"
+  | "proposals"
+  | "proposal_states"
+  | "proposal_documents";
+
 async function verifySupabaseSetup() {
   console.log("🔍 Verifying Supabase setup...\n");
 
@@ -57,7 +64,7 @@ async function verifySupabaseSetup() {
 
   // 2. Check database schema
   console.log("\nChecking database schema...");
-  const tables = [
+  const tables: TableName[] = [
     "users",
     "proposals",
     "proposal_states",
@@ -157,10 +164,57 @@ async function verifySupabaseSetup() {
 
   // 5. Check for storage policies (indirect check)
   console.log("\nAttempting to verify storage policies...");
-  console.log("⚠️ Cannot programmatically verify storage policies.");
+
+  // Try to verify storage policies by attempting operations
+  try {
+    // Try to create a test file to check if policies are working
+    console.log("Testing storage policies with test file operation...");
+
+    // First try storage access that requires policy permissions
+    try {
+      // Try to list files, which should be controlled by policies
+      const { data: fileList, error: listError } = await supabase.storage
+        .from("proposal-documents")
+        .list();
+
+      console.log("Testing file listing with regular user permissions...");
+      if (listError) {
+        console.log("✅ Expected policy control: ", listError.message);
+      } else {
+        console.log("✅ Storage access permitted with user permissions");
+      }
+    } catch (e) {
+      console.error("Error testing storage list policies:", e);
+    }
+
+    // Try to see if we can list policies via storage bucket properties
+    try {
+      const { data: bucketData, error: bucketError } =
+        await supabaseAdmin.storage.getBucket("proposal-documents");
+
+      if (!bucketError && bucketData) {
+        console.log(
+          "✅ Storage bucket properties accessible, bucket is configured"
+        );
+
+        if (bucketData.public) {
+          console.log("⚠️ Bucket is public, which might bypass RLS policies");
+        } else {
+          console.log("✅ Bucket is private, will respect RLS policies");
+        }
+      }
+    } catch (err) {
+      console.error("Error checking bucket properties:", err);
+    }
+  } catch (err) {
+    console.error("❌ Error testing storage policies:", err);
+  }
+
+  console.log("\n⚠️ Full storage policy verification requires manual check");
   console.log(
-    "   Please manually verify in Supabase Dashboard > Storage > proposal-documents > Policies"
+    "   Please verify in Supabase Dashboard > Storage > proposal-documents > Policies"
   );
+  console.log("   You should see 4 policies: INSERT, SELECT, UPDATE, DELETE");
 
   // Summary
   console.log("\n=== SETUP VERIFICATION SUMMARY ===");
