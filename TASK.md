@@ -73,6 +73,7 @@
 - [x] Implement connection pooling for Supabase client
 - [x] Document checkpoint restore procedures
 - [x] Create data retention policies
+- [x] Create comprehensive tests for checkpoint recovery and data retention (2023-07-25)
 
 ### Discovered During Work
 
@@ -85,8 +86,21 @@
 
 - [x] Create basic application layout (`RootLayout`, `Header`)
 - [x] Create basic Homepage (`page.tsx`)
-- [ ] Create proposal dashboard layout
-- [ ] Design and implement proposal listing view
+- [x] Create proposal dashboard layout (2023-07-25)
+- [x] Design and implement proposal listing view (2023-07-25)
+  - [x] Implement ProposalCard component (2023-07-25)
+  - [x] Create EmptyDashboard state component (2023-07-25)
+  - [x] Add filtering functionality for proposals (2023-07-25)
+  - [x] Implement skeleton loading states (2023-07-25)
+- [x] Write comprehensive tests for dashboard components (2023-07-25)
+  - [x] Test for ProposalCard component (2023-07-25)
+  - [x] Test for ProposalList component (2023-07-25)
+  - [x] Test for DashboardFilters component (2023-07-25)
+  - [x] Test for EmptyDashboard component (2023-07-25)
+  - [x] Test for Dashboard page (2023-07-25)
+  - [x] Test for Header component (2023-07-25)
+  - [x] Test for authentication utilities (2023-07-25)
+  - [x] Test for proposals API (2023-07-25)
 - [ ] Create proposal creation flow
 - [ ] Design chat interface for agent interaction
   - [ ] Create message components for different agent roles
@@ -385,6 +399,14 @@
 - [x] Create comprehensive E2E tests for redirects, protected routes, and authentication UI
 - [x] Debug and refine authentication mocking strategy for reliable tests
 
+## Discovered During Work (July 25)
+
+- [x] Create test directory structure for component tests (2023-07-25)
+- [x] Implement mocks for Next.js components and utilities in tests (2023-07-25)
+- [x] Add data-testid attributes to dashboard components for testing (2023-07-25)
+- [x] Create comprehensive test coverage for UI components and API functions (2023-07-25)
+- [x] Implement mock authentication state for component tests (2023-07-25)
+
 ## Next Steps
 
 - [x] Implement a basic agent with LangGraph
@@ -393,4 +415,4 @@
 - [ ] Resolve remaining linting issues (missing types, `any` usage)
 - [ ] Implement Supabase UI components for login
 - [ ] Create a human-in-the-loop interface
-- [ ] Implement persistence layer
+- [x] Implement persistence layer
