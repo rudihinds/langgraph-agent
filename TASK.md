@@ -70,16 +70,16 @@
 - [x] Implement proposal state management functions _(2023-07-15)_
 - [x] Implement SQL schema with Row Level Security _(2023-07-18)_
 - [x] Implement session timeout and recovery mechanisms _(2023-07-22)_
-- [ ] Implement connection pooling for Supabase client
+- [x] Implement connection pooling for Supabase client _(2023-07-25)_
 - [ ] Document checkpoint restore procedures
 - [ ] Create data retention policies
 
 ### Discovered During Work
 
-- [x] Need to create SQL schema for proposal_checkpoints _(2023-07-17)_
+- [x] Need to create SQL schema for proposal*checkpoints *(2023-07-17)\_
 - [x] Add batch operations for checkpoint management _(2023-07-19)_
 - [x] Need to format thread IDs for proposal sessions _(2023-07-08)_
-- [ ] Fix type issues in serialization utilities _(2023-07-12)_
+- [x] Fix type issues in serialization utilities _(2023-07-12)_
 
 ### Basic UI Setup
 
