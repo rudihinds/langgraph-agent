@@ -33,11 +33,11 @@ export interface SerializationOptions {
 const SerializedMessageDataSchema = z.object({
   content: z.any(),
   additional_kwargs: z.record(z.any()).optional(),
-  example: z.boolean().optional(),
   response_metadata: z.record(z.any()).optional(),
   tool_call_id: z.string().optional(),
   tool_name: z.string().optional(),
   name: z.string().optional(),
+  role: z.string().optional(),
 });
 
 /**
@@ -83,10 +83,6 @@ export function serializeMessage(
       serializedData.response_metadata = message.response_metadata;
     }
 
-    if ("example" in message && message.example !== undefined) {
-      serializedData.example = message.example;
-    }
-
     // Handle tool messages
     if (message instanceof ToolMessage) {
       if (message.tool_call_id)
@@ -97,6 +93,7 @@ export function serializeMessage(
     // Handle chat messages
     if (message instanceof ChatMessage && message.name) {
       serializedData.name = message.name;
+      serializedData.role = message._getType();
     }
   }
 
@@ -119,8 +116,9 @@ export function deserializeMessage(data: SerializedMessage): BaseMessage {
   const {
     content,
     additional_kwargs = {},
-    response_metadata,
-    example,
+    response_metadata = {},
+    tool_call_id,
+    name,
   } = validated.data;
 
   // Create the appropriate message type
@@ -130,48 +128,53 @@ export function deserializeMessage(data: SerializedMessage): BaseMessage {
         content,
         additional_kwargs,
         response_metadata,
-        example,
       });
     case "ai":
       return new AIMessage({
         content,
         additional_kwargs,
         response_metadata,
-        example,
       });
     case "system":
       return new SystemMessage({
         content,
         additional_kwargs,
         response_metadata,
-        example,
       });
     case "tool": {
-      const options: Record<string, any> = {
+      if (!tool_call_id) {
+        return new ToolMessage({
+          content,
+          tool_call_id: "default_tool_call_id",
+          additional_kwargs,
+          response_metadata,
+        });
+      }
+
+      return new ToolMessage({
         content,
+        tool_call_id,
         additional_kwargs,
         response_metadata,
-        example,
-      };
-
-      // Add tool-specific properties
-      if (data.data.tool_call_id) options.tool_call_id = data.data.tool_call_id;
-      if (data.data.name) options.name = data.data.name;
-
-      return new ToolMessage(options);
+        name,
+      });
     }
     case "chat": {
-      const options: Record<string, any> = {
+      if (!name) {
+        return new ChatMessage({
+          content,
+          role: "assistant", // Default role if not specified
+          additional_kwargs,
+          response_metadata,
+        });
+      }
+
+      return new ChatMessage({
         content,
+        role: name,
         additional_kwargs,
         response_metadata,
-        example,
-      };
-
-      // Add name for chat messages
-      if (data.data.name) options.name = data.data.name;
-
-      return new ChatMessage(options);
+      });
     }
     default:
       throw new Error(`Unknown message type: ${type}`);

@@ -63,23 +63,23 @@
 
 ### Persistence Layer
 
-- [x] Implement PostgresCheckpointer class for saving and loading proposal state _(2023-07-02)_
-- [x] Create serialization/deserialization helpers for messages and state _(2023-07-05)_
-- [x] Implement thread ID management for proposal sessions _(2023-07-08)_
-- [x] Write test cases for checkpoints _(2023-07-10)_
-- [x] Implement proposal state management functions _(2023-07-15)_
-- [x] Implement SQL schema with Row Level Security _(2023-07-18)_
-- [x] Implement session timeout and recovery mechanisms _(2023-07-22)_
-- [x] Implement connection pooling for Supabase client _(2023-07-25)_
-- [ ] Document checkpoint restore procedures
-- [ ] Create data retention policies
+- [x] Implement PostgresCheckpointer class for saving and loading proposal state
+- [x] Create serialization/deserialization helpers for messages and state
+- [x] Implement thread ID management for proposal sessions
+- [x] Write test cases for checkpoints
+- [x] Implement proposal state management functions
+- [x] Implement SQL schema with Row Level Security
+- [x] Implement session timeout and recovery mechanisms
+- [x] Implement connection pooling for Supabase client
+- [x] Document checkpoint restore procedures
+- [x] Create data retention policies
 
 ### Discovered During Work
 
-- [x] Need to create SQL schema for proposal*checkpoints *(2023-07-17)\_
-- [x] Add batch operations for checkpoint management _(2023-07-19)_
-- [x] Need to format thread IDs for proposal sessions _(2023-07-08)_
-- [x] Fix type issues in serialization utilities _(2023-07-12)_
+- [x] Need to create SQL schema for proposal\*checkpoints
+- [x] Add batch operations for checkpoint management
+- [x] Need to format thread IDs for proposal sessions
+- [x] Fix type issues in serialization utilities
 
 ### Basic UI Setup
 
