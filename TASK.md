@@ -31,14 +31,28 @@
 - [x] Configure API keys for LLM services
 - [x] Test basic LLM connectivity
 
+### Frontend Integration with create-agent-chat-app
+
+- [ ] Create a new project using create-agent-chat-app CLI
+- [ ] Configure project structure:
+  - [ ] Extract and integrate the `apps/web` Next.js frontend
+  - [ ] Connect it to our existing LangGraph backend
+- [ ] Set up environment variables for frontend-backend communication
+- [ ] Adapt the chat interface for proposal agent interactions
+- [ ] Integrate Supabase authentication with the frontend
+- [ ] Test end-to-end communication between frontend and backend
+
 ## Phase 2: Core Infrastructure (Week 2)
 
 ### Authentication Implementation
 
-- [ ] Integrate Supabase Auth helpers with Next.js
-- [ ] Create login/signup pages
-- [ ] Implement protected routes
-- [ ] Add user profile management
+- [ ] Configure Supabase Auth helpers in Next.js frontend
+- [ ] Create login/signup pages with Google OAuth
+- [ ] Implement protected routes using Next.js middleware
+- [ ] Set up user session management
+- [ ] Create user profile management interface
+- [ ] Handle authentication state in the chat interface
+- [ ] Implement token refresh and session persistence
 - [ ] Test authentication flow end-to-end
 
 ### Persistence Layer

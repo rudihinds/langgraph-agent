@@ -1,0 +1,12 @@
+{
+  "node_version": "20",
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "basic_agent": "./src/agents/basic-agent.ts:graph",
+    "multi_agent": "./src/agents/multi-agent.ts:multiAgentGraph",
+    "proposal_agent": "./src/agents/proposal-agent/graph.ts:graph"
+  },
+  "env": ".env"
+}

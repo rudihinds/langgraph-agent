@@ -42,7 +42,7 @@ The Proposal Agent System is an AI-powered application that assists users in cre
 - **Framework**: LangGraph.js with LangChain.js
 - **LLMs**: 
   - Claude 3.7 Sonnet (primary thinking/writing model)
-  - Claude 3 Opus (deep research)
+  - GPT-o3-mini (deep research)
   - GPT-4o-mini (vector store interactions)
 - **Embeddings**: Gemini Text Embeddings
 - **Vector Database**: Pinecone
