@@ -2,20 +2,17 @@
 
 The following steps need to be completed manually in the Supabase dashboard:
 
-## 1. Create Storage Bucket
+## 1. Create Storage Bucket (✅ COMPLETED)
 
-1. Go to the Supabase dashboard and select your project
-2. Navigate to **Storage** in the left sidebar
-3. Click **Create new bucket**
-4. Enter the name: `proposal-documents`
-5. Make sure **Private bucket** is selected
-6. Click **Create bucket**
+Storage bucket "proposal-documents" has been successfully created.
 
 ## 2. Set Up Storage Bucket Policies
 
+You need to run the following SQL in the Supabase SQL Editor to set up the policies:
+
 1. Go to **SQL Editor** in the left sidebar
 2. Create a new query
-3. Paste the following SQL and run it:
+3. Copy and paste the following SQL:
 
 ```sql
 -- Allow users to upload files (INSERT)
@@ -59,6 +56,14 @@ USING (
 );
 ```
 
+4. Click **Run** to execute the SQL
+
+5. To verify the policies are set up:
+   - Go to **Storage** in the left sidebar
+   - Select the **proposal-documents** bucket
+   - Click the **Policies** tab
+   - Verify there are policies for INSERT, SELECT, UPDATE, and DELETE operations
+
 ## 3. Configure Google OAuth
 
 1. In the Supabase dashboard, navigate to **Authentication** > **Providers**
@@ -79,13 +84,7 @@ USING (
 
 ## 4. Verify Setup
 
-After completing all the manual steps above, you can verify that everything is set up correctly by running the test script:
-
-```sh
-npx tsx src/lib/test-supabase.ts
-```
-
-You should see successful checks for both the database tables and the storage bucket.
+After completing all the manual steps above, update TASK.md to mark the remaining tasks as completed.
 
 ## Programmatic Storage Bucket Creation (Alternative to Manual Creation)
 
