@@ -101,7 +101,11 @@
   - [x] Test for Header component (2023-07-25)
   - [x] Test for authentication utilities (2023-07-25)
   - [x] Test for proposals API (2023-07-25)
-- [ ] Create proposal creation flow
+- [x] Connect homepage to dashboard (2023-07-25)
+  - [x] Update links in homepage (2023-07-25)
+  - [x] Create proposal creation flow skeleton (2023-07-25)
+  - [x] Add tests for homepage links (2023-07-25)
+  - [x] Add tests for new proposal page (2023-07-25)
 - [ ] Design chat interface for agent interaction
   - [ ] Create message components for different agent roles
   - [ ] Implement streaming response display
@@ -406,6 +410,8 @@
 - [x] Add data-testid attributes to dashboard components for testing (2023-07-25)
 - [x] Create comprehensive test coverage for UI components and API functions (2023-07-25)
 - [x] Implement mock authentication state for component tests (2023-07-25)
+- [x] Create new proposal page structure for basic flow (2023-07-25)
+- [x] Implement homepage to dashboard navigation (2023-07-25)
 
 ## Next Steps
 
