@@ -12,7 +12,7 @@
 ### Supabase Configuration
 
 - [x] Create Supabase project
-- [ ] Configure authentication with Google OAuth
+- [x] Configure authentication with Google OAuth
 - [x] Design and create database schema:
   - [x] Users table
   - [x] Proposals table
