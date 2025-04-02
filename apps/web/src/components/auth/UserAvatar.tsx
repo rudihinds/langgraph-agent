@@ -1,33 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { User } from "@supabase/supabase-js";
-import { getCurrentUser } from "@/lib/supabase";
+import { useState, useRef } from "react";
+import { useSession } from "@/hooks/useSession";
+import { signOut } from "@/lib/supabase";
 
 export function UserAvatar() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useSession();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Error loading user:", error);
-      }
+  // Handle click outside to close dropdown
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
+      setDropdownOpen(false);
     }
+  };
 
-    loadUser();
-  }, []);
+  // Add event listener when dropdown is open
+  if (typeof window !== "undefined" && dropdownOpen) {
+    window.addEventListener("click", handleClickOutside);
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   if (!user) {
     return (
-      <div
-        className="h-10 w-10 rounded-full bg-muted flex items-center justify-center"
-        data-testid="user-avatar-placeholder"
+      <a
+        href="/login"
+        className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90"
       >
-        <span className="text-xs font-medium">?</span>
-      </div>
+        Sign In
+      </a>
     );
   }
 
@@ -46,21 +59,66 @@ export function UserAvatar() {
   };
 
   // Use avatar URL if available, otherwise show initials
-  return user.user_metadata?.avatar_url ? (
+  const avatarContent = user.user_metadata?.avatar_url ? (
     <img
       src={user.user_metadata.avatar_url}
       alt={user.user_metadata?.full_name || user.email || "User avatar"}
       className="h-10 w-10 rounded-full object-cover"
       data-testid="user-avatar"
+      onClick={() => setDropdownOpen(!dropdownOpen)}
     />
   ) : (
     <div
-      className="h-10 w-10 rounded-full bg-primary flex items-center justify-center"
+      className="h-10 w-10 rounded-full bg-primary flex items-center justify-center cursor-pointer"
       data-testid="user-avatar"
+      onClick={() => setDropdownOpen(!dropdownOpen)}
     >
       <span className="text-xs font-medium text-primary-foreground">
         {getInitials()}
       </span>
+    </div>
+  );
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      {avatarContent}
+
+      {/* Dropdown menu */}
+      {dropdownOpen && (
+        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-background border">
+          <div className="py-1" role="menu" aria-orientation="vertical">
+            <div className="px-4 py-2 text-sm border-b">
+              <div className="font-medium">
+                {user.user_metadata?.full_name || user.email}
+              </div>
+              <div className="text-muted-foreground text-xs truncate">
+                {user.email}
+              </div>
+            </div>
+            <a
+              href="/proposals"
+              className="block px-4 py-2 text-sm hover:bg-muted"
+              onClick={() => setDropdownOpen(false)}
+            >
+              My Proposals
+            </a>
+            <a
+              href="/settings"
+              className="block px-4 py-2 text-sm hover:bg-muted"
+              onClick={() => setDropdownOpen(false)}
+            >
+              Settings
+            </a>
+            <button
+              onClick={handleSignOut}
+              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-muted"
+              data-testid="sign-out-button"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

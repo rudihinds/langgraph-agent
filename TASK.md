@@ -51,11 +51,11 @@
 - [x] Configure Supabase Auth helpers in Next.js frontend (basic getCurrentUser, signIn, signOut)
 - [x] Create login page with Supabase UI (placeholder, needs Supabase UI components)
 - [x] Implement protected routes using Next.js middleware
-- [ ] Set up user session management (basic session check in middleware)
+- [x] Set up user session management (basic session check in middleware)
 - [x] Create user profile display component (`UserAvatar`)
 - [x] Handle authentication state in the UI (`Header`, Homepage buttons)
-- [ ] Implement token refresh and session persistence
-- [ ] Test authentication flow end-to-end
+- [x] Implement token refresh and session persistence
+- [x] Test authentication flow end-to-end
 
 ### Persistence Layer
 

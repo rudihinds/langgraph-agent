@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Header } from "@/components/Header";
 import "./globals.css";
+import { Header } from "@/components/Header";
+import { SessionProvider } from "@/hooks/useSession";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Proposal Writer",
-  description: "AI-powered proposal writer for grants and RFPs",
+  description: "Create high-quality proposals with AI assistance",
 };
 
 export default function RootLayout({
@@ -18,17 +19,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-1 container py-8">{children}</main>
-          <footer className="border-t py-6 bg-background">
-            <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
-              <p className="text-sm text-muted-foreground">
-                &copy; {new Date().getFullYear()} Proposal Writer. All rights reserved.
-              </p>
-            </div>
-          </footer>
-        </div>
+        <SessionProvider>
+          <div className="min-h-screen flex flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <footer className="w-full border-t py-4">
+              <div className="max-w-5xl mx-auto px-4 text-center text-sm text-muted-foreground">
+                © {new Date().getFullYear()} Proposal Writer
+              </div>
+            </footer>
+          </div>
+        </SessionProvider>
       </body>
     </html>
   );

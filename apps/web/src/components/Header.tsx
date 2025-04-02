@@ -1,28 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { User } from "@supabase/supabase-js";
+import { useState } from "react";
 import { UserAvatar } from "./auth/UserAvatar";
-import { getCurrentUser } from "@/lib/supabase";
+import { useSession } from "@/hooks/useSession";
 
 export function Header() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isLoading } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const currentUser = await getCurrentUser();
-        console.log("Header loaded user:", currentUser?.email || "No user");
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Error loading user:", error);
-      }
-    }
-
-    loadUser();
-  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -82,7 +67,11 @@ export function Header() {
                 </svg>
               </button>
             )}
-            <UserAvatar />
+            {isLoading ? (
+              <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+            ) : (
+              <UserAvatar />
+            )}
           </div>
         </div>
       </div>
