@@ -482,36 +482,46 @@ describe("ProposalState", () => {
       expect(defaultProposalState.metadata.proposalTitle).toBe("");
     });
 
-    test("should update metadata", () => {
+    test("should update metadata and update timestamp", () => {
       const initialState = { ...defaultProposalState };
+      const oldTimestamp = initialState.metadata.updatedAt;
 
-      const metadataUpdates = {
-        proposalId: "prop-123",
-        userId: "user-abc",
-        proposalTitle: "Community Garden Project",
-        customField: "custom value",
-      };
+      // Wait a bit to ensure timestamp changes
+      const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 
-      // Use the reducer directly from the state object
-      const metadataReducer =
-        ProposalState.channelDescriptions.metadata.reducer;
-      const updatedMetadata = metadataReducer(
-        initialState.metadata,
-        metadataUpdates
-      );
+      return delay().then(() => {
+        const metadataUpdates = {
+          proposalId: "prop-123",
+          userId: "user-abc",
+          proposalTitle: "Community Garden Project",
+          customField: "custom value",
+        };
 
-      // Create the new state
-      const newState = {
-        ...initialState,
-        metadata: updatedMetadata,
-      };
+        // Use the reducer directly from the state object
+        const metadataReducer =
+          ProposalState.channelDescriptions.metadata.reducer;
+        const updatedMetadata = metadataReducer(
+          initialState.metadata,
+          metadataUpdates
+        );
 
-      expect(newState.metadata.proposalId).toBe("prop-123");
-      expect(newState.metadata.userId).toBe("user-abc");
-      expect(newState.metadata.proposalTitle).toBe("Community Garden Project");
-      expect(newState.metadata.customField).toBe("custom value");
-      // Created at should still be there
-      expect(newState.metadata.createdAt).toBeDefined();
+        // Create the new state
+        const newState = {
+          ...initialState,
+          metadata: updatedMetadata,
+        };
+
+        expect(newState.metadata.proposalId).toBe("prop-123");
+        expect(newState.metadata.userId).toBe("user-abc");
+        expect(newState.metadata.proposalTitle).toBe(
+          "Community Garden Project"
+        );
+        expect(newState.metadata.customField).toBe("custom value");
+        // Created at should still be there
+        expect(newState.metadata.createdAt).toBeDefined();
+        // Updated timestamp should be newer
+        expect(newState.metadata.updatedAt).not.toBe(oldTimestamp);
+      });
     });
   });
 });
