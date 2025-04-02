@@ -22,7 +22,10 @@ export function UserAvatar() {
 
   if (!user) {
     return (
-      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+      <div
+        className="h-10 w-10 rounded-full bg-muted flex items-center justify-center"
+        data-testid="user-avatar-placeholder"
+      >
         <span className="text-xs font-medium">?</span>
       </div>
     );
@@ -48,9 +51,13 @@ export function UserAvatar() {
       src={user.user_metadata.avatar_url}
       alt={user.user_metadata?.full_name || user.email || "User avatar"}
       className="h-10 w-10 rounded-full object-cover"
+      data-testid="user-avatar"
     />
   ) : (
-    <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+    <div
+      className="h-10 w-10 rounded-full bg-primary flex items-center justify-center"
+      data-testid="user-avatar"
+    >
       <span className="text-xs font-medium text-primary-foreground">
         {getInitials()}
       </span>

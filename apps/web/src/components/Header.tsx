@@ -14,6 +14,7 @@ export function Header() {
     async function loadUser() {
       try {
         const currentUser = await getCurrentUser();
+        console.log("Header loaded user:", currentUser?.email || "No user");
         setUser(currentUser);
       } catch (error) {
         console.error("Error loading user:", error);
@@ -35,16 +36,21 @@ export function Header() {
               Proposal Writer
             </Link>
             {user && (
-              <nav className="hidden md:flex items-center gap-6">
+              <nav
+                className="hidden md:flex items-center gap-6"
+                data-testid="auth-nav"
+              >
                 <Link
                   href="/proposals"
                   className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  data-testid="proposals-link"
                 >
                   My Proposals
                 </Link>
                 <Link
                   href="/new"
                   className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  data-testid="new-proposal-link"
                 >
                   Create New
                 </Link>
@@ -57,6 +63,7 @@ export function Header() {
               <button
                 className="md:hidden text-muted-foreground hover:text-primary transition-colors"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                data-testid="mobile-menu-button"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -82,13 +89,17 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && user && (
-        <div className="md:hidden border-t bg-background">
+        <div
+          className="md:hidden border-t bg-background"
+          data-testid="mobile-menu"
+        >
           <div className="w-full max-w-5xl mx-auto px-4">
             <nav className="py-4 flex flex-col gap-4">
               <Link
                 href="/proposals"
                 className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
+                data-testid="mobile-proposals-link"
               >
                 My Proposals
               </Link>
@@ -96,6 +107,7 @@ export function Header() {
                 href="/new"
                 className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
+                data-testid="mobile-new-proposal-link"
               >
                 Create New
               </Link>
