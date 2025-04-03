@@ -118,6 +118,11 @@
   - [x] Standardize footer heights across layout components
   - [x] Improve vertical centering and spacing
 - [ ] Create proposal creation flow
+  - [x] Create NewProposalModal component with form validation
+  - [x] Implement tests for the NewProposalModal component
+  - [x] Connect modal to dashboard and empty state components
+  - [ ] Implement API endpoint for saving new proposals
+  - [ ] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction
   - [ ] Create message components for different agent roles
   - [ ] Implement streaming response display

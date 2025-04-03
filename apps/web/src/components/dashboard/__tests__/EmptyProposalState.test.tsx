@@ -1,19 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect } from "vitest";
-import { EmptyProposalState } from "../EmptyProposalState";
+import { EmptyProposalState } from "@/components/dashboard/EmptyProposalState";
 
-// Mock the next/link component
-vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => {
-    return <a href={href}>{children}</a>;
-  },
+// Mock the NewProposalModal component
+vi.mock("@/components/dashboard/NewProposalModal", () => ({
+  __esModule: true,
+  default: vi.fn(({ open, onOpenChange }) => {
+    return open ? (
+      <div data-testid="mock-modal">
+        <button onClick={() => onOpenChange(false)}>Close Modal</button>
+      </div>
+    ) : null;
+  }),
 }));
 
 describe("EmptyProposalState", () => {
@@ -68,17 +67,21 @@ describe("EmptyProposalState", () => {
     });
   });
 
-  it("has a link to create a new proposal", async () => {
+  it("opens the modal when button is clicked", async () => {
+    const user = userEvent.setup();
     render(<EmptyProposalState />);
 
+    // The modal should not be in the document initially
+    expect(screen.queryByTestId("mock-modal")).not.toBeInTheDocument();
+
+    // Click the button
     const button = screen.getByRole("button", {
       name: /Create Your First Proposal/i,
     });
-    expect(button).toBeInTheDocument();
+    await user.click(button);
 
-    // The button should be inside a link that points to the new proposal page
-    const link = button.closest("a");
-    expect(link).toHaveAttribute("href", "/proposals/new");
+    // The modal should now be in the document
+    expect(screen.getByTestId("mock-modal")).toBeInTheDocument();
   });
 
   it("has proper heading hierarchy for accessibility", () => {
@@ -118,5 +121,26 @@ describe("EmptyProposalState", () => {
     // Check for the Plus icon
     const plusIcon = button.querySelector("svg");
     expect(plusIcon).toBeInTheDocument();
+  });
+
+  it("can close the modal", async () => {
+    const user = userEvent.setup();
+    render(<EmptyProposalState />);
+
+    // Open the modal
+    const button = screen.getByRole("button", {
+      name: /Create Your First Proposal/i,
+    });
+    await user.click(button);
+
+    // The modal should be in the document
+    expect(screen.getByTestId("mock-modal")).toBeInTheDocument();
+
+    // Close the modal
+    const closeButton = screen.getByRole("button", { name: /Close Modal/i });
+    await user.click(closeButton);
+
+    // The modal should not be in the document anymore
+    expect(screen.queryByTestId("mock-modal")).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +10,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { ClipboardList, Check, Plus } from "lucide-react";
+import NewProposalModal from "./NewProposalModal";
 
 // List of features to display
 const featureList = [
@@ -19,6 +20,8 @@ const featureList = [
 ];
 
 export function EmptyProposalState() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="flex items-center justify-center h-full min-h-[calc(100vh-220px)]">
       <Card
@@ -54,17 +57,18 @@ export function EmptyProposalState() {
           </ul>
         </CardContent>
         <CardFooter className="flex justify-center pb-8">
-          <Link href="/proposals/new">
-            <Button
-              size="lg"
-              className="gap-2 font-medium transition-all hover:shadow-md focus:ring-2 focus:ring-primary/20"
-            >
-              <Plus className="h-5 w-5" />
-              Create Your First Proposal
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            className="gap-2 font-medium transition-all hover:shadow-md focus:ring-2 focus:ring-primary/20"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="h-5 w-5" />
+            Create Your First Proposal
+          </Button>
         </CardFooter>
       </Card>
+
+      <NewProposalModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }

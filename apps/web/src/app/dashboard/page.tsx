@@ -1,15 +1,14 @@
-import { Metadata } from "next";
+"use client";
+
 import EmptyProposalState from "@/components/dashboard/EmptyProposalState";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import Link from "next/link";
-
-export const metadata: Metadata = {
-  title: "Dashboard | Proposal Agent",
-  description: "Manage your proposal drafts and submissions",
-};
+import { useState } from "react";
+import NewProposalModal from "@/components/dashboard/NewProposalModal";
 
 export default function DashboardPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="container px-4 py-6 mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -19,15 +18,15 @@ export default function DashboardPage() {
             Manage your proposal drafts, works in progress, and submissions
           </p>
         </div>
-        <Link href="/proposals/new">
-          <Button className="gap-1">
-            <PlusIcon className="w-4 h-4" />
-            New Proposal
-          </Button>
-        </Link>
+        <Button className="gap-1" onClick={() => setIsModalOpen(true)}>
+          <PlusIcon className="w-4 h-4" />
+          New Proposal
+        </Button>
       </div>
 
       <EmptyProposalState />
+
+      <NewProposalModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
