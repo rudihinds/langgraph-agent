@@ -13,6 +13,7 @@ export type Proposal = {
   createdAt: string;
   updatedAt: string;
   phase?: string;
+  dueDate?: string;
 };
 
 export async function getProposals(): Promise<Proposal[]> {
@@ -93,6 +94,7 @@ export async function getProposals(): Promise<Proposal[]> {
           phase: state?.currentPhase,
           createdAt: item.created_at,
           updatedAt: item.updated_at,
+          dueDate: state?.metadata?.dueDate,
         };
       });
 
