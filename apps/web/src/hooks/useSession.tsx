@@ -41,7 +41,7 @@ function hasMarkerCookie() {
 
 // Helper to check if Supabase auth token exists
 function hasAuthTokenCookie() {
-  return document.cookie.includes("sb-rqwgqyhonjnzvgwxbrvh-auth-token");
+  return document.cookie.includes("sb-");
 }
 
 // Helper to clear cookies that might be causing issues
@@ -84,20 +84,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setSession(data?.session || null);
       setUser(data?.session?.user || null);
 
+      // DEBUG: Always log cookie state
+      const markerExists = hasMarkerCookie();
+      const authTokenExists = hasAuthTokenCookie();
+      console.log("[SessionProvider] Auth marker cookie exists:", markerExists);
+      console.log(
+        "[SessionProvider] Auth token cookie exists:",
+        authTokenExists
+      );
+      console.log("[SessionProvider] All cookies:", document.cookie);
+
       // If we didn't get a session but have authentication cookies
-      if (!data?.session) {
-        const markerExists = hasMarkerCookie();
-        const authTokenExists = hasAuthTokenCookie();
-
-        console.log(
-          "[SessionProvider] Auth marker cookie exists:",
-          markerExists
-        );
-        console.log(
-          "[SessionProvider] Auth token cookie exists:",
-          authTokenExists
-        );
-
+      if (!data?.session && false) {
+        // DISABLED recovery mechanism temporarily
         // If we have marker cookie but no session, we might be in a state where cookies aren't properly synced
         if ((markerExists || authTokenExists) && !recoveryAttempted) {
           console.log(
@@ -163,6 +162,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // Initial session check and setup auth listener
   useEffect(() => {
     console.log("[SessionProvider] Setting up auth state");
+    console.log("[SessionProvider] Initial cookies:", document.cookie);
 
     // Get initial session
     refreshSession();
@@ -175,6 +175,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(
       (event: string, session: Session | null) => {
         console.log("[SessionProvider] Auth state changed:", event);
+        console.log(
+          "[SessionProvider] Cookies after state change:",
+          document.cookie
+        );
 
         if (event === "SIGNED_IN") {
           console.log("[SessionProvider] User signed in, updating auth state");

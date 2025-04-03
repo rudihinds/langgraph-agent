@@ -9,25 +9,44 @@ import LoginButton from "@/components/auth/LoginButton";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [hasAttemptedAuth, setHasAttemptedAuth] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
       try {
-        const { session } = await getSession();
-        const user = session?.user || null;
+        console.log("[Home] Checking for session...");
+        const { data, error } = await getSession();
+        if (error) {
+          console.error("[Home] Session error:", error);
+          setHasAttemptedAuth(true);
+          return;
+        }
+        const user = data?.session?.user || null;
+        console.log("[Home] User found:", !!user);
         setUser(user);
+        setHasAttemptedAuth(true);
       } catch (error) {
-        console.error("Error loading user:", error);
+        console.error("[Home] Error loading user:", error);
+        setHasAttemptedAuth(true);
       }
     }
 
     loadUser();
   }, []);
 
+  // DEBUG: Add cookie logging for debugging
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("[Home] Cookies:", document.cookie);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
-      {user && <Header user={user} />}
-      <main className={`flex-1 ${user ? "pt-16" : ""}`}>
+      {/* DISABLED authentication-dependent header rendering for debugging
+      {user && <Header user={user} />} */}
+      <Header user={null} />
+      <main className="flex-1">
         <div className="flex flex-col items-center">
           <div className="w-full max-w-5xl px-4 py-16 mx-auto sm:py-24">
             <div className="mb-16 space-y-6 text-center">
@@ -38,40 +57,19 @@ export default function Home() {
                 Create high-quality proposals for grants and RFPs with the help
                 of AI
               </p>
+              {/* DEBUG INFO */}
+              <div className="p-4 border border-yellow-400 rounded bg-yellow-50 text-sm text-left">
+                <p>Debug Info:</p>
+                <p>Auth attempted: {hasAttemptedAuth ? "Yes" : "No"}</p>
+                <p>User authenticated: {user ? "Yes" : "No"}</p>
+                <p>Cookies: Use console to view</p>
+              </div>
             </div>
 
-            {user ? (
-              <div className="flex justify-center gap-4 mb-16 flex-wrap">
-                <Link
-                  href="/proposals/new"
-                  className="px-6 py-3 font-medium transition-colors rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Start New Proposal
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="px-6 py-3 font-medium transition-colors rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                >
-                  View My Proposals
-                </Link>
-                <Link
-                  href="/dashboard/test-page"
-                  className="px-6 py-3 font-medium transition-colors rounded-md bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                  Dashboard Test Page
-                </Link>
-                <Link
-                  href="/dashboard/simple"
-                  className="px-6 py-3 font-medium transition-colors rounded-md bg-muted text-muted-foreground hover:bg-muted/90"
-                >
-                  Simple Dashboard
-                </Link>
-              </div>
-            ) : (
-              <div className="flex justify-center mb-16">
-                <LoginButton />
-              </div>
-            )}
+            {/* SIMPLIFIED: Always show login button for debugging */}
+            <div className="flex justify-center mb-16">
+              <LoginButton />
+            </div>
 
             {/* Test Links - always visible for easy access */}
             <div className="flex justify-center gap-2 mb-8">
