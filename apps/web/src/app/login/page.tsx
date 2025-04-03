@@ -52,22 +52,20 @@ export default function LoginPage() {
       }
     }
 
-    // Log localStorage for debugging code verifier
+    // Check if already authenticated and no recovery needed
     if (typeof window !== "undefined") {
-      console.log("[Login] localStorage keys:", Object.keys(localStorage));
-      const authStartTime = localStorage.getItem("auth_start_time");
-      if (authStartTime) {
-        console.log("[Login] Auth started at:", authStartTime);
-        const elapsed =
-          new Date().getTime() - new Date(authStartTime).getTime();
-        console.log(
-          "[Login] Time elapsed since auth start:",
-          elapsed / 1000,
-          "seconds"
-        );
+      // If we find a valid auth cookie and we're not in recovery mode
+      const hasAuthCookie =
+        document.cookie.includes("auth-token") ||
+        document.cookie.includes("sb-") ||
+        document.cookie.includes("auth-session-established");
+
+      if (hasAuthCookie && recovery !== "true" && !errorParam) {
+        console.log("[Login] Already authenticated, redirecting to dashboard");
+        router.push("/dashboard");
       }
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const handleSignIn = async () => {
     try {

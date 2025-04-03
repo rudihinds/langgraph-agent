@@ -62,19 +62,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for authentication - look for marker cookie or auth token
-  // We're being flexible here for development purposes
-  const authCookieOptions = [
-    "sb-rqwgqyhonjnzvgwxbrvh-auth-token",
-    "auth-session-established",
-  ];
-
-  // Check if any of the auth cookies exist
-  const hasCookie = authCookieOptions.some((cookieName) =>
-    request.cookies.has(cookieName)
-  );
-
-  const isAuthenticated = hasCookie;
+  // Check for authentication by examining all cookies
+  // Look for Supabase auth tokens or our custom auth marker
+  let isAuthenticated = false;
+  for (const cookie of allCookies) {
+    if (
+      cookie.name.includes("auth-token") ||
+      cookie.name === "auth-session-established" ||
+      (cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"))
+    ) {
+      isAuthenticated = true;
+      break;
+    }
+  }
 
   console.log(
     `[Middleware] Auth state: ${isAuthenticated ? "authenticated" : "not authenticated"}`
