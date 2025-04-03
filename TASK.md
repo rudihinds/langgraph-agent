@@ -131,6 +131,9 @@
   - [x] Create ProposalTypeModal for selecting proposal type
   - [x] Implement tests for the ProposalTypeModal component
   - [x] Connect ProposalTypeModal to dashboard and NewProposalModal
+  - [x] Create ApplicationQuestionsView for entering application questions
+  - [x] Implement test for the ApplicationQuestionsView component
+  - [x] Create ProposalCreationFlow to manage multi-step creation process
   - [ ] Implement API endpoint for saving new proposals
   - [ ] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction
