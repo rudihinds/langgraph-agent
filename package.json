@@ -7,11 +7,11 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "tsx watch src/index.ts",
+    "dev:backend": "cd apps/backend && tsx watch index.ts",
     "dev:frontend": "cd apps/web && npm run dev",
     "dev:agents": "npx @langchain/langgraph-cli dev --port 2024 --config langgraph.json",
     "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "tsc",
+    "build:backend": "tsc -p apps/backend/tsconfig.json",
     "build:frontend": "cd apps/web && npm run build",
     "start": "node dist/index.js",
     "test": "vitest",
@@ -20,7 +20,7 @@
     "test:integration": "vitest run --include '**/*.int.test.ts'",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "install:all": "npm install && cd web && npm install",
+    "install:all": "npm install && cd apps/web && npm install",
     "clean": "rm -rf node_modules .turbo dist coverage",
     "e2e": "playwright test"
   },
@@ -31,6 +31,8 @@
     "@langchain/openai": "^0.0.14",
     "@supabase/supabase-js": "^2.39.7",
     "dotenv": "^16.4.5",
+    "tailwind-scrollbar": "^4.0.2",
+    "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.7.1",
     "zod": "^3.22.4"
   },

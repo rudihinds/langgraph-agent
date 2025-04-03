@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect } from "vitest";
-import { EmptyProposalStateView } from "../EmptyProposalState";
+import { EmptyProposalState } from "../EmptyProposalState";
 
 // Mock the next/link component
 vi.mock("next/link", () => ({
@@ -17,14 +17,8 @@ vi.mock("next/link", () => ({
 }));
 
 describe("EmptyProposalState", () => {
-  const mockOnCreateProposal = vi.fn();
-
-  beforeEach(() => {
-    mockOnCreateProposal.mockClear();
-  });
-
   it("renders the illustration/icon", () => {
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+    render(<EmptyProposalState />);
 
     // Check for the document/clipboard icon
     const icon = screen.getByTestId("empty-state-icon");
@@ -37,7 +31,7 @@ describe("EmptyProposalState", () => {
   });
 
   it("renders the heading and description", () => {
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+    render(<EmptyProposalState />);
 
     // Check for the heading
     const heading = screen.getByRole("heading", { name: /No Proposals Yet/i });
@@ -51,7 +45,7 @@ describe("EmptyProposalState", () => {
   });
 
   it("renders the feature list with check marks", () => {
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+    render(<EmptyProposalState />);
 
     // Check for the feature list items
     const features = [
@@ -74,28 +68,28 @@ describe("EmptyProposalState", () => {
     });
   });
 
-  it("calls onCreateProposal when button is clicked", async () => {
-    const user = userEvent.setup();
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+  it("has a link to create a new proposal", async () => {
+    render(<EmptyProposalState />);
 
     const button = screen.getByRole("button", {
       name: /Create Your First Proposal/i,
     });
     expect(button).toBeInTheDocument();
 
-    await user.click(button);
-    expect(mockOnCreateProposal).toHaveBeenCalledTimes(1);
+    // The button should be inside a link that points to the new proposal page
+    const link = button.closest("a");
+    expect(link).toHaveAttribute("href", "/proposals/new");
   });
 
   it("has proper heading hierarchy for accessibility", () => {
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+    render(<EmptyProposalState />);
 
     const heading = screen.getByRole("heading", { name: /No Proposals Yet/i });
     expect(heading.tagName).toBe("H2");
   });
 
   it("has responsive styling", () => {
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+    render(<EmptyProposalState />);
 
     // Test responsive styling by checking for appropriate classes
     const container = screen.getByTestId("empty-proposal-state");
@@ -111,7 +105,7 @@ describe("EmptyProposalState", () => {
   });
 
   it("has a prominent button with proper styling", () => {
-    render(<EmptyProposalStateView onCreateProposal={mockOnCreateProposal} />);
+    render(<EmptyProposalState />);
 
     const button = screen.getByRole("button", {
       name: /Create Your First Proposal/i,

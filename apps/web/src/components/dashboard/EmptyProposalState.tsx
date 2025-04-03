@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,7 +8,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { ClipboardList, Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -61,14 +62,15 @@ export function EmptyProposalStateView({
         </ul>
       </CardContent>
       <CardFooter className="flex justify-center pb-10">
-        <Button
-          size="lg"
-          className="gap-2 font-medium transition-all hover:shadow-md focus:ring-2 focus:ring-primary/20"
-          onClick={onCreateProposal}
-        >
-          <Plus className="h-5 w-5" />
-          Create Your First Proposal
-        </Button>
+        <Link href="/proposals/new">
+          <Button
+            size="lg"
+            className="gap-2 font-medium transition-all hover:shadow-md focus:ring-2 focus:ring-primary/20"
+          >
+            <Plus className="h-5 w-5" />
+            Create Your First Proposal
+          </Button>
+        </Link>
       </CardFooter>
     </Card>
   );

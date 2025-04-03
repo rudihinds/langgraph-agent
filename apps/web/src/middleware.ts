@@ -1,73 +1,120 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
 
-// Define the protected routes that require authentication
-const protectedRoutes = ["/proposals", "/new"];
+// Define protected and public routes
+const protectedRoutes = ["/dashboard", "/proposals", "/new"];
+const publicRoutes = ["/login", "/auth", "/"];
+const debugRoutes = ["/debug", "/dashboard/test-page", "/dashboard/simple"];
 
-export async function middleware(request: NextRequest) {
-  // Check if the route is protected
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
+// Middleware for authentication and logging
+export function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  console.log(`[Middleware] Processing path: ${path}`);
+
+  // Log all cookies for debugging
+  const allCookies = request.cookies.getAll();
+  console.log(
+    `[Middleware] Cookies:`,
+    allCookies.map(
+      (c) =>
+        `${c.name}: ${c.value?.substring(0, 20)}${
+          c.value?.length > 20 ? "..." : ""
+        }`
+    )
   );
 
-  // Skip middleware for non-protected routes and API routes
-  if (!isProtectedRoute || request.nextUrl.pathname.startsWith("/api")) {
+  // Static path detection - skip middleware processing
+  const isStaticResource =
+    path.startsWith("/_next") ||
+    path.startsWith("/static") ||
+    path.startsWith("/api") ||
+    path.includes(".") ||
+    path.includes("favicon");
+
+  if (isStaticResource) {
+    console.log("[Middleware] Skipping middleware for static resource path");
     return NextResponse.next();
   }
 
-  // Get Supabase cookies from the request for server-side auth check
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  // Check if the route is protected, public, or a debug route
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    path.startsWith(route)
+  );
+  const isPublicRoute = publicRoutes.some((route) =>
+    route === "/" ? path === "/" : path.startsWith(route)
+  );
+  const isDebugRoute = debugRoutes.some((route) => path.startsWith(route));
 
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("Missing Supabase environment variables");
+  console.log(
+    `[Middleware] Route type: ${
+      isProtectedRoute
+        ? "protected"
+        : isPublicRoute
+          ? "public"
+          : isDebugRoute
+            ? "debug"
+            : "other"
+    }`
+  );
+
+  // Special case for debug routes - always allow them during development
+  if (isDebugRoute) {
+    console.log("[Middleware] Allowing access to debug route");
     return NextResponse.next();
   }
 
-  // Create a Supabase client with the cookies from the request
-  const supabaseClient = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false, // Don't persist in middleware context
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
+  // Check for authentication - look for marker cookie or auth token
+  // We're being flexible here for development purposes
+  const authCookieOptions = [
+    "sb-rqwgqyhonjnzvgwxbrvh-auth-token",
+    "auth-session-established",
+  ];
 
-  // Get the auth cookies from the request
-  const authCookie =
-    request.cookies.get("sb-auth-token") ||
-    request.cookies.get("supabase-auth-token");
+  // Check if any of the auth cookies exist
+  const hasCookie = authCookieOptions.some((cookieName) =>
+    request.cookies.has(cookieName)
+  );
 
-  // If no auth cookie is present, redirect to login
-  if (!authCookie) {
-    console.log("No auth cookie found, redirecting to login");
-    const redirectUrl = new URL("/login", request.url);
-    redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl);
+  const isAuthenticated = hasCookie;
+
+  console.log(
+    `[Middleware] Auth state: ${isAuthenticated ? "authenticated" : "not authenticated"}`
+  );
+
+  // Protect secured routes
+  if (isProtectedRoute && !isAuthenticated) {
+    console.log(
+      "[Middleware] Unauthenticated user accessing protected route, redirecting to login"
+    );
+
+    // Create the full login URL with redirect parameter
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", path);
+
+    return NextResponse.redirect(loginUrl);
   }
 
-  try {
-    // Try to get the session using the cookie
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
-
-    // If there's no active session and the route is protected, redirect to login
-    if (!session && isProtectedRoute) {
-      console.log("No active session found, redirecting to login");
-      const redirectUrl = new URL("/login", request.url);
-      redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-  } catch (error) {
-    console.error("Error in auth middleware:", error);
+  // Redirect already authenticated users from public routes to dashboard
+  if (isPublicRoute && isAuthenticated && path !== "/") {
+    console.log(
+      "[Middleware] Authenticated user accessing login/auth, redirecting to dashboard"
+    );
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // Allow access to root path for everyone
+  if (path === "/") {
+    console.log("[Middleware] Allowing access to home page");
+    return NextResponse.next();
+  }
+
+  // Allow all other routes
   return NextResponse.next();
 }
 
-// Run middleware on all routes except static files and api routes
+// Configure middleware to run on specific paths but exclude static files
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
+  matcher: [
+    // Match all paths except static files and resources
+    "/((?!_next/static|_next/image|_next/script|_next/font|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.svg$|.*\\.webp$|.*\\.css$|.*\\.js$|assets).*)",
+  ],
 };
