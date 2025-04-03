@@ -178,35 +178,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </ul>
         </nav>
 
-        {/* User profile section */}
-        <div className="border-t border-border p-4">
-          <div className="flex items-center">
-            <Avatar className="h-8 w-8 mr-2">
-              <AvatarImage
-                src={user.user_metadata?.avatar_url}
-                alt={user.email || ""}
-              />
-              <AvatarFallback>
-                {user.user_metadata?.name?.charAt(0) ||
-                  user.email?.charAt(0) ||
-                  "U"}
-              </AvatarFallback>
-            </Avatar>
-            {!isSidebarCollapsed && (
-              <div className="ml-2 overflow-hidden">
-                <p className="text-sm font-medium truncate">
-                  {user.user_metadata?.name || "User"}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {user.email}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Toggle sidebar button - moved to where the profile section was */}
-        <div className="p-4 border-t border-border flex justify-center">
+        {/* Sidebar Footer */}
+        <div className="border-t border-border py-4 px-6 flex justify-center">
           <Button
             data-testid="sidebar-toggle"
             variant="ghost"
