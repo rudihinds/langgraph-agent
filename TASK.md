@@ -111,6 +111,12 @@
   - [x] Test for Header component (2023-07-25)
   - [x] Test for authentication utilities (2023-07-25)
   - [x] Test for proposals API (2023-07-25)
+- [x] Dashboard UI refinements
+  - [x] Remove test links from dashboard page
+  - [x] Fix empty state component to fit properly in viewport
+  - [x] Remove user profile from sidebar for cleaner interface
+  - [x] Standardize footer heights across layout components
+  - [x] Improve vertical centering and spacing
 - [ ] Create proposal creation flow
 - [ ] Design chat interface for agent interaction
   - [ ] Create message components for different agent roles
