@@ -601,7 +601,7 @@ function ApplicationQuestionsViewComponent({
                           "data-[state=open]:animate-collapsible-down"
                         )}
                       >
-                        <div className="pt-4 pb-1 mt-3 space-y-4 border-t">
+                        <div className="pt-4 pb-1 mt-3 space-y-4">
                           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                               <Label
@@ -658,36 +658,38 @@ function ApplicationQuestionsViewComponent({
                               />
                             </div>
                           </div>
-                          <div>
+                          <div className="pt-1 pb-1">
                             <Label
                               htmlFor={`category-${question.id}`}
-                              className="text-sm flex items-center gap-1 mb-1.5"
+                              className="flex items-center gap-1 mb-2 text-sm"
                             >
                               Question category
                               <HelpCircle className="w-3 h-3 text-muted-foreground" />
                             </Label>
-                            <Select
-                              value={question.category || ""}
-                              onValueChange={(value) =>
-                                updateQuestion(question.id, {
-                                  category: value || null,
-                                })
-                              }
-                            >
-                              <SelectTrigger
-                                id={`category-${question.id}`}
-                                className="w-full"
+                            <div className="relative">
+                              <Select
+                                value={question.category || ""}
+                                onValueChange={(value) =>
+                                  updateQuestion(question.id, {
+                                    category: value || null,
+                                  })
+                                }
                               >
-                                <SelectValue placeholder="Select a category (optional)" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {QUESTION_CATEGORIES.map((category) => (
-                                  <SelectItem key={category} value={category}>
-                                    {category}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                <SelectTrigger
+                                  id={`category-${question.id}`}
+                                  className="w-full focus:ring-offset-0"
+                                >
+                                  <SelectValue placeholder="Select a category (optional)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {QUESTION_CATEGORIES.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                      {category}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </CollapsibleContent>
@@ -715,21 +717,21 @@ function ApplicationQuestionsViewComponent({
                 <CardTitle className="text-base">Navigation</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 pb-4">
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center px-3 py-2 font-medium rounded-md bg-primary/10 text-primary">
-                    <span className="flex items-center justify-center w-6 h-6 mr-2 text-xs text-white rounded-full bg-primary">
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
+                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">
                       1
                     </span>
                     Application Questions
                   </div>
-                  <div className="flex items-center px-3 py-2">
-                    <span className="flex items-center justify-center w-6 h-6 mr-2 text-xs border border-gray-300 rounded-full">
+                  <div className="flex items-center px-4 py-2.5">
+                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">
                       2
                     </span>
                     Organization Info
                   </div>
-                  <div className="flex items-center px-3 py-2">
-                    <span className="flex items-center justify-center w-6 h-6 mr-2 text-xs border border-gray-300 rounded-full">
+                  <div className="flex items-center px-4 py-2.5">
+                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">
                       3
                     </span>
                     Review & Create
@@ -743,28 +745,28 @@ function ApplicationQuestionsViewComponent({
                 <CardTitle className="text-base">Help & Tips</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Enter each question exactly as it appears in the application
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Specify word or character limits if they exist
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Use categories to organize questions by section
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Bulk import allows pasting multiple questions at once
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col space-y-2">
+            <div className="flex flex-col pt-2 space-y-3">
               <Button onClick={handleSubmit} size="lg" className="w-full">
                 Continue
               </Button>

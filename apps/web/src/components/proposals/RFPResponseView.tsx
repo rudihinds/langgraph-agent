@@ -21,24 +21,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Upload, 
-  File, 
-  FileText, 
-  Trash, 
-  Plus, 
-  Info, 
-  Check, 
-  ChevronRight, 
+import {
+  Upload,
+  File,
+  FileText,
+  Trash,
+  Plus,
+  Info,
+  Check,
+  ChevronRight,
   Save,
-  HelpCircle
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 
 // MODEL
 export interface RFPResponseViewProps {
-  onSubmit: (data: { rfpUrl: string; rfpText: string; companyName: string }) => void;
+  onSubmit: (data: {
+    rfpUrl: string;
+    rfpText: string;
+    companyName: string;
+  }) => void;
   onBack: () => void;
 }
 
@@ -65,7 +69,10 @@ interface UseRFPResponseModel {
   confirmClear: () => void;
 }
 
-function useRFPResponse({ onSubmit, onBack }: RFPResponseViewProps): UseRFPResponseModel {
+function useRFPResponse({
+  onSubmit,
+  onBack,
+}: RFPResponseViewProps): UseRFPResponseModel {
   const [rfpUrl, setRfpUrl] = useState("");
   const [rfpText, setRfpText] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -75,7 +82,7 @@ function useRFPResponse({ onSubmit, onBack }: RFPResponseViewProps): UseRFPRespo
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  
+
   // Load saved data from localStorage on mount
   useState(() => {
     const savedData = localStorage.getItem("rfpResponseData");
@@ -90,7 +97,7 @@ function useRFPResponse({ onSubmit, onBack }: RFPResponseViewProps): UseRFPRespo
       }
     }
   });
-  
+
   // Auto-save to localStorage when data changes
   useState(() => {
     const saveTimeout = setTimeout(() => {
@@ -100,7 +107,7 @@ function useRFPResponse({ onSubmit, onBack }: RFPResponseViewProps): UseRFPRespo
           "rfpResponseData",
           JSON.stringify({ rfpUrl, rfpText, companyName })
         );
-        
+
         // Simulate a short delay to show the saving indicator
         setTimeout(() => {
           setIsSaving(false);
@@ -108,72 +115,75 @@ function useRFPResponse({ onSubmit, onBack }: RFPResponseViewProps): UseRFPRespo
         }, 600);
       }
     }, 1000); // Debounce for 1 second
-    
+
     return () => clearTimeout(saveTimeout);
   }, [rfpUrl, rfpText, companyName]);
-  
+
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
     let isValid = true;
-    
+
     if (!rfpUrl && !rfpText) {
       newErrors.rfpSource = "Please provide either a URL or the RFP text";
       isValid = false;
     }
-    
+
     if (!companyName) {
       newErrors.companyName = "Company name is required";
       isValid = false;
     }
-    
+
     setErrors(newErrors);
     return isValid;
   }, [rfpUrl, rfpText, companyName]);
-  
+
   const handleSubmit = useCallback(() => {
     if (validateForm()) {
       onSubmit({ rfpUrl, rfpText, companyName });
     }
   }, [rfpUrl, rfpText, companyName, validateForm, onSubmit]);
-  
+
   const handleBack = useCallback(() => {
     onBack();
   }, [onBack]);
-  
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setFileName(file.name);
-    setIsUploading(true);
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (content) {
-        setRfpText(content);
-      }
-      setIsUploading(false);
-    };
-    
-    reader.onerror = () => {
-      setIsUploading(false);
-      // Reset file input 
-      e.target.value = "";
-      setFileName(null);
-      setErrors({
-        ...errors,
-        fileUpload: "Failed to read file. Please try again.",
-      });
-    };
-    
-    reader.readAsText(file);
-  }, [errors]);
-  
+
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setFileName(file.name);
+      setIsUploading(true);
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        if (content) {
+          setRfpText(content);
+        }
+        setIsUploading(false);
+      };
+
+      reader.onerror = () => {
+        setIsUploading(false);
+        // Reset file input
+        e.target.value = "";
+        setFileName(null);
+        setErrors({
+          ...errors,
+          fileUpload: "Failed to read file. Please try again.",
+        });
+      };
+
+      reader.readAsText(file);
+    },
+    [errors]
+  );
+
   const handleRemoveFile = useCallback(() => {
     setFileName(null);
     setRfpText("");
-    
+
     // Clear any error related to file upload
     if (errors.fileUpload) {
       const newErrors = { ...errors };
@@ -181,23 +191,23 @@ function useRFPResponse({ onSubmit, onBack }: RFPResponseViewProps): UseRFPRespo
       setErrors(newErrors);
     }
   }, [errors]);
-  
+
   const openConfirmClear = useCallback(() => {
     if (rfpText.trim()) {
       setConfirmClearOpen(true);
     }
   }, [rfpText]);
-  
+
   const closeConfirmClear = useCallback(() => {
     setConfirmClearOpen(false);
   }, []);
-  
+
   const confirmClear = useCallback(() => {
     setRfpText("");
     setFileName(null);
     closeConfirmClear();
   }, [closeConfirmClear]);
-  
+
   return {
     rfpUrl,
     rfpText,
@@ -300,9 +310,12 @@ function RFPResponseViewComponent({
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-3/4">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight mb-2">RFP Response</h1>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">
+              RFP Response
+            </h1>
             <p className="text-muted-foreground text-lg">
-              Enter the details from the Request for Proposal (RFP) document to analyze and create your response.
+              Enter the details from the Request for Proposal (RFP) document to
+              analyze and create your response.
             </p>
           </div>
 
@@ -337,7 +350,7 @@ function RFPResponseViewComponent({
               <CardContent className="pt-6 bg-white">
                 <div className="space-y-6">
                   <div>
-                    <Label 
+                    <Label
                       htmlFor="companyName"
                       className="text-base font-medium flex items-center mb-2"
                     >
@@ -351,7 +364,9 @@ function RFPResponseViewComponent({
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="Enter the name of the company or organization issuing the RFP"
                       className={cn(
-                        errors.companyName ? "border-destructive" : "border-input"
+                        errors.companyName
+                          ? "border-destructive"
+                          : "border-input"
                       )}
                       aria-invalid={!!errors.companyName}
                       aria-describedby={
@@ -370,7 +385,7 @@ function RFPResponseViewComponent({
                   </div>
 
                   <div>
-                    <Label 
+                    <Label
                       htmlFor="rfpUrl"
                       className="text-base font-medium flex items-center mb-2"
                     >
@@ -390,7 +405,7 @@ function RFPResponseViewComponent({
                   </div>
 
                   <div className="relative">
-                    <Label 
+                    <Label
                       htmlFor="rfpText"
                       className="text-base font-medium flex items-center mb-2"
                     >
@@ -399,8 +414,8 @@ function RFPResponseViewComponent({
                     </Label>
 
                     <div className="flex items-center gap-2 mb-2">
-                      <label 
-                        htmlFor="file-upload" 
+                      <label
+                        htmlFor="file-upload"
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background",
                           "hover:bg-muted cursor-pointer"
@@ -416,7 +431,7 @@ function RFPResponseViewComponent({
                         onChange={handleFileUpload}
                         className="hidden"
                       />
-                      
+
                       {fileName && (
                         <div className="flex items-center gap-1.5 text-sm">
                           <FileText className="h-4 w-4 text-muted-foreground" />
@@ -441,7 +456,9 @@ function RFPResponseViewComponent({
                           <div className="animate-pulse">
                             <File className="h-12 w-12 text-muted-foreground" />
                           </div>
-                          <p className="text-sm text-muted-foreground">Processing file...</p>
+                          <p className="text-sm text-muted-foreground">
+                            Processing file...
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -453,10 +470,14 @@ function RFPResponseViewComponent({
                           placeholder="Paste the content of the RFP document here..."
                           className={cn(
                             "min-h-[300px]",
-                            errors.rfpSource ? "border-destructive" : "border-input"
+                            errors.rfpSource
+                              ? "border-destructive"
+                              : "border-input"
                           )}
                           aria-invalid={!!errors.rfpSource}
-                          aria-describedby={errors.rfpSource ? "rfp-source-error" : undefined}
+                          aria-describedby={
+                            errors.rfpSource ? "rfp-source-error" : undefined
+                          }
                         />
 
                         {rfpText && (
@@ -502,54 +523,65 @@ function RFPResponseViewComponent({
                 <CardTitle className="text-base">Navigation</CardTitle>
               </CardHeader>
               <CardContent className="pb-4 pt-0">
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center px-3 py-2 rounded-md bg-primary/10 text-primary font-medium">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center mr-2 text-xs">1</span>
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center px-4 py-2.5 rounded-md bg-primary/10 text-primary font-medium">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-xs">
+                      1
+                    </span>
                     RFP Details
                   </div>
-                  <div className="flex items-center px-3 py-2">
-                    <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-2 text-xs">2</span>
+                  <div className="flex items-center px-4 py-2.5">
+                    <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-3 text-xs">
+                      2
+                    </span>
                     Organization Info
                   </div>
-                  <div className="flex items-center px-3 py-2">
-                    <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-2 text-xs">3</span>
+                  <div className="flex items-center px-4 py-2.5">
+                    <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-3 text-xs">
+                      3
+                    </span>
                     Review & Create
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-md border-0">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Help & Tips</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Enter the exact name of the organization issuing the RFP
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Upload the RFP document or paste the content directly
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Include as much detail as possible for better results
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
+                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     If available, include the URL to the original RFP
                   </li>
                 </ul>
               </CardContent>
             </Card>
-            
-            <div className="flex flex-col space-y-2">
+
+            <div className="flex flex-col space-y-3 pt-2">
               <Button onClick={handleSubmit} size="lg" className="w-full">
                 Continue
               </Button>
-              <Button variant="outline" onClick={handleBack} size="lg" className="w-full">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                size="lg"
+                className="w-full"
+              >
                 Back
               </Button>
             </div>
@@ -563,7 +595,8 @@ function RFPResponseViewComponent({
           <DialogHeader>
             <DialogTitle>Clear RFP Text?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to clear the RFP text? This action cannot be undone.
+              Are you sure you want to clear the RFP text? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex space-x-2 justify-end">
@@ -584,4 +617,4 @@ function RFPResponseViewComponent({
 export default function RFPResponseView(props: RFPResponseViewProps) {
   const model = useRFPResponse(props);
   return <RFPResponseViewComponent {...props} {...model} />;
-} 
+}
