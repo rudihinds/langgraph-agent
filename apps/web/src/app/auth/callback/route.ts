@@ -10,15 +10,15 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
-  const recovery = requestUrl.searchParams.get("recovery");
 
-  console.log("[Auth] Callback URL:", request.url);
+  // Log debugging information
+  console.log("[Auth] Callback URL parameters:", {
+    code: code ? "present" : "missing",
+    error: error || "none",
+    errorDescription: errorDescription || "none",
+  });
   console.log("[Auth] Request origin:", requestUrl.origin);
   console.log("[Auth] Request hostname:", requestUrl.hostname);
-  console.log("[Auth] Request port:", requestUrl.port);
-  console.log("[Auth] Headers origin:", request.headers.get("origin"));
-  console.log("[Auth] Headers referer:", request.headers.get("referer"));
-  console.log("[Auth] Recovery mode:", recovery ? "true" : "false");
 
   // Use the origin from the request for redirects
   const targetOrigin = requestUrl.origin;
@@ -45,16 +45,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Create a response for setting cookies and redirecting
-  const redirectUrl = new URL("/dashboard", targetOrigin);
-  console.log("[Auth] Will redirect to:", redirectUrl.toString());
-
-  const response = NextResponse.redirect(redirectUrl);
-
   try {
     console.log("[Auth] Creating server-side Supabase client");
 
-    // Create a server client using the request cookies - now properly awaited
+    // Create a server client for handling the authentication
     const supabase = await createServerSupabaseClient();
 
     console.log("[Auth] Exchanging auth code for session");
@@ -87,6 +81,13 @@ export async function GET(request: NextRequest) {
         : "unknown",
     });
 
+    // Since Supabase handles the session cookie automatically, we'll create
+    // a simple redirect response
+    const redirectUrl = new URL("/dashboard", targetOrigin);
+    console.log("[Auth] Will redirect to:", redirectUrl.toString());
+
+    const response = NextResponse.redirect(redirectUrl);
+
     // Parse the hostname to determine domain for cookies
     const hostname = requestUrl.hostname;
     const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
@@ -97,8 +98,7 @@ export async function GET(request: NextRequest) {
       domain || "default (localhost)"
     );
 
-    // Set an additional marker cookie for optimistic auth checks in middleware
-    // Use precise cookie options to ensure they work across environments
+    // Set an additional marker cookie for optimistic auth checks
     response.cookies.set("auth-session-established", "true", {
       httpOnly: false, // Allow JavaScript access
       path: "/",
@@ -120,10 +120,14 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error("[Auth] Unexpected error in callback:", error.message);
+    console.error(
+      "[Auth] Unexpected error in callback:",
+      error.message,
+      error.stack
+    );
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent("server_error")}`,
+        `/login?error=${encodeURIComponent("server_error")}&details=${encodeURIComponent(error.message || "Unknown error")}`,
         targetOrigin
       )
     );
