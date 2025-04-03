@@ -12,7 +12,6 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetOverlay,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +35,7 @@ interface NewProposalModalProps {
 function useNewProposalModal(props: NewProposalModalProps) {
   const { open, onOpenChange } = props;
   const router = useRouter();
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -79,10 +78,10 @@ function NewProposalModalView({
   isSubmitting,
 }: ReturnType<typeof useNewProposalModal>) {
   const { register } = form;
-  
+
   // Focus the first input when the modal opens
   const inputRef = React.useRef<HTMLInputElement>(null);
-  
+
   React.useEffect(() => {
     if (open && inputRef.current) {
       setTimeout(() => {
@@ -93,7 +92,6 @@ function NewProposalModalView({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetOverlay data-testid="dialog-overlay" />
       <SheetContent
         side="right"
         className="sm:max-w-md w-full"
@@ -107,7 +105,7 @@ function NewProposalModalView({
             Start a new proposal by providing some basic information.
           </SheetDescription>
         </SheetHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6 py-6">
           <div className="space-y-2">
             <Label htmlFor="proposalName">
@@ -127,7 +125,7 @@ function NewProposalModalView({
               </p>
             )}
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="clientName">
               RFP/Client Name
@@ -145,21 +143,17 @@ function NewProposalModalView({
               </p>
             )}
           </div>
-          
+
           <SheetFooter className="pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleCancel}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit"
-              disabled={isSubmitting}
-              className="ml-2"
-            >
+            <Button type="submit" disabled={isSubmitting} className="ml-2">
               Create
             </Button>
           </SheetFooter>
