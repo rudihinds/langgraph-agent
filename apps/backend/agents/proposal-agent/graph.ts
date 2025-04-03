@@ -8,16 +8,17 @@ import {
   sectionGeneratorNode,
   evaluatorNode,
   humanFeedbackNode,
-} from "./nodes.js";
+} from "./nodes.ts";
 import { RunnableConfig } from "@langchain/core/runnables";
+import { stateConfig } from "./state";
 
 /**
  * Create a proposal agent with a multi-stage workflow
  * @returns Compiled graph for the proposal agent
  */
 function createProposalAgent() {
-  // Use MessagesAnnotation for message state
-  const graph = new StateGraph(MessagesAnnotation)
+  // Use MessagesAnnotation for message state with channels configuration
+  const graph = new StateGraph({ channels: stateConfig.channels })
     .addNode("orchestrator", orchestratorNode)
     .addNode("research", researchNode)
     .addNode("solution_sought", solutionSoughtNode)

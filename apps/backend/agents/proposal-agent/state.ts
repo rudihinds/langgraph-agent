@@ -42,3 +42,44 @@ export const ProposalStateSchema = z.object({
   currentSection: z.string().optional(),
   userFeedback: z.string().optional(),
 });
+
+/**
+ * Configuration for StateGraph channels
+ * This is required for LangGraph v0.2.x and above
+ */
+export const stateConfig = {
+  channels: {
+    messages: {
+      value: [],
+      default: () => [],
+    },
+    rfpDocument: {
+      value: undefined,
+      default: () => undefined,
+    },
+    funderInfo: {
+      value: undefined,
+      default: () => undefined,
+    },
+    solutionSought: {
+      value: undefined,
+      default: () => undefined,
+    },
+    connectionPairs: {
+      value: undefined,
+      default: () => [],
+    },
+    proposalSections: {
+      value: undefined,
+      default: () => [],
+    },
+    currentSection: {
+      value: undefined,
+      default: () => undefined,
+    },
+    userFeedback: {
+      value: undefined,
+      default: () => undefined,
+    },
+  },
+};

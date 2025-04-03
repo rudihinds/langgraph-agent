@@ -94,9 +94,10 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect already authenticated users from public routes to dashboard
-  if (isPublicRoute && isAuthenticated && path !== "/") {
+  // Only do this for login page, not auth callback which is also a public route
+  if (path === "/login" && isAuthenticated) {
     console.log(
-      "[Middleware] Authenticated user accessing login/auth, redirecting to dashboard"
+      "[Middleware] Authenticated user accessing login page, redirecting to dashboard"
     );
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
