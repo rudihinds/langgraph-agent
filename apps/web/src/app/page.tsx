@@ -10,23 +10,34 @@ import LoginButton from "@/components/auth/LoginButton";
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [hasAttemptedAuth, setHasAttemptedAuth] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadUser() {
       try {
         console.log("[Home] Checking for session...");
         const { data, error } = await getSession();
+
         if (error) {
           console.error("[Home] Session error:", error);
+          setAuthError(error.message);
           setHasAttemptedAuth(true);
           return;
         }
+
         const user = data?.session?.user || null;
         console.log("[Home] User found:", !!user);
+
+        if (user) {
+          console.log("[Home] User ID:", user.id);
+          console.log("[Home] User email:", user.email);
+        }
+
         setUser(user);
         setHasAttemptedAuth(true);
       } catch (error) {
         console.error("[Home] Error loading user:", error);
+        setAuthError(String(error));
         setHasAttemptedAuth(true);
       }
     }
@@ -43,9 +54,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* DISABLED authentication-dependent header rendering for debugging
-      {user && <Header user={user} />} */}
-      <Header user={null} />
+      <Header user={user} />
+
       <main className="flex-1">
         <div className="flex flex-col items-center">
           <div className="w-full max-w-5xl px-4 py-16 mx-auto sm:py-24">
@@ -57,18 +67,30 @@ export default function Home() {
                 Create high-quality proposals for grants and RFPs with the help
                 of AI
               </p>
+
               {/* DEBUG INFO */}
               <div className="p-4 border border-yellow-400 rounded bg-yellow-50 text-sm text-left">
                 <p>Debug Info:</p>
                 <p>Auth attempted: {hasAttemptedAuth ? "Yes" : "No"}</p>
                 <p>User authenticated: {user ? "Yes" : "No"}</p>
-                <p>Cookies: Use console to view</p>
+                {authError && (
+                  <p className="text-red-600">Error: {authError}</p>
+                )}
+                <p>Cookies present: {document.cookie ? "Yes" : "No"}</p>
               </div>
             </div>
 
-            {/* SIMPLIFIED: Always show login button for debugging */}
             <div className="flex justify-center mb-16">
-              <LoginButton />
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="px-4 py-2 font-medium text-white bg-primary rounded-md hover:bg-primary/90"
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <LoginButton />
+              )}
             </div>
 
             {/* Test Links - always visible for easy access */}

@@ -41,7 +41,9 @@ function hasMarkerCookie() {
 
 // Helper to check if Supabase auth token exists
 function hasAuthTokenCookie() {
-  return document.cookie.includes("sb-");
+  return (
+    document.cookie.includes("sb-") && document.cookie.includes("auth-token")
+  );
 }
 
 // Helper to clear cookies that might be causing issues
@@ -49,11 +51,14 @@ function clearAuthCookies() {
   // List of cookies that could cause authentication issues
   const cookiesToClear = [
     "sb-rqwgqyhonjnzvgwxbrvh-auth-token-code-verifier",
+    "sb-rqwgqyhonjnzvgwxbrvh-auth-token.0",
+    "sb-rqwgqyhonjnzvgwxbrvh-auth-token.1",
     "auth-session-established",
+    "auth-session-time",
   ];
 
   cookiesToClear.forEach((cookieName) => {
-    document.cookie = `${cookieName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+    document.cookie = `${cookieName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Domain=${window.location.hostname}; SameSite=Lax`;
     console.log(`[SessionProvider] Cleared cookie: ${cookieName}`);
   });
 }
@@ -65,6 +70,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [recoveryAttempted, setRecoveryAttempted] = useState<boolean>(false);
+  const [debugMode, setDebugMode] = useState<boolean>(true); // Enable debug mode
 
   // Function to refresh the session data
   const refreshSession = async () => {
@@ -74,6 +80,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("[SessionProvider] Session refresh error:", error);
+        setError(error);
       }
 
       console.log(
@@ -81,6 +88,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         data?.session ? "active" : "none"
       );
 
+      // Set session state
       setSession(data?.session || null);
       setUser(data?.session?.user || null);
 
@@ -94,37 +102,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       );
       console.log("[SessionProvider] All cookies:", document.cookie);
 
-      // If we didn't get a session but have authentication cookies
-      if (!data?.session && false) {
-        // DISABLED recovery mechanism temporarily
-        // If we have marker cookie but no session, we might be in a state where cookies aren't properly synced
-        if ((markerExists || authTokenExists) && !recoveryAttempted) {
-          console.log(
-            "[SessionProvider] Attempting session recovery due to cookie sync issue"
-          );
-          setRecoveryAttempted(true);
-
-          // Try to force a relogin by clearing problematic cookies
-          // This is a last resort for development only
-          if (process.env.NODE_ENV !== "production") {
-            console.log(
-              "[SessionProvider] Clearing auth cookies for recovery attempt"
-            );
-            clearAuthCookies();
-
-            // Force reload the page to clear any browser state
-            if (typeof window !== "undefined") {
-              // Wait a moment before redirecting
-              setTimeout(() => {
-                console.log(
-                  "[SessionProvider] Redirecting to login for fresh authentication"
-                );
-                window.location.href = "/login?recovery=true";
-              }, 500);
-            }
-          }
-        }
-      } else {
+      // If we have auth token cookies but no session, try force relogin
+      if (
+        !data?.session &&
+        authTokenExists &&
+        !recoveryAttempted &&
+        debugMode
+      ) {
+        console.log(
+          "[SessionProvider] Found auth cookies but no session. Clearing cookies for clean state."
+        );
+        // This should resolve the token/session mismatch
+        clearAuthCookies();
+        setRecoveryAttempted(true);
+      } else if (data?.session) {
         // We have a session, reset recovery flag
         setRecoveryAttempted(false);
       }
@@ -182,6 +173,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
         if (event === "SIGNED_IN") {
           console.log("[SessionProvider] User signed in, updating auth state");
+          // Set marker cookie to track successful sign-in
+          document.cookie =
+            "auth-session-established=true; path=/; max-age=86400";
         } else if (event === "SIGNED_OUT") {
           console.log("[SessionProvider] User signed out, clearing auth state");
           // Also manually clear cookies on sign out event

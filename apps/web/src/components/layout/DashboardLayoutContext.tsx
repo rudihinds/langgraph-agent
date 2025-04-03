@@ -21,19 +21,13 @@ export function useDashboardLayout() {
 export function DashboardLayoutProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  // DEBUG: Temporarily simplify dashboard route detection and add logging
   console.log("[DashboardContext] Current pathname:", pathname);
 
-  // For debugging: hardcode to false to disable dashboard layouts
-  const isDashboardRoute = false;
-
-  // Original logic (commented for debugging)
-  /*
+  // Restore original dashboard route detection logic
   const isDashboardRoute =
     pathname?.startsWith("/dashboard") ||
     pathname?.startsWith("/proposals") ||
     pathname?.startsWith("/settings");
-  */
 
   console.log("[DashboardContext] isDashboardRoute:", isDashboardRoute);
 
