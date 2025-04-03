@@ -117,10 +117,14 @@
   - [x] Remove user profile from sidebar for cleaner interface
   - [x] Standardize footer heights across layout components
   - [x] Improve vertical centering and spacing
+  - [x] Remove diagnostics from home page for production readiness
+  - [x] Integrate proposal list with empty state conditional display
 - [ ] Create proposal creation flow
   - [x] Create NewProposalModal component with form validation
   - [x] Implement tests for the NewProposalModal component
   - [x] Connect modal to dashboard and empty state components
+  - [x] Create NewProposalCard for dashboard grid
+  - [x] Implement tests for the NewProposalCard component
   - [ ] Implement API endpoint for saving new proposals
   - [ ] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction

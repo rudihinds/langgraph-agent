@@ -15,7 +15,6 @@ export default function Home() {
   useEffect(() => {
     async function loadUser() {
       try {
-        console.log("[Home] Checking for session...");
         const { data, error } = await getSession();
 
         if (error) {
@@ -26,13 +25,6 @@ export default function Home() {
         }
 
         const user = data?.session?.user || null;
-        console.log("[Home] User found:", !!user);
-
-        if (user) {
-          console.log("[Home] User ID:", user.id);
-          console.log("[Home] User email:", user.email);
-        }
-
         setUser(user);
         setHasAttemptedAuth(true);
       } catch (error) {
@@ -43,13 +35,6 @@ export default function Home() {
     }
 
     loadUser();
-  }, []);
-
-  // DEBUG: Add cookie logging for debugging
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      console.log("[Home] Cookies:", document.cookie);
-    }
   }, []);
 
   return (
@@ -67,17 +52,6 @@ export default function Home() {
                 Create high-quality proposals for grants and RFPs with the help
                 of AI
               </p>
-
-              {/* DEBUG INFO */}
-              <div className="p-4 border border-yellow-400 rounded bg-yellow-50 text-sm text-left">
-                <p>Debug Info:</p>
-                <p>Auth attempted: {hasAttemptedAuth ? "Yes" : "No"}</p>
-                <p>User authenticated: {user ? "Yes" : "No"}</p>
-                {authError && (
-                  <p className="text-red-600">Error: {authError}</p>
-                )}
-                <p>Cookies present: {document.cookie ? "Yes" : "No"}</p>
-              </div>
             </div>
 
             <div className="flex justify-center mb-16">
@@ -91,30 +65,6 @@ export default function Home() {
               ) : (
                 <LoginButton />
               )}
-            </div>
-
-            {/* Test Links - always visible for easy access */}
-            <div className="flex justify-center gap-2 mb-8">
-              <Link
-                href="/dashboard/simple"
-                className="text-primary hover:underline text-sm"
-              >
-                Simple Page Test
-              </Link>
-              <span className="text-muted-foreground">•</span>
-              <Link
-                href="/dashboard/test-page"
-                className="text-primary hover:underline text-sm"
-              >
-                Client Test Page
-              </Link>
-              <span className="text-muted-foreground">•</span>
-              <Link
-                href="/debug"
-                className="text-primary hover:underline text-sm"
-              >
-                Debug Tools
-              </Link>
             </div>
 
             <div className="grid grid-cols-1 gap-8 px-4 md:grid-cols-3">
