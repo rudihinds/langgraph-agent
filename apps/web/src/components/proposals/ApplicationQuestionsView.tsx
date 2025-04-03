@@ -404,20 +404,20 @@ function ApplicationQuestionsViewComponent({
       <div className="mb-8">
         <div className="relative">
           <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
-            <div className="flex flex-col justify-center w-1/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
+            <div className="flex flex-col justify-center w-2/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
           </div>
           <div className="flex justify-between text-xs text-muted-foreground">
-            <div className="flex flex-col items-center font-medium text-primary">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
-                1
-              </div>
-              <span>Application Questions</span>
-            </div>
             <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                2
+              <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full bg-primary/10">
+                <Check className="w-3 h-3 text-primary" />
               </div>
               <span>Organization Info</span>
+            </div>
+            <div className="flex flex-col items-center font-medium text-primary">
+              <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
+                2
+              </div>
+              <span>Application Questions</span>
             </div>
             <div className="flex flex-col items-center">
               <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
@@ -718,17 +718,17 @@ function ApplicationQuestionsViewComponent({
               </CardHeader>
               <CardContent className="pt-0 pb-4">
                 <div className="flex flex-col space-y-3">
-                  <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">
-                      1
-                    </span>
-                    Application Questions
-                  </div>
                   <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">
-                      2
+                    <span className="flex items-center justify-center w-6 h-6 mr-3 border-2 rounded-full bg-primary/10 border-primary">
+                      <Check className="w-3 h-3 text-primary" />
                     </span>
                     Organization Info
+                  </div>
+                  <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
+                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">
+                      2
+                    </span>
+                    Application Questions
                   </div>
                   <div className="flex items-center px-4 py-2.5">
                     <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">

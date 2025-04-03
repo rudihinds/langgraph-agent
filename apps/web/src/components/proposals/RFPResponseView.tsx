@@ -282,20 +282,20 @@ function RFPResponseViewComponent({
       <div className="mb-8">
         <div className="relative">
           <div className="overflow-hidden h-2 mb-6 text-xs flex rounded bg-gray-100">
-            <div className="w-1/3 shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary"></div>
+            <div className="w-2/3 shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary"></div>
           </div>
           <div className="flex justify-between text-xs text-muted-foreground">
-            <div className="text-primary font-medium flex flex-col items-center">
-              <div className="w-6 h-6 rounded-full border-2 border-primary bg-primary text-white flex items-center justify-center mb-1">
-                1
-              </div>
-              <span>RFP Details</span>
-            </div>
             <div className="flex flex-col items-center">
-              <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mb-1">
-                2
+              <div className="w-6 h-6 rounded-full border-2 border-gray-300 bg-primary/10 flex items-center justify-center mb-1">
+                <Check className="h-3 w-3 text-primary" />
               </div>
               <span>Organization Info</span>
+            </div>
+            <div className="text-primary font-medium flex flex-col items-center">
+              <div className="w-6 h-6 rounded-full border-2 border-primary bg-primary text-white flex items-center justify-center mb-1">
+                2
+              </div>
+              <span>RFP Details</span>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mb-1">
@@ -524,17 +524,17 @@ function RFPResponseViewComponent({
               </CardHeader>
               <CardContent className="pb-4 pt-0">
                 <div className="flex flex-col space-y-3">
-                  <div className="flex items-center px-4 py-2.5 rounded-md bg-primary/10 text-primary font-medium">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-xs">
-                      1
-                    </span>
-                    RFP Details
-                  </div>
                   <div className="flex items-center px-4 py-2.5">
-                    <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-3 text-xs">
-                      2
+                    <span className="w-6 h-6 rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center mr-3">
+                      <Check className="h-3 w-3 text-primary" />
                     </span>
                     Organization Info
+                  </div>
+                  <div className="flex items-center px-4 py-2.5 rounded-md bg-primary/10 text-primary font-medium">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-xs">
+                      2
+                    </span>
+                    RFP Details
                   </div>
                   <div className="flex items-center px-4 py-2.5">
                     <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-3 text-xs">

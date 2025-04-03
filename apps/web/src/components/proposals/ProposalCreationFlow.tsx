@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationQuestionsView from "./ApplicationQuestionsView";
 import RFPResponseView from "./RFPResponseView";
+import OrganizationInfoView from "./OrganizationInfoView";
 import { Button } from "@/components/ui/button";
 
 // MODEL
@@ -82,14 +83,14 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the next step
     const nextStep = currentStep + 1;
-    
+
     // Push the new step to history
     window.history.pushState(
       { step: nextStep, proposalType },
       "",
       window.location.pathname
     );
-    
+
     setCurrentStep(nextStep);
   };
 
@@ -103,7 +104,7 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the previous step
     const prevStep = currentStep - 1;
-    
+
     // Use browser's history.back() to maintain proper history stack
     window.history.back();
   };
@@ -138,15 +139,22 @@ function ProposalCreationFlowView({
   handleBack,
   handleCancel,
 }: ProposalCreationFlowViewProps) {
-  // Render the appropriate step based on the current step and proposal type
-  if (proposalType === "application" && currentStep === 1) {
-    return (
-      <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />
-    );
+  // First step is now Organization Info for both proposal types
+  if (currentStep === 1) {
+    return <OrganizationInfoView onSubmit={handleNext} onBack={handleBack} />;
   }
 
-  if (proposalType === "rfp" && currentStep === 1) {
-    return <RFPResponseView onSubmit={handleNext} onBack={handleBack} />;
+  // Second step depends on proposal type
+  if (currentStep === 2) {
+    if (proposalType === "application") {
+      return (
+        <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />
+      );
+    }
+
+    if (proposalType === "rfp") {
+      return <RFPResponseView onSubmit={handleNext} onBack={handleBack} />;
+    }
   }
 
   // TODO: Add other steps for the proposal creation flow
