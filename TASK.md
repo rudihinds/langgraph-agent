@@ -111,6 +111,7 @@
   - [x] Test for Header component (2023-07-25)
   - [x] Test for authentication utilities (2023-07-25)
   - [x] Test for proposals API (2023-07-25)
+  - [x] Test for toggle functionality between empty and populated states
 - [x] Dashboard UI refinements
   - [x] Remove test links from dashboard page
   - [x] Fix empty state component to fit properly in viewport
