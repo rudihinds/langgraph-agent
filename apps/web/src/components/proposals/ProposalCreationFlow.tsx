@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationQuestionsView from "./ApplicationQuestionsView";
+import RFPResponseView from "./RFPResponseView";
 import { Button } from "@/components/ui/button";
 
 // MODEL
@@ -31,6 +32,38 @@ function useProposalCreationFlow({
 
   const totalSteps = proposalType === "rfp" ? 4 : 3;
 
+  // Set up history state handling to intercept browser back button
+  useEffect(() => {
+    // Push an entry for the first step
+    if (currentStep === 1) {
+      window.history.replaceState(
+        { step: 1, proposalType },
+        "",
+        window.location.pathname
+      );
+    }
+
+    // Handle popstate event (browser back/forward buttons)
+    const handlePopState = (event: PopStateEvent) => {
+      // If the user navigates back to the previous page
+      if (!event.state || !event.state.step) {
+        // Redirect them back to dashboard instead of losing their progress
+        onCancel();
+        return;
+      }
+
+      // Set the step from history state
+      const historyStep = event.state.step;
+      setCurrentStep(historyStep);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [proposalType, onCancel]);
+
   const handleNext = (data: any) => {
     // Save the data from the current step
     setFormData((prev) => ({ ...prev, ...data }));
@@ -48,16 +81,31 @@ function useProposalCreationFlow({
     }
 
     // Otherwise, go to the next step
-    setCurrentStep((prev) => prev + 1);
+    const nextStep = currentStep + 1;
+    
+    // Push the new step to history
+    window.history.pushState(
+      { step: nextStep, proposalType },
+      "",
+      window.location.pathname
+    );
+    
+    setCurrentStep(nextStep);
   };
 
   const handleBack = () => {
     if (currentStep === 1) {
+      // For the first step, we want to go back to the dashboard
+      // Let the browser handle the back navigation
       onCancel();
       return;
     }
 
-    setCurrentStep((prev) => prev - 1);
+    // Otherwise, go to the previous step
+    const prevStep = currentStep - 1;
+    
+    // Use browser's history.back() to maintain proper history stack
+    window.history.back();
   };
 
   const handleCancel = () => {
@@ -95,6 +143,10 @@ function ProposalCreationFlowView({
     return (
       <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />
     );
+  }
+
+  if (proposalType === "rfp" && currentStep === 1) {
+    return <RFPResponseView onSubmit={handleNext} onBack={handleBack} />;
   }
 
   // TODO: Add other steps for the proposal creation flow
