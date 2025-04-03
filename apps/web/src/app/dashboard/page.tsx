@@ -5,11 +5,15 @@ import EmptyProposalState from "@/components/dashboard/EmptyProposalState";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, LayoutGrid, LayoutList } from "lucide-react";
 import NewProposalModal from "@/components/dashboard/NewProposalModal";
+import ProposalTypeModal, {
+  ProposalType,
+} from "@/components/dashboard/ProposalTypeModal";
 import { ProposalGrid } from "@/components/dashboard/ProposalGrid";
 import { ProposalCard } from "@/components/dashboard/ProposalCard";
 import NewProposalCard from "@/components/dashboard/NewProposalCard";
 import { getProposals, Proposal } from "@/lib/api/proposals";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
+import { useRouter } from "next/navigation";
 
 // Dummy proposal data for testing
 const dummyProposals: Proposal[] = [
@@ -70,7 +74,10 @@ const dummyProposals: Proposal[] = [
 ];
 
 export default function DashboardPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState<ProposalType | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +131,24 @@ export default function DashboardPage() {
     setShowDummyData(!showDummyData);
   };
 
+  // Handle proposal type selection
+  const handleTypeSelect = (type: ProposalType) => {
+    setSelectedType(type);
+    // For now, we'll show the NewProposalModal for both types
+    // In a real implementation, we'd route to different forms based on the type
+    setIsProposalModalOpen(true);
+  };
+
+  // Handle new proposal creation from modal
+  const handleCreateProposal = (data: any) => {
+    if (selectedType === "rfp") {
+      router.push("/proposals/new/rfp");
+    } else if (selectedType === "application") {
+      router.push("/proposals/new/application");
+    }
+    setIsProposalModalOpen(false);
+  };
+
   // Show loading state
   if (isLoading) {
     return (
@@ -145,7 +170,7 @@ export default function DashboardPage() {
             >
               {showDummyData ? "Show Empty State" : "Show Proposals"}
             </Button>
-            <Button className="gap-1" onClick={() => setIsModalOpen(true)}>
+            <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
               <PlusIcon className="w-4 h-4" />
               New Proposal
             </Button>
@@ -178,7 +203,7 @@ export default function DashboardPage() {
             >
               {showDummyData ? "Show Empty State" : "Show Proposals"}
             </Button>
-            <Button className="gap-1" onClick={() => setIsModalOpen(true)}>
+            <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
               <PlusIcon className="w-4 h-4" />
               New Proposal
             </Button>
@@ -220,16 +245,25 @@ export default function DashboardPage() {
             >
               {showDummyData ? "Show Empty State" : "Show Proposals"}
             </Button>
-            <Button className="gap-1" onClick={() => setIsModalOpen(true)}>
+            <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
               <PlusIcon className="w-4 h-4" />
               New Proposal
             </Button>
           </div>
         </div>
 
-        <EmptyProposalState />
+        <EmptyProposalState onCreateClick={() => setIsTypeModalOpen(true)} />
 
-        <NewProposalModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+        <ProposalTypeModal
+          open={isTypeModalOpen}
+          onOpenChange={setIsTypeModalOpen}
+          onSelect={handleTypeSelect}
+        />
+
+        <NewProposalModal
+          open={isProposalModalOpen}
+          onOpenChange={setIsProposalModalOpen}
+        />
       </div>
     );
   }
@@ -248,7 +282,7 @@ export default function DashboardPage() {
           <Button variant="outline" onClick={toggleDummyData} className="gap-1">
             {showDummyData ? "Show Empty State" : "Show Proposals"}
           </Button>
-          <Button className="gap-1" onClick={() => setIsModalOpen(true)}>
+          <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
             <PlusIcon className="w-4 h-4" />
             New Proposal
           </Button>
@@ -256,7 +290,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <NewProposalCard />
+        <NewProposalCard onClick={() => setIsTypeModalOpen(true)} />
 
         {proposals.map((proposal) => (
           <ProposalCard
@@ -269,7 +303,16 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <NewProposalModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <ProposalTypeModal
+        open={isTypeModalOpen}
+        onOpenChange={setIsTypeModalOpen}
+        onSelect={handleTypeSelect}
+      />
+
+      <NewProposalModal
+        open={isProposalModalOpen}
+        onOpenChange={setIsProposalModalOpen}
+      />
     </div>
   );
 }

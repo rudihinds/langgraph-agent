@@ -128,6 +128,9 @@
   - [x] Connect modal to dashboard and empty state components
   - [x] Create NewProposalCard for dashboard grid
   - [x] Implement tests for the NewProposalCard component
+  - [x] Create ProposalTypeModal for selecting proposal type
+  - [x] Implement tests for the ProposalTypeModal component
+  - [x] Connect ProposalTypeModal to dashboard and NewProposalModal
   - [ ] Implement API endpoint for saving new proposals
   - [ ] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction
@@ -450,6 +453,12 @@
   - [x] Fix PostCSS configuration to use correct plugin syntax
   - [x] Update globals.css to use proper Tailwind directives
   - [x] Update Next.js config to use current syntax for external packages
+- [x] Improve proposal creation flow (2024-04-04)
+  - [x] Implement two-step proposal creation with type selection
+  - [x] Create accessible UI components with proper keyboard navigation
+  - [x] Implement the MCP pattern for component organization
+  - [x] Fix runtime errors related to missing exports (SheetOverlay component)
+  - [x] Ensure all components follow consistent design patterns
 
 ## Next Steps
 

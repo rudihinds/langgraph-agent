@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import NewProposalModal from "./NewProposalModal";
 import { cn } from "@/lib/utils";
 
 // MODEL
-interface NewProposalCardProps {
+export interface NewProposalCardProps {
   className?: string;
+  onClick?: () => void;
 }
 
 function useNewProposalCard() {
@@ -28,6 +29,7 @@ function useNewProposalCard() {
 // VIEW
 function NewProposalCardView({
   className,
+  onClick,
   isModalOpen,
   setIsModalOpen,
   handleOpenModal,
@@ -39,7 +41,7 @@ function NewProposalCardView({
           "flex items-center justify-center border-dashed bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors p-8 h-full",
           className
         )}
-        onClick={handleOpenModal}
+        onClick={onClick || handleOpenModal}
         data-testid="new-proposal-card"
       >
         <div className="flex flex-col items-center text-center">
@@ -53,15 +55,15 @@ function NewProposalCardView({
         </div>
       </Card>
 
-      <NewProposalModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      {!onClick && (
+        <NewProposalModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      )}
     </>
   );
 }
 
 // COMPONENT
-export function NewProposalCard(props: NewProposalCardProps) {
+export default function NewProposalCard(props: NewProposalCardProps) {
   const model = useNewProposalCard();
   return <NewProposalCardView {...props} {...model} />;
 }
-
-export default NewProposalCard;
