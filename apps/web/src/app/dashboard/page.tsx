@@ -27,23 +27,6 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="mb-8">
-        <div className="flex space-x-4 mb-4">
-          <Link
-            href="/dashboard/simple"
-            className="text-primary hover:underline"
-          >
-            Simple Test Page
-          </Link>
-          <Link
-            href="/dashboard/test-page"
-            className="text-primary hover:underline"
-          >
-            Client Test Page
-          </Link>
-        </div>
-      </div>
-
       <EmptyProposalState />
     </div>
   );

@@ -205,13 +205,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </div>
 
-        {/* Toggle button */}
-        <div className="border-t border-border p-2 flex justify-center">
+        {/* Toggle sidebar button - moved to where the profile section was */}
+        <div className="p-4 border-t border-border flex justify-center">
           <Button
             data-testid="sidebar-toggle"
             variant="ghost"
             size="icon"
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            aria-label={
+              isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
           >
             {isSidebarCollapsed ? (
               <ChevronRight size={16} />
@@ -239,8 +242,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">{children}</div>
+        <main className="flex-1 overflow-auto relative">
+          <div className="max-w-7xl mx-auto p-6">{children}</div>
         </main>
 
         {/* Footer */}
@@ -249,9 +252,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <p className="text-xs text-muted-foreground">
               Proposal Agent v1.0.0
             </p>
-            <Link href="/help" className="text-xs text-primary hover:underline">
-              Need help?
-            </Link>
+            <p className="text-xs text-muted-foreground">
+              © 2023 21st.dev. All rights reserved.
+            </p>
           </div>
         </footer>
       </div>
