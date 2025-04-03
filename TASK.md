@@ -459,6 +459,9 @@
   - [x] Implement the MCP pattern for component organization
   - [x] Fix runtime errors related to missing exports (SheetOverlay component)
   - [x] Ensure all components follow consistent design patterns
+- [x] Add missing UI components (2024-04-04)
+  - [x] Create dialog.tsx component from Shadcn UI for modal dialogs
+  - [x] Ensure proper exports for all UI components
 
 ## Next Steps
 
