@@ -119,6 +119,8 @@
   - [x] Improve vertical centering and spacing
   - [x] Remove diagnostics from home page for production readiness
   - [x] Integrate proposal list with empty state conditional display
+  - [x] Fix module import paths for shared package components
+  - [x] Add toggle for testing empty/filled proposal states
 - [ ] Create proposal creation flow
   - [x] Create NewProposalModal component with form validation
   - [x] Implement tests for the NewProposalModal component
