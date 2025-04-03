@@ -407,6 +407,22 @@
 - [x] Create comprehensive test coverage for UI components and API functions (2023-07-25)
 - [x] Implement mock authentication state for component tests (2023-07-25)
 
+## Discovered During Work (April 3)
+
+- [x] Switch from Jest to Vitest for better ESM support
+- [x] Create mock for OpenAI API calls in tests
+- [x] Remove Jest configuration files after successful switch to Vitest
+- [x] Fix `require.main === module` checks for ESM compatibility in agent files
+- [x] Fix `use client` directive issues in Next.js components
+- [x] Restructure project into a monorepo with `apps` and `packages`
+- [x] Create `packages/shared` for common types/utils
+- [x] Resolve initial linting errors (unused variables)
+- [x] Fix Tailwind CSS configuration to ensure consistent styling (2024-04-03)
+  - [x] Downgrade from Tailwind v4 to v3 for better compatibility
+  - [x] Fix PostCSS configuration to use correct plugin syntax
+  - [x] Update globals.css to use proper Tailwind directives
+  - [x] Update Next.js config to use current syntax for external packages
+
 ## Next Steps
 
 - [x] Implement a basic agent with LangGraph
