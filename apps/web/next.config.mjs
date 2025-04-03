@@ -44,8 +44,8 @@ const nextConfig = {
   // Disable strict mode temporarily for debugging
   reactStrictMode: false,
 
-  // Add proper trailing slashes to prevent path issues
-  trailingSlash: true,
+  // Remove trailing slash configuration to fix routing issues
+  // trailingSlash: true,
 
   // Enable detailed error messages
   distDir: ".next",
