@@ -95,6 +95,8 @@
   - [x] Implement ProposalCard component (2023-07-25)
   - [x] Create EmptyDashboard state component (2023-07-25)
   - [x] Enhance EmptyProposalState component with improved UI and MCP pattern
+  - [x] Implement ProposalCard component with enhanced UI, deadline tracking, and MCP pattern
+  - [x] Implement ProposalGrid component with responsive layout and MCP pattern
   - [x] Add filtering functionality for proposals (2023-07-25)
   - [x] Implement skeleton loading states (2023-07-25)
 - [x] Write comprehensive tests for dashboard components (2023-07-25)
@@ -103,6 +105,8 @@
   - [x] Test for DashboardFilters component (2023-07-25)
   - [x] Test for EmptyDashboard component (2023-07-25)
   - [x] Test for Enhanced EmptyProposalState component
+  - [x] Test for Enhanced ProposalCard with deadline tracking and status badges
+  - [x] Test for ProposalGrid component with responsive layout
   - [x] Test for Dashboard page (2023-07-25)
   - [x] Test for Header component (2023-07-25)
   - [x] Test for authentication utilities (2023-07-25)
