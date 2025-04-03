@@ -93,13 +93,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect already authenticated users from public routes to dashboard
-  // Only do this for login page, not auth callback which is also a public route
+  // Redirect already authenticated users from login page to dashboard
+  // Only do this for login page, not auth callback
   if (path === "/login" && isAuthenticated) {
-    console.log(
-      "[Middleware] Authenticated user accessing login page, redirecting to dashboard"
-    );
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Don't redirect if there are query parameters like error or recovery
+    const hasParams =
+      request.nextUrl.searchParams.has("error") ||
+      request.nextUrl.searchParams.has("recovery");
+
+    if (!hasParams) {
+      console.log(
+        "[Middleware] Authenticated user accessing login page, redirecting to dashboard"
+      );
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
   }
 
   // Allow access to root path for everyone
