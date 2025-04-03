@@ -86,6 +86,10 @@
 
 - [x] Create basic application layout (`RootLayout`, `Header`)
 - [x] Create basic Homepage (`page.tsx`)
+- [x] Create dashboard layout with sidebar navigation (2023-07-25)
+  - [x] Implement DashboardLayout component with responsive sidebar
+  - [x] Create tests for the layout component
+  - [x] Add conditional header visibility for dashboard routes
 - [x] Create proposal dashboard layout (2023-07-25)
 - [x] Design and implement proposal listing view (2023-07-25)
   - [x] Implement ProposalCard component (2023-07-25)
