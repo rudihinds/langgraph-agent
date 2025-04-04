@@ -36,13 +36,13 @@ import {
   FileText,
   DollarSign,
   Target,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -54,6 +54,7 @@ import { z } from "zod";
 export interface FunderDetailsViewProps {
   onSubmit: (data: FunderDetails) => void;
   onBack: () => void;
+  proposalType?: "rfp" | "application";
 }
 
 export interface FunderDetails {
@@ -72,19 +73,28 @@ const BUDGET_RANGES = [
   "$250,000 - $500,000",
   "$500,000 - $1 million",
   "Over $1 million",
-  "Not specified"
+  "Not specified",
 ];
 
 // Define Zod schema for validation
 const funderDetailsSchema = z.object({
-  organizationName: z.string().min(1, { message: "Organization name is required" }),
-  fundingTitle: z.string().min(1, { message: "Grant/funding opportunity title is required" }),
-  deadline: z.date().nullable().refine(val => val !== null, { 
-    message: "Submission deadline is required" 
-  }),
-  budgetRange: z.string().min(1, { message: "Budget range is required" })
+  organizationName: z
+    .string()
+    .min(1, { message: "Organization name is required" }),
+  fundingTitle: z
+    .string()
+    .min(1, { message: "Grant/funding opportunity title is required" }),
+  deadline: z
+    .date()
+    .nullable()
+    .refine((val) => val !== null, {
+      message: "Submission deadline is required",
+    }),
+  budgetRange: z
+    .string()
+    .min(1, { message: "Budget range is required" })
     .regex(/^\d+$/, { message: "Please enter numbers only" }),
-  focusArea: z.string().min(1, { message: "Primary focus area is required" })
+  focusArea: z.string().min(1, { message: "Primary focus area is required" }),
 });
 
 interface UseFunderDetailsModel {
@@ -92,13 +102,22 @@ interface UseFunderDetailsModel {
   errors: Record<string, string>;
   isSaving: boolean;
   lastSaved: Date | null;
-  handleChange: <K extends keyof FunderDetails>(field: K, value: FunderDetails[K]) => void;
+  handleChange: <K extends keyof FunderDetails>(
+    field: K,
+    value: FunderDetails[K]
+  ) => void;
   handleSubmit: () => void;
   handleBack: () => void;
   validateForm: () => boolean;
+  handleFocus: (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
 }
 
-function useFunderDetails({ onSubmit, onBack }: FunderDetailsViewProps): UseFunderDetailsModel {
+function useFunderDetails({
+  onSubmit,
+  onBack,
+}: FunderDetailsViewProps): UseFunderDetailsModel {
   const [formData, setFormData] = useState<FunderDetails>({
     organizationName: "",
     fundingTitle: "",
@@ -106,11 +125,11 @@ function useFunderDetails({ onSubmit, onBack }: FunderDetailsViewProps): UseFund
     budgetRange: "",
     focusArea: "",
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  
+
   // Load saved data from localStorage on mount
   useEffect(() => {
     const savedData = localStorage.getItem("funderDetailsData");
@@ -127,50 +146,53 @@ function useFunderDetails({ onSubmit, onBack }: FunderDetailsViewProps): UseFund
       }
     }
   }, []);
-  
+
   // Auto-save to localStorage when data changes
   useEffect(() => {
     // Don't save if all fields are empty
-    if (Object.values(formData).every(v => !v)) return;
-    
+    if (Object.values(formData).every((v) => !v)) return;
+
     const saveTimeout = setTimeout(() => {
       setIsSaving(true);
-      
+
       // Create a copy for localStorage that handles Date objects
       const dataToSave = {
         ...formData,
         // Convert Date to ISO string for storage
         deadline: formData.deadline ? formData.deadline.toISOString() : null,
       };
-      
+
       localStorage.setItem("funderDetailsData", JSON.stringify(dataToSave));
-      
+
       // Simulate a short delay to show the saving indicator
       setTimeout(() => {
         setIsSaving(false);
         setLastSaved(new Date());
       }, 600);
     }, 1000); // Debounce for 1 second
-    
+
     return () => clearTimeout(saveTimeout);
   }, [formData]);
-  
-  const handleChange = useCallback(<K extends keyof FunderDetails>(field: K, value: FunderDetails[K]) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear error for this field if it was previously set
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  }, [errors]);
-  
+
+  const handleChange = useCallback(
+    <K extends keyof FunderDetails>(field: K, value: FunderDetails[K]) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+
+      // Clear error for this field if it was previously set
+      if (errors[field]) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
+
   const validateForm = useCallback(() => {
     try {
       // Validate with Zod
@@ -181,7 +203,7 @@ function useFunderDetails({ onSubmit, onBack }: FunderDetailsViewProps): UseFund
       if (error instanceof z.ZodError) {
         // Convert Zod errors to our error format
         const newErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           const path = err.path[0] as string;
           newErrors[path] = err.message;
         });
@@ -190,17 +212,27 @@ function useFunderDetails({ onSubmit, onBack }: FunderDetailsViewProps): UseFund
       return false;
     }
   }, [formData]);
-  
+
   const handleSubmit = useCallback(() => {
     if (validateForm()) {
       onSubmit(formData);
     }
   }, [formData, validateForm, onSubmit]);
-  
+
   const handleBack = useCallback(() => {
     onBack();
   }, [onBack]);
-  
+
+  const handleFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      // Move cursor to the end of text on focus
+      const value = e.target.value;
+      e.target.value = "";
+      e.target.value = value;
+    },
+    []
+  );
+
   return {
     formData,
     errors,
@@ -210,6 +242,7 @@ function useFunderDetails({ onSubmit, onBack }: FunderDetailsViewProps): UseFund
     handleSubmit,
     handleBack,
     validateForm,
+    handleFocus,
   };
 }
 
@@ -219,9 +252,15 @@ interface FunderDetailsViewComponentProps extends FunderDetailsViewProps {
   errors: Record<string, string>;
   isSaving: boolean;
   lastSaved: Date | null;
-  handleChange: <K extends keyof FunderDetails>(field: K, value: FunderDetails[K]) => void;
+  handleChange: <K extends keyof FunderDetails>(
+    field: K,
+    value: FunderDetails[K]
+  ) => void;
   handleSubmit: () => void;
   handleBack: () => void;
+  handleFocus: (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
 }
 
 function FunderDetailsViewComponent({
@@ -232,6 +271,8 @@ function FunderDetailsViewComponent({
   handleChange,
   handleSubmit,
   handleBack,
+  handleFocus,
+  proposalType = "application",
 }: FunderDetailsViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -252,7 +293,11 @@ function FunderDetailsViewComponent({
               <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
                 2
               </div>
-              <span>Application Questions</span>
+              <span>
+                {proposalType === "rfp"
+                  ? "Upload RFP Doc"
+                  : "Application Questions"}
+              </span>
             </div>
             <div className="flex flex-col items-center">
               <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
@@ -283,9 +328,7 @@ function FunderDetailsViewComponent({
             <Card className="mb-6 border-0 shadow-md">
               <CardHeader className="pb-3 border-b bg-muted/30">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">
-                    Funding Information
-                  </CardTitle>
+                  <CardTitle className="text-xl">Funding Information</CardTitle>
                   <div className="flex items-center gap-2">
                     {isSaving && (
                       <span className="flex items-center text-xs text-muted-foreground animate-pulse">
@@ -307,24 +350,43 @@ function FunderDetailsViewComponent({
               </CardHeader>
               <CardContent className="pt-6 space-y-6 bg-white">
                 <div>
-                  <Label 
+                  <Label
                     htmlFor="organizationName"
                     className="text-base font-medium flex items-center mb-2"
                   >
                     Organization Name
                     <span className="text-destructive ml-1">*</span>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                      </PopoverTrigger>
+                      <PopoverContent side="top" className="w-80 text-sm p-3">
+                        <p>
+                          Enter the official name of the funding organization
+                          exactly as it appears in their documents. This ensures
+                          proper identification and alignment with their
+                          branding.
+                        </p>
+                      </PopoverContent>
+                    </Popover>
                   </Label>
                   <Input
                     id="organizationName"
                     value={formData.organizationName}
-                    onChange={(e) => handleChange("organizationName", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("organizationName", e.target.value)
+                    }
                     placeholder="Enter the name of the funding organization"
                     className={cn(
-                      errors.organizationName ? "border-destructive" : "border-input"
+                      errors.organizationName
+                        ? "border-destructive"
+                        : "border-input"
                     )}
                     aria-invalid={!!errors.organizationName}
-                    aria-describedby={errors.organizationName ? "org-name-error" : undefined}
+                    aria-describedby={
+                      errors.organizationName ? "org-name-error" : undefined
+                    }
+                    onFocus={handleFocus}
                   />
                   {errors.organizationName && (
                     <p
@@ -338,24 +400,43 @@ function FunderDetailsViewComponent({
                 </div>
 
                 <div>
-                  <Label 
+                  <Label
                     htmlFor="fundingTitle"
                     className="text-base font-medium flex items-center mb-2"
                   >
                     Grant/Funding Opportunity Title
                     <span className="text-destructive ml-1">*</span>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                      </PopoverTrigger>
+                      <PopoverContent side="top" className="w-80 text-sm p-3">
+                        <p>
+                          Enter the complete title of the grant or funding
+                          opportunity. Using the exact title will help ensure
+                          your proposal addresses the specific program and its
+                          requirements.
+                        </p>
+                      </PopoverContent>
+                    </Popover>
                   </Label>
                   <Input
                     id="fundingTitle"
                     value={formData.fundingTitle}
-                    onChange={(e) => handleChange("fundingTitle", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("fundingTitle", e.target.value)
+                    }
                     placeholder="Enter the title of the grant or funding opportunity"
                     className={cn(
-                      errors.fundingTitle ? "border-destructive" : "border-input"
+                      errors.fundingTitle
+                        ? "border-destructive"
+                        : "border-input"
                     )}
                     aria-invalid={!!errors.fundingTitle}
-                    aria-describedby={errors.fundingTitle ? "funding-title-error" : undefined}
+                    aria-describedby={
+                      errors.fundingTitle ? "funding-title-error" : undefined
+                    }
+                    onFocus={handleFocus}
                   />
                   {errors.fundingTitle && (
                     <p
@@ -369,13 +450,25 @@ function FunderDetailsViewComponent({
                 </div>
 
                 <div>
-                  <Label 
+                  <Label
                     htmlFor="deadline"
                     className="text-base font-medium flex items-center mb-2"
                   >
                     Submission Deadline
                     <span className="text-destructive ml-1">*</span>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                      </PopoverTrigger>
+                      <PopoverContent side="top" className="w-80 text-sm p-3">
+                        <p>
+                          Select the final date for submitting your proposal. Be
+                          sure to check if the deadline refers to a specific
+                          time zone, and plan to submit well before the deadline
+                          to avoid technical issues.
+                        </p>
+                      </PopoverContent>
+                    </Popover>
                   </Label>
                   <div className="relative">
                     <Popover>
@@ -389,14 +482,15 @@ function FunderDetailsViewComponent({
                             errors.deadline && "border-destructive"
                           )}
                           aria-invalid={!!errors.deadline}
-                          aria-describedby={errors.deadline ? "deadline-error" : undefined}
+                          aria-describedby={
+                            errors.deadline ? "deadline-error" : undefined
+                          }
+                          onFocus={handleFocus}
                         >
                           <Calendar className="mr-2 h-4 w-4" />
-                          {formData.deadline ? (
-                            format(formData.deadline, "PPP")
-                          ) : (
-                            "Select deadline date"
-                          )}
+                          {formData.deadline
+                            ? format(formData.deadline, "PPP")
+                            : "Select deadline date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -408,8 +502,9 @@ function FunderDetailsViewComponent({
                           showOutsideDays={false}
                           className="rounded-md border"
                           classNames={{
-                            day_selected: "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
-                            head_row: "hidden"
+                            day_selected:
+                              "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
+                            head_row: "hidden",
                           }}
                         />
                       </PopoverContent>
@@ -427,13 +522,25 @@ function FunderDetailsViewComponent({
                 </div>
 
                 <div>
-                  <Label 
+                  <Label
                     htmlFor="budgetRange"
                     className="text-base font-medium flex items-center mb-2"
                   >
                     Approximate Budget ($)
                     <span className="text-destructive ml-1">*</span>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                      </PopoverTrigger>
+                      <PopoverContent side="top" className="w-80 text-sm p-3">
+                        <p>
+                          Enter the total amount you're requesting in USD
+                          (numbers only). This should align with the funder's
+                          typical grant size and be realistic for your proposed
+                          activities.
+                        </p>
+                      </PopoverContent>
+                    </Popover>
                   </Label>
                   <Input
                     id="budgetRange"
@@ -441,13 +548,21 @@ function FunderDetailsViewComponent({
                     inputMode="numeric"
                     pattern="[0-9]*"
                     value={formData.budgetRange}
-                    onChange={(e) => handleChange("budgetRange", e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e) =>
+                      handleChange(
+                        "budgetRange",
+                        e.target.value.replace(/[^0-9]/g, "")
+                      )
+                    }
                     placeholder="Enter budget amount (numbers only)"
                     className={cn(
                       errors.budgetRange ? "border-destructive" : "border-input"
                     )}
                     aria-invalid={!!errors.budgetRange}
-                    aria-describedby={errors.budgetRange ? "budget-error" : undefined}
+                    aria-describedby={
+                      errors.budgetRange ? "budget-error" : undefined
+                    }
+                    onFocus={handleFocus}
                   />
                   {errors.budgetRange && (
                     <p
@@ -461,13 +576,25 @@ function FunderDetailsViewComponent({
                 </div>
 
                 <div>
-                  <Label 
+                  <Label
                     htmlFor="focusArea"
                     className="text-base font-medium flex items-center mb-2"
                   >
                     Primary Focus Area
                     <span className="text-destructive ml-1">*</span>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                      </PopoverTrigger>
+                      <PopoverContent side="top" className="w-80 text-sm p-3">
+                        <p>
+                          Enter the main category or field that your proposal
+                          addresses (e.g., "Education", "Climate Action",
+                          "Public Health"). This helps tailor your proposal to
+                          align with the funder's priorities.
+                        </p>
+                      </PopoverContent>
+                    </Popover>
                   </Label>
                   <Input
                     id="focusArea"
@@ -478,7 +605,10 @@ function FunderDetailsViewComponent({
                       errors.focusArea ? "border-destructive" : "border-input"
                     )}
                     aria-invalid={!!errors.focusArea}
-                    aria-describedby={errors.focusArea ? "focus-area-error" : undefined}
+                    aria-describedby={
+                      errors.focusArea ? "focus-area-error" : undefined
+                    }
+                    onFocus={handleFocus}
                   />
                   {errors.focusArea && (
                     <p
@@ -509,11 +639,10 @@ function FunderDetailsViewComponent({
                   <CheckItem>
                     Include the exact title of the grant or funding opportunity
                   </CheckItem>
+                  <CheckItem>Double-check the submission deadline</CheckItem>
                   <CheckItem>
-                    Double-check the submission deadline
-                  </CheckItem>
-                  <CheckItem>
-                    The focus area helps tailor your proposal to the funder's priorities
+                    The focus area helps tailor your proposal to the funder's
+                    priorities
                   </CheckItem>
                 </ul>
               </CardContent>

@@ -92,6 +92,11 @@ interface UseApplicationQuestionsModel {
   processBulkImport: () => void;
   togglePanel: (id: string) => void;
   questionRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  handleFocus: (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
+  ) => void;
 }
 
 const QUESTION_CATEGORIES = [
@@ -348,6 +353,25 @@ function useApplicationQuestions({
     setActivePanel((prev) => (prev === id ? null : id));
   }, []);
 
+  const handleFocus = useCallback(
+    (
+      e: React.FocusEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+      >
+    ) => {
+      // Move cursor to the end of text on focus if it's an input or textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        const value = e.target.value;
+        e.target.value = "";
+        e.target.value = value;
+      }
+    },
+    []
+  );
+
   return {
     questions,
     errors,
@@ -370,6 +394,7 @@ function useApplicationQuestions({
     processBulkImport,
     togglePanel,
     questionRefs,
+    handleFocus,
   };
 }
 
@@ -396,6 +421,11 @@ interface ApplicationQuestionsViewComponentProps
   processBulkImport: () => void;
   togglePanel: (id: string) => void;
   questionRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  handleFocus: (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
+  ) => void;
 }
 
 function ApplicationQuestionsViewComponent({
@@ -419,6 +449,7 @@ function ApplicationQuestionsViewComponent({
   processBulkImport,
   togglePanel,
   questionRefs,
+  handleFocus,
 }: ApplicationQuestionsViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -585,6 +616,7 @@ function ApplicationQuestionsViewComponent({
                             ? `question-error-${question.id}`
                             : undefined
                         }
+                        onFocus={handleFocus}
                       />
                       {errors[question.id] && (
                         <p
@@ -653,6 +685,7 @@ function ApplicationQuestionsViewComponent({
                                       : null,
                                   })
                                 }
+                                onFocus={handleFocus}
                               />
                             </div>
                             <div>
@@ -680,6 +713,7 @@ function ApplicationQuestionsViewComponent({
                                       : null,
                                   })
                                 }
+                                onFocus={handleFocus}
                               />
                             </div>
                           </div>
@@ -792,6 +826,7 @@ function ApplicationQuestionsViewComponent({
               placeholder="What is your organization's mission?&#10;Describe your project goals.&#10;What is your proposed budget?"
               className="min-h-[300px]"
               aria-label="Questions"
+              onFocus={handleFocus}
             />
           </div>
 

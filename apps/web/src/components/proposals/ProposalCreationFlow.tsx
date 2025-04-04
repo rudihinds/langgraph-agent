@@ -182,7 +182,13 @@ function ProposalCreationFlowView({
 }: ProposalCreationFlowViewProps) {
   // First step is now Funder Details for both proposal types
   if (currentStep === 1) {
-    return <FunderDetailsView onSubmit={handleNext} onBack={handleBack} />;
+    return (
+      <FunderDetailsView
+        onSubmit={handleNext}
+        onBack={handleBack}
+        proposalType={proposalType}
+      />
+    );
   }
 
   // Second step depends on proposal type

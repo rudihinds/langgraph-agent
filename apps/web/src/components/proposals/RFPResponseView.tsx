@@ -74,6 +74,11 @@ interface UseRFPResponseModel {
   openConfirmClear: () => void;
   closeConfirmClear: () => void;
   confirmClear: () => void;
+  handleFocus: (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
+  ) => void;
 }
 
 function useRFPResponse({
@@ -215,6 +220,25 @@ function useRFPResponse({
     closeConfirmClear();
   }, [closeConfirmClear]);
 
+  const handleFocus = useCallback(
+    (
+      e: React.FocusEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+      >
+    ) => {
+      // Move cursor to the end of text on focus if it's an input or textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        const value = e.target.value;
+        e.target.value = "";
+        e.target.value = value;
+      }
+    },
+    []
+  );
+
   return {
     rfpUrl,
     rfpText,
@@ -236,6 +260,7 @@ function useRFPResponse({
     openConfirmClear,
     closeConfirmClear,
     confirmClear,
+    handleFocus,
   };
 }
 
@@ -260,6 +285,11 @@ interface RFPResponseViewComponentProps extends RFPResponseViewProps {
   openConfirmClear: () => void;
   closeConfirmClear: () => void;
   confirmClear: () => void;
+  handleFocus: (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
+  ) => void;
 }
 
 function RFPResponseViewComponent({
@@ -282,6 +312,7 @@ function RFPResponseViewComponent({
   openConfirmClear,
   closeConfirmClear,
   confirmClear,
+  handleFocus,
 }: RFPResponseViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -387,6 +418,7 @@ function RFPResponseViewComponent({
                     aria-describedby={
                       errors.companyName ? "company-name-error" : undefined
                     }
+                    onFocus={handleFocus}
                   />
                   {errors.companyName && (
                     <p
@@ -424,6 +456,7 @@ function RFPResponseViewComponent({
                     value={rfpUrl}
                     onChange={(e) => setRfpUrl(e.target.value)}
                     placeholder="https://example.com/rfp-document"
+                    onFocus={handleFocus}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
                     If the RFP is available online, enter the URL here
@@ -468,6 +501,7 @@ function RFPResponseViewComponent({
                       accept=".txt,.pdf,.doc,.docx"
                       onChange={handleFileUpload}
                       className="hidden"
+                      onFocus={handleFocus}
                     />
 
                     {fileName && (
@@ -482,6 +516,7 @@ function RFPResponseViewComponent({
                           onClick={handleRemoveFile}
                           className="w-6 h-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
                           aria-label="Remove file"
+                          onFocus={handleFocus}
                         >
                           <Trash className="h-3.5 w-3.5" />
                         </Button>
@@ -517,6 +552,7 @@ function RFPResponseViewComponent({
                         aria-describedby={
                           errors.rfpSource ? "rfp-source-error" : undefined
                         }
+                        onFocus={handleFocus}
                       />
 
                       {rfpText && (
@@ -526,6 +562,7 @@ function RFPResponseViewComponent({
                           onClick={openConfirmClear}
                           className="absolute w-6 h-6 p-0 rounded-full top-2 right-2 opacity-70 hover:opacity-100"
                           aria-label="Clear text"
+                          onFocus={handleFocus}
                         >
                           <Trash className="h-3.5 w-3.5" />
                         </Button>
