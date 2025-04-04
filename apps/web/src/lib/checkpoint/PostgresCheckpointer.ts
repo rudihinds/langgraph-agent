@@ -1,1 +1,2 @@
-import { PostgresCheckpointer as SharedPostgresCheckpointer } from "@proposal-writer/shared/checkpoint/PostgresCheckpointer"; export const PostgresCheckpointer = SharedPostgresCheckpointer;
+import { PostgresCheckpointer as SharedPostgresCheckpointer } from "@shared/checkpoint/PostgresCheckpointer";
+export const PostgresCheckpointer = SharedPostgresCheckpointer;

@@ -1,1 +1,5 @@
-import { deserializeState, serializeState } from "@proposal-writer/shared/checkpoint/serializers"; export { deserializeState, serializeState };
+import {
+  deserializeState,
+  serializeState,
+} from "@shared/checkpoint/serializers";
+export { deserializeState, serializeState };

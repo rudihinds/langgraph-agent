@@ -1,13 +1,40 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as PopoverPrimitive from "@radix-ui/react-popover"
+import * as React from "react";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-const Popover = PopoverPrimitive.Root
+const Popover = PopoverPrimitive.Root;
 
-const PopoverTrigger = PopoverPrimitive.Trigger
+const PopoverTrigger = PopoverPrimitive.Trigger;
+
+// Custom Popover with auto-close functionality
+const AutoClosePopover = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>
+>((props, ref) => {
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleCloseEvent = () => setOpen(false);
+    document.addEventListener("close-popover", handleCloseEvent);
+
+    return () => {
+      document.removeEventListener("close-popover", handleCloseEvent);
+    };
+  }, []);
+
+  return (
+    <PopoverPrimitive.Root
+      {...props}
+      ref={ref}
+      open={open}
+      onOpenChange={setOpen}
+    />
+  );
+});
+AutoClosePopover.displayName = "AutoClosePopover";
 
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
@@ -25,7 +52,7 @@ const PopoverContent = React.forwardRef<
       {...props}
     />
   </PopoverPrimitive.Portal>
-))
-PopoverContent.displayName = PopoverPrimitive.Content.displayName
+));
+PopoverContent.displayName = PopoverPrimitive.Content.displayName;
 
-export { Popover, PopoverTrigger, PopoverContent }
+export { Popover, PopoverTrigger, PopoverContent, AutoClosePopover };

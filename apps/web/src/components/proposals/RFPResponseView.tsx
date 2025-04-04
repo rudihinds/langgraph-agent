@@ -42,6 +42,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // MODEL
 export interface RFPResponseViewProps {
@@ -231,9 +237,14 @@ function useRFPResponse({
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       ) {
-        const value = e.target.value;
-        e.target.value = "";
-        e.target.value = value;
+        const target = e.target;
+        const length = target.value.length;
+
+        // Use setTimeout to ensure this happens after the default focus behavior
+        setTimeout(() => {
+          target.selectionStart = length;
+          target.selectionEnd = length;
+        }, 0);
       }
     },
     []
@@ -315,338 +326,365 @@ function RFPResponseViewComponent({
   handleFocus,
 }: RFPResponseViewComponentProps) {
   return (
-    <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
-      {/* Progress steps */}
-      <div className="mb-8">
-        <div className="relative">
-          <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
-            <div className="flex flex-col justify-center w-2/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full bg-primary/10">
-                <Check className="w-3 h-3 text-primary" />
-              </div>
-              <span>Funder Details</span>
+    <TooltipProvider>
+      <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
+        {/* Progress steps */}
+        <div className="mb-8">
+          <div className="relative">
+            <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
+              <div className="flex flex-col justify-center w-2/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
             </div>
-            <div className="flex flex-col items-center font-medium text-primary">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
-                2
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex flex-col items-center font-medium text-muted">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 text-primary border-2 rounded-full border-primary bg-muted/30">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <span>Funder Details</span>
               </div>
-              <span>Upload RFP Doc</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                3
+              <div className="flex flex-col items-center font-medium text-primary">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
+                  2
+                </div>
+                <span>Upload RFP Doc</span>
               </div>
-              <span>Review & Create</span>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
+                  3
+                </div>
+                <span>Review & Create</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="lg:w-3/4">
-          <div className="mb-6">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight">
-              RFP Response
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Enter the details from the Request for Proposal (RFP) document to
-              analyze and create your response.
-            </p>
-          </div>
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="lg:w-3/4">
+            <div className="mb-6">
+              <h1 className="mb-2 text-3xl font-bold tracking-tight">
+                RFP Response
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Enter the details from the Request for Proposal (RFP) document
+                to analyze and create your response.
+              </p>
+            </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="mb-6 border-0 shadow-md">
-              <CardHeader className="pb-3 border-b bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Upload RFP Doc</CardTitle>
-                  <div className="flex items-center gap-2">
-                    {isSaving && (
-                      <span className="flex items-center text-xs text-muted-foreground animate-pulse">
-                        <Save className="w-3 h-3 mr-1" />
-                        Saving...
-                      </span>
-                    )}
-                    {!isSaving && lastSaved && (
-                      <span className="flex items-center text-xs text-muted-foreground">
-                        <Check className="w-3 h-3 mr-1 text-green-500" />
-                        Saved {lastSaved.toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <CardDescription>
-                  Provide the information from the RFP document you received
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6 bg-white">
-                <div>
-                  <Label
-                    htmlFor="companyName"
-                    className="flex items-center mb-2 text-base font-medium"
-                  >
-                    Company or Organization Name
-                    <span className="ml-1 text-destructive">*</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="p-3 text-sm w-80">
-                        <p>
-                          Enter the full official name of the organization
-                          issuing the RFP. This helps tailor the response to the
-                          specific company's needs and industry context.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <Input
-                    id="companyName"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Enter the name of the company or organization issuing the RFP"
-                    className={cn(
-                      errors.companyName ? "border-destructive" : "border-input"
-                    )}
-                    aria-invalid={!!errors.companyName}
-                    aria-describedby={
-                      errors.companyName ? "company-name-error" : undefined
-                    }
-                    onFocus={handleFocus}
-                  />
-                  {errors.companyName && (
-                    <p
-                      id="company-name-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.companyName}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="rfpUrl"
-                    className="flex items-center mb-2 text-base font-medium"
-                  >
-                    RFP URL (Optional)
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="p-3 text-sm w-80">
-                        <p>
-                          If the RFP is available online, provide the direct
-                          link to the document. This allows the system to access
-                          the most up-to-date version of the RFP.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <Input
-                    id="rfpUrl"
-                    type="url"
-                    value={rfpUrl}
-                    onChange={(e) => setRfpUrl(e.target.value)}
-                    placeholder="https://example.com/rfp-document"
-                    onFocus={handleFocus}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    If the RFP is available online, enter the URL here
-                  </p>
-                </div>
-
-                <div className="relative">
-                  <Label
-                    htmlFor="rfpText"
-                    className="flex items-center mb-2 text-base font-medium"
-                  >
-                    RFP Document Text
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="p-3 text-sm w-80">
-                        <p>
-                          Copy and paste the content of the RFP document or
-                          upload a file. Include all sections, requirements, and
-                          evaluation criteria for the most comprehensive
-                          analysis.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-
-                  <div className="flex items-center gap-2 mb-2">
-                    <label
-                      htmlFor="file-upload"
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background",
-                        "hover:bg-muted cursor-pointer"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="mb-6 border-0 shadow-md">
+                <CardHeader className="pb-3 border-b bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Upload RFP Doc</CardTitle>
+                    <div className="flex items-center gap-2">
+                      {isSaving && (
+                        <span className="flex items-center text-xs text-muted-foreground animate-pulse">
+                          <Save className="w-3 h-3 mr-1" />
+                          Saving...
+                        </span>
                       )}
+                      {!isSaving && lastSaved && (
+                        <span className="flex items-center text-xs text-muted-foreground">
+                          <Check className="w-3 h-3 mr-1 text-green-500" />
+                          Saved {lastSaved.toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <CardDescription>
+                    Provide the information from the RFP document you received
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6 bg-white">
+                  <div>
+                    <Label
+                      htmlFor="companyName"
+                      className="flex items-center mb-2 text-base font-medium"
                     >
-                      <Upload className="w-4 h-4" />
-                      Upload RFP File
-                    </label>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      accept=".txt,.pdf,.doc,.docx"
-                      onChange={handleFileUpload}
-                      className="hidden"
+                      Company or Organization Name
+                      <span className="ml-1 text-destructive">*</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="p-3 text-sm w-80"
+                          >
+                            <p>
+                              Enter the full official name of the organization
+                              issuing the RFP. This helps tailor the response to
+                              the specific company's needs and industry context.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
+                    <Input
+                      id="companyName"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Enter the name of the company or organization issuing the RFP"
+                      className={cn(
+                        errors.companyName
+                          ? "border-destructive"
+                          : "border-input"
+                      )}
+                      aria-invalid={!!errors.companyName}
+                      aria-describedby={
+                        errors.companyName ? "company-name-error" : undefined
+                      }
                       onFocus={handleFocus}
                     />
-
-                    {fileName && (
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-muted-foreground truncate max-w-[200px]">
-                          {fileName}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleRemoveFile}
-                          className="w-6 h-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
-                          aria-label="Remove file"
-                          onFocus={handleFocus}
-                        >
-                          <Trash className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                    {errors.companyName && (
+                      <p
+                        id="company-name-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.companyName}
+                      </p>
                     )}
                   </div>
 
-                  {isUploading ? (
-                    <div className="min-h-[300px] border rounded-md p-4 flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="animate-pulse">
-                          <File className="w-12 h-12 text-muted-foreground" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Processing file...
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <Textarea
-                        id="rfpText"
-                        value={rfpText}
-                        onChange={(e) => setRfpText(e.target.value)}
-                        placeholder="Paste the content of the RFP document here..."
+                  <div>
+                    <Label
+                      htmlFor="rfpUrl"
+                      className="flex items-center mb-2 text-base font-medium"
+                    >
+                      RFP URL (Optional)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="p-3 text-sm w-80"
+                          >
+                            <p>
+                              If the RFP is available online, provide the direct
+                              link to the document. This allows the system to
+                              access the most up-to-date version of the RFP.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
+                    <Input
+                      id="rfpUrl"
+                      type="url"
+                      value={rfpUrl}
+                      onChange={(e) => setRfpUrl(e.target.value)}
+                      placeholder="https://example.com/rfp-document"
+                      onFocus={handleFocus}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      If the RFP is available online, enter the URL here
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <Label
+                      htmlFor="rfpText"
+                      className="flex items-center mb-2 text-base font-medium"
+                    >
+                      RFP Document Text
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="p-3 text-sm w-80"
+                          >
+                            <p>
+                              Copy and paste the content of the RFP document or
+                              upload a file. Include all sections, requirements,
+                              and evaluation criteria for the most comprehensive
+                              analysis.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <label
+                        htmlFor="file-upload"
                         className={cn(
-                          "min-h-[300px]",
-                          errors.rfpSource
-                            ? "border-destructive"
-                            : "border-input"
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background",
+                          "hover:bg-muted cursor-pointer"
                         )}
-                        aria-invalid={!!errors.rfpSource}
-                        aria-describedby={
-                          errors.rfpSource ? "rfp-source-error" : undefined
-                        }
+                      >
+                        <Upload className="w-4 h-4" />
+                        Upload RFP File
+                      </label>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept=".txt,.pdf,.doc,.docx"
+                        onChange={handleFileUpload}
+                        className="hidden"
                         onFocus={handleFocus}
                       />
 
-                      {rfpText && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={openConfirmClear}
-                          className="absolute w-6 h-6 p-0 rounded-full top-2 right-2 opacity-70 hover:opacity-100"
-                          aria-label="Clear text"
-                          onFocus={handleFocus}
-                        >
-                          <Trash className="h-3.5 w-3.5" />
-                        </Button>
+                      {fileName && (
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground truncate max-w-[200px]">
+                            {fileName}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleRemoveFile}
+                            className="w-6 h-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Remove file"
+                            onFocus={handleFocus}
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       )}
                     </div>
-                  )}
 
-                  {errors.rfpSource && (
-                    <p
-                      id="rfp-source-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.rfpSource}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+                    {isUploading ? (
+                      <div className="min-h-[300px] border rounded-md p-4 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="animate-pulse">
+                            <File className="w-12 h-12 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Processing file...
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Textarea
+                          id="rfpText"
+                          value={rfpText}
+                          onChange={(e) => setRfpText(e.target.value)}
+                          placeholder="Paste the content of the RFP document here..."
+                          className={cn(
+                            "min-h-[300px]",
+                            errors.rfpSource
+                              ? "border-destructive"
+                              : "border-input"
+                          )}
+                          aria-invalid={!!errors.rfpSource}
+                          aria-describedby={
+                            errors.rfpSource ? "rfp-source-error" : undefined
+                          }
+                          onFocus={handleFocus}
+                        />
 
-        <div className="lg:w-1/4">
-          <div className="sticky space-y-6 top-8">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Help & Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <ul className="space-y-2.5">
-                  <CheckItem>
-                    Enter the exact name of the organization issuing the RFP
-                  </CheckItem>
-                  <CheckItem>
-                    Upload the RFP document or paste the content directly
-                  </CheckItem>
-                  <CheckItem>
-                    Include evaluation criteria and requirements sections
-                  </CheckItem>
-                  <CheckItem>
-                    If available, include the URL to the original RFP
-                  </CheckItem>
-                </ul>
-              </CardContent>
-            </Card>
+                        {rfpText && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={openConfirmClear}
+                            className="absolute w-6 h-6 p-0 rounded-full top-2 right-2 opacity-70 hover:opacity-100"
+                            aria-label="Clear text"
+                            onFocus={handleFocus}
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
 
-            <div className="flex flex-col pt-4 space-y-3">
-              <Button onClick={handleSubmit} size="lg" className="w-full">
-                Continue
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                size="lg"
-                className="w-full"
-              >
-                Back
-              </Button>
+                    {errors.rfpSource && (
+                      <p
+                        id="rfp-source-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.rfpSource}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          <div className="lg:w-1/4">
+            <div className="sticky space-y-6 top-8">
+              <Card className="border-0 shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Help & Tips</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  <ul className="space-y-2.5">
+                    <CheckItem>
+                      Enter the exact name of the organization issuing the RFP
+                    </CheckItem>
+                    <CheckItem>
+                      Upload the RFP document or paste the content directly
+                    </CheckItem>
+                    <CheckItem>
+                      Include evaluation criteria and requirements sections
+                    </CheckItem>
+                    <CheckItem>
+                      If available, include the URL to the original RFP
+                    </CheckItem>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <div className="flex flex-col pt-4 space-y-3">
+                <Button onClick={handleSubmit} size="lg" className="w-full">
+                  Continue
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  size="lg"
+                  className="w-full"
+                >
+                  Back
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Confirm Clear Dialog */}
-      <Dialog open={confirmClearOpen} onOpenChange={closeConfirmClear}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Clear RFP Text?</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to clear the RFP text? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-end">
-            <Button type="button" variant="outline" onClick={closeConfirmClear}>
-              Cancel
-            </Button>
-            <Button type="button" variant="destructive" onClick={confirmClear}>
-              Clear Text
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {/* Confirm Clear Dialog */}
+        <Dialog open={confirmClearOpen} onOpenChange={closeConfirmClear}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Clear RFP Text?</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to clear the RFP text? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeConfirmClear}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmClear}
+              >
+                Clear Text
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }
 

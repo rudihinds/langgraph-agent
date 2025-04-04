@@ -39,9 +39,16 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  AutoClosePopover,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -226,9 +233,14 @@ function useFunderDetails({
   const handleFocus = useCallback(
     (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       // Move cursor to the end of text on focus
-      const value = e.target.value;
-      e.target.value = "";
-      e.target.value = value;
+      const target = e.target;
+      const length = target.value.length;
+
+      // Use setTimeout to ensure this happens after the default focus behavior
+      setTimeout(() => {
+        target.selectionStart = length;
+        target.selectionEnd = length;
+      }, 0);
     },
     []
   );
@@ -275,396 +287,414 @@ function FunderDetailsViewComponent({
   proposalType = "application",
 }: FunderDetailsViewComponentProps) {
   return (
-    <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
-      {/* Progress steps */}
-      <div className="mb-8">
-        <div className="relative">
-          <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
-            <div className="flex flex-col justify-center w-1/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
+    <TooltipProvider>
+      <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
+        {/* Progress steps */}
+        <div className="mb-8">
+          <div className="relative">
+            <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
+              <div className="flex flex-col justify-center w-1/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex flex-col items-center font-medium text-primary">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
+                  1
+                </div>
+                <span>Funder Details</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
+                  2
+                </div>
+                <span>
+                  {proposalType === "rfp"
+                    ? "Upload RFP Doc"
+                    : "Application Questions"}
+                </span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
+                  3
+                </div>
+                <span>Review & Create</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <div className="flex flex-col items-center font-medium text-primary">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
-                1
-              </div>
-              <span>Funder Details</span>
+        </div>
+
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="lg:w-3/4">
+            <div className="mb-6">
+              <h1 className="mb-2 text-3xl font-bold tracking-tight">
+                Funder Details
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Enter information about the funding organization and
+                opportunity.
+              </p>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                2
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="mb-6 border-0 shadow-md">
+                <CardHeader className="pb-3 border-b bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">
+                      Funding Information
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {isSaving && (
+                        <span className="flex items-center text-xs text-muted-foreground animate-pulse">
+                          <Save className="w-3 h-3 mr-1" />
+                          Saving...
+                        </span>
+                      )}
+                      {!isSaving && lastSaved && (
+                        <span className="flex items-center text-xs text-muted-foreground">
+                          <Check className="w-3 h-3 mr-1 text-green-500" />
+                          Saved {lastSaved.toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <CardDescription>
+                    Enter the details of the funder and the grant opportunity
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6 bg-white">
+                  <div>
+                    <Label
+                      htmlFor="organizationName"
+                      className="text-base font-medium flex items-center mb-2"
+                    >
+                      Organization Name
+                      <span className="text-destructive ml-1">*</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
+                          <p>
+                            Enter the official name of the funding organization
+                            exactly as it appears in their documents. This
+                            ensures proper identification and alignment with
+                            their branding.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      id="organizationName"
+                      value={formData.organizationName}
+                      onChange={(e) =>
+                        handleChange("organizationName", e.target.value)
+                      }
+                      placeholder="Enter the name of the funding organization"
+                      className={cn(
+                        errors.organizationName
+                          ? "border-destructive"
+                          : "border-input"
+                      )}
+                      aria-invalid={!!errors.organizationName}
+                      aria-describedby={
+                        errors.organizationName ? "org-name-error" : undefined
+                      }
+                      onFocus={handleFocus}
+                    />
+                    {errors.organizationName && (
+                      <p
+                        id="org-name-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.organizationName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="fundingTitle"
+                      className="text-base font-medium flex items-center mb-2"
+                    >
+                      Grant/Funding Opportunity Title
+                      <span className="text-destructive ml-1">*</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
+                          <p>
+                            Enter the complete title of the grant or funding
+                            opportunity. Using the exact title will help ensure
+                            your proposal addresses the specific program and its
+                            requirements.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      id="fundingTitle"
+                      value={formData.fundingTitle}
+                      onChange={(e) =>
+                        handleChange("fundingTitle", e.target.value)
+                      }
+                      placeholder="Enter the title of the grant or funding opportunity"
+                      className={cn(
+                        errors.fundingTitle
+                          ? "border-destructive"
+                          : "border-input"
+                      )}
+                      aria-invalid={!!errors.fundingTitle}
+                      aria-describedby={
+                        errors.fundingTitle ? "funding-title-error" : undefined
+                      }
+                      onFocus={handleFocus}
+                    />
+                    {errors.fundingTitle && (
+                      <p
+                        id="funding-title-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.fundingTitle}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="deadline"
+                      className="text-base font-medium flex items-center mb-2"
+                    >
+                      Submission Deadline
+                      <span className="text-destructive ml-1">*</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
+                          <p>
+                            Select the final date for submitting your proposal.
+                            Be sure to check if the deadline refers to a
+                            specific time zone, and plan to submit well before
+                            the deadline to avoid technical issues.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="relative">
+                      <AutoClosePopover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="deadline"
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formData.deadline && "text-muted-foreground",
+                              errors.deadline && "border-destructive"
+                            )}
+                            aria-invalid={!!errors.deadline}
+                            aria-describedby={
+                              errors.deadline ? "deadline-error" : undefined
+                            }
+                            onFocus={handleFocus}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {formData.deadline
+                              ? format(formData.deadline, "PPP")
+                              : "Select deadline date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={formData.deadline || undefined}
+                            onSelect={(date) => {
+                              handleChange("deadline", date);
+                              // Close the popover after selection
+                              const closeEvent = new CustomEvent(
+                                "close-popover"
+                              );
+                              document.dispatchEvent(closeEvent);
+                            }}
+                            initialFocus
+                            showOutsideDays={false}
+                            className="rounded-md border"
+                            classNames={{
+                              day_selected:
+                                "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
+                              head_row: "hidden",
+                              day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 data-[state=inactive]:opacity-50 cursor-pointer",
+                            }}
+                          />
+                        </PopoverContent>
+                      </AutoClosePopover>
+                    </div>
+                    {errors.deadline && (
+                      <p
+                        id="deadline-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.deadline}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="budgetRange"
+                      className="text-base font-medium flex items-center mb-2"
+                    >
+                      Approximate Budget ($)
+                      <span className="text-destructive ml-1">*</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
+                          <p>
+                            Enter the total amount you're requesting in USD
+                            (numbers only). This should align with the funder's
+                            typical grant size and be realistic for your
+                            proposed activities.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      id="budgetRange"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formData.budgetRange}
+                      onChange={(e) =>
+                        handleChange(
+                          "budgetRange",
+                          e.target.value.replace(/[^0-9]/g, "")
+                        )
+                      }
+                      placeholder="Enter budget amount (numbers only)"
+                      className={cn(
+                        errors.budgetRange
+                          ? "border-destructive"
+                          : "border-input"
+                      )}
+                      aria-invalid={!!errors.budgetRange}
+                      aria-describedby={
+                        errors.budgetRange ? "budget-error" : undefined
+                      }
+                      onFocus={handleFocus}
+                    />
+                    {errors.budgetRange && (
+                      <p
+                        id="budget-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.budgetRange}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="focusArea"
+                      className="text-base font-medium flex items-center mb-2"
+                    >
+                      Primary Focus Area
+                      <span className="text-destructive ml-1">*</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
+                          <p>
+                            Enter the main category or field that your proposal
+                            addresses (e.g., "Education", "Climate Action",
+                            "Public Health"). This helps tailor your proposal to
+                            align with the funder's priorities.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      id="focusArea"
+                      value={formData.focusArea}
+                      onChange={(e) =>
+                        handleChange("focusArea", e.target.value)
+                      }
+                      placeholder="e.g., Education, Healthcare, Climate Action"
+                      className={cn(
+                        errors.focusArea ? "border-destructive" : "border-input"
+                      )}
+                      aria-invalid={!!errors.focusArea}
+                      aria-describedby={
+                        errors.focusArea ? "focus-area-error" : undefined
+                      }
+                      onFocus={handleFocus}
+                    />
+                    {errors.focusArea && (
+                      <p
+                        id="focus-area-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.focusArea}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          <div className="lg:w-1/4">
+            <div className="sticky space-y-6 top-8">
+              <Card className="border-0 shadow-md">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Help & Tips</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  <ul className="space-y-2.5">
+                    <CheckItem>
+                      Enter the official name of the funding organization
+                    </CheckItem>
+                    <CheckItem>
+                      Include the exact title of the grant or funding
+                      opportunity
+                    </CheckItem>
+                    <CheckItem>Double-check the submission deadline</CheckItem>
+                    <CheckItem>
+                      The focus area helps tailor your proposal to the funder's
+                      priorities
+                    </CheckItem>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <div className="flex flex-col space-y-3 pt-4">
+                <Button onClick={handleSubmit} size="lg" className="w-full">
+                  Continue
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  size="lg"
+                  className="w-full"
+                >
+                  Back
+                </Button>
               </div>
-              <span>
-                {proposalType === "rfp"
-                  ? "Upload RFP Doc"
-                  : "Application Questions"}
-              </span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                3
-              </div>
-              <span>Review & Create</span>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="lg:w-3/4">
-          <div className="mb-6">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight">
-              Funder Details
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Enter information about the funding organization and opportunity.
-            </p>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="mb-6 border-0 shadow-md">
-              <CardHeader className="pb-3 border-b bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Funding Information</CardTitle>
-                  <div className="flex items-center gap-2">
-                    {isSaving && (
-                      <span className="flex items-center text-xs text-muted-foreground animate-pulse">
-                        <Save className="w-3 h-3 mr-1" />
-                        Saving...
-                      </span>
-                    )}
-                    {!isSaving && lastSaved && (
-                      <span className="flex items-center text-xs text-muted-foreground">
-                        <Check className="w-3 h-3 mr-1 text-green-500" />
-                        Saved {lastSaved.toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <CardDescription>
-                  Enter the details of the funder and the grant opportunity
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6 bg-white">
-                <div>
-                  <Label
-                    htmlFor="organizationName"
-                    className="text-base font-medium flex items-center mb-2"
-                  >
-                    Organization Name
-                    <span className="text-destructive ml-1">*</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="w-80 text-sm p-3">
-                        <p>
-                          Enter the official name of the funding organization
-                          exactly as it appears in their documents. This ensures
-                          proper identification and alignment with their
-                          branding.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <Input
-                    id="organizationName"
-                    value={formData.organizationName}
-                    onChange={(e) =>
-                      handleChange("organizationName", e.target.value)
-                    }
-                    placeholder="Enter the name of the funding organization"
-                    className={cn(
-                      errors.organizationName
-                        ? "border-destructive"
-                        : "border-input"
-                    )}
-                    aria-invalid={!!errors.organizationName}
-                    aria-describedby={
-                      errors.organizationName ? "org-name-error" : undefined
-                    }
-                    onFocus={handleFocus}
-                  />
-                  {errors.organizationName && (
-                    <p
-                      id="org-name-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.organizationName}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="fundingTitle"
-                    className="text-base font-medium flex items-center mb-2"
-                  >
-                    Grant/Funding Opportunity Title
-                    <span className="text-destructive ml-1">*</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="w-80 text-sm p-3">
-                        <p>
-                          Enter the complete title of the grant or funding
-                          opportunity. Using the exact title will help ensure
-                          your proposal addresses the specific program and its
-                          requirements.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <Input
-                    id="fundingTitle"
-                    value={formData.fundingTitle}
-                    onChange={(e) =>
-                      handleChange("fundingTitle", e.target.value)
-                    }
-                    placeholder="Enter the title of the grant or funding opportunity"
-                    className={cn(
-                      errors.fundingTitle
-                        ? "border-destructive"
-                        : "border-input"
-                    )}
-                    aria-invalid={!!errors.fundingTitle}
-                    aria-describedby={
-                      errors.fundingTitle ? "funding-title-error" : undefined
-                    }
-                    onFocus={handleFocus}
-                  />
-                  {errors.fundingTitle && (
-                    <p
-                      id="funding-title-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.fundingTitle}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="deadline"
-                    className="text-base font-medium flex items-center mb-2"
-                  >
-                    Submission Deadline
-                    <span className="text-destructive ml-1">*</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="w-80 text-sm p-3">
-                        <p>
-                          Select the final date for submitting your proposal. Be
-                          sure to check if the deadline refers to a specific
-                          time zone, and plan to submit well before the deadline
-                          to avoid technical issues.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <div className="relative">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          id="deadline"
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.deadline && "text-muted-foreground",
-                            errors.deadline && "border-destructive"
-                          )}
-                          aria-invalid={!!errors.deadline}
-                          aria-describedby={
-                            errors.deadline ? "deadline-error" : undefined
-                          }
-                          onFocus={handleFocus}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formData.deadline
-                            ? format(formData.deadline, "PPP")
-                            : "Select deadline date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={formData.deadline || undefined}
-                          onSelect={(date) => handleChange("deadline", date)}
-                          initialFocus
-                          showOutsideDays={false}
-                          className="rounded-md border"
-                          classNames={{
-                            day_selected:
-                              "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
-                            head_row: "hidden",
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  {errors.deadline && (
-                    <p
-                      id="deadline-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.deadline}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="budgetRange"
-                    className="text-base font-medium flex items-center mb-2"
-                  >
-                    Approximate Budget ($)
-                    <span className="text-destructive ml-1">*</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="w-80 text-sm p-3">
-                        <p>
-                          Enter the total amount you're requesting in USD
-                          (numbers only). This should align with the funder's
-                          typical grant size and be realistic for your proposed
-                          activities.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <Input
-                    id="budgetRange"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={formData.budgetRange}
-                    onChange={(e) =>
-                      handleChange(
-                        "budgetRange",
-                        e.target.value.replace(/[^0-9]/g, "")
-                      )
-                    }
-                    placeholder="Enter budget amount (numbers only)"
-                    className={cn(
-                      errors.budgetRange ? "border-destructive" : "border-input"
-                    )}
-                    aria-invalid={!!errors.budgetRange}
-                    aria-describedby={
-                      errors.budgetRange ? "budget-error" : undefined
-                    }
-                    onFocus={handleFocus}
-                  />
-                  {errors.budgetRange && (
-                    <p
-                      id="budget-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.budgetRange}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="focusArea"
-                    className="text-base font-medium flex items-center mb-2"
-                  >
-                    Primary Focus Area
-                    <span className="text-destructive ml-1">*</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                      </PopoverTrigger>
-                      <PopoverContent side="top" className="w-80 text-sm p-3">
-                        <p>
-                          Enter the main category or field that your proposal
-                          addresses (e.g., "Education", "Climate Action",
-                          "Public Health"). This helps tailor your proposal to
-                          align with the funder's priorities.
-                        </p>
-                      </PopoverContent>
-                    </Popover>
-                  </Label>
-                  <Input
-                    id="focusArea"
-                    value={formData.focusArea}
-                    onChange={(e) => handleChange("focusArea", e.target.value)}
-                    placeholder="e.g., Education, Healthcare, Climate Action"
-                    className={cn(
-                      errors.focusArea ? "border-destructive" : "border-input"
-                    )}
-                    aria-invalid={!!errors.focusArea}
-                    aria-describedby={
-                      errors.focusArea ? "focus-area-error" : undefined
-                    }
-                    onFocus={handleFocus}
-                  />
-                  {errors.focusArea && (
-                    <p
-                      id="focus-area-error"
-                      className="flex items-center mt-1 text-sm text-destructive"
-                    >
-                      <Info className="w-3 h-3 mr-1" />
-                      {errors.focusArea}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
-        <div className="lg:w-1/4">
-          <div className="sticky space-y-6 top-8">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Help & Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <ul className="space-y-2.5">
-                  <CheckItem>
-                    Enter the official name of the funding organization
-                  </CheckItem>
-                  <CheckItem>
-                    Include the exact title of the grant or funding opportunity
-                  </CheckItem>
-                  <CheckItem>Double-check the submission deadline</CheckItem>
-                  <CheckItem>
-                    The focus area helps tailor your proposal to the funder's
-                    priorities
-                  </CheckItem>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <div className="flex flex-col space-y-3 pt-4">
-              <Button onClick={handleSubmit} size="lg" className="w-full">
-                Continue
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                size="lg"
-                className="w-full"
-              >
-                Back
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
