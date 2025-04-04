@@ -46,9 +46,9 @@ function useNewProposalModal(props: NewProposalModalProps) {
 
   const handleSubmit = form.handleSubmit((data) => {
     // In a real implementation, we would save the proposal to the database here
-    // For now, we'll just redirect to the new proposal page
-    router.push("/proposals/new");
+    // For now, we'll just redirect to the proposal type selection
     onOpenChange(false);
+    router.push("/dashboard");
   });
 
   const handleCancel = () => {

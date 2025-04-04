@@ -1,140 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import { ProposalGrid } from "@/components/dashboard/ProposalGrid";
-
-const mockProposals = [
-  {
-    id: "1",
-    title: "Grant Application for Community Health Initiative",
-    organization: "Health Foundation",
-    status: "draft",
-    progress: 25,
-    createdAt: "2023-04-01T12:00:00Z",
-    updatedAt: "2023-04-02T12:00:00Z",
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-    phase: "research",
-  },
-  {
-    id: "2",
-    title: "RFP Response for School District Technology Upgrade",
-    organization: "Local School District",
-    status: "in_progress",
-    progress: 60,
-    createdAt: "2023-03-15T12:00:00Z",
-    updatedAt: "2023-04-01T12:00:00Z",
-    dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now (approaching)
-    phase: "writing",
-  },
-  {
-    id: "3",
-    title: "Urban Development Funding Proposal",
-    organization: "City Planning Department",
-    status: "submitted",
-    progress: 100,
-    createdAt: "2023-02-10T12:00:00Z",
-    updatedAt: "2023-03-01T12:00:00Z",
-    dueDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago (past due)
-    phase: "completed",
-  },
-  {
-    id: "4",
-    title: "Renewable Energy Research Grant",
-    organization: "Environmental Foundation",
-    status: "in_progress",
-    progress: 45,
-    createdAt: "2023-03-20T12:00:00Z",
-    updatedAt: "2023-03-25T12:00:00Z",
-    dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now (urgent)
-    phase: "research",
-  },
-  {
-    id: "5",
-    title: "Social Service Program Expansion Proposal",
-    organization: "Community Services Nonprofit",
-    status: "draft",
-    progress: 15,
-    createdAt: "2023-04-05T12:00:00Z",
-    updatedAt: "2023-04-06T12:00:00Z",
-    dueDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), // 45 days from now
-    phase: "planning",
-  },
-  {
-    id: "6",
-    title: "AI for Education Technology Development Proposal",
-    organization: "Education Innovation Fund",
-    status: "paused",
-    progress: 35,
-    createdAt: "2023-02-15T12:00:00Z",
-    updatedAt: "2023-03-10T12:00:00Z",
-    dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days from now (approaching)
-    phase: "research",
-  },
-];
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function ProposalsPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [proposals, setProposals] = useState(mockProposals);
-
-  const handleEdit = (id: string) => {
-    console.log(`Edit proposal ${id}`);
-  };
-
-  const handleDelete = (id: string) => {
-    console.log(`Delete proposal ${id}`);
-    // Simulate deletion
-    setProposals((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleExport = (id: string) => {
-    console.log(`Export proposal ${id}`);
-  };
-
-  const toggleLoading = () => {
-    setIsLoading((prev) => !prev);
-  };
-
-  const resetProposals = () => {
-    setProposals(mockProposals);
-  };
-
-  const clearProposals = () => {
-    setProposals([]);
-  };
-
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Your Proposals</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={toggleLoading}
-            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-          >
-            {isLoading ? "Show Content" : "Show Loading"}
-          </button>
-          <button
-            onClick={resetProposals}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            Reset
-          </button>
-          <button
-            onClick={clearProposals}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-          >
-            Clear All
-          </button>
+    <div className="container mx-auto py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Proposals Overview</h1>
+        
+        <div className="mb-8">
+          <p className="text-lg mb-4">
+            Welcome to the Proposals section. Here you can create, manage, and track all your proposals.
+          </p>
+          <p className="mb-4">
+            Choose one of the options below to get started.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <div className="border rounded-lg p-6 bg-card">
+            <h2 className="text-xl font-semibold mb-3">RFP Response</h2>
+            <p className="text-muted-foreground mb-4">
+              Create a proposal in response to a formal Request for Proposals (RFP)
+            </p>
+            <Button asChild>
+              <Link href="/proposals/create?type=rfp">Create RFP Response</Link>
+            </Button>
+          </div>
+          
+          <div className="border rounded-lg p-6 bg-card">
+            <h2 className="text-xl font-semibold mb-3">Application Questions</h2>
+            <p className="text-muted-foreground mb-4">
+              Answer a series of application questions for a grant or funding opportunity
+            </p>
+            <Button asChild>
+              <Link href="/proposals/create?type=application">Create Application</Link>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard">Back to Dashboard</Link>
+          </Button>
         </div>
       </div>
-
-      <ProposalGrid
-        proposals={proposals}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onExport={handleExport}
-      />
     </div>
   );
 }

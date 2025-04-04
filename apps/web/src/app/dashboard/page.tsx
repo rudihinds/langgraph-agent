@@ -134,9 +134,8 @@ export default function DashboardPage() {
   // Handle proposal type selection
   const handleTypeSelect = (type: ProposalType) => {
     setSelectedType(type);
-    // For now, we'll show the NewProposalModal for both types
-    // In a real implementation, we'd route to different forms based on the type
-    setIsProposalModalOpen(true);
+    // Redirect to the proposal creation page with the selected type
+    router.push(`/proposals/create?type=${type}`);
   };
 
   // Handle new proposal creation from modal

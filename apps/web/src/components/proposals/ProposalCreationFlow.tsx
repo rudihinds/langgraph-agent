@@ -54,8 +54,8 @@ function useProposalCreationFlow({
         title: "Success!",
         description: "Your proposal has been created successfully.",
       });
-      // Navigate to the dashboard
-      router.push("/dashboard");
+      // Navigate to the success page
+      router.push("/proposals/created");
     },
     onError: (error) => {
       toast({
