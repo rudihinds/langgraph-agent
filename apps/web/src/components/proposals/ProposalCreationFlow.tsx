@@ -119,20 +119,31 @@ function useProposalCreationFlow({
       setIsSubmitting(true);
 
       try {
+        // Map form data fields to match expected schema field names
+        const mappedFunderDetails = {
+          funderName: funderDetails.organizationName,
+          programName: funderDetails.fundingTitle,
+          deadline: funderDetails.deadline
+            ? funderDetails.deadline.toISOString()
+            : null,
+          funderType: "Unknown", // Add a default value for required field
+          budgetRange: funderDetails.budgetRange,
+          focusArea: funderDetails.focusArea,
+        };
+
         // Prepare proposal data based on type
         const proposalData = {
           title:
-            funderDetails.programName ||
-            funderDetails.funderName ||
+            funderDetails.fundingTitle ||
+            funderDetails.organizationName ||
             "Untitled Proposal",
-          description:
-            funderDetails.programDescription ||
-            funderDetails.funderDescription ||
-            "",
+          description: funderDetails.focusArea || "",
           proposal_type: proposalType,
-          funder_details: funderDetails,
+          funder_details: mappedFunderDetails,
           status: "draft",
-          deadline: funderDetails.deadline || undefined,
+          deadline: funderDetails.deadline
+            ? funderDetails.deadline.toISOString()
+            : undefined,
         };
 
         if (proposalType === "application") {
@@ -161,8 +172,6 @@ function useProposalCreationFlow({
             await uploadFile(rfpDetails.file, proposal.id);
           }
         }
-
-        // The navigation will be handled by the onSuccess callback
       } catch (error) {
         // Error handling is done in the hook's onError callback
         console.error("Error submitting proposal:", error);
