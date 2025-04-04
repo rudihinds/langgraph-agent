@@ -517,35 +517,7 @@ function RFPResponseViewComponent({
         </div>
 
         <div className="md:w-1/4">
-          <div className="sticky top-8 space-y-4">
-            <Card className="shadow-md border-0">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base">Navigation</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4 pt-0">
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="w-6 h-6 rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center mr-3">
-                      <Check className="h-3 w-3 text-primary" />
-                    </span>
-                    Funder Details
-                  </div>
-                  <div className="flex items-center px-4 py-2.5 rounded-md bg-primary/10 text-primary font-medium">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-xs">
-                      2
-                    </span>
-                    RFP Details
-                  </div>
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mr-3 text-xs">
-                      3
-                    </span>
-                    Review & Create
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="sticky top-8 space-y-6">
             <Card className="shadow-md border-0">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Help & Tips</CardTitle>
@@ -572,7 +544,7 @@ function RFPResponseViewComponent({
               </CardContent>
             </Card>
 
-            <div className="flex flex-col space-y-3 pt-2">
+            <div className="flex flex-col space-y-3 pt-4">
               <Button onClick={handleSubmit} size="lg" className="w-full">
                 Continue
               </Button>

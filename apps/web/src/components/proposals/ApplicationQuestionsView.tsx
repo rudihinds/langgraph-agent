@@ -711,35 +711,7 @@ function ApplicationQuestionsViewComponent({
         </div>
 
         <div className="lg:w-1/4">
-          <div className="sticky space-y-4 top-8">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base">Navigation</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4">
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 border-2 rounded-full bg-primary/10 border-primary">
-                      <Check className="w-3 h-3 text-primary" />
-                    </span>
-                    Funder Details
-                  </div>
-                  <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">
-                      2
-                    </span>
-                    Application Questions
-                  </div>
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">
-                      3
-                    </span>
-                    Review & Create
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="sticky space-y-6 top-8">
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Help & Tips</CardTitle>
@@ -748,25 +720,25 @@ function ApplicationQuestionsViewComponent({
                 <ul className="space-y-2.5">
                   <li className="flex items-start">
                     <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
-                    Enter each question exactly as it appears in the application
+                    Add all questions from your grant application
                   </li>
                   <li className="flex items-start">
                     <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
-                    Specify word or character limits if they exist
+                    For multiple questions, use bulk import
                   </li>
                   <li className="flex items-start">
                     <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
-                    Use categories to organize questions by section
+                    Add word limits if specified in the application
                   </li>
                   <li className="flex items-start">
                     <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
-                    Bulk import allows pasting multiple questions at once
+                    Categorize questions to improve generated responses
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col pt-2 space-y-3">
+            <div className="flex flex-col pt-4 space-y-3">
               <Button onClick={handleSubmit} size="lg" className="w-full">
                 Continue
               </Button>
