@@ -1,20 +1,3 @@
 {
-  "pages": {
-    "/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/commons.js",
-      "static/chunks/supabase-vendors.js",
-      "static/chunks/vendors-_app-pages-browser_node_modules_cookie_dist_index_js-_app-pages-browser_node_modules_-c13573.js",
-      "static/css/app/layout.css",
-      "static/chunks/app/layout.js"
-    ],
-    "/proposals/new/rfp/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/commons.js",
-      "static/chunks/vendors-_app-pages-browser_node_modules_lucide-react_dist_esm_icons_arrow-down_js-_app-pages--8465cd.js",
-      "static/chunks/app/proposals/new/rfp/page.js"
-    ]
-  }
+  "pages": {}
 }

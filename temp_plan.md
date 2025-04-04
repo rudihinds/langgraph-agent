@@ -11,7 +11,7 @@ This plan outlines the steps required to implement the API endpoint for saving n
 
 **Implementation Steps:**
 1. Write test cases for proposal data validation with expected success and failure scenarios
-2. Create a `ProposalSchema.ts` file in the `shared/types` directory with Zod schemas
+2. Create a `ProposalSchema.ts` file with Zod schemas
 3. Implement interfaces for both application-type and RFP-type proposals
 4. Add validation functions with proper error messages
 5. Test validation with edge cases (missing fields, invalid data formats)
