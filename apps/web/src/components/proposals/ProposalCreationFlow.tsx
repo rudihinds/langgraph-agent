@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ApplicationQuestionsView from "./ApplicationQuestionsView";
 import RFPResponseView from "./RFPResponseView";
 import FunderDetailsView from "./FunderDetailsView";
+import ReviewProposalView from "./ReviewProposalView";
 import { Button } from "@/components/ui/button";
 
 // MODEL
@@ -18,8 +19,12 @@ export interface ProposalCreationFlowProps {
 interface UseProposalCreationFlowModel {
   currentStep: number;
   totalSteps: number;
+  funderDetails: any;
+  applicationQuestions: string[];
+  rfpDetails: any;
   handleNext: (data: any) => void;
   handleBack: () => void;
+  handleEdit: (step: number) => void;
   handleCancel: () => void;
 }
 
@@ -29,9 +34,11 @@ function useProposalCreationFlow({
 }: ProposalCreationFlowProps): UseProposalCreationFlowModel {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<any>({});
+  const [funderDetails, setFunderDetails] = useState<any>({});
+  const [applicationQuestions, setApplicationQuestions] = useState<string[]>([]);
+  const [rfpDetails, setRfpDetails] = useState<any>({});
 
-  const totalSteps = proposalType === "rfp" ? 4 : 3;
+  const totalSteps = proposalType === "rfp" ? 3 : 3;
 
   // Set up history state handling to intercept browser back button
   useEffect(() => {
@@ -67,14 +74,23 @@ function useProposalCreationFlow({
 
   const handleNext = (data: any) => {
     // Save the data from the current step
-    setFormData((prev) => ({ ...prev, ...data }));
+    if (currentStep === 1) {
+      setFunderDetails(data);
+    } else if (currentStep === 2) {
+      if (proposalType === "application") {
+        setApplicationQuestions(data.questions || []);
+      } else {
+        setRfpDetails(data);
+      }
+    }
 
     // If this is the last step, submit the proposal
     if (currentStep === totalSteps) {
       // TODO: Save the proposal to the database
       console.log("Submitting proposal:", {
-        ...formData,
-        ...data,
+        funderDetails,
+        applicationQuestions,
+        rfpDetails,
         type: proposalType,
       });
       router.push("/dashboard");
@@ -83,14 +99,14 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the next step
     const nextStep = currentStep + 1;
-
+    
     // Push the new step to history
     window.history.pushState(
       { step: nextStep, proposalType },
       "",
       window.location.pathname
     );
-
+    
     setCurrentStep(nextStep);
   };
 
@@ -104,9 +120,20 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the previous step
     const prevStep = currentStep - 1;
-
+    
     // Use browser's history.back() to maintain proper history stack
     window.history.back();
+  };
+
+  const handleEdit = (step: number) => {
+    // Navigate directly to the specified step
+    window.history.pushState(
+      { step, proposalType },
+      "",
+      window.location.pathname
+    );
+    
+    setCurrentStep(step);
   };
 
   const handleCancel = () => {
@@ -116,8 +143,12 @@ function useProposalCreationFlow({
   return {
     currentStep,
     totalSteps,
+    funderDetails,
+    applicationQuestions,
+    rfpDetails,
     handleNext,
     handleBack,
+    handleEdit,
     handleCancel,
   };
 }
@@ -126,8 +157,12 @@ function useProposalCreationFlow({
 interface ProposalCreationFlowViewProps extends ProposalCreationFlowProps {
   currentStep: number;
   totalSteps: number;
+  funderDetails: any;
+  applicationQuestions: string[];
+  rfpDetails: any;
   handleNext: (data: any) => void;
   handleBack: () => void;
+  handleEdit: (step: number) => void;
   handleCancel: () => void;
 }
 
@@ -135,29 +170,42 @@ function ProposalCreationFlowView({
   proposalType,
   currentStep,
   totalSteps,
+  funderDetails,
+  applicationQuestions,
+  rfpDetails,
   handleNext,
   handleBack,
+  handleEdit,
   handleCancel,
 }: ProposalCreationFlowViewProps) {
   // First step is now Funder Details for both proposal types
   if (currentStep === 1) {
     return <FunderDetailsView onSubmit={handleNext} onBack={handleBack} />;
   }
-
+  
   // Second step depends on proposal type
   if (currentStep === 2) {
     if (proposalType === "application") {
-      return (
-        <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />
-      );
+      return <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />;
     }
-
+    
     if (proposalType === "rfp") {
       return <RFPResponseView onSubmit={handleNext} onBack={handleBack} />;
     }
   }
 
-  // TODO: Add other steps for the proposal creation flow
+  // Third step is review for both proposal types
+  if (currentStep === 3) {
+    return (
+      <ReviewProposalView 
+        onSubmit={handleNext} 
+        onBack={handleBack} 
+        onEdit={handleEdit}
+        funderDetails={funderDetails}
+        applicationQuestions={proposalType === "application" ? applicationQuestions : []}
+      />
+    );
+  }
 
   // Fallback for unimplemented steps
   return (
