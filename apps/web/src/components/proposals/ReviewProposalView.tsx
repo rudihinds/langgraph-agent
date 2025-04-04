@@ -35,7 +35,7 @@ export interface ReviewProposalViewProps {
   onBack: () => void;
   onEdit: (step: number) => void;
   funderDetails: FunderDetails;
-  applicationQuestions: string[];
+  applicationQuestions: string[] | { text: string; wordLimit: number | null; charLimit: number | null; category: string | null }[];
 }
 
 interface UseReviewProposalModel {
@@ -259,7 +259,9 @@ function ReviewProposalViewComponent({
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">
                           Question {index + 1}
                         </h3>
-                        <p className="font-medium">{question}</p>
+                        <p className="font-medium">
+                          {typeof question === "string" ? question : question.text}
+                        </p>
                       </div>
                     ))
                   ) : (
