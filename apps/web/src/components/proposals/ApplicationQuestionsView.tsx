@@ -91,6 +91,7 @@ interface UseApplicationQuestionsModel {
   updateBulkImportText: (text: string) => void;
   processBulkImport: () => void;
   togglePanel: (id: string) => void;
+  questionRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }
 
 const QUESTION_CATEGORIES = [
@@ -123,6 +124,7 @@ function useApplicationQuestions({
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Load saved questions from localStorage on mount
   useEffect(() => {
@@ -268,6 +270,21 @@ function useApplicationQuestions({
     });
 
     setErrors(newErrors);
+
+    // If there are errors, schedule scrolling to the first error
+    if (!isValid) {
+      // Use setTimeout to ensure the DOM has updated with the error messages
+      setTimeout(() => {
+        const firstErrorId = Object.keys(newErrors)[0];
+        if (firstErrorId && questionRefs.current[firstErrorId]) {
+          questionRefs.current[firstErrorId]?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 100);
+    }
+
     return isValid;
   }, [questions]);
 
@@ -352,6 +369,7 @@ function useApplicationQuestions({
     updateBulkImportText,
     processBulkImport,
     togglePanel,
+    questionRefs,
   };
 }
 
@@ -377,6 +395,7 @@ interface ApplicationQuestionsViewComponentProps
   updateBulkImportText: (text: string) => void;
   processBulkImport: () => void;
   togglePanel: (id: string) => void;
+  questionRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }
 
 function ApplicationQuestionsViewComponent({
@@ -399,6 +418,7 @@ function ApplicationQuestionsViewComponent({
   updateBulkImportText,
   processBulkImport,
   togglePanel,
+  questionRefs,
 }: ApplicationQuestionsViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -492,6 +512,9 @@ function ApplicationQuestionsViewComponent({
                         : "border-muted hover:border-muted-foreground/20 hover:shadow-sm"
                     )}
                     data-testid={`question-${index + 1}`}
+                    ref={(el) => {
+                      questionRefs.current[question.id] = el;
+                    }}
                   >
                     <div className="absolute flex space-x-1 transition-opacity opacity-0 right-3 top-3 group-hover:opacity-100">
                       <Button

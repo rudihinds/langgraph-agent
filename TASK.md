@@ -137,6 +137,7 @@
   - [x] Create ReviewProposalView for reviewing and submitting the proposal (2024-06-20)
   - [x] Implement consistent UI components with shared styling across all views (2024-06-20)
   - [x] Create reusable CheckItem component for consistent styling (2024-06-20)
+  - [x] Add scroll-to-error feature in ApplicationQuestionsView for improved validation UX (2024-06-22)
   - [ ] Implement API endpoint for saving new proposals
   - [ ] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction
