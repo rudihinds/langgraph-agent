@@ -46,46 +46,49 @@ interface UseReviewProposalModel {
   formattedBudget: string;
 }
 
-function useReviewProposal({ 
-  onSubmit, 
-  onBack, 
+function useReviewProposal({
+  onSubmit,
+  onBack,
   onEdit,
-  funderDetails
+  funderDetails,
 }: ReviewProposalViewProps): UseReviewProposalModel {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Format budget with commas for readability
-  const formattedBudget = funderDetails.budgetRange 
+  const formattedBudget = funderDetails.budgetRange
     ? `$${parseInt(funderDetails.budgetRange).toLocaleString()}`
     : "Not specified";
-  
+
   const handleSubmit = useCallback(() => {
     setIsSubmitting(true);
-    
+
     // Simulate submission process
     setTimeout(() => {
       onSubmit({
         funderDetails,
-        submittedAt: new Date()
+        submittedAt: new Date(),
       });
       setIsSubmitting(false);
     }, 1500);
   }, [funderDetails, onSubmit]);
-  
+
   const handleBack = useCallback(() => {
     onBack();
   }, [onBack]);
-  
-  const handleEdit = useCallback((step: number) => {
-    onEdit(step);
-  }, [onEdit]);
-  
+
+  const handleEdit = useCallback(
+    (step: number) => {
+      onEdit(step);
+    },
+    [onEdit]
+  );
+
   return {
     isSubmitting,
     handleSubmit,
     handleBack,
     handleEdit,
-    formattedBudget
+    formattedBudget,
   };
 }
 
@@ -105,7 +108,7 @@ function ReviewProposalViewComponent({
   handleSubmit,
   handleBack,
   handleEdit,
-  formattedBudget
+  formattedBudget,
 }: ReviewProposalViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -161,8 +164,8 @@ function ReviewProposalViewComponent({
                     <Building className="w-5 h-5 mr-2" />
                     Funder Details
                   </CardTitle>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="flex items-center gap-1"
                     onClick={() => handleEdit(1)}
@@ -175,32 +178,49 @@ function ReviewProposalViewComponent({
               <CardContent className="pt-6 bg-white divide-y">
                 <div className="grid grid-cols-1 gap-4 py-3 md:grid-cols-2">
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Organization Name</h3>
-                    <p className="font-medium">{funderDetails.organizationName}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Grant/Funding Title</h3>
-                    <p className="font-medium">{funderDetails.fundingTitle}</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4 py-3 md:grid-cols-3">
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Submission Deadline</h3>
-                    <p className="font-medium flex items-center">
-                      <Calendar className="w-4 h-4 mr-1 text-muted-foreground" />
-                      {funderDetails.deadline ? format(new Date(funderDetails.deadline), "MMMM d, yyyy") : "Not specified"}
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Organization Name
+                    </h3>
+                    <p className="font-medium">
+                      {funderDetails.organizationName}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Approximate Budget</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Grant/Funding Title
+                    </h3>
+                    <p className="font-medium">{funderDetails.fundingTitle}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 py-3 md:grid-cols-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Submission Deadline
+                    </h3>
+                    <p className="font-medium flex items-center">
+                      <Calendar className="w-4 h-4 mr-1 text-muted-foreground" />
+                      {funderDetails.deadline
+                        ? format(
+                            new Date(funderDetails.deadline),
+                            "MMMM d, yyyy"
+                          )
+                        : "Not specified"}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Approximate Budget
+                    </h3>
                     <p className="font-medium flex items-center">
                       <DollarSign className="w-4 h-4 mr-1 text-muted-foreground" />
                       {formattedBudget}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Primary Focus Area</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Primary Focus Area
+                    </h3>
                     <p className="font-medium flex items-center">
                       <Target className="w-4 h-4 mr-1 text-muted-foreground" />
                       {funderDetails.focusArea}
@@ -217,8 +237,8 @@ function ReviewProposalViewComponent({
                     <FileText className="w-5 h-5 mr-2" />
                     Application Questions
                   </CardTitle>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="flex items-center gap-1"
                     onClick={() => handleEdit(2)}
@@ -232,8 +252,13 @@ function ReviewProposalViewComponent({
                 <div className="space-y-4">
                   {applicationQuestions && applicationQuestions.length > 0 ? (
                     applicationQuestions.map((question, index) => (
-                      <div key={index} className="border-b pb-3 last:border-b-0 last:pb-0">
-                        <h3 className="text-sm font-medium text-muted-foreground mb-1">Question {index + 1}</h3>
+                      <div
+                        key={index}
+                        className="border-b pb-3 last:border-b-0 last:pb-0"
+                      >
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Question {index + 1}
+                        </h3>
                         <p className="font-medium">{question}</p>
                       </div>
                     ))
@@ -250,41 +275,16 @@ function ReviewProposalViewComponent({
         </div>
 
         <div className="lg:w-1/4">
-          <div className="sticky space-y-4 top-8">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base">Navigation</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4">
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 border-2 rounded-full bg-primary/10 border-primary">
-                      <Check className="w-3 h-3 text-primary" />
-                    </span>
-                    Funder Details
-                  </div>
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 border-2 rounded-full bg-primary/10 border-primary">
-                      <Check className="w-3 h-3 text-primary" />
-                    </span>
-                    Application Questions
-                  </div>
-                  <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">
-                      3
-                    </span>
-                    Review & Create
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="sticky space-y-6 top-8">
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Final Steps</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                <p className="mb-4">Please review all information carefully before submitting your proposal. Once submitted:</p>
+                <p className="mb-4">
+                  Please review all information carefully before submitting your
+                  proposal. Once submitted:
+                </p>
                 <ul className="space-y-2.5">
                   <li className="flex items-start">
                     <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
@@ -302,11 +302,11 @@ function ReviewProposalViewComponent({
               </CardContent>
             </Card>
 
-            <div className="flex flex-col space-y-3 pt-2">
-              <Button 
-                onClick={handleSubmit} 
+            <div className="flex flex-col space-y-3 pt-4">
+              <Button
+                onClick={handleSubmit}
                 disabled={isSubmitting}
-                size="lg" 
+                size="lg"
                 className="w-full"
               >
                 {isSubmitting ? (
