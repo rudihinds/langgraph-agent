@@ -334,7 +334,7 @@ function RFPResponseViewComponent({
             <Card className="mb-6 border-0 shadow-md">
               <CardHeader className="pb-3 border-b bg-muted/30">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">RFP Details</CardTitle>
+                  <CardTitle className="text-xl">Upload RFP Doc</CardTitle>
                   <div className="flex items-center gap-2">
                     {isSaving && (
                       <span className="flex items-center text-xs text-muted-foreground animate-pulse">
