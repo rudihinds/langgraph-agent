@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { CheckItem } from "@/components/ui/check-item";
 import { z } from "zod";
 
 // MODEL
@@ -502,22 +503,18 @@ function FunderDetailsViewComponent({
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <ul className="space-y-2.5">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  <CheckItem>
                     Enter the official name of the funding organization
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     Include the exact title of the grant or funding opportunity
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     Double-check the submission deadline
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     The focus area helps tailor your proposal to the funder's priorities
-                  </li>
+                  </CheckItem>
                 </ul>
               </CardContent>
             </Card>

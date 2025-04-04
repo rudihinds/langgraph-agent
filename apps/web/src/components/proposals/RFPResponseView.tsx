@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { CheckItem } from "@/components/ui/check-item";
 
 // MODEL
 export interface RFPResponseViewProps {
@@ -525,22 +526,18 @@ function RFPResponseViewComponent({
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <ul className="space-y-2.5">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  <CheckItem>
                     Enter the exact name of the organization issuing the RFP
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     Upload the RFP document or paste the content directly
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     Include as much detail as possible for better results
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     If available, include the URL to the original RFP
-                  </li>
+                  </CheckItem>
                 </ul>
               </CardContent>
             </Card>

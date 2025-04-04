@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { FunderDetails } from "./FunderDetailsView";
+import { CheckItem } from "@/components/ui/check-item";
 import { z } from "zod";
 
 // MODEL
@@ -35,7 +36,14 @@ export interface ReviewProposalViewProps {
   onBack: () => void;
   onEdit: (step: number) => void;
   funderDetails: FunderDetails;
-  applicationQuestions: string[] | { text: string; wordLimit: number | null; charLimit: number | null; category: string | null }[];
+  applicationQuestions:
+    | string[]
+    | {
+        text: string;
+        wordLimit: number | null;
+        charLimit: number | null;
+        category: string | null;
+      }[];
 }
 
 interface UseReviewProposalModel {
@@ -260,7 +268,9 @@ function ReviewProposalViewComponent({
                           Question {index + 1}
                         </h3>
                         <p className="font-medium">
-                          {typeof question === "string" ? question : question.text}
+                          {typeof question === "string"
+                            ? question
+                            : question.text}
                         </p>
                       </div>
                     ))
@@ -288,18 +298,13 @@ function ReviewProposalViewComponent({
                   proposal. Once submitted:
                 </p>
                 <ul className="space-y-2.5">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  <CheckItem>
                     Your proposal will be saved to your dashboard
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     You'll be able to edit it later if needed
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
-                    You'll receive a confirmation email
-                  </li>
+                  </CheckItem>
+                  <CheckItem>You'll receive a confirmation email</CheckItem>
                 </ul>
               </CardContent>
             </Card>

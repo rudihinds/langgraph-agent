@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { CheckItem } from "@/components/ui/check-item";
 
 // MODEL
 export interface Question {
@@ -719,22 +720,16 @@ function ApplicationQuestionsViewComponent({
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 <ul className="space-y-2.5">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  <CheckItem>
                     Add all questions from your grant application
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
-                    For multiple questions, use bulk import
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>For multiple questions, use bulk import</CheckItem>
+                  <CheckItem>
                     Add word limits if specified in the application
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                  </CheckItem>
+                  <CheckItem>
                     Categorize questions to improve generated responses
-                  </li>
+                  </CheckItem>
                 </ul>
               </CardContent>
             </Card>
