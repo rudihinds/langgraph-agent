@@ -33,7 +33,9 @@ import {
   Check,
   HelpCircle,
   Save,
-  FileText
+  FileText,
+  DollarSign,
+  Target
 } from "lucide-react";
 import {
   Popover,
