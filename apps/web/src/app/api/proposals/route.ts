@@ -11,12 +11,17 @@ import { z } from "zod";
  */
 export async function POST(req: Request) {
   try {
+    console.log("POST /api/proposals - Request received");
+
     // Parse the request body
     const body = await req.json();
+    console.log("Proposal data received:", JSON.stringify(body, null, 2));
 
     // Validate the request body
+    console.log("Validating proposal data...");
     const validationResult = ProposalSchema.safeParse(body);
     if (!validationResult.success) {
+      console.log("Validation failed:", validationResult.error);
       return NextResponse.json(
         {
           message: "Invalid proposal data",
@@ -25,19 +30,24 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    console.log("Validation successful");
 
     // Create a Supabase client
+    console.log("Creating Supabase client...");
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
     // Check if user is authenticated
+    console.log("Checking authentication...");
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.log("Authentication failed:", authError);
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    console.log("User authenticated:", user.id);
 
     // Add user_id to the proposal data
     const proposalData = {
@@ -46,8 +56,10 @@ export async function POST(req: Request) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    console.log("Final proposal data:", JSON.stringify(proposalData, null, 2));
 
     // Insert the proposal into the database
+    console.log("Inserting proposal into database...");
     const { data: proposal, error } = await supabase
       .from("proposals")
       .insert(proposalData)
@@ -57,16 +69,17 @@ export async function POST(req: Request) {
     if (error) {
       console.error("Error creating proposal:", error);
       return NextResponse.json(
-        { message: "Failed to create proposal" },
+        { message: "Failed to create proposal", error: error.message },
         { status: 500 }
       );
     }
 
+    console.log("Proposal created successfully:", proposal.id);
     return NextResponse.json(proposal, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/proposals:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "Internal server error", error: String(error) },
       { status: 500 }
     );
   }

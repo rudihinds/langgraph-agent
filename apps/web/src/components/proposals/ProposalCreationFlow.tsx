@@ -8,7 +8,7 @@ import FunderDetailsView from "./FunderDetailsView";
 import ReviewProposalView from "./ReviewProposalView";
 import { Button } from "@/components/ui/button";
 import { useProposalSubmission } from "@/hooks/useProposalSubmission";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/toast";
 import { Question } from "./ApplicationQuestionsView";
 import { FunderDetails } from "./FunderDetailsView";
 
@@ -47,6 +47,7 @@ function useProposalCreationFlow({
   );
   const [rfpDetails, setRfpDetails] = useState<any>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const { submitProposal, uploadFile, loading, error } = useProposalSubmission({
     onSuccess: (proposalId) => {

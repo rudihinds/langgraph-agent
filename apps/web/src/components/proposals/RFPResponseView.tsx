@@ -55,6 +55,13 @@ export interface RFPResponseViewProps {
     rfpUrl: string;
     rfpText: string;
     companyName: string;
+    file?: File;
+    document?: {
+      name: string;
+      type: string;
+      size: number;
+      lastModified: number;
+    };
   }) => void;
   onBack: () => void;
 }
@@ -100,6 +107,7 @@ function useRFPResponse({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [rfpDetails, setRfpDetails] = useState<Record<string, any>>({});
 
   // Load saved data from localStorage on mount
   useEffect(() => {
@@ -157,9 +165,15 @@ function useRFPResponse({
 
   const handleSubmit = useCallback(() => {
     if (validateForm()) {
-      onSubmit({ rfpUrl, rfpText, companyName });
+      onSubmit({
+        companyName,
+        rfpUrl,
+        rfpText,
+        file: rfpDetails.file,
+        document: rfpDetails.document,
+      });
     }
-  }, [rfpUrl, rfpText, companyName, validateForm, onSubmit]);
+  }, [rfpUrl, rfpText, companyName, validateForm, onSubmit, rfpDetails]);
 
   const handleBack = useCallback(() => {
     onBack();
@@ -173,11 +187,32 @@ function useRFPResponse({
       setFileName(file.name);
       setIsUploading(true);
 
+      // Store the actual file object for upload
+      const fileForUpload = file;
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target?.result as string;
         if (content) {
           setRfpText(content);
+
+          // Create a document object with file metadata that can be saved to the proposal
+          const document = {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            lastModified: file.lastModified,
+          };
+
+          // Store both the file for upload and the document metadata
+          setRfpDetails((prev) => ({
+            ...prev,
+            file: fileForUpload,
+            document: document,
+            companyName,
+            rfpUrl,
+            rfpText: content,
+          }));
         }
         setIsUploading(false);
       };
@@ -195,7 +230,7 @@ function useRFPResponse({
 
       reader.readAsText(file);
     },
-    [errors]
+    [errors, companyName, rfpUrl]
   );
 
   const handleRemoveFile = useCallback(() => {
