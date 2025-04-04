@@ -411,7 +411,7 @@ function ApplicationQuestionsViewComponent({
               <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full bg-primary/10">
                 <Check className="w-3 h-3 text-primary" />
               </div>
-              <span>Organization Info</span>
+              <span>Funder Details</span>
             </div>
             <div className="flex flex-col items-center font-medium text-primary">
               <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
@@ -722,7 +722,7 @@ function ApplicationQuestionsViewComponent({
                     <span className="flex items-center justify-center w-6 h-6 mr-3 border-2 rounded-full bg-primary/10 border-primary">
                       <Check className="w-3 h-3 text-primary" />
                     </span>
-                    Organization Info
+                    Funder Details
                   </div>
                   <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
                     <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationQuestionsView from "./ApplicationQuestionsView";
 import RFPResponseView from "./RFPResponseView";
-import OrganizationInfoView from "./OrganizationInfoView";
+import FunderDetailsView from "./FunderDetailsView";
 import { Button } from "@/components/ui/button";
 
 // MODEL
@@ -139,9 +139,9 @@ function ProposalCreationFlowView({
   handleBack,
   handleCancel,
 }: ProposalCreationFlowViewProps) {
-  // First step is now Organization Info for both proposal types
+  // First step is now Funder Details for both proposal types
   if (currentStep === 1) {
-    return <OrganizationInfoView onSubmit={handleNext} onBack={handleBack} />;
+    return <FunderDetailsView onSubmit={handleNext} onBack={handleBack} />;
   }
 
   // Second step depends on proposal type

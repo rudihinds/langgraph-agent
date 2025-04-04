@@ -289,7 +289,7 @@ function RFPResponseViewComponent({
               <div className="w-6 h-6 rounded-full border-2 border-gray-300 bg-primary/10 flex items-center justify-center mb-1">
                 <Check className="h-3 w-3 text-primary" />
               </div>
-              <span>Organization Info</span>
+              <span>Funder Details</span>
             </div>
             <div className="text-primary font-medium flex flex-col items-center">
               <div className="w-6 h-6 rounded-full border-2 border-primary bg-primary text-white flex items-center justify-center mb-1">
@@ -528,7 +528,7 @@ function RFPResponseViewComponent({
                     <span className="w-6 h-6 rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center mr-3">
                       <Check className="h-3 w-3 text-primary" />
                     </span>
-                    Organization Info
+                    Funder Details
                   </div>
                   <div className="flex items-center px-4 py-2.5 rounded-md bg-primary/10 text-primary font-medium">
                     <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center mr-3 text-xs">
