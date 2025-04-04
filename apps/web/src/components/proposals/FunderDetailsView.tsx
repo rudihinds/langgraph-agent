@@ -80,7 +80,8 @@ const funderDetailsSchema = z.object({
   deadline: z.date().nullable().refine(val => val !== null, { 
     message: "Submission deadline is required" 
   }),
-  budgetRange: z.string().min(1, { message: "Budget range is required" }),
+  budgetRange: z.string().min(1, { message: "Budget range is required" })
+    .regex(/^\d+$/, { message: "Please enter numbers only" }),
   focusArea: z.string().min(1, { message: "Primary focus area is required" })
 });
 
@@ -312,23 +313,17 @@ function FunderDetailsViewComponent({
                     <span className="text-destructive ml-1">*</span>
                     <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
                   </Label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                      <Building className="w-5 h-5" />
-                    </span>
-                    <Input
-                      id="organizationName"
-                      value={formData.organizationName}
-                      onChange={(e) => handleChange("organizationName", e.target.value)}
-                      placeholder="Enter the name of the funding organization"
-                      className={cn(
-                        "pl-10",
-                        errors.organizationName ? "border-destructive" : "border-input"
-                      )}
-                      aria-invalid={!!errors.organizationName}
-                      aria-describedby={errors.organizationName ? "org-name-error" : undefined}
-                    />
-                  </div>
+                  <Input
+                    id="organizationName"
+                    value={formData.organizationName}
+                    onChange={(e) => handleChange("organizationName", e.target.value)}
+                    placeholder="Enter the name of the funding organization"
+                    className={cn(
+                      errors.organizationName ? "border-destructive" : "border-input"
+                    )}
+                    aria-invalid={!!errors.organizationName}
+                    aria-describedby={errors.organizationName ? "org-name-error" : undefined}
+                  />
                   {errors.organizationName && (
                     <p
                       id="org-name-error"
@@ -349,23 +344,17 @@ function FunderDetailsViewComponent({
                     <span className="text-destructive ml-1">*</span>
                     <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
                   </Label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                      <FileText className="w-5 h-5" />
-                    </span>
-                    <Input
-                      id="fundingTitle"
-                      value={formData.fundingTitle}
-                      onChange={(e) => handleChange("fundingTitle", e.target.value)}
-                      placeholder="Enter the title of the grant or funding opportunity"
-                      className={cn(
-                        "pl-10",
-                        errors.fundingTitle ? "border-destructive" : "border-input"
-                      )}
-                      aria-invalid={!!errors.fundingTitle}
-                      aria-describedby={errors.fundingTitle ? "funding-title-error" : undefined}
-                    />
-                  </div>
+                  <Input
+                    id="fundingTitle"
+                    value={formData.fundingTitle}
+                    onChange={(e) => handleChange("fundingTitle", e.target.value)}
+                    placeholder="Enter the title of the grant or funding opportunity"
+                    className={cn(
+                      errors.fundingTitle ? "border-destructive" : "border-input"
+                    )}
+                    aria-invalid={!!errors.fundingTitle}
+                    aria-describedby={errors.fundingTitle ? "funding-title-error" : undefined}
+                  />
                   {errors.fundingTitle && (
                     <p
                       id="funding-title-error"
@@ -393,16 +382,14 @@ function FunderDetailsViewComponent({
                           id="deadline"
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal pl-10",
+                            "w-full justify-start text-left font-normal",
                             !formData.deadline && "text-muted-foreground",
                             errors.deadline && "border-destructive"
                           )}
                           aria-invalid={!!errors.deadline}
                           aria-describedby={errors.deadline ? "deadline-error" : undefined}
                         >
-                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                            <Calendar className="w-5 h-5" />
-                          </span>
+                          <Calendar className="mr-2 h-4 w-4" />
                           {formData.deadline ? (
                             format(formData.deadline, "PPP")
                           ) : (
@@ -416,6 +403,12 @@ function FunderDetailsViewComponent({
                           selected={formData.deadline || undefined}
                           onSelect={(date) => handleChange("deadline", date)}
                           initialFocus
+                          showOutsideDays={false}
+                          className="rounded-md border"
+                          classNames={{
+                            day_selected: "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
+                            head_row: "hidden"
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
@@ -436,38 +429,24 @@ function FunderDetailsViewComponent({
                     htmlFor="budgetRange"
                     className="text-base font-medium flex items-center mb-2"
                   >
-                    Approximate Budget Range
+                    Approximate Budget ($)
                     <span className="text-destructive ml-1">*</span>
                     <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
                   </Label>
-                  <div className="relative">
-                    <Select
-                      value={formData.budgetRange}
-                      onValueChange={(value) => handleChange("budgetRange", value)}
-                    >
-                      <SelectTrigger 
-                        id="budgetRange"
-                        className={cn(
-                          "pl-10",
-                          errors.budgetRange ? "border-destructive" : "border-input"
-                        )}
-                        aria-invalid={!!errors.budgetRange}
-                        aria-describedby={errors.budgetRange ? "budget-error" : undefined}
-                      >
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                          <DollarSign className="w-5 h-5" />
-                        </span>
-                        <SelectValue placeholder="Select budget range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BUDGET_RANGES.map((range) => (
-                          <SelectItem key={range} value={range}>
-                            {range}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Input
+                    id="budgetRange"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={formData.budgetRange}
+                    onChange={(e) => handleChange("budgetRange", e.target.value.replace(/[^0-9]/g, ""))}
+                    placeholder="Enter budget amount (numbers only)"
+                    className={cn(
+                      errors.budgetRange ? "border-destructive" : "border-input"
+                    )}
+                    aria-invalid={!!errors.budgetRange}
+                    aria-describedby={errors.budgetRange ? "budget-error" : undefined}
+                  />
                   {errors.budgetRange && (
                     <p
                       id="budget-error"
@@ -488,23 +467,17 @@ function FunderDetailsViewComponent({
                     <span className="text-destructive ml-1">*</span>
                     <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5" />
                   </Label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                      <Target className="w-5 h-5" />
-                    </span>
-                    <Input
-                      id="focusArea"
-                      value={formData.focusArea}
-                      onChange={(e) => handleChange("focusArea", e.target.value)}
-                      placeholder="e.g., Education, Healthcare, Climate Action"
-                      className={cn(
-                        "pl-10",
-                        errors.focusArea ? "border-destructive" : "border-input"
-                      )}
-                      aria-invalid={!!errors.focusArea}
-                      aria-describedby={errors.focusArea ? "focus-area-error" : undefined}
-                    />
-                  </div>
+                  <Input
+                    id="focusArea"
+                    value={formData.focusArea}
+                    onChange={(e) => handleChange("focusArea", e.target.value)}
+                    placeholder="e.g., Education, Healthcare, Climate Action"
+                    className={cn(
+                      errors.focusArea ? "border-destructive" : "border-input"
+                    )}
+                    aria-invalid={!!errors.focusArea}
+                    aria-describedby={errors.focusArea ? "focus-area-error" : undefined}
+                  />
                   {errors.focusArea && (
                     <p
                       id="focus-area-error"
