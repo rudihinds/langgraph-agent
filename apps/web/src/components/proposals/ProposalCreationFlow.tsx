@@ -35,7 +35,9 @@ function useProposalCreationFlow({
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [funderDetails, setFunderDetails] = useState<any>({});
-  const [applicationQuestions, setApplicationQuestions] = useState<string[]>([]);
+  const [applicationQuestions, setApplicationQuestions] = useState<string[]>(
+    []
+  );
   const [rfpDetails, setRfpDetails] = useState<any>({});
 
   const totalSteps = proposalType === "rfp" ? 3 : 3;
@@ -99,14 +101,14 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the next step
     const nextStep = currentStep + 1;
-    
+
     // Push the new step to history
     window.history.pushState(
       { step: nextStep, proposalType },
       "",
       window.location.pathname
     );
-    
+
     setCurrentStep(nextStep);
   };
 
@@ -120,7 +122,7 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the previous step
     const prevStep = currentStep - 1;
-    
+
     // Use browser's history.back() to maintain proper history stack
     window.history.back();
   };
@@ -132,7 +134,7 @@ function useProposalCreationFlow({
       "",
       window.location.pathname
     );
-    
+
     setCurrentStep(step);
   };
 
@@ -182,13 +184,15 @@ function ProposalCreationFlowView({
   if (currentStep === 1) {
     return <FunderDetailsView onSubmit={handleNext} onBack={handleBack} />;
   }
-  
+
   // Second step depends on proposal type
   if (currentStep === 2) {
     if (proposalType === "application") {
-      return <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />;
+      return (
+        <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />
+      );
     }
-    
+
     if (proposalType === "rfp") {
       return <RFPResponseView onSubmit={handleNext} onBack={handleBack} />;
     }
@@ -197,12 +201,15 @@ function ProposalCreationFlowView({
   // Third step is review for both proposal types
   if (currentStep === 3) {
     return (
-      <ReviewProposalView 
-        onSubmit={handleNext} 
-        onBack={handleBack} 
+      <ReviewProposalView
+        onSubmit={handleNext}
+        onBack={handleBack}
         onEdit={handleEdit}
         funderDetails={funderDetails}
-        applicationQuestions={proposalType === "application" ? applicationQuestions : []}
+        applicationQuestions={
+          proposalType === "application" ? applicationQuestions : []
+        }
+        proposalType={proposalType}
       />
     );
   }

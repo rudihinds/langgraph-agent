@@ -44,6 +44,7 @@ export interface ReviewProposalViewProps {
         charLimit: number | null;
         category: string | null;
       }[];
+  proposalType?: "rfp" | "application";
 }
 
 interface UseReviewProposalModel {
@@ -117,6 +118,7 @@ function ReviewProposalViewComponent({
   handleBack,
   handleEdit,
   formattedBudget,
+  proposalType = "application",
 }: ReviewProposalViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -137,7 +139,11 @@ function ReviewProposalViewComponent({
               <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full bg-primary/10">
                 <Check className="w-3 h-3 text-primary" />
               </div>
-              <span>Application Questions</span>
+              <span>
+                {proposalType === "rfp"
+                  ? "Upload RFP Doc"
+                  : "Application Questions"}
+              </span>
             </div>
             <div className="flex flex-col items-center font-medium text-primary">
               <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
@@ -243,7 +249,9 @@ function ReviewProposalViewComponent({
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl flex items-center">
                     <FileText className="w-5 h-5 mr-2" />
-                    Application Questions
+                    {proposalType === "rfp"
+                      ? "RFP Details"
+                      : "Application Questions"}
                   </CardTitle>
                   <Button
                     variant="ghost"

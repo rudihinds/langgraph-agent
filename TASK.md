@@ -481,6 +481,10 @@
 - [x] Fix runtime errors related to object rendering in React (2024-06-20)
 - [x] Enhance spacing and layout for better visual hierarchy (2024-06-20)
 - [x] Implement Edit functionality on the Review page to navigate back to specific steps (2024-06-20)
+- [x] Update RFP flow naming for consistent terminology (2024-06-22)
+  - [x] Change "RFP Details" to "Upload RFP Doc" in RFPResponseView component
+  - [x] Add conditional display in ReviewProposalView to show "RFP Details" for RFP proposals
+  - [x] Ensure consistent naming across the entire proposal creation flow
 
 ## Next Steps
 
