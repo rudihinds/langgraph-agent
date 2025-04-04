@@ -32,6 +32,7 @@ import {
   ChevronRight,
   Save,
   HelpCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -525,19 +526,19 @@ function RFPResponseViewComponent({
               <CardContent className="text-sm text-muted-foreground">
                 <ul className="space-y-2.5">
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Enter the exact name of the organization issuing the RFP
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Upload the RFP document or paste the content directly
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Include as much detail as possible for better results
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     If available, include the URL to the original RFP
                   </li>
                 </ul>

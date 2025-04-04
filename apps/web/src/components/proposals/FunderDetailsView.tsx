@@ -35,7 +35,8 @@ import {
   Save,
   FileText,
   DollarSign,
-  Target
+  Target,
+  CheckCircle2
 } from "lucide-react";
 import {
   Popover,
@@ -494,35 +495,7 @@ function FunderDetailsViewComponent({
         </div>
 
         <div className="lg:w-1/4">
-          <div className="sticky space-y-4 top-8">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base">Navigation</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4">
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center px-4 py-2.5 font-medium rounded-md bg-primary/10 text-primary">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs text-white rounded-full bg-primary">
-                      1
-                    </span>
-                    Funder Details
-                  </div>
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">
-                      2
-                    </span>
-                    Application Questions
-                  </div>
-                  <div className="flex items-center px-4 py-2.5">
-                    <span className="flex items-center justify-center w-6 h-6 mr-3 text-xs border border-gray-300 rounded-full">
-                      3
-                    </span>
-                    Review & Create
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="sticky space-y-6 top-8">
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Help & Tips</CardTitle>
@@ -530,26 +503,26 @@ function FunderDetailsViewComponent({
               <CardContent className="text-sm text-muted-foreground">
                 <ul className="space-y-2.5">
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Enter the official name of the funding organization
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Include the exact title of the grant or funding opportunity
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Double-check the submission deadline
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     The focus area helps tailor your proposal to the funder's priorities
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col space-y-3 pt-2">
+            <div className="flex flex-col space-y-3 pt-4">
               <Button onClick={handleSubmit} size="lg" className="w-full">
                 Continue
               </Button>

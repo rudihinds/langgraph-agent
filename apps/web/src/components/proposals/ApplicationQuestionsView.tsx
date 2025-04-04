@@ -50,6 +50,7 @@ import {
   Save,
   Info,
   HelpCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -719,19 +720,19 @@ function ApplicationQuestionsViewComponent({
               <CardContent className="text-sm text-muted-foreground">
                 <ul className="space-y-2.5">
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Add all questions from your grant application
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     For multiple questions, use bulk import
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Add word limits if specified in the application
                   </li>
                   <li className="flex items-start">
-                    <Check className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-2.5 mt-0.5" />
                     Categorize questions to improve generated responses
                   </li>
                 </ul>
