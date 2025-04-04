@@ -26,7 +26,7 @@ export interface EmptyProposalStateProps {
   onCreateClick?: () => void;
 }
 
-export default function EmptyProposalState({
+export function EmptyProposalState({
   onCreateClick,
 }: EmptyProposalStateProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,3 +66,6 @@ export default function EmptyProposalState({
     </div>
   );
 }
+
+// Default export for backward compatibility
+export default EmptyProposalState;

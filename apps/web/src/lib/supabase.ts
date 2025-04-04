@@ -110,3 +110,18 @@ export async function validateSession(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Gets the current user if authenticated
+ * Returns null if not authenticated
+ */
+export async function getCurrentUser() {
+  try {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    return data.user;
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
+  }
+}

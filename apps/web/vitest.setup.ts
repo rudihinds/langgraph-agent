@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import { vi } from "vitest";
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://mock-project.supabase.co";
@@ -9,14 +10,28 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
     replace: vi.fn(),
+    refresh: vi.fn(),
     back: vi.fn(),
     forward: vi.fn(),
+    prefetch: vi.fn(),
   })),
+  useParams: vi.fn(() => ({})),
+  usePathname: vi.fn(() => ""),
   useSearchParams: vi.fn(() => ({
     get: vi.fn(),
-    getAll: vi.fn(),
+    has: vi.fn(),
+    entries: vi.fn(() => []),
+    forEach: vi.fn(),
+    keys: vi.fn(() => []),
+    values: vi.fn(() => []),
   })),
-  usePathname: vi.fn(() => "/"),
+  redirect: vi.fn(),
+}));
+
+// Mock react-dom
+vi.mock("react-dom", () => ({
+  ...vi.importActual("react-dom"),
+  preload: vi.fn(),
 }));
 
 // Mock localStorage

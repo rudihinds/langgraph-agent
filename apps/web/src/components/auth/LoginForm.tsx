@@ -1,5 +1,7 @@
+"use client";
+
 import { useState } from 'react';
-import { signInWithGoogle } from '@/lib/supabase';
+import { signIn } from '@/lib/supabase';
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,7 +11,7 @@ export function LoginForm() {
     try {
       setIsLoading(true);
       setError(null);
-      const { error } = await signInWithGoogle();
+      const { error } = await signIn();
       if (error) throw error;
     } catch (err: any) {
       setError(err.message || 'An error occurred during sign in');

@@ -11,7 +11,7 @@ const PopoverTrigger = PopoverPrimitive.Trigger;
 
 // Custom Popover with auto-close functionality
 const AutoClosePopover = React.forwardRef<
-  React.ElementRef<typeof PopoverPrimitive.Root>,
+  HTMLDivElement,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>
 >((props, ref) => {
   const [open, setOpen] = React.useState(false);
@@ -25,14 +25,7 @@ const AutoClosePopover = React.forwardRef<
     };
   }, []);
 
-  return (
-    <PopoverPrimitive.Root
-      {...props}
-      ref={ref}
-      open={open}
-      onOpenChange={setOpen}
-    />
-  );
+  return <Popover {...props} open={open} onOpenChange={setOpen} />;
 });
 AutoClosePopover.displayName = "AutoClosePopover";
 

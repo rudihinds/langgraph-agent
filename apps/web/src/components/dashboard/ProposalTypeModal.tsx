@@ -60,21 +60,14 @@ function useProposalTypeModal(props: ProposalTypeModalProps) {
 }
 
 // VIEW: Render the UI
-function ProposalTypeCard({
-  title,
-  description,
-  icon: Icon,
-  selected,
-  onClick,
-  testId,
-}: {
+const ProposalTypeCard = React.forwardRef<HTMLDivElement, {
   title: string;
   description: string;
   icon: React.ElementType;
   selected: boolean;
   onClick: () => void;
   testId: string;
-}) {
+}>(({ title, description, icon: Icon, selected, onClick, testId }, ref) => {
   return (
     <div
       className={cn(
@@ -94,6 +87,7 @@ function ProposalTypeCard({
       aria-selected={selected}
       tabIndex={0}
       data-testid={testId}
+      ref={ref}
     >
       {selected && (
         <div className="absolute top-3 right-3 text-primary">
@@ -107,7 +101,9 @@ function ProposalTypeCard({
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   );
-}
+});
+
+ProposalTypeCard.displayName = "ProposalTypeCard";
 
 function ProposalTypeModalView({
   open,

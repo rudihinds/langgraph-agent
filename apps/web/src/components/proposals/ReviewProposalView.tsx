@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,8 @@ import { motion } from "framer-motion";
 import { FunderDetails } from "./FunderDetailsView";
 import { CheckItem } from "@/components/ui/check-item";
 import { z } from "zod";
+import { Question } from "./ApplicationQuestionsView";
+import { ProposalType } from "./ProposalCreationFlow";
 
 // MODEL
 export interface ReviewProposalViewProps {
@@ -36,15 +39,9 @@ export interface ReviewProposalViewProps {
   onBack: () => void;
   onEdit: (step: number) => void;
   funderDetails: FunderDetails;
-  applicationQuestions:
-    | string[]
-    | {
-        text: string;
-        wordLimit: number | null;
-        charLimit: number | null;
-        category: string | null;
-      }[];
-  proposalType?: "rfp" | "application";
+  applicationQuestions: Question[];
+  proposalType: ProposalType;
+  isSubmitting?: boolean;
 }
 
 interface UseReviewProposalModel {
@@ -118,7 +115,7 @@ function ReviewProposalViewComponent({
   handleBack,
   handleEdit,
   formattedBudget,
-  proposalType = "application",
+  proposalType,
 }: ReviewProposalViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -278,7 +275,7 @@ function ReviewProposalViewComponent({
                         <p className="font-medium">
                           {typeof question === "string"
                             ? question
-                            : question.text}
+                            : question.question}
                         </p>
                       </div>
                     ))

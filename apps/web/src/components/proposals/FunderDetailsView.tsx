@@ -56,21 +56,20 @@ import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { CheckItem } from "@/components/ui/check-item";
 import { z } from "zod";
+import {
+  FunderDetailsFormSchema,
+  type FunderDetailsForm,
+} from "@shared/types/ProposalSchema";
 
 // MODEL
 export interface FunderDetailsViewProps {
-  onSubmit: (data: FunderDetails) => void;
+  onSubmit: (data: FunderDetailsForm) => void;
   onBack: () => void;
   proposalType?: "rfp" | "application";
 }
 
-export interface FunderDetails {
-  organizationName: string;
-  fundingTitle: string;
-  deadline: Date | null;
-  budgetRange: string;
-  focusArea: string;
-}
+// Keeping this for backward compatibility but using the shared schema type
+export type FunderDetails = FunderDetailsForm;
 
 const BUDGET_RANGES = [
   "Under $10,000",
@@ -83,41 +82,25 @@ const BUDGET_RANGES = [
   "Not specified",
 ];
 
-// Define Zod schema for validation
-const funderDetailsSchema = z.object({
-  organizationName: z
-    .string()
-    .min(1, { message: "Organization name is required" }),
-  fundingTitle: z
-    .string()
-    .min(1, { message: "Grant/funding opportunity title is required" }),
-  deadline: z
-    .date()
-    .nullable()
-    .refine((val) => val !== null, {
-      message: "Submission deadline is required",
-    }),
-  budgetRange: z
-    .string()
-    .min(1, { message: "Budget range is required" })
-    .regex(/^\d+$/, { message: "Please enter numbers only" }),
-  focusArea: z.string().min(1, { message: "Primary focus area is required" }),
-});
+// For validation, we use the shared schema
+const funderDetailsSchema = FunderDetailsFormSchema;
 
 interface UseFunderDetailsModel {
-  formData: FunderDetails;
+  formData: FunderDetailsForm;
   errors: Record<string, string>;
   isSaving: boolean;
   lastSaved: Date | null;
-  handleChange: <K extends keyof FunderDetails>(
+  handleChange: <K extends keyof FunderDetailsForm>(
     field: K,
-    value: FunderDetails[K]
+    value: FunderDetailsForm[K]
   ) => void;
   handleSubmit: () => void;
   handleBack: () => void;
   validateForm: () => boolean;
   handleFocus: (
-    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
   ) => void;
 }
 
@@ -125,10 +108,10 @@ function useFunderDetails({
   onSubmit,
   onBack,
 }: FunderDetailsViewProps): UseFunderDetailsModel {
-  const [formData, setFormData] = useState<FunderDetails>({
+  const [formData, setFormData] = useState<FunderDetailsForm>({
     organizationName: "",
     fundingTitle: "",
-    deadline: null,
+    deadline: new Date(),
     budgetRange: "",
     focusArea: "",
   });
@@ -182,7 +165,10 @@ function useFunderDetails({
   }, [formData]);
 
   const handleChange = useCallback(
-    <K extends keyof FunderDetails>(field: K, value: FunderDetails[K]) => {
+    <K extends keyof FunderDetailsForm>(
+      field: K,
+      value: FunderDetailsForm[K]
+    ) => {
       setFormData((prev) => ({
         ...prev,
         [field]: value,
@@ -202,7 +188,7 @@ function useFunderDetails({
 
   const validateForm = useCallback(() => {
     try {
-      // Validate with Zod
+      // Validate with Zod using the shared schema
       funderDetailsSchema.parse(formData);
       setErrors({});
       return true;
@@ -231,16 +217,24 @@ function useFunderDetails({
   }, [onBack]);
 
   const handleFocus = useCallback(
-    (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      // Move cursor to the end of text on focus
+    (
+      e: React.FocusEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+      >
+    ) => {
+      // Move cursor to the end of text on focus for input and textarea elements
       const target = e.target;
-      const length = target.value.length;
-
-      // Use setTimeout to ensure this happens after the default focus behavior
-      setTimeout(() => {
-        target.selectionStart = length;
-        target.selectionEnd = length;
-      }, 0);
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement
+      ) {
+        const length = target.value.length;
+        // Use setTimeout to ensure this happens after the default focus behavior
+        setTimeout(() => {
+          target.selectionStart = length;
+          target.selectionEnd = length;
+        }, 0);
+      }
     },
     []
   );
@@ -260,18 +254,20 @@ function useFunderDetails({
 
 // VIEW
 interface FunderDetailsViewComponentProps extends FunderDetailsViewProps {
-  formData: FunderDetails;
+  formData: FunderDetailsForm;
   errors: Record<string, string>;
   isSaving: boolean;
   lastSaved: Date | null;
-  handleChange: <K extends keyof FunderDetails>(
+  handleChange: <K extends keyof FunderDetailsForm>(
     field: K,
-    value: FunderDetails[K]
+    value: FunderDetailsForm[K]
   ) => void;
   handleSubmit: () => void;
   handleBack: () => void;
   handleFocus: (
-    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
   ) => void;
 }
 
@@ -512,9 +508,9 @@ function FunderDetailsViewComponent({
                         <PopoverContent className="w-auto p-0" align="start">
                           <CalendarComponent
                             mode="single"
-                            selected={formData.deadline || undefined}
+                            selected={formData.deadline}
                             onSelect={(date) => {
-                              handleChange("deadline", date);
+                              handleChange("deadline", date || new Date());
                               // Close the popover after selection
                               const closeEvent = new CustomEvent(
                                 "close-popover"

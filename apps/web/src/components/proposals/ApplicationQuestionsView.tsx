@@ -66,18 +66,47 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  ApplicationQuestionsSchema,
+  type Question as SharedQuestion,
+  type ApplicationQuestions,
+} from "@shared/types/ProposalSchema";
+import { z } from "zod";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { slugify } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ProgressCircle } from "@/components/ui/progress-circle";
+import { debounce } from "@/lib/utils";
 
 // MODEL
-export interface Question {
+// Extend the shared Question type to include ID for internal management
+export interface Question extends Omit<SharedQuestion, "id"> {
   id: string;
   text: string;
+  category: string | null;
   wordLimit: number | null;
   charLimit: number | null;
-  category: string | null;
 }
 
 export interface ApplicationQuestionsViewProps {
-  onSubmit: (data: { questions: Omit<Question, "id">[] }) => void;
+  onSubmit: (data: { questions: Question[] }) => void;
   onBack: () => void;
 }
 
@@ -124,6 +153,7 @@ function useApplicationQuestions({
   onSubmit,
   onBack,
 }: ApplicationQuestionsViewProps): UseApplicationQuestionsModel {
+  const { toast } = useToast();
   const [questions, setQuestions] = useState<Question[]>([
     {
       id: Date.now().toString(),
@@ -199,34 +229,15 @@ function useApplicationQuestions({
       },
     ]);
 
-    // Automatically open the options panel for the new question
-    setActivePanel(newId);
+    // Schedule focus to expand this panel
+    setTimeout(() => {
+      setActivePanel(newId);
+    }, 100);
   }, []);
 
-  const removeQuestion = useCallback(
-    (id: string) => {
-      setQuestions((prev) => {
-        // Don't allow removing the last question
-        if (prev.length <= 1) {
-          return prev;
-        }
-        return prev.filter((q) => q.id !== id);
-      });
-
-      // Clear any errors for this question
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[id];
-        return newErrors;
-      });
-
-      // Clear active panel if it's the one being removed
-      if (activePanel === id) {
-        setActivePanel(null);
-      }
-    },
-    [activePanel]
-  );
+  const removeQuestion = useCallback((id: string) => {
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
+  }, []);
 
   const updateQuestion = useCallback(
     (id: string, updates: Partial<Omit<Question, "id">>) => {
@@ -234,8 +245,8 @@ function useApplicationQuestions({
         prev.map((q) => (q.id === id ? { ...q, ...updates } : q))
       );
 
-      // Clear errors for this question if it was previously invalid and now has text
-      if (updates.text && errors[id]) {
+      // Clear error for this question if it was previously set
+      if (errors[id]) {
         setErrors((prev) => {
           const newErrors = { ...prev };
           delete newErrors[id];
@@ -307,7 +318,13 @@ function useApplicationQuestions({
   const handleSubmit = useCallback(() => {
     if (validateForm()) {
       onSubmit({
-        questions: questions.map(({ id, ...rest }) => rest),
+        questions: questions.map((question) => ({
+          id: question.id,
+          text: question.text,
+          wordLimit: question.wordLimit,
+          charLimit: question.charLimit,
+          category: question.category,
+        })),
       });
     }
   }, [questions, validateForm, onSubmit]);

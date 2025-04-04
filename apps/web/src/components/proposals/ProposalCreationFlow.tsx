@@ -7,6 +7,10 @@ import RFPResponseView from "./RFPResponseView";
 import FunderDetailsView from "./FunderDetailsView";
 import ReviewProposalView from "./ReviewProposalView";
 import { Button } from "@/components/ui/button";
+import { useProposalSubmission } from "@/hooks/useProposalSubmission";
+import { toast } from "@/components/ui/use-toast";
+import { Question } from "./ApplicationQuestionsView";
+import { FunderDetails } from "./FunderDetailsView";
 
 // MODEL
 export type ProposalType = "rfp" | "application";
@@ -19,9 +23,10 @@ export interface ProposalCreationFlowProps {
 interface UseProposalCreationFlowModel {
   currentStep: number;
   totalSteps: number;
-  funderDetails: any;
-  applicationQuestions: string[];
+  funderDetails: FunderDetails;
+  applicationQuestions: Question[];
   rfpDetails: any;
+  isSubmitting: boolean;
   handleNext: (data: any) => void;
   handleBack: () => void;
   handleEdit: (step: number) => void;
@@ -34,11 +39,33 @@ function useProposalCreationFlow({
 }: ProposalCreationFlowProps): UseProposalCreationFlowModel {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [funderDetails, setFunderDetails] = useState<any>({});
-  const [applicationQuestions, setApplicationQuestions] = useState<string[]>(
+  const [funderDetails, setFunderDetails] = useState<FunderDetails>(
+    {} as FunderDetails
+  );
+  const [applicationQuestions, setApplicationQuestions] = useState<Question[]>(
     []
   );
   const [rfpDetails, setRfpDetails] = useState<any>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { submitProposal, uploadFile, loading, error } = useProposalSubmission({
+    onSuccess: (proposalId) => {
+      toast({
+        title: "Success!",
+        description: "Your proposal has been created successfully.",
+      });
+      // Navigate to the dashboard
+      router.push("/dashboard");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create proposal: ${error.message}`,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    },
+  });
 
   const totalSteps = proposalType === "rfp" ? 3 : 3;
 
@@ -74,7 +101,7 @@ function useProposalCreationFlow({
     };
   }, [proposalType, onCancel]);
 
-  const handleNext = (data: any) => {
+  const handleNext = async (data: any) => {
     // Save the data from the current step
     if (currentStep === 1) {
       setFunderDetails(data);
@@ -88,14 +115,58 @@ function useProposalCreationFlow({
 
     // If this is the last step, submit the proposal
     if (currentStep === totalSteps) {
-      // TODO: Save the proposal to the database
-      console.log("Submitting proposal:", {
-        funderDetails,
-        applicationQuestions,
-        rfpDetails,
-        type: proposalType,
-      });
-      router.push("/dashboard");
+      setIsSubmitting(true);
+
+      try {
+        // Prepare proposal data based on type
+        const proposalData = {
+          title:
+            funderDetails.programName ||
+            funderDetails.funderName ||
+            "Untitled Proposal",
+          description:
+            funderDetails.programDescription ||
+            funderDetails.funderDescription ||
+            "",
+          proposal_type: proposalType,
+          funder_details: funderDetails,
+          status: "draft",
+          deadline: funderDetails.deadline || undefined,
+        };
+
+        if (proposalType === "application") {
+          // Add application-specific data
+          const applicationData = {
+            ...proposalData,
+            proposal_type: "application" as const,
+            questions: applicationQuestions,
+          };
+
+          await submitProposal(applicationData);
+        } else {
+          // Add RFP-specific data
+          const rfpData = {
+            ...proposalData,
+            proposal_type: "rfp" as const,
+            // If there's document data in rfpDetails, include it
+            rfp_document: rfpDetails.document || undefined,
+          };
+
+          // Submit the proposal first
+          const proposal = await submitProposal(rfpData);
+
+          // If there's a file to upload and proposal was created successfully
+          if (rfpDetails.file && proposal && proposal.id) {
+            await uploadFile(rfpDetails.file, proposal.id);
+          }
+        }
+
+        // The navigation will be handled by the onSuccess callback
+      } catch (error) {
+        // Error handling is done in the hook's onError callback
+        console.error("Error submitting proposal:", error);
+      }
+
       return;
     }
 
@@ -148,6 +219,7 @@ function useProposalCreationFlow({
     funderDetails,
     applicationQuestions,
     rfpDetails,
+    isSubmitting,
     handleNext,
     handleBack,
     handleEdit,
@@ -159,9 +231,10 @@ function useProposalCreationFlow({
 interface ProposalCreationFlowViewProps extends ProposalCreationFlowProps {
   currentStep: number;
   totalSteps: number;
-  funderDetails: any;
-  applicationQuestions: string[];
+  funderDetails: FunderDetails;
+  applicationQuestions: Question[];
   rfpDetails: any;
+  isSubmitting: boolean;
   handleNext: (data: any) => void;
   handleBack: () => void;
   handleEdit: (step: number) => void;
@@ -175,6 +248,7 @@ function ProposalCreationFlowView({
   funderDetails,
   applicationQuestions,
   rfpDetails,
+  isSubmitting,
   handleNext,
   handleBack,
   handleEdit,
@@ -216,6 +290,7 @@ function ProposalCreationFlowView({
           proposalType === "application" ? applicationQuestions : []
         }
         proposalType={proposalType}
+        isSubmitting={isSubmitting}
       />
     );
   }

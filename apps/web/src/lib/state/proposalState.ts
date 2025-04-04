@@ -1,2 +1,2 @@
 import { ProposalStateType } from "@shared/state/proposalState";
-export { ProposalStateType };
+export type { ProposalStateType };

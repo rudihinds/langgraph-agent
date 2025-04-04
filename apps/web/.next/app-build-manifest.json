@@ -1,3 +1,36 @@
 {
-  "pages": {}
+  "pages": {
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/commons.js",
+      "static/css/app/layout.css",
+      "static/chunks/app/layout.js"
+    ],
+    "/dashboard/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/commons.js",
+      "static/chunks/app/dashboard/layout.js"
+    ],
+    "/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/commons.js",
+      "static/chunks/vendors-_app-pages-browser_node_modules_lucide-react_dist_esm_icons_chart-no-axes-column-incr-59989d.js",
+      "static/chunks/app/dashboard/page.js"
+    ],
+    "/proposals/new/rfp/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/commons.js",
+      "static/chunks/vendors-_app-pages-browser_node_modules_lucide-react_dist_esm_icons_arrow-down_js-_app-pages--6800c7.js",
+      "static/chunks/app/proposals/new/rfp/page.js"
+    ],
+    "/api/proposals/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/proposals/route.js"
+    ]
+  }
 }
