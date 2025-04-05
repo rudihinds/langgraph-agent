@@ -2,111 +2,79 @@
 
 import { SupabaseClient, User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { createClient } from "./supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { Database } from "./schema/database";
+
+export type SyncUserResult = {
+  success: boolean;
+  updated?: boolean;
+  created?: boolean;
+  error?: string;
+};
 
 /**
- * Creates or updates a user record in the users table
- * This ensures that the users table is synchronized with the Supabase Auth users
+ * Sync user data to the database after authentication.
+ * Creates a user record if it doesn't exist, or updates last_login if it does.
  */
 export async function syncUserToDatabase(
-  supabase: SupabaseClient,
-  user: {
-    id: string;
-    email?: string | null;
-    user_metadata?: Record<string, any> | null;
-  }
-) {
-  if (!user || !user.id) {
+  supabaseClient: SupabaseClient<Database>,
+  user: User
+): Promise<SyncUserResult> {
+  if (!user || !user.id || !user.email) {
     console.error(
-      "[SyncUser] Cannot sync user to database: invalid user data provided",
-      { userId: user?.id }
+      "[SyncUser] Cannot sync user to database: invalid user data provided"
     );
-    return { error: "Invalid user data" };
+    return { success: false, error: "Invalid user data" };
   }
 
   try {
-    // Check if the user already exists in the users table
+    // 1. Check if user already exists in the database
     console.log(`[SyncUser] Checking for existing user: ${user.id}`);
-    const { data: existingUser, error: fetchError } = await supabase
+
+    if (!supabaseClient) {
+      return { success: false, error: "Invalid Supabase client" };
+    }
+
+    // Check if user exists
+    const { data: existingUser, error: findError } = await supabaseClient
       .from("users")
       .select("id")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    // Log the result of the check
-    if (fetchError && fetchError.code !== "PGRST116") {
-      // PGRST116 means no rows found, which is expected for new users
+    if (findError) {
       console.error(
         `[SyncUser] Error checking for existing user ${user.id}:`,
-        fetchError
+        findError.message
       );
-      return { error: fetchError };
-    } else if (existingUser) {
-      console.log(`[SyncUser] User ${user.id} found.`);
-    } else {
-      console.log(`[SyncUser] User ${user.id} not found, attempting insert.`);
+      return { success: false, error: findError.message };
     }
 
-    const now = new Date().toISOString();
+    // 2a. If user exists, update last_login
+    if (existingUser) {
+      console.log(`[SyncUser] User ${user.id} found in database`);
+      const now = new Date().toISOString();
 
-    if (!existingUser) {
-      // --- INSERT PATH ---
-      console.log(`[SyncUser] Inserting new user record for ${user.id}`);
-
-      // Define the user data to insert, excluding updated_at
-      const userData = {
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || null,
-        avatar_url: user.user_metadata?.avatar_url || null,
-        created_at: now, // Set creation timestamp explicitly
-        last_login: now, // Set initial last login timestamp
-      };
-
-      try {
-        const { error: insertError } = await supabase
-          .from("users")
-          .insert(userData);
-
-        if (insertError) {
-          console.error(
-            `[SyncUser] Error creating user record for ${user.id}:`,
-            insertError
-          );
-          return { error: insertError };
-        }
-
-        console.log(
-          `[SyncUser] User record created successfully for ${user.id}`
-        );
-        return { success: true, created: true };
-      } catch (err) {
-        console.error(`[SyncUser] Unexpected error during insert:`, err);
-        return { error: err instanceof Error ? err : new Error(String(err)) };
-      }
-    } else {
-      // --- UPDATE PATH ---
       console.log(
-        `[SyncUser] Updating last_login for existing user ${user.id}`
+        `[SyncUser] Updating last_login for existing user ${user.id} to ${now}`
       );
 
-      // Define the data to update, only including last_login
-      const updateData = {
-        last_login: now,
-      };
-
       try {
-        const { error: updateError } = await supabase
+        const { data: updateData, error: updateError } = await supabaseClient
           .from("users")
-          .update(updateData)
-          .eq("id", user.id);
+          .update({
+            last_login: now,
+            updated_at: now,
+          })
+          .eq("id", user.id)
+          .select();
 
         if (updateError) {
           console.error(
             `[SyncUser] Error updating last_login for ${user.id}:`,
-            updateError
+            updateError.message
           );
-          return { error: updateError };
+          return { success: false, error: updateError.message };
         }
 
         console.log(
@@ -115,89 +83,135 @@ export async function syncUserToDatabase(
         return { success: true, updated: true };
       } catch (err) {
         console.error(`[SyncUser] Unexpected error during update:`, err);
-        return { error: err instanceof Error ? err : new Error(String(err)) };
+        return { success: false, error: "Unexpected error during update" };
       }
     }
-  } catch (error) {
+    // 2b. If user doesn't exist, create a new user record
+    else {
+      console.log(
+        `[SyncUser] User ${user.id} not found in database, will create new record`
+      );
+
+      // Create new user record
+      const now = new Date().toISOString();
+
+      try {
+        console.log(
+          `[SyncUser] Executing insert operation for user ${user.id}`
+        );
+
+        const { data: insertData, error: insertError } = await supabaseClient
+          .from("users")
+          .insert({
+            id: user.id,
+            email: user.email,
+            last_login: now,
+            created_at: now,
+            updated_at: now,
+            metadata: {
+              source: "signup",
+              auth_timestamp: now,
+            },
+          })
+          .select();
+
+        if (insertError) {
+          console.error(
+            `[SyncUser] Error creating user record for ${user.id}:`,
+            insertError.message
+          );
+          return { success: false, error: insertError.message };
+        }
+
+        console.log(
+          `[SyncUser] User record created successfully for ${user.id}`
+        );
+        return { success: true, created: true };
+      } catch (err) {
+        console.error(`[SyncUser] Unexpected error during insert:`, err);
+        return {
+          success: false,
+          error: "Unexpected error during user creation",
+        };
+      }
+    }
+  } catch (err) {
     console.error(
       `[SyncUser] Unexpected error during sync for user ${user.id}:`,
-      error
+      err
     );
-    return { error: error instanceof Error ? error : new Error(String(error)) };
+    return { success: false, error: "Unexpected error during user sync" };
   }
 }
 
-// Define a success return type for ensureUserExists
-type EnsureUserExistsSuccess = { success: true; user: User };
-type EnsureUserExistsResult =
-  | EnsureUserExistsSuccess
-  | { success: false; error: any };
+// Result type for ensureUserExists
+export type EnsureUserResult = {
+  success: boolean;
+  user?: User;
+  error?: string;
+};
 
 /**
- * Server action/function to ensure user record exists.
- * Accepts a SupabaseClient instance.
+ * Ensures that a user exists and is authenticated.
+ * Also syncs the user to the database.
  */
 export async function ensureUserExists(
-  supabase: SupabaseClient
-): Promise<EnsureUserExistsResult> {
-  console.log("[EnsureUser] Attempting to get user session.");
-  try {
-    // Check if supabase or supabase.auth is undefined
-    if (!supabase || !supabase.auth) {
-      console.error("[EnsureUser] Invalid Supabase client or auth object");
-      return {
-        success: false,
-        error: new Error("Authentication service unavailable"),
-      };
-    }
+  supabaseClient: SupabaseClient<Database>
+): Promise<EnsureUserResult> {
+  console.log("[EnsureUser] Attempting to get user session");
 
-    // Use the passed Supabase client to get the user
+  if (!supabaseClient || !supabaseClient.auth) {
+    console.error("[EnsureUser] Invalid Supabase client or auth object");
+    return { success: false, error: "Authentication service unavailable" };
+  }
+
+  try {
+    // Get the current user and check if they're authenticated
+    console.log(
+      "[EnsureUser] Supabase client and auth object available, calling getUser()"
+    );
+
     const {
       data: { user },
       error,
-    } = await supabase.auth.getUser();
+    } = await supabaseClient.auth.getUser();
 
     if (error) {
-      console.error("[EnsureUser] Supabase auth error:", error);
-      return {
-        success: false,
-        error: error || new Error("Supabase authentication error"),
-      };
+      console.error("[EnsureUser] Supabase auth error:", error.message);
+      return { success: false, error: error.message };
     }
+
+    console.log("[EnsureUser] getUser() completed", { hasUser: !!user });
+
     if (!user) {
-      console.warn("[EnsureUser] No authenticated user found in session.");
-      return { success: false, error: new Error("User not authenticated") };
+      console.error("[EnsureUser] No authenticated user found in session");
+      return { success: false, error: "Not authenticated" };
     }
 
-    console.log(
-      `[EnsureUser] User ${user.id} authenticated. Proceeding to sync.`
-    );
-    // Sync user to DB using the same client
-    const syncResult = await syncUserToDatabase(supabase, user);
+    // User is authenticated, log their details
+    console.log(`[EnsureUser] User ${user.id} authenticated.`);
 
-    if (!syncResult || syncResult.error) {
+    // Sync user to database
+    console.log("[EnsureUser] Proceeding to sync user to database");
+    const syncResult = await syncUserToDatabase(supabaseClient, user);
+    console.log("[EnsureUser] Sync user result:", syncResult);
+
+    if (!syncResult.success) {
       console.error(
         `[EnsureUser] Failed to sync user ${user.id}:`,
-        syncResult?.error ?? "Unknown sync error"
+        syncResult.error
       );
-      // Propagate the specific sync error
       return {
         success: false,
-        error: syncResult?.error ?? new Error("User sync failed"),
+        user,
+        error: `User authenticated but sync failed: ${syncResult.error}`,
       };
     }
 
-    console.log(`[EnsureUser] User ${user.id} sync completed successfully.`);
-    // On successful sync, return success and the user object
-    return { success: true, user: user };
+    console.log(`[EnsureUser] User ${user.id} sync completed successfully`);
+    return { success: true, user };
   } catch (error) {
     console.error("[EnsureUser] Unexpected error:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error
-          : new Error("An unexpected error occurred"),
-    };
+    return { success: false, error: "Unexpected authentication error" };
   }
 }

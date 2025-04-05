@@ -23,71 +23,82 @@ export async function handleRfpUpload(
   file: File
 ): Promise<UploadResult> {
   console.log(
-    `[Helper][Upload] Starting internal handler for proposal ${proposalId}, user ${userId}`
+    `[UploadHelper] Processing file upload for proposal ${proposalId}`
   );
+
+  // Validate Supabase client has necessary services
+  if (!supabase.storage) {
+    console.error(`[UploadHelper] Supabase client is missing storage module`);
+    return {
+      success: false,
+      message: "Storage service unavailable.",
+    };
+  }
+
   try {
     // 1. Upload file to Supabase Storage
     const filePath = `${proposalId}/${file.name}`;
-    console.log(
-      `[Helper][UploadStorage] Attempting to upload file to path: ${filePath}`
-    );
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("proposal-documents") // Ensure bucket name matches setup from SUPABASE_SETUP.md
-      .upload(filePath, file, {
-        upsert: true,
-      });
 
-    if (uploadError || !uploadData) {
+    try {
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("proposal-documents")
+        .upload(filePath, file, {
+          upsert: true,
+        });
+
+      if (uploadError || !uploadData) {
+        console.error(
+          "[UploadHelper] Storage upload failed:",
+          uploadError?.message || "Unknown storage error"
+        );
+        return {
+          success: false,
+          message: `Failed to upload file: ${uploadError?.message || "Unknown storage error"}`,
+        };
+      }
+      console.log(
+        `[UploadHelper] File successfully uploaded to: ${uploadData.path}`
+      );
+    } catch (directUploadError) {
       console.error(
-        "[Helper][UploadStorage] Storage upload failed:",
-        uploadError
+        `[UploadHelper] Exception during upload operation:`,
+        directUploadError
       );
       return {
         success: false,
-        message: `Failed to upload file: ${uploadError?.message || "Unknown storage error"}`,
+        message: `Upload operation error: ${directUploadError instanceof Error ? directUploadError.message : "Unknown error during upload"}`,
       };
     }
-    console.log(
-      `[Helper][UploadStorage] File successfully uploaded to: ${uploadData.path}`
-    );
 
     // 2. Fetch existing proposal metadata
-    console.log(
-      `[Helper][UploadDB] Fetching metadata for proposal: ${proposalId}`
-    );
     const { data: proposalData, error: fetchError } = await supabase
       .from("proposals")
       .select("metadata")
       .eq("id", proposalId)
-      // Ensure user owns the proposal (important check, even if auth done in wrapper)
       .eq("user_id", userId)
       .maybeSingle();
 
     if (fetchError) {
       console.error(
-        "[Helper][UploadDB] Failed to fetch proposal metadata:",
-        fetchError
+        "[UploadHelper] Failed to fetch proposal metadata:",
+        fetchError.message
       );
       return {
         success: false,
         message: `Failed to retrieve proposal metadata: ${fetchError.message}`,
       };
     }
+
     // Check if proposal was found and belongs to the user
     if (!proposalData) {
       console.warn(
-        `[Helper][UploadDB] Proposal ${proposalId} not found or user ${userId} does not own it.`
+        `[UploadHelper] Proposal ${proposalId} not found or user ${userId} does not own it.`
       );
       return {
         success: false,
         message: "Proposal not found or access denied.",
       };
     }
-
-    console.log(
-      "[Helper][UploadDB] Successfully fetched proposal metadata",
-      proposalData.metadata
-    );
 
     // 3. Prepare and merge new metadata
     const existingMetadata =
@@ -97,35 +108,29 @@ export async function handleRfpUpload(
 
     const rfpDocumentMetadata = {
       name: file.name,
-      path: uploadData.path,
+      path: `${proposalId}/${file.name}`,
       size: file.size,
       type: file.type,
+      uploaded_at: new Date().toISOString(),
     };
 
     const newMetadata = {
       ...existingMetadata,
       rfp_document: rfpDocumentMetadata,
     };
-    console.log(
-      "[Helper][UploadDB] Prepared new merged metadata:",
-      newMetadata
-    );
 
     // 4. Update proposal metadata in database
-    console.log(
-      `[Helper][UploadDB] Updating metadata for proposal: ${proposalId}`
-    );
-    // We already verified ownership with the select, so update should be safe if RLS is correct
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from("proposals")
       .update({ metadata: newMetadata })
       .eq("id", proposalId)
-      .eq("user_id", userId); // Re-iterate user_id for safety/clarity
+      .eq("user_id", userId)
+      .select();
 
     if (updateError) {
       console.error(
-        "[Helper][UploadDB] Failed to update proposal metadata:",
-        updateError
+        "[UploadHelper] Failed to update proposal metadata:",
+        updateError.message
       );
       return {
         success: false,
@@ -133,7 +138,7 @@ export async function handleRfpUpload(
       };
     }
     console.log(
-      `[Helper][UploadDB] Metadata updated successfully for proposal ${proposalId}`
+      `[UploadHelper] Metadata updated successfully for proposal ${proposalId}`
     );
 
     // 5. Return success
@@ -143,8 +148,8 @@ export async function handleRfpUpload(
     };
   } catch (error) {
     console.error(
-      "[Helper][Upload] Unexpected error in handleRfpUpload:",
-      error
+      "[UploadHelper] Unexpected error in handleRfpUpload:",
+      error instanceof Error ? error.message : error
     );
     return {
       success: false,

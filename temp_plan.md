@@ -1,207 +1,91 @@
-# Implementation Plan: API Endpoint for Saving New Proposals
+# Implementation Plan: Fix and Optimize RFP Document Upload (TDD Approach)
 
-## Overview
-This plan outlines the steps required to implement the API endpoint for saving new proposals, connecting the frontend proposal creation flow to the Supabase database, and ensuring proper data persistence.
+## Goal
+Refactor the RFP document upload process to be reliable and performant by separating file storage from content parsing, following TDD principles. The immediate goal is to successfully store the uploaded file in Supabase Storage and link it correctly via the proposal's `metadata`, deferring text extraction.
 
-## Sub-Tasks
+## Phase 1: Backend Refinement (Storage Focus)
 
-### # 1. Create Proposal Interface and Schema Validation
+### # 1.1: Define Tests for `uploadProposalFile` Action
+   **Purpose:** Define the expected behavior and error conditions for the backend file upload action *before* implementation/refinement.
+   **Implementation Steps:**
+    1.  **Write Unit Test Specification:** Outline test cases for `uploadProposalFile` in a test file (e.g., `actions.test.ts`). Include:
+        *   Happy path: Successful upload and metadata update.
+        *   Error case: Storage upload failure.
+        *   Error case: Database metadata fetch failure.
+        *   Error case: Database metadata update failure.
+        *   Error case: User authentication failure.
+        *   Error case: Missing file or proposalId in input.
+        *   Edge case: Merging with existing vs. empty metadata.
+    2.  **Write Failing Unit Tests:** Implement the tests using Vitest/Jest. Mock dependencies (`supabase` client methods for storage/db, `ensureUserExists`, `cookies`). Assert expected calls to mocks and expected return values (success/error objects). These tests should initially fail or be skipped.
+   **Success Criteria:** A suite of failing/skipped unit tests covering the specified scenarios exists.
 
-**Purpose:** Define a comprehensive type interface and validation schema for proposal data to ensure type safety and data integrity.
+### # 1.2: Implement/Refine `uploadProposalFile` Action Logic
+   **Purpose:** Ensure the server action passes the defined tests, correctly handles storage and metadata update, and follows Supabase best practices.
+   **Implementation Steps:**
+    1.  **Implement/Refine `actions.ts` > `uploadProposalFile`:** Write or adjust the code to meet the requirements defined by the tests.
+    2.  **Adhere to Supabase Guidelines:** Ensure `createClient` is called correctly (as per `supabase/server.ts` using `cookieStore`) and that storage/database interactions use the client appropriately.
+    3.  **Focus on Storage & Metadata:** Confirm logic only uploads the raw file and updates the `metadata` JSONB field with `rfp_document` details (`name`, `path`, `size`, `type`).
+    4.  **Ensure No Content Reading/Logging:** Verify no file content/buffer is read or logged directly.
+    5.  **Refine Logging:** Implement clear, distinct logs for each step (start, auth, validation, storage attempt/result, db fetch/update attempt/result).
+    6.  **Run Tests:** Execute the unit tests written in #1.1. Iterate on the code until all tests pass.
+   **Success Criteria:** All unit tests for `uploadProposalFile` pass. Code review confirms adherence to Supabase guidelines and "store first" principle.
 
-**Implementation Steps:**
-1. Write test cases for proposal data validation with expected success and failure scenarios
-2. Create a `ProposalSchema.ts` file with Zod schemas
-3. Implement interfaces for both application-type and RFP-type proposals
-4. Add validation functions with proper error messages
-5. Test validation with edge cases (missing fields, invalid data formats)
-6. Ensure schema supports all required fields from the UI components
+### # 1.3: Write Additional Backend Tests
+    **Purpose:** Cover any further edge cases or refine existing tests after implementation.
+    **Implementation Steps:**
+     1. Review the implemented code and initial tests.
+     2. Add tests for any scenarios missed (e.g., specific error codes from Supabase, handling of different file types/extensions if relevant).
+     3. Ensure adequate test coverage.
+    **Success Criteria:** Comprehensive unit test suite passes with good coverage.
 
-**Technical Requirements:**
-- Use Zod for schema validation
-- Include separate schemas for different proposal types (application vs. RFP)
-- Define clear error messages for each validation failure
-- Implement type guards for runtime type checking
-- Support optional fields with sensible defaults
+## Phase 2: Frontend Refinement (TDD-Inspired)
 
-**Edge Cases:**
-- Handle partial saves for in-progress proposals
-- Account for various data types (text, dates, numbers)
-- Consider serialization/deserialization for complex objects
+### # 2.1: Define Tests for Frontend Upload Integration
+   **Purpose:** Define how the frontend should interact with the (now tested) backend action and handle responses. While pure TDD is harder for UI, we can test the submission logic.
+   **Implementation Steps:**
+    1.  **Write Test Specification:** Outline integration tests for the submission logic within `ServerForm.tsx` or its related hook (`useProposalSubmission` if applicable). Focus on the `handleSubmit` part related to file uploads. Test cases:
+        *   Calls `uploadProposalFile` action with correct `FormData` (mocking the action).
+        *   Displays correct toast message on mocked success from `uploadProposalFile`.
+        *   Displays correct toast message on mocked failure from `uploadProposalFile`.
+        *   Sets `isSubmitting` state correctly during the process.
+    2.  **Write Failing Integration Tests:** Implement tests using testing-library/react and Vitest/Jest. Mock the imported `uploadProposalFile` server action. Trigger form submission and assert on state changes and mock calls/toast calls.
+   **Success Criteria:** A suite of failing/skipped integration tests for the frontend submission logic exists.
 
-### # 2. Implement API Route for Proposal Creation
+### # 2.2: Implement/Refine Frontend Integration (`ServerForm.tsx`)
+   **Purpose:** Ensure the frontend component correctly calls the backend, handles state, provides feedback, and passes integration tests.
+   **Implementation Steps:**
+    1.  **Implement/Refine `ServerForm.tsx` > `handleSubmit`:** Write or adjust the code related to preparing `fileData` and calling `uploadProposalFile`.
+    2.  **Handle State & Feedback:** Ensure `isSubmitting` state covers the upload call. Implement clear loading indicators (spinner added previously) based on `isSubmitting`. Ensure toast messages accurately reflect the *storage* operation outcome.
+    3.  **Confirm Raw File:** Double-check that the raw `file` object is appended to `FormData`.
+    4.  **Run Tests:** Execute the integration tests from #2.1. Iterate until they pass.
+   **Success Criteria:** Frontend integration tests pass. UI provides clear feedback during upload.
 
-**Purpose:** Create a Next.js API route that securely handles proposal creation requests and interacts with the Supabase database.
+## Phase 3: Verification & Documentation
 
-**Implementation Steps:**
-1. Write test specifications for the API route using Vitest, including authentication tests
-2. Create an API route at `app/api/proposals/route.ts` with POST method handling
-3. Implement authentication middleware to ensure only logged-in users can create proposals
-4. Add input validation using the proposal schema
-5. Create database interaction logic using Supabase client
-6. Add proper error handling and response formatting
-7. Test with various input scenarios and error conditions
+### # 3.1: Manual End-to-End Test (RFP Upload)
+   **Purpose:** Verify the complete, refactored RFP upload flow from the user's perspective *after* backend/frontend logic is tested.
+   **Implementation Steps:**
+    1.  Start the application locally.
+    2.  Navigate through the UI to create a new RFP-type proposal.
+    3.  Upload a **small-to-medium sized PDF** file (< 5MB).
+    4.  Observe the UI feedback (loading states, toasts).
+    5.  Check the browser's developer console for errors or relevant logs.
+    6.  **After successful UI indication:**
+        *   Check Supabase Storage to confirm the file exists in the correct path.
+        *   Check the `proposals` table. Verify the `metadata` column contains the `rfp_document` object with accurate `name`, `path`, `size`, and `type`.
+    7.  (Optional) Repeat with a slightly larger file.
+   **Success Criteria:** File is successfully uploaded and linked in metadata. UI feedback is accurate. No garbled text appears. Hanging issue mitigated.
 
-**Technical Requirements:**
-- Use Next.js App Router API route handlers
-- Implement proper status codes (201 for creation, 400 for validation errors, 401 for unauthorized)
-- Add request rate limiting to prevent abuse
-- Ensure database queries are optimized
-- Log all errors for monitoring
+### # 3.2: Document Asynchronous Parsing Task
+   **Purpose:** Formally plan for the deferred text extraction task in the main project documentation.
+   **Implementation Steps:**
+    1.  Create/update entry in `TASK.md`.
+    2.  **Title:** "Implement Asynchronous RFP/Document Content Parsing".
+    3.  **Description:** Explain need, strategy (parse *after* storage), triggers, tools (`pdf-parse`), storage location (`proposals.metadata.rfp_extracted_text`).
+    4.  Mark as deferred.
+   **Success Criteria:** Clear task for future parsing exists in `TASK.md`.
 
-**Security Considerations:**
-- Validate user authentication via Supabase session
-- Sanitize all user input before database operations
-- Implement Row Level Security policies in Supabase
-- Return only necessary data in responses
+## Phase 4: (Deferred) Implement Asynchronous Parsing
+*   Build the background process described in Task #3.2.
 
-### # 3. Integrate Database Operations with Supabase
-
-**Purpose:** Create a robust data layer for proposal storage that handles all database operations with proper error handling and transaction support.
-
-**Implementation Steps:**
-1. Write tests for database operations with mocked Supabase client
-2. Create a `proposalRepository.ts` file with CRUD functions
-3. Implement transaction handling for atomicity
-4. Add error handling with specific error types
-5. Test database operations with different proposal types
-6. Ensure proper Row Level Security policies are applied
-7. Verify data integrity with serialization/deserialization tests
-
-**Technical Requirements:**
-- Use Supabase SDK for database operations
-- Implement optimistic concurrency control
-- Create stored procedures for complex operations if needed
-- Add indexes for frequently queried fields
-- Ensure proper foreign key relationships
-
-**Data Integrity Considerations:**
-- Handle proposal versioning for updates
-- Implement soft delete for proposals
-- Create audit trail for significant operations
-- Handle database errors gracefully
-
-### # 4. Update Frontend Components for API Integration
-
-**Purpose:** Connect the existing proposal creation flow UI components to the new API endpoint, handling loading states, errors, and success feedback.
-
-**Implementation Steps:**
-1. Write tests for frontend API integration
-2. Create a custom hook `useProposalSubmission` for handling API calls
-3. Integrate the hook with the `ProposalCreationFlow` component
-4. Add loading states, error handling, and success notifications
-5. Implement retry logic for failed submissions
-6. Test edge cases like network failures and server errors
-7. Add proper form validation before submission
-
-**Technical Requirements:**
-- Use React Query or SWR for data fetching
-- Implement progressive enhancement for JS-disabled environments
-- Add error boundary for graceful error rendering
-- Create toast notifications for submission status
-- Use Suspense for loading states
-
-**Accessibility Requirements:**
-- Ensure form validation errors are announced to screen readers
-- Add aria-busy attributes during loading
-- Create focus management for error/success states
-- Ensure keyboard navigation works during all states
-- Add progress indicators with proper ARIA attributes
-
-### # 5. Implement Proposal Storage for File Attachments
-
-**Purpose:** Create a secure storage system for RFP document uploads with proper access controls, file validation, and optimized storage.
-
-**Implementation Steps:**
-1. Write tests for file upload and retrieval functionality
-2. Create a Supabase Storage bucket configuration for proposal documents
-3. Implement file upload handling in the API route
-4. Add file type validation and size limits
-5. Create a preview component for uploaded files
-6. Test with various file types and sizes
-7. Implement access controls for file viewing/downloading
-
-**Technical Requirements:**
-- Configure Supabase Storage with proper permissions
-- Implement client-side file validation
-- Add server-side validation as a security measure
-- Create signed URLs for secure file access
-- Set up proper CORS configuration
-
-**File Handling Considerations:**
-- Limit file sizes (e.g., 10MB maximum)
-- Restrict file types to safe formats (PDF, DOCX, etc.)
-- Implement virus scanning for uploaded files if possible
-- Add file compression for large documents
-- Create thumbnails for preview purposes
-
-### # 6. Add Comprehensive Error Handling and Recovery
-
-**Purpose:** Implement robust error handling throughout the proposal creation process to ensure user data is never lost and errors are properly communicated.
-
-**Implementation Steps:**
-1. Write tests for various error scenarios
-2. Implement client-side form data persistence (localStorage)
-3. Create error boundary components for React rendering errors
-4. Add retry mechanisms for API calls
-5. Implement detailed error logging
-6. Create user-friendly error messages
-7. Test recovery from various failure points
-
-**Technical Requirements:**
-- Use consistent error message formatting
-- Implement proper error codes for tracking
-- Add telemetry for error monitoring
-- Create fallback UI components
-- Implement auto-save functionality
-
-**Edge Cases:**
-- Handle browser crashes/page reloads
-- Account for session timeouts
-- Consider multi-tab usage scenarios
-- Implement conflict resolution for concurrent edits
-- Handle partially completed submissions
-
-### # 7. Create End-to-End Tests for Proposal Creation Flow
-
-**Purpose:** Ensure the entire proposal creation flow works correctly from UI interaction to database storage with comprehensive end-to-end tests.
-
-**Implementation Steps:**
-1. Set up Playwright for end-to-end testing
-2. Create test scenarios for application-type proposal creation
-3. Add test scenarios for RFP-type proposal creation
-4. Implement authentication testing
-5. Test error scenarios and recovery
-6. Create accessibility tests
-7. Run tests across multiple browsers
-
-**Technical Requirements:**
-- Use Playwright for browser testing
-- Implement test database isolation
-- Create test fixtures for different proposal types
-- Add visual regression testing
-- Automate test runs in CI/CD pipeline
-
-**Test Coverage Requirements:**
-- Cover all user flows (happy paths)
-- Test all validation error scenarios
-- Verify database state after operations
-- Test accessibility compliance
-- Ensure responsive behavior across devices
-
-## Timeline and Dependencies
-
-1. **Week 1**: Tasks #1 and #2 (Schema and API Route)
-2. **Week 1**: Task #3 (Database Integration)
-3. **Week 2**: Tasks #4 and #5 (Frontend Integration and File Storage)
-4. **Week 2**: Tasks #6 and #7 (Error Handling and E2E Testing)
-
-## Success Criteria
-
-- All tests pass across browsers
-- Proposals can be created through the UI and are properly stored
-- Files can be uploaded and retrieved
-- Authentication and authorization work correctly
-- The system gracefully handles all error conditions
-- The interface is fully accessible per WCAG 2.1 AA standards
-- Performance metrics meet targets (< 3s for form submission)
+---

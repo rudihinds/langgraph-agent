@@ -19,6 +19,7 @@ const nextConfig = {
         "localhost:3003",
         "localhost:3004",
       ],
+      bodySizeLimit: "10mb",
     },
   },
 };

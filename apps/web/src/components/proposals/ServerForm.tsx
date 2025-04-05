@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, FormEvent, useEffect } from "react";
+import { useRef, useState, FormEvent, useEffect, ChangeEvent } from "react";
 import {
   createProposal,
   uploadProposalFile,
@@ -8,8 +8,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useRequireAuth, signOut } from "@/lib/client-auth";
-import { ensureUserExists } from "@/lib/user-management";
+import { Loader2, Upload, FileText, Trash, Info } from "lucide-react";
+import { UploadResult } from "@/lib/proposal-actions/upload-helper";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import { z } from "zod";
 
 interface ServerFormProps {
   proposalType: "rfp" | "application";
@@ -21,24 +28,30 @@ interface ServerFormProps {
 export default function ServerForm({
   proposalType,
   formData,
-  file,
+  file: initialFile,
   onCancel,
 }: ServerFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifyingUser, setIsVerifyingUser] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(
+    initialFile || null
+  );
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [fileValidation, setFileValidation] = useState<{
+    isValid: boolean;
+    message?: string;
+  }>({ isValid: true });
+
   const router = useRouter();
   const { toast } = useToast();
 
-  // Use the authentication hook to ensure the user is logged in
   const { user, loading, error } = useRequireAuth();
 
-  // When component mounts, make a server call to ensure the user exists in our database
   useEffect(() => {
     if (user && !loading) {
       const verifyUserInDatabase = async () => {
         try {
-          // Show loading state while verifying
           setIsVerifyingUser(true);
 
           console.log("Starting user verification process...");
@@ -58,7 +71,6 @@ export default function ServerForm({
             console.error("User verification failed:", errorData);
 
             if (response.status === 401) {
-              // User is not authenticated
               setIsVerifyingUser(false);
               toast({
                 title: "Authentication Required",
@@ -68,7 +80,6 @@ export default function ServerForm({
               router.push("/login");
               return false;
             } else {
-              // General error
               setIsVerifyingUser(false);
               toast({
                 title: "Verification Error",
@@ -118,7 +129,6 @@ export default function ServerForm({
     }
   }, [user, loading, toast, router]);
 
-  // Show error if authentication failed
   useEffect(() => {
     if (error) {
       toast({
@@ -129,10 +139,39 @@ export default function ServerForm({
     }
   }, [error, toast]);
 
+  // File selection handler
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    setUploadError(null);
+
+    // Validation logic
+    if (file) {
+      const isSizeValid = file.size <= 5 * 1024 * 1024; // 5MB limit
+      const fileType = file.type;
+      const isTypeValid = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+      ].includes(fileType);
+
+      setFileValidation({
+        isValid: isSizeValid && isTypeValid,
+        message: !isSizeValid
+          ? "File too large (max 5MB)"
+          : !isTypeValid
+            ? "Invalid file type (PDF or DOCX only)"
+            : undefined,
+      });
+    } else {
+      setFileValidation({ isValid: true });
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log(`[ServerForm] Form submission for ${proposalType} proposal`);
 
-    // Double-check authentication before proceeding
     if (!user && !loading) {
       toast({
         title: "Authentication Required",
@@ -143,7 +182,6 @@ export default function ServerForm({
       return;
     }
 
-    // Don't allow submission during verification
     if (isVerifyingUser) {
       toast({
         title: "Please Wait",
@@ -153,21 +191,26 @@ export default function ServerForm({
       return;
     }
 
+    // If this is an RFP proposal and needs a file, validate it
+    if (proposalType === "rfp" && selectedFile && !fileValidation.isValid) {
+      toast({
+        title: "Invalid File",
+        description: fileValidation.message || "Please select a valid file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Create the FormData object
       const submitData = new FormData();
 
-      // Add all form fields
+      // Append all form fields EXCEPT the file to the first FormData
       submitData.append("proposal_type", proposalType);
-
-      // Add all the data from formData
-      console.log("Preparing form data for submission:", formData);
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
           if (key === "metadata") {
-            // Always stringify the metadata object
             submitData.append(key, JSON.stringify(value));
           } else if (value instanceof Date) {
             submitData.append(key, value.toISOString());
@@ -179,80 +222,84 @@ export default function ServerForm({
         }
       });
 
-      // Debug what we're submitting
-      console.log("Form data ready for submission");
+      // 1. Call createProposal (which no longer handles files)
+      const createResult = await createProposal(submitData);
 
-      // Submit the proposal
-      console.log("Calling createProposal with form data");
-      const result = await createProposal(submitData);
-      console.log("Received result from createProposal:", result);
-
-      if (!result.success) {
-        // Handle different types of errors
-        if (
-          result.error?.includes("must be logged in") ||
-          result.error?.includes("authentication") ||
-          result.error?.includes("authenticated") ||
-          result.error?.includes("session")
-        ) {
+      if (!createResult.success || !createResult.proposal?.id) {
+        if (createResult.error?.includes("session")) {
           toast({
             title: "Session Expired",
             description: "Your session has expired. Please log in again.",
             variant: "destructive",
           });
           await signOut("/login?error=session_expired");
+          setIsSubmitting(false);
           return;
         }
-
-        throw new Error(result.error || "Failed to create proposal");
+        throw new Error(createResult.error || "Failed to create proposal");
       }
 
-      // If there's a file and the proposal was created successfully, upload it
-      if (file && result.proposal?.id) {
-        console.log(
-          "Preparing to upload file:",
-          file.name,
-          "for proposal:",
-          result.proposal.id
-        );
+      const newProposalId = createResult.proposal.id;
+
+      // 2. If a file was selected, call uploadProposalFile
+      let uploadOk = true;
+      if (selectedFile) {
+        // Prepare file upload data
         const fileData = new FormData();
-        fileData.append("file", file);
-        fileData.append("proposalId", result.proposal.id);
+        fileData.append("file", selectedFile);
+        fileData.append("proposalId", newProposalId);
 
-        const uploadResult = await uploadProposalFile(fileData);
-        console.log("File upload result:", uploadResult);
+        // Show a loading toast during upload
+        const uploadPromise = uploadProposalFile(fileData);
 
-        if (!uploadResult.success) {
-          console.error("File upload failed:", uploadResult.error);
-          toast({
-            title: "Warning",
-            description:
-              "Proposal created but file upload failed. You can try uploading again later.",
-            variant: "destructive",
+        try {
+          // Show toast for the upload process
+          sonnerToast.promise(uploadPromise, {
+            loading: "Uploading document...",
+            success: "Document uploaded successfully!",
+            error: "Failed to upload document.",
           });
-        } else {
-          console.log("File uploaded successfully:", uploadResult.filePath);
-          toast({
-            title: "Success",
-            description: "Proposal and document uploaded successfully.",
-          });
+
+          // Await the actual result separately
+          const uploadResult = await uploadPromise;
+
+          if (!uploadResult.success) {
+            console.error(
+              "[ServerForm] File upload failed:",
+              uploadResult.message || "Unknown error"
+            );
+            uploadOk = false;
+          }
+        } catch (uploadError) {
+          console.error("[ServerForm] Upload error:", uploadError);
+          uploadOk = false;
         }
       }
 
-      // Show success toast
-      toast({
-        title: "Success!",
-        description: "Your proposal has been created successfully.",
-      });
+      if (uploadOk) {
+        toast({
+          title: "Success!",
+          description: "Your proposal has been created.",
+        });
 
-      // Navigate to success page
-      router.push("/proposals/created");
-    } catch (error) {
-      console.error("Error submitting proposal:", error);
+        // Redirect to the success page
+        router.push("/proposals/created");
+      } else {
+        toast({
+          title: "Partial Success",
+          description:
+            "Proposal created but file upload failed. Try uploading again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("[ServerForm] Submission error:", err);
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to create proposal",
+          err instanceof Error
+            ? err.message
+            : "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -260,21 +307,92 @@ export default function ServerForm({
     }
   };
 
-  // If still loading authentication, show loading state
   if (loading || isVerifyingUser) {
     return (
-      <div className="flex justify-center py-8">
-        {loading ? "Checking authentication..." : "Verifying your account..."}
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4">
+        Authentication error. Please try logging in again.
       </div>
     );
   }
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-      {/* Hidden fields for the form data - we handle this in the submit handler */}
       <input type="hidden" name="proposal_type" value={proposalType} />
 
-      <div className="flex justify-between">
+      {proposalType === "rfp" && (
+        <div className="space-y-4">
+          <Label htmlFor="rfpDocument" className="block text-sm font-medium">
+            Upload RFP Document (PDF or DOCX, max 5MB)
+          </Label>
+
+          <div className="flex items-center gap-2 mb-2">
+            <label
+              htmlFor="file-upload"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background",
+                "hover:bg-muted cursor-pointer"
+              )}
+            >
+              <Upload className="w-4 h-4" />
+              {selectedFile ? "Change File" : "Upload RFP File"}
+            </label>
+            <Input
+              id="file-upload"
+              type="file"
+              accept=".pdf,.docx,.doc"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {selectedFile && (
+              <div className="flex items-center gap-1.5 text-sm">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground truncate max-w-[200px]">
+                  {selectedFile.name}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setFileValidation({ isValid: true });
+                  }}
+                  className="w-6 h-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Remove file"
+                >
+                  <Trash className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {fileValidation.message && (
+            <p className="text-sm text-destructive flex items-center">
+              <Info className="w-3.5 h-3.5 mr-1" />
+              {fileValidation.message}
+            </p>
+          )}
+
+          {uploadError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{uploadError}</AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-end space-x-4">
         <Button
           type="button"
           variant="outline"
@@ -283,9 +401,27 @@ export default function ServerForm({
         >
           Cancel
         </Button>
-
-        <Button type="submit" disabled={isSubmitting || !user}>
-          {isSubmitting ? "Submitting..." : "Submit Proposal"}
+        <Button
+          type="submit"
+          disabled={
+            isSubmitting ||
+            isVerifyingUser ||
+            (proposalType === "rfp" &&
+              !!selectedFile &&
+              !fileValidation.isValid)
+          }
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2
+                className="mr-2 h-4 w-4 animate-spin"
+                data-testid="submitting-indicator"
+              />
+              Submitting...
+            </>
+          ) : (
+            "Create Proposal"
+          )}
         </Button>
       </div>
     </form>
