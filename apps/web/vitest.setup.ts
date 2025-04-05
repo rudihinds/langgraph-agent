@@ -1,5 +1,9 @@
-import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { expect, vi } from "vitest";
+import * as matchers from "@testing-library/jest-dom/matchers";
+
+// Add testing-library matchers to Vitest
+expect.extend(matchers);
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://mock-project.supabase.co";

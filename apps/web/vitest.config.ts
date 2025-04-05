@@ -5,6 +5,11 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "./src"),
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,
@@ -14,9 +19,6 @@ export default defineConfig({
     coverage: {
       reporter: ["text", "json", "html"],
       exclude: ["**/node_modules/**", "**/__tests__/**"],
-    },
-    alias: {
-      "@": resolve(__dirname, "./src"),
     },
   },
 });
