@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { syncUserToDatabase } from "@/lib/user-management";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
     // Create Supabase client
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     // Sign in the user
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -28,6 +29,11 @@ export async function POST(req: Request) {
     if (error) {
       console.error("Sign in error:", error);
       return NextResponse.json({ message: error.message }, { status: 400 });
+    }
+
+    // After successful sign-in, check if user exists in users table and update or create
+    if (data.user) {
+      await syncUserToDatabase(supabase, data.user);
     }
 
     return NextResponse.json(

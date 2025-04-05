@@ -1,231 +1,214 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { GET } from "../route";
-import { cookies } from "next/headers";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { GET } from '../route';
+import { createClient } from '@/lib/supabase/server';
+import { syncUserToDatabase } from '@/lib/user-management';
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 // Mock dependencies
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(),
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
 }));
-
-vi.mock("@/lib/supabase-server", () => ({
-  createServerSupabaseClient: vi.fn(),
+vi.mock('@/lib/user-management', () => ({
+  syncUserToDatabase: vi.fn(),
 }));
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(() => ({
+    getAll: vi.fn().mockReturnValue([]),
+    set: vi.fn(),
+  })),
+}));
+vi.mock('next/server', async (importOriginal) => {
+  const mod = await importOriginal() as any;
+  return {
+    ...mod,
+    NextResponse: {
+      redirect: vi.fn().mockImplementation((url) => ({
+        url,
+        status: 307, // Default redirect status
+        cookies: {
+          set: vi.fn(),
+          getAll: vi.fn().mockReturnValue([]),
+        },
+      })),
+      next: vi.fn().mockImplementation(() => ({
+        status: 200,
+        cookies: {
+          set: vi.fn(),
+          getAll: vi.fn().mockReturnValue([]),
+        },
+      })),
+    }
+  }
+});
 
-// Mock console.log to reduce test output noise
-vi.spyOn(console, "log").mockImplementation(() => {});
+describe('Auth Callback Route', () => {
+  let mockSupabaseClient: any;
+  let mockCookieStore: any;
 
-describe("Auth Callback Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
 
-  it("redirects to login with error if no code parameter", async () => {
-    // Mock NextRequest with no code parameter
-    const mockRequest = {
-      url: "https://example.com/auth/callback",
-      nextUrl: new URL("https://example.com/auth/callback"),
-      cookies: {
-        get: vi.fn().mockReturnValue(null),
-      },
-      headers: {
-        get: vi.fn().mockImplementation((name) => null),
-      },
-    } as unknown as NextRequest;
-
-    // Mock cookies
-    const mockCookieStore = {
-      get: vi.fn().mockReturnValue(null),
+    // Mock CookieStore
+    mockCookieStore = {
+      getAll: vi.fn().mockReturnValue([]),
       set: vi.fn(),
     };
     (cookies as any).mockReturnValue(mockCookieStore);
 
-    // Mock NextResponse.redirect
-    const mockRedirect = vi.fn().mockReturnValue({
-      headers: new Headers(),
-      cookies: {
-        set: vi.fn(),
-      },
-    });
-    vi.spyOn(NextResponse, "redirect").mockImplementation(mockRedirect);
-
-    // Call the route handler
-    await GET(mockRequest);
-
-    // Verify redirect was called with login and error parameter
-    expect(mockRedirect).toHaveBeenCalled();
-    expect(mockRedirect.mock.calls[0][0].toString()).toBe(
-      "https://example.com/login?error=missing_code"
-    );
-  });
-
-  it("exchanges code for session and redirects to dashboard on success", async () => {
-    // Mock NextRequest with code parameter
-    const mockRequest = {
-      url: "https://example.com/auth/callback?code=test-code",
-      nextUrl: new URL("https://example.com/auth/callback?code=test-code"),
-      cookies: {
-        get: vi.fn().mockReturnValue(null),
-      },
-      headers: {
-        get: vi.fn().mockImplementation((name) => null),
-      },
-    } as unknown as NextRequest;
-
-    // Mock supabase client with successful exchange
-    const mockExchangeCodeForSession = vi.fn().mockResolvedValue({
-      data: {
-        session: {
-          user: { id: "test-user", email: "test@example.com" },
-          expires_at: null,
-        },
-      },
-      error: null,
-    });
-
-    const mockSupabaseClient = {
+    // Mock Supabase client
+    mockSupabaseClient = {
       auth: {
-        exchangeCodeForSession: mockExchangeCodeForSession,
+        exchangeCodeForSession: vi.fn(),
       },
     };
-    (createServerSupabaseClient as any).mockResolvedValue(mockSupabaseClient);
+    (createClient as any).mockReturnValue(mockSupabaseClient);
 
-    // Mock cookies
-    const mockCookieStore = {
-      get: vi.fn().mockReturnValue(null),
-      set: vi.fn(),
-    };
-    (cookies as any).mockReturnValue(mockCookieStore);
-
-    // Mock NextResponse.redirect
-    const mockRedirect = vi.fn().mockReturnValue({
-      headers: new Headers(),
-      cookies: {
-        set: vi.fn(),
-      },
-    });
-    vi.spyOn(NextResponse, "redirect").mockImplementation(mockRedirect);
-
-    // Call the route handler
-    await GET(mockRequest);
-
-    // Verify exchangeCodeForSession was called with the code
-    expect(mockExchangeCodeForSession).toHaveBeenCalledWith("test-code");
-
-    // Verify redirect was called to dashboard
-    expect(mockRedirect).toHaveBeenCalled();
-    expect(mockRedirect.mock.calls[0][0].toString()).toBe(
-      "https://example.com/dashboard"
-    );
+    // Reset NextResponse mocks
+    (NextResponse.redirect as any).mockClear();
+    (NextResponse.redirect as any).mockImplementation((url) => ({
+        url,
+        status: 307,
+        cookies: { set: vi.fn(), getAll: vi.fn().mockReturnValue([]) },
+    }));
   });
 
-  it("handles exchangeCodeForSession error and redirects to login", async () => {
-    // Mock NextRequest with code parameter
-    const mockRequest = {
-      url: "https://example.com/auth/callback?code=test-code",
-      nextUrl: new URL("https://example.com/auth/callback?code=test-code"),
-      cookies: {
-        get: vi.fn().mockReturnValue(null),
-      },
-      headers: {
-        get: vi.fn().mockImplementation((name) => null),
-      },
-    } as unknown as NextRequest;
-
-    // Mock supabase client with error
-    const mockExchangeCodeForSession = vi.fn().mockResolvedValue({
-      data: { session: null },
-      error: { message: "Auth error" },
-    });
-
-    const mockSupabaseClient = {
-      auth: {
-        exchangeCodeForSession: mockExchangeCodeForSession,
-      },
-    };
-    (createServerSupabaseClient as any).mockResolvedValue(mockSupabaseClient);
-
-    // Mock cookies
-    const mockCookieStore = {
-      get: vi.fn().mockReturnValue(null),
-      set: vi.fn(),
-    };
-    (cookies as any).mockReturnValue(mockCookieStore);
-
-    // Mock NextResponse.redirect
-    const mockRedirect = vi.fn().mockReturnValue({
-      headers: new Headers(),
-      cookies: {
-        set: vi.fn(),
-      },
-    });
-    vi.spyOn(NextResponse, "redirect").mockImplementation(mockRedirect);
-
-    // Call the route handler
-    await GET(mockRequest);
-
-    // Verify exchangeCodeForSession was called with the code
-    expect(mockExchangeCodeForSession).toHaveBeenCalledWith("test-code");
-
-    // Verify redirect was called to login with error
-    expect(mockRedirect).toHaveBeenCalledTimes(2); // Initial redirect + error redirect
-    expect(mockRedirect.mock.calls[1][0].toString()).toBe(
-      "https://example.com/login?error=Auth%20error"
-    );
+  afterEach(() => {
+    vi.resetAllMocks();
   });
 
-  it("handles unexpected errors during code exchange", async () => {
-    // Mock NextRequest with code parameter
-    const mockRequest = {
-      url: "https://example.com/auth/callback?code=test-code",
-      nextUrl: new URL("https://example.com/auth/callback?code=test-code"),
-      cookies: {
-        get: vi.fn().mockReturnValue(null),
-      },
-      headers: {
-        get: vi.fn().mockImplementation((name) => null),
-      },
-    } as unknown as NextRequest;
+  const createMockRequest = (searchParams: Record<string, string>): NextRequest => {
+    const url = new URL('http://localhost:3000/auth/callback');
+    Object.entries(searchParams).forEach(([key, value]) => url.searchParams.set(key, value));
+    return { url: url.toString(), nextUrl: url } as unknown as NextRequest;
+  };
 
-    // Mock supabase client with exception
-    const mockExchangeCodeForSession = vi
-      .fn()
-      .mockRejectedValue(new Error("Network error"));
+  it('should exchange code for session and sync user successfully', async () => {
+    const code = 'valid-code';
+    const mockUserData = { id: 'user-123', email: 'test@example.com' };
+    const mockSessionData = { access_token: 'token', refresh_token: 'refresh', user: mockUserData, expires_at: Date.now() / 1000 + 3600 };
+    const mockRequest = createMockRequest({ code });
 
-    const mockSupabaseClient = {
-      auth: {
-        exchangeCodeForSession: mockExchangeCodeForSession,
-      },
-    };
-    (createServerSupabaseClient as any).mockResolvedValue(mockSupabaseClient);
-
-    // Mock cookies
-    const mockCookieStore = {
-      get: vi.fn().mockReturnValue(null),
-      set: vi.fn(),
-    };
-    (cookies as any).mockReturnValue(mockCookieStore);
-
-    // Mock console.error to prevent test output pollution
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
-    // Mock NextResponse.redirect
-    const mockRedirect = vi.fn().mockReturnValue({
-      headers: new Headers(),
-      cookies: {
-        set: vi.fn(),
-      },
+    mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({ 
+      data: { session: mockSessionData, user: mockUserData }, 
+      error: null 
     });
-    vi.spyOn(NextResponse, "redirect").mockImplementation(mockRedirect);
+    (syncUserToDatabase as any).mockResolvedValue({ success: true });
 
-    // Call the route handler
+    const response = await GET(mockRequest);
+    
+    expect(createClient).toHaveBeenCalledWith(mockCookieStore);
+    expect(mockSupabaseClient.auth.exchangeCodeForSession).toHaveBeenCalledWith(code);
+    expect(syncUserToDatabase).toHaveBeenCalledWith(mockSupabaseClient, mockUserData);
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/dashboard');
+    expect(response.cookies.set).toHaveBeenCalledWith('auth-session-established', 'true', expect.any(Object));
+  });
+
+  it('should redirect to login with error if OAuth provider returns error', async () => {
+    const error = 'access_denied';
+    const errorDescription = 'User denied access';
+    const mockRequest = createMockRequest({ error, error_description: errorDescription });
+
     await GET(mockRequest);
 
-    // Verify redirect was called to login with server_error
-    expect(mockRedirect).toHaveBeenCalledTimes(2); // Initial redirect + error redirect
-    expect(mockRedirect.mock.calls[1][0].toString()).toBe(
-      "https://example.com/login?error=server_error"
-    );
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/login');
+    expect(redirectCall.search).toContain(`error=${encodeURIComponent(errorDescription)}`);
+    expect(mockSupabaseClient.auth.exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(syncUserToDatabase).not.toHaveBeenCalled();
+  });
+
+  it('should redirect to login with error if code is missing', async () => {
+    const mockRequest = createMockRequest({}); // No code
+
+    await GET(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/login');
+    expect(redirectCall.search).toContain('error=missing_code');
+    expect(mockSupabaseClient.auth.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it('should redirect to login with error if exchangeCodeForSession fails', async () => {
+    const code = 'invalid-code';
+    const mockError = { message: 'Invalid code exchange' };
+    const mockRequest = createMockRequest({ code });
+
+    mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: mockError });
+
+    await GET(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/login');
+    expect(redirectCall.search).toContain(`error=${encodeURIComponent(mockError.message)}`);
+    expect(syncUserToDatabase).not.toHaveBeenCalled();
+  });
+  
+   it('should redirect to login with error if no session is returned after exchange', async () => {
+    const code = 'valid-code-no-session';
+    const mockRequest = createMockRequest({ code });
+
+    // Simulate Supabase returning success but no session object
+    mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({ 
+      data: { session: null, user: null }, // No session
+      error: null 
+    });
+
+    await GET(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/login');
+    expect(redirectCall.search).toContain('error=no_session');
+    expect(syncUserToDatabase).not.toHaveBeenCalled();
+  });
+
+  it('should still redirect to dashboard but log error if syncUserToDatabase fails', async () => {
+    const code = 'valid-code-sync-fail';
+    const mockUserData = { id: 'user-123', email: 'syncfail@example.com' };
+    const mockSessionData = { access_token: 'token', refresh_token: 'refresh', user: mockUserData, expires_at: Date.now() / 1000 + 3600 };
+    const syncError = { message: 'DB sync failed' };
+    const mockRequest = createMockRequest({ code });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockSupabaseClient.auth.exchangeCodeForSession.mockResolvedValue({ 
+      data: { session: mockSessionData, user: mockUserData }, 
+      error: null 
+    });
+    (syncUserToDatabase as any).mockResolvedValue({ error: syncError }); // Simulate sync failure
+
+    const response = await GET(mockRequest);
+
+    expect(syncUserToDatabase).toHaveBeenCalledWith(mockSupabaseClient, mockUserData);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Error syncing user to database'), syncError);
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/dashboard'); // Still redirects on successful auth
+    expect(response.cookies.set).toHaveBeenCalledWith('auth-session-established', 'true', expect.any(Object));
+    consoleSpy.mockRestore();
+  });
+
+  it('should redirect to login with server_error on unexpected exceptions', async () => {
+    const code = 'valid-code-unexpected-fail';
+    const mockError = new Error('Something broke unexpectedly');
+    const mockRequest = createMockRequest({ code });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockSupabaseClient.auth.exchangeCodeForSession.mockRejectedValue(mockError);
+
+    await GET(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe('/login');
+    expect(redirectCall.search).toContain('error=server_error');
+    expect(redirectCall.search).toContain(`details=${encodeURIComponent(mockError.message)}`);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Unexpected error in callback'), mockError.message, expect.any(String));
+    consoleSpy.mockRestore();
   });
 });

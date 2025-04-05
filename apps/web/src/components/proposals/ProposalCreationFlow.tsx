@@ -8,7 +8,7 @@ import FunderDetailsView from "./FunderDetailsView";
 import ReviewProposalView from "./ReviewProposalView";
 import { Button } from "@/components/ui/button";
 import { useProposalSubmission } from "@/hooks/useProposalSubmission";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Question } from "./ApplicationQuestionsView";
 import { FunderDetails } from "./FunderDetailsView";
 
@@ -119,58 +119,16 @@ function useProposalCreationFlow({
       setIsSubmitting(true);
 
       try {
-        // Map form data fields to match expected schema field names
-        const mappedFunderDetails = {
-          funderName: funderDetails.organizationName,
-          programName: funderDetails.fundingTitle,
-          deadline: funderDetails.deadline
-            ? funderDetails.deadline.toISOString()
-            : null,
-          funderType: "Unknown", // Add a default value for required field
-          budgetRange: funderDetails.budgetRange,
-          focusArea: funderDetails.focusArea,
-        };
-
-        // Prepare proposal data based on type
-        const proposalData = {
-          title:
-            funderDetails.fundingTitle ||
-            funderDetails.organizationName ||
-            "Untitled Proposal",
-          description: funderDetails.focusArea || "",
-          proposal_type: proposalType,
-          funder_details: mappedFunderDetails,
-          status: "draft",
-          deadline: funderDetails.deadline
-            ? funderDetails.deadline.toISOString()
-            : undefined,
-        };
-
-        if (proposalType === "application") {
-          // Add application-specific data
-          const applicationData = {
-            ...proposalData,
-            proposal_type: "application" as const,
-            questions: applicationQuestions,
-          };
-
-          await submitProposal(applicationData);
-        } else {
-          // Add RFP-specific data
-          const rfpData = {
-            ...proposalData,
-            proposal_type: "rfp" as const,
-            // If there's document data in rfpDetails, include it
-            rfp_document: rfpDetails.document || undefined,
-          };
-
-          // Submit the proposal first
-          const proposal = await submitProposal(rfpData);
-
-          // If there's a file to upload and proposal was created successfully
-          if (rfpDetails.file && proposal && proposal.id) {
-            await uploadFile(rfpDetails.file, proposal.id);
-          }
+        // If we're at the review step, the data should already be prepared 
+        // in the correct format by the ReviewProposalView component
+        console.log("Submitting proposal with data:", data);
+        
+        // Submit the proposal
+        const proposal = await submitProposal(data);
+        
+        // If there's a file to upload and proposal was created successfully
+        if (proposalType === "rfp" && rfpDetails.file && proposal && proposal.id) {
+          await uploadFile(rfpDetails.file, proposal.id);
         }
       } catch (error) {
         // Error handling is done in the hook's onError callback
@@ -301,6 +259,7 @@ function ProposalCreationFlowView({
         }
         proposalType={proposalType}
         isSubmitting={isSubmitting}
+        rfpDetails={rfpDetails}
       />
     );
   }

@@ -13,7 +13,7 @@ const PopoverTrigger = PopoverPrimitive.Trigger;
 const AutoClosePopover = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root>
->((props, ref) => {
+>((props, _) => {
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {

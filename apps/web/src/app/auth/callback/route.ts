@@ -1,4 +1,6 @@
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase/server";
+import { syncUserToDatabase } from "@/lib/user-management";
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 // This route handles the OAuth callback from Supabase authentication
@@ -49,7 +51,8 @@ export async function GET(request: NextRequest) {
     console.log("[Auth] Creating server-side Supabase client");
 
     // Create a server client for handling the authentication
-    const supabase = await createServerSupabaseClient();
+    const cookieStore = cookies();
+    const supabase = await createClient(cookieStore);
 
     console.log("[Auth] Exchanging auth code for session");
 
@@ -80,6 +83,14 @@ export async function GET(request: NextRequest) {
         ? new Date(data.session.expires_at * 1000).toISOString()
         : "unknown",
     });
+
+    // Create or update user record in the users table
+    if (data.session.user) {
+      const result = await syncUserToDatabase(supabase, data.session.user);
+      if (result.error) {
+        console.error("[Auth] Error syncing user to database:", result.error);
+      }
+    }
 
     // Since Supabase handles the session cookie automatically, we'll create
     // a simple redirect response

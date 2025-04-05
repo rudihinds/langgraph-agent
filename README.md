@@ -49,17 +49,20 @@ proposal-writer/
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/yourusername/proposal-writer.git
    cd proposal-writer
    ```
 
 2. Install dependencies:
+
    ```bash
    npm run install:all
    ```
 
 3. Copy the environment variables:
+
    ```bash
    cp .env.example .env
    ```
@@ -75,6 +78,7 @@ npm run dev
 ```
 
 This will start:
+
 - The backend server at http://localhost:3001
 - The LangGraph server at http://localhost:2024
 - The Next.js frontend at http://localhost:3000
@@ -110,6 +114,28 @@ npm run dev:agents
 - Structured proposal generation
 - Human-in-the-loop feedback
 - Complete proposal export
+
+## Testing
+
+Run the test suite:
+
+```bash
+npm test
+```
+
+#### Authentication Testing
+
+We've implemented comprehensive tests for the Supabase authentication flow, ensuring:
+
+- Proper user creation and synchronization
+- Robust session management
+- Comprehensive error handling
+- Protection of authenticated routes
+
+For detailed information about our authentication implementation and testing:
+
+- See [SUPABASE_IMPLEMENTATION.md](./SUPABASE_IMPLEMENTATION.md) for implementation details
+- See [AUTHENTICATION_TESTING.md](./AUTHENTICATION_TESTING.md) for testing approach
 
 ## License
 

@@ -851,14 +851,18 @@ function ApplicationQuestionsViewComponent({
 
         {/* Bulk import dialog */}
         <Dialog open={bulkImportOpen} onOpenChange={closeBulkImport}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Bulk Import Questions</DialogTitle>
-              <DialogDescription>
-                Enter one question per line. Each line will be added as a
-                separate question.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent
+            className="sm:max-w-md"
+            aria-labelledby="bulk-import-v2-dialog-title"
+            aria-describedby="bulk-import-v2-dialog-description"
+          >
+            <DialogTitle id="bulk-import-v2-dialog-title">
+              Bulk Import Questions
+            </DialogTitle>
+            <DialogDescription id="bulk-import-v2-dialog-description">
+              Enter one question per line. Each line will be added as a separate
+              question.
+            </DialogDescription>
             <div className="space-y-4 py-4">
               <Textarea
                 placeholder="Enter one question per line..."

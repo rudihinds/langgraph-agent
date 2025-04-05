@@ -14,7 +14,7 @@ export function getRedirectURL() {
     return window.location.origin;
   }
   // Fallback to default URL in SSR context
-  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3005";
+  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 }
 
 /**
@@ -33,7 +33,7 @@ export async function signIn() {
       localStorage.setItem("auth_start_time", new Date().toISOString());
     }
 
-    return await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: redirectURL,
@@ -43,6 +43,19 @@ export async function signIn() {
         },
       },
     });
+
+    if (error) {
+      console.error("[Auth] Error during OAuth sign-in:", error);
+      throw error;
+    }
+
+    // If we got this far without a redirect, manually navigate to the auth URL
+    if (data?.url && window) {
+      console.log("[Auth] Manually navigating to auth URL:", data.url);
+      window.location.href = data.url;
+    }
+
+    return { data, error };
   } catch (error) {
     console.error("[Auth] Error in signIn:", error);
     throw error;
@@ -53,8 +66,27 @@ export async function signIn() {
  * Signs out the current user
  */
 export async function signOut() {
-  const supabase = createClient();
-  return await supabase.auth.signOut();
+  try {
+    // First call server-side sign-out endpoint
+    await fetch("/api/auth/sign-out", { method: "POST" });
+
+    // Then sign out on the client side
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("[Auth] Error in signOut:", error);
+      throw error;
+    }
+
+    // Redirect to login page
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  } catch (error) {
+    console.error("[Auth] Error in signOut:", error);
+    throw error;
+  }
 }
 
 /**

@@ -60,6 +60,11 @@
 - [x] Handle authentication state in the UI (`Header`, Homepage buttons)
 - [x] Implement token refresh and session persistence
 - [x] Test authentication flow end-to-end
+- [x] Fix user record creation in database after sign-up (2024-06-26)
+  - [x] Implement synchronization between Supabase Auth and users table
+  - [x] Create helper function for consistent user creation/updates
+  - [x] Add comprehensive tests for user creation flow
+  - [x] Update sign-up, sign-in, and callback routes to ensure user records exist
 
 ### Persistence Layer
 
@@ -138,16 +143,33 @@
   - [x] Implement consistent UI components with shared styling across all views (2024-06-20)
   - [x] Create reusable CheckItem component for consistent styling (2024-06-20)
   - [x] Add scroll-to-error feature in ApplicationQuestionsView for improved validation UX (2024-06-22)
-  - [ ] Implement API endpoint for saving new proposals
+  - [x] Implement API endpoint for saving new proposals
+  - [x] Fix database schema mismatches in the proposal submission process
+  - [x] Fix RFP flow to properly handle document uploads
+  - [x] Improve error handling and logging for proposal submission
+  - [x] Update metadata schema handling to support flexible data structures
   - [ ] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction
   - [ ] Create message components for different agent roles
   - [ ] Implement streaming response display
   - [ ] Add human-in-the-loop interaction components
-- [ ] Implement file upload for RFP documents
-  - [ ] Create file upload component with validation
-  - [ ] Add document preview functionality
-  - [ ] Show upload progress indicators
+- [x] Implement file upload for RFP documents
+  - [x] Create file upload component with validation
+  - [x] Add document preview functionality
+  - [x] Show upload progress indicators
+  - [x] Implement proper metadata handling for RFP documents
+  - [x] Add comprehensive logging for file upload process
+
+### Discovered During Work on Proposal Creation Flow
+
+- [x] Fixed database schema mismatches between form data and database tables
+- [x] Improved metadata handling to use Supabase JSONB for flexible data structures
+- [x] Enhanced error handling in proposal submission process
+- [x] Added comprehensive logging for debugging submission issues
+- [x] Fixed RFP flow to properly handle document uploads
+- [x] Created solution documentation for database schema and API implementation
+- [x] Fixed accessibility issues with dialog components
+- [x] Fixed linter errors in UI components for better code quality
 
 ## Phase 3: Agent Foundation (Week 3)
 

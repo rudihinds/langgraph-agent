@@ -68,7 +68,7 @@ The Proposal Agent System is an AI-powered application that assists users in cre
 6. Each section is evaluated, revised as needed, and approved by user
 7. Complete proposal is compiled and presented for download
 
-### State Management
+### State Management (backend)
 - LangGraph state persisted in Supabase
 - Checkpoint-based persistence for resuming sessions
 - Thread-based organization for multiple proposals
@@ -128,6 +128,7 @@ The Proposal Agent System is an AI-powered application that assists users in cre
 - Continuous integration with GitHub Actions
 - Regular user testing for feedback and refinement
 - Accessibility audits at each development milestone
+- Use npm for package management NOT yarn
 
 ## Future Enhancements
 - Template library for common proposal types

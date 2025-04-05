@@ -890,14 +890,18 @@ function ApplicationQuestionsViewComponent({
 
         {/* Bulk Import Dialog */}
         <Dialog open={bulkImportOpen} onOpenChange={closeBulkImport}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Bulk Import Questions</DialogTitle>
-              <DialogDescription>
-                Paste your questions below, one per line. These will replace
-                your current questions.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent
+            className="max-w-2xl"
+            aria-labelledby="bulk-import-dialog-title"
+            aria-describedby="bulk-import-dialog-description"
+          >
+            <DialogTitle id="bulk-import-dialog-title">
+              Bulk Import Questions
+            </DialogTitle>
+            <DialogDescription id="bulk-import-dialog-description">
+              Paste your questions below, one per line. These will replace your
+              current questions.
+            </DialogDescription>
 
             <div className="py-4">
               <Textarea

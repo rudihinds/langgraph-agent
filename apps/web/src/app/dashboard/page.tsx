@@ -134,8 +134,12 @@ export default function DashboardPage() {
   // Handle proposal type selection
   const handleTypeSelect = (type: ProposalType) => {
     setSelectedType(type);
-    // Redirect to the proposal creation page with the selected type
-    router.push(`/proposals/create?type=${type}`);
+    // Redirect directly to the appropriate page based on the proposal type
+    if (type === "rfp") {
+      router.push("/proposals/new/rfp");
+    } else if (type === "application") {
+      router.push("/proposals/new/application");
+    }
   };
 
   // Handle new proposal creation from modal

@@ -60,14 +60,17 @@ function useProposalTypeModal(props: ProposalTypeModalProps) {
 }
 
 // VIEW: Render the UI
-const ProposalTypeCard = React.forwardRef<HTMLDivElement, {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  selected: boolean;
-  onClick: () => void;
-  testId: string;
-}>(({ title, description, icon: Icon, selected, onClick, testId }, ref) => {
+const ProposalTypeCard = React.forwardRef<
+  HTMLDivElement,
+  {
+    title: string;
+    description: string;
+    icon: React.ElementType;
+    selected: boolean;
+    onClick: () => void;
+    testId: string;
+  }
+>(({ title, description, icon: Icon, selected, onClick, testId }, ref) => {
   return (
     <div
       className={cn(
@@ -132,14 +135,12 @@ function ProposalTypeModalView({
         aria-labelledby="proposal-type-modal-title"
         aria-describedby="proposal-type-modal-description"
       >
-        <DialogHeader>
-          <DialogTitle id="proposal-type-modal-title" className="text-2xl">
-            Create New Proposal
-          </DialogTitle>
-          <DialogDescription id="proposal-type-modal-description">
-            Select the type of proposal you want to create
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitle id="proposal-type-modal-title" className="text-2xl">
+          Create New Proposal
+        </DialogTitle>
+        <DialogDescription id="proposal-type-modal-description">
+          Select the type of proposal you want to create
+        </DialogDescription>
 
         <div
           className="grid grid-cols-1 md:grid-cols-2 gap-4"

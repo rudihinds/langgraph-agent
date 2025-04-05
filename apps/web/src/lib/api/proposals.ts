@@ -1,8 +1,8 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { PostgresCheckpointer } from "@/lib/checkpoint/PostgresCheckpointer";
-import { ProposalStateType } from "@/lib/state/proposalState";
+import { ProposalStatus } from "@/types";
+import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 export type Proposal = {
   id: string;
@@ -16,99 +16,85 @@ export type Proposal = {
   dueDate?: string;
 };
 
-export async function getProposals(): Promise<Proposal[]> {
+/**
+ * Get all proposals for the current user
+ */
+export async function getUserProposals(
+  status?: ProposalStatus,
+  page: number = 1,
+  limit: number = 10
+) {
   try {
-    console.log("[Proposals] Starting getProposals function");
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-    // Use our server Supabase client with proper await
-    const supabase = await createServerSupabaseClient();
+    // Get the user's session
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
 
-    // Get current user session
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      console.log(
-        "[Proposals] No user session found, returning empty proposals"
-      );
-      return [];
+    if (sessionError || !sessionData?.session) {
+      throw new Error(sessionError?.message || "User is not authenticated");
     }
 
-    console.log("[Proposals] Got session for user:", session.user.email);
+    // Construct the query
+    let query = supabase
+      .from("proposals")
+      .select("*")
+      .eq("user_id", sessionData.session.user.id)
+      .order("created_at", { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
 
-    try {
-      // Using the checkpointer to get proposal data
-      const checkpointer = new PostgresCheckpointer({
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        supabaseKey: process.env.SUPABASE_SERVICE_KEY!,
-        userId: session.user.id,
-      });
-
-      // Query checkpoints directly
-      const { data, error } = await supabase
-        .from("proposal_checkpoints")
-        .select("proposal_id, namespace, state, created_at, updated_at")
-        .eq("user_id", session.user.id)
-        .not("namespace", "like", "proposal_sessions:%")
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        console.error("[Proposals] Error fetching proposals:", error);
-        return [];
-      }
-
-      if (!data || data.length === 0) {
-        console.log("[Proposals] No proposals found for user");
-        return [];
-      }
-
-      console.log(`[Proposals] Found ${data.length} raw checkpoint records`);
-
-      // Process proposals
-      const proposals: Proposal[] = data.map((item) => {
-        let state: Partial<ProposalStateType> = {};
-
-        try {
-          // Try to deserialize state
-          if (typeof item.state === "object") {
-            state = item.state;
-          }
-        } catch (e) {
-          console.error(
-            "[Proposals] Error deserializing state for proposal:",
-            item.proposal_id,
-            e
-          );
-        }
-
-        // Calculate progress from section status
-        const progress = calculateProgress(state?.sectionStatus || {});
-
-        return {
-          id: item.proposal_id,
-          title: state?.metadata?.proposalTitle || "Untitled Proposal",
-          organization: state?.metadata?.organization,
-          status: state?.metadata?.status || "in_progress",
-          progress,
-          phase: state?.currentPhase,
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          dueDate: state?.metadata?.dueDate,
-        };
-      });
-
-      console.log(
-        `[Proposals] Successfully processed ${proposals.length} proposals`
-      );
-      return proposals;
-    } catch (dbError) {
-      console.error("[Proposals] Database error:", dbError);
-      return [];
+    // Filter by status if provided
+    if (status) {
+      query = query.eq("status", status);
     }
+
+    // Execute the query
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
   } catch (error) {
-    console.error("[Proposals] Error in getProposals:", error);
-    return [];
+    console.error("Error fetching user proposals:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get a proposal by ID, ensuring it belongs to the current user
+ */
+export async function getProposalById(id: string) {
+  try {
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+
+    // Get the user's session
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError || !sessionData?.session) {
+      throw new Error(sessionError?.message || "User is not authenticated");
+    }
+
+    // Get the proposal with the given ID, ensuring it belongs to the current user
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", sessionData.session.user.id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching proposal by ID:", error);
+    throw error;
   }
 }
 

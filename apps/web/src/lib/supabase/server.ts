@@ -1,25 +1,83 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { type CookieContainer } from '@/lib/supabase/types';
+"use server";
 
-export function createClient(cookieContainer: CookieContainer) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { cache } from "react";
+import { ENV } from "@/env";
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
+/**
+ * Server-side Supabase client that handles cookies properly.
+ * Can be used in Server Components, Route Handlers, and Server Actions.
+ */
+export const createClient = cache(
+  async (
+    cookieStore?:
+      | ReturnType<typeof cookies>
+      | Promise<ReturnType<typeof cookies>>
+  ) => {
+    try {
+      if (!ENV.NEXT_PUBLIC_SUPABASE_URL) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_URL");
+        return null;
+      }
+
+      if (!ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
+        return null;
+      }
+
+      // Use provided cookie store or get from next/headers
+      let cookieJar;
+      try {
+        cookieJar = cookieStore
+          ? cookieStore instanceof Promise
+            ? await cookieStore
+            : cookieStore
+          : await cookies();
+      } catch (cookieError) {
+        console.error(
+          "[Supabase Client] Error accessing cookies:",
+          cookieError
+        );
+        return null;
+      }
+
+      return createServerClient(
+        ENV.NEXT_PUBLIC_SUPABASE_URL,
+        ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        {
+          cookies: {
+            async getAll() {
+              try {
+                // Make sure to use await to satisfy Next.js expectations
+                return await cookieJar.getAll();
+              } catch (error) {
+                console.error(
+                  "[Supabase Client] Error getting cookies:",
+                  error
+                );
+                return [];
+              }
+            },
+            setAll(cookiesToSet) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) =>
+                  cookieJar.set(name, value, options)
+                );
+              } catch (error) {
+                console.error(
+                  "[Supabase Client] Error setting cookies:",
+                  error
+                );
+                // This can be ignored if you have middleware refreshing user sessions
+              }
+            },
+          },
+        }
+      );
+    } catch (error) {
+      console.error("[Supabase Client] Failed to create client:", error);
+      return null;
+    }
   }
-
-  return createSupabaseClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      get(name: string) {
-        return cookieContainer.get(name)?.value;
-      },
-      set(name: string, value: string, options: { path: string; maxAge: number; domain: string }) {
-        cookieContainer.set(name, value, options);
-      },
-      remove(name: string, options: { path: string; maxAge: number; domain: string }) {
-        cookieContainer.set(name, '', { ...options, maxAge: 0 });
-      },
-    },
-  });
-}
+);

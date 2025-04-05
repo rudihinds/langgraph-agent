@@ -58,39 +58,39 @@ const DocumentSchema = z.object({
   type: z.string().optional(),
 });
 
-// Base proposal schema with common fields
-const BaseProposalSchema = z.object({
+// Define metadata schema for additional fields
+const MetadataSchema = z
+  .object({
+    description: z.string().optional().default(""),
+    funder_details: FunderDetailsSchema.optional(),
+    questions: z.array(QuestionSchema).optional().default([]),
+    proposal_type: z.enum(["rfp", "application"]).optional(),
+    rfp_document: DocumentSchema.optional(),
+  })
+  .passthrough(); // Allow additional fields in metadata
+
+// Base proposal schema matching database structure
+const ProposalSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().optional().default(""),
   status: z
-    .enum(["draft", "in_progress", "submitted", "approved", "rejected"])
+    .enum([
+      "draft",
+      "in_progress",
+      "submitted",
+      "approved",
+      "rejected",
+      "review",
+      "completed",
+    ])
     .default("draft"),
-  funder_details: FunderDetailsSchema,
+  funder: z.string().optional().default(""),
+  applicant: z.string().optional().default(""),
   deadline: z.string().optional().nullable(),
+  metadata: MetadataSchema.optional().default({}),
 });
-
-// Application-specific proposal schema
-const ApplicationProposalSchema = BaseProposalSchema.extend({
-  proposal_type: z.literal("application"),
-  questions: z.array(QuestionSchema).default([]),
-});
-
-// RFP-specific proposal schema
-const RFPProposalSchema = BaseProposalSchema.extend({
-  proposal_type: z.literal("rfp"),
-  rfp_document: DocumentSchema.optional(),
-});
-
-// Combine the schemas using discriminated union
-export const ProposalSchema = z.discriminatedUnion("proposal_type", [
-  ApplicationProposalSchema,
-  RFPProposalSchema,
-]);
 
 // Export type definitions
 export type Question = z.infer<typeof QuestionSchema>;
 export type FunderDetails = z.infer<typeof FunderDetailsSchema>;
 export type Document = z.infer<typeof DocumentSchema>;
 export type Proposal = z.infer<typeof ProposalSchema>;
-export type ApplicationProposal = z.infer<typeof ApplicationProposalSchema>;
-export type RFPProposal = z.infer<typeof RFPProposalSchema>;

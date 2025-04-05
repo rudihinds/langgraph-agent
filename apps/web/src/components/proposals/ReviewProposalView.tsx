@@ -32,6 +32,7 @@ import { CheckItem } from "@/components/ui/check-item";
 import { z } from "zod";
 import { Question } from "./ApplicationQuestionsView";
 import { ProposalType } from "./ProposalCreationFlow";
+import ServerForm from "./ServerForm";
 
 // MODEL
 export interface ReviewProposalViewProps {
@@ -42,6 +43,7 @@ export interface ReviewProposalViewProps {
   applicationQuestions: Question[];
   proposalType: ProposalType;
   isSubmitting?: boolean;
+  rfpDetails?: any;
 }
 
 interface UseReviewProposalModel {
@@ -50,6 +52,7 @@ interface UseReviewProposalModel {
   handleBack: () => void;
   handleEdit: (step: number) => void;
   formattedBudget: string;
+  preparedFormData: Record<string, any>;
 }
 
 function useReviewProposal({
@@ -57,6 +60,9 @@ function useReviewProposal({
   onBack,
   onEdit,
   funderDetails,
+  applicationQuestions,
+  proposalType,
+  rfpDetails,
 }: ReviewProposalViewProps): UseReviewProposalModel {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,18 +71,88 @@ function useReviewProposal({
     ? `$${parseInt(funderDetails.budgetRange).toLocaleString()}`
     : "Not specified";
 
+  // Prepare form data for submission
+  const preparedFormData = {
+    // Use only fields that exist in the database schema
+    title:
+      funderDetails.fundingTitle ||
+      funderDetails.organizationName ||
+      "Untitled Proposal",
+    status: "draft",
+    deadline: funderDetails.deadline
+      ? funderDetails.deadline.toISOString()
+      : null,
+    // Use the funder field from the database
+    funder: funderDetails.organizationName || "",
+    // Store all other data in the metadata JSONB field
+    metadata: {
+      description: funderDetails.focusArea || "",
+      funder_details: {
+        funderName: funderDetails.organizationName,
+        programName: funderDetails.fundingTitle,
+        deadline: funderDetails.deadline
+          ? funderDetails.deadline.toISOString()
+          : null,
+        funderType: "Unknown", // Default value
+        budgetRange: funderDetails.budgetRange,
+        focusArea: funderDetails.focusArea,
+      },
+      // Add application questions if we're in application flow
+      ...(proposalType === "application"
+        ? {
+            questions: applicationQuestions.map((q) => {
+              // Handle different question formats
+              if (typeof q === "string") {
+                return { question: q, required: true };
+              } else if (q.text) {
+                // Convert from { text: "..." } to { question: "..." }
+                return {
+                  question: q.text,
+                  required: q.required ?? true,
+                  maxLength: q.maxLength,
+                };
+              } else if (q.question) {
+                // Already in the right format
+                return q;
+              } else {
+                // Fallback for unexpected formats
+                console.warn("Unexpected question format:", q);
+                return {
+                  question: String(q),
+                  required: true,
+                };
+              }
+            }),
+          }
+        : {}),
+      // Add RFP document details if we're in RFP flow
+      ...(proposalType === "rfp" && rfpDetails
+        ? {
+            rfp_details: {
+              rfpUrl: rfpDetails.rfpUrl || "",
+              rfpText: rfpDetails.rfpText || "",
+              companyName: rfpDetails.companyName || "",
+            },
+            rfp_document: rfpDetails.document
+              ? {
+                  name: rfpDetails.document.name || "",
+                  type: rfpDetails.document.type || "",
+                  size: rfpDetails.document.size || 0,
+                  lastModified: rfpDetails.document.lastModified || 0,
+                }
+              : null,
+          }
+        : {}),
+      proposal_type: proposalType,
+    },
+  };
+
   const handleSubmit = useCallback(() => {
     setIsSubmitting(true);
-
-    // Simulate submission process
-    setTimeout(() => {
-      onSubmit({
-        funderDetails,
-        submittedAt: new Date(),
-      });
-      setIsSubmitting(false);
-    }, 1500);
-  }, [funderDetails, onSubmit]);
+    // Pass the preparedFormData to ensure proper structure for the database
+    console.log("Submitting prepared form data:", preparedFormData);
+    onSubmit(preparedFormData);
+  }, [preparedFormData, onSubmit]);
 
   const handleBack = useCallback(() => {
     onBack();
@@ -95,6 +171,7 @@ function useReviewProposal({
     handleBack,
     handleEdit,
     formattedBudget,
+    preparedFormData,
   };
 }
 
@@ -105,6 +182,7 @@ interface ReviewProposalViewComponentProps extends ReviewProposalViewProps {
   handleBack: () => void;
   handleEdit: (step: number) => void;
   formattedBudget: string;
+  preparedFormData: Record<string, any>;
 }
 
 function ReviewProposalViewComponent({
@@ -116,6 +194,9 @@ function ReviewProposalViewComponent({
   handleEdit,
   formattedBudget,
   proposalType,
+  rfpDetails,
+  preparedFormData,
+  onCancel = handleBack,
 }: ReviewProposalViewComponentProps) {
   return (
     <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -279,10 +360,24 @@ function ReviewProposalViewComponent({
                         </p>
                       </div>
                     ))
+                  ) : proposalType === "rfp" && rfpDetails?.file ? (
+                    <div className="flex items-center">
+                      <FileText className="w-5 h-5 mr-3 text-blue-500" />
+                      <div>
+                        <p className="font-medium">{rfpDetails.file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(rfpDetails.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex items-center justify-center p-6 text-muted-foreground">
                       <AlertCircle className="w-5 h-5 mr-2" />
-                      No application questions provided.
+                      No{" "}
+                      {proposalType === "rfp"
+                        ? "RFP document"
+                        : "application questions"}{" "}
+                      provided.
                     </div>
                   )}
                 </div>
@@ -312,35 +407,16 @@ function ReviewProposalViewComponent({
                   <CheckItem>You'll receive a confirmation email</CheckItem>
                 </ul>
               </CardContent>
+              <CardFooter className="pt-0">
+                {/* Replace manual buttons with ServerForm */}
+                <ServerForm
+                  proposalType={proposalType}
+                  formData={preparedFormData}
+                  file={proposalType === "rfp" ? rfpDetails?.file : null}
+                  onCancel={handleBack}
+                />
+              </CardFooter>
             </Card>
-
-            <div className="flex flex-col space-y-3 pt-4">
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                size="lg"
-                className="w-full"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Save className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Proposal"
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                size="lg"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Back
-              </Button>
-            </div>
           </div>
         </div>
       </div>

@@ -1,11 +1,11 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { middleware } from "../middleware";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, beforeEach, afterEach, describe, it, expect } from "vitest";
 
-// Mock createServerSupabaseClient
-vi.mock("@/lib/supabase-server", () => ({
-  createServerSupabaseClient: vi.fn(),
+// Mock Supabase client
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: vi.fn(),
 }));
 
 // Mock NextResponse
@@ -14,145 +14,234 @@ vi.mock("next/server", () => {
   return {
     ...originalModule,
     NextResponse: {
-      next: vi.fn().mockReturnValue({ headers: new Headers() }),
+      next: vi.fn().mockImplementation(() => ({
+        cookies: {
+          set: vi.fn(),
+          getAll: vi.fn().mockReturnValue([]),
+        },
+      })),
       redirect: vi.fn().mockImplementation((url) => ({
         url,
-        headers: new Headers(),
+        cookies: {
+          set: vi.fn(),
+          getAll: vi.fn().mockReturnValue([]),
+        },
       })),
     },
   };
 });
 
-describe("Auth Middleware", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe("Middleware", () => {
+  let mockRequest: NextRequest;
+  let mockSupabaseClient: any;
+  let mockGetUser: any;
 
-  const createMockRequest = (path: string) => {
-    return {
-      nextUrl: new URL(`https://example.com${path}`),
-      url: `https://example.com${path}`,
+  beforeEach(() => {
+    // Reset mocks
+    vi.clearAllMocks();
+
+    // Mock getUser function with default unauthenticated response
+    mockGetUser = vi.fn().mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    // Mock a Supabase client
+    mockSupabaseClient = {
+      auth: {
+        getUser: mockGetUser,
+      },
+    };
+
+    (createServerClient as any).mockReturnValue(mockSupabaseClient);
+
+    // Mock a Next.js request
+    mockRequest = {
+      nextUrl: {
+        pathname: "/",
+        clone: vi.fn().mockReturnThis(),
+      },
       cookies: {
-        get: vi.fn(),
         getAll: vi.fn().mockReturnValue([]),
-        has: vi.fn().mockReturnValue(false),
+        set: vi.fn(),
       },
     } as unknown as NextRequest;
-  };
-
-  // Helper to create authenticated request
-  const createAuthenticatedRequest = (path: string) => {
-    const request = createMockRequest(path);
-    // Mock has to return true for auth cookie
-    request.cookies.has = vi.fn().mockImplementation((name) => {
-      if (name === "auth-session-established") {
-        return true;
-      }
-      return false;
-    });
-    return request;
-  };
-
-  it("allows access to static files without authentication check", async () => {
-    const mockRequest = createMockRequest("/_next/static/chunks/main.js");
-    await middleware(mockRequest);
-
-    // Should call next() without checking auth
-    expect(NextResponse.next).toHaveBeenCalled();
-    // createServerSupabaseClient should not be called for static files
-    expect(createServerSupabaseClient).not.toHaveBeenCalled();
   });
 
-  it("allows access to api routes without authentication check", async () => {
-    const mockRequest = createMockRequest("/api/health");
-    await middleware(mockRequest);
-
-    // Should call next() without checking auth
-    expect(NextResponse.next).toHaveBeenCalled();
-    // createServerSupabaseClient should not be called for API routes
-    expect(createServerSupabaseClient).not.toHaveBeenCalled();
+  afterEach(() => {
+    vi.resetAllMocks();
   });
 
-  it("allows access to auth routes without authentication check", async () => {
-    const mockRequest = createMockRequest("/auth/callback");
-    await middleware(mockRequest);
-
-    // Should call next() without checking auth
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("allows access to login route without authentication check", async () => {
-    const mockRequest = createMockRequest("/login");
-    await middleware(mockRequest);
-
-    // Should call next() without checking auth for public routes
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("redirects to login if unauthenticated user tries to access protected route", async () => {
-    const mockRequest = createMockRequest("/dashboard");
-
-    await middleware(mockRequest);
-
-    // Should redirect to login with a URL object
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    // Check the redirect URL contains login
-    const redirectCall = NextResponse.redirect.mock.calls[0][0];
-    expect(redirectCall.toString()).toContain("/login");
-  });
-
-  it("allows authenticated user to access protected route", async () => {
-    const mockRequest = createAuthenticatedRequest("/dashboard");
-
-    await middleware(mockRequest);
-
-    // Should call next() for authenticated users on protected routes
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("redirects authenticated user from login page to dashboard", async () => {
-    const mockRequest = createAuthenticatedRequest("/login");
-
-    await middleware(mockRequest);
-
-    // Should redirect to dashboard if already logged in
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    // Check the redirect URL contains dashboard
-    const redirectCall = NextResponse.redirect.mock.calls[0][0];
-    expect(redirectCall.toString()).toContain("/dashboard");
-  });
-
-  it("checks for session marker cookie", async () => {
-    const mockRequest = createMockRequest("/dashboard");
-    mockRequest.cookies.has = vi.fn().mockImplementation((name) => {
-      if (name === "auth-session-established") {
-        return true;
-      }
-      return false;
+  it("should redirect unauthenticated users to login", async () => {
+    // Mock an unauthenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
     });
 
     await middleware(mockRequest);
 
-    // Verify has() was called with the correct cookie name
-    expect(mockRequest.cookies.has).toHaveBeenCalledWith(
-      "auth-session-established"
+    // Check if redirect was called with login path
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe("/login");
+  });
+
+  it("should allow access for authenticated users", async () => {
+    // Mock an authenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "test-user" } },
+      error: null,
+    });
+
+    await middleware(mockRequest);
+
+    // Check if we continued without redirect
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalled();
+  });
+
+  it("should allow access to login path even if unauthenticated", async () => {
+    // Set path to login
+    mockRequest.nextUrl.pathname = "/login";
+
+    // Mock an unauthenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await middleware(mockRequest);
+
+    // Check if no redirect happened
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalled();
+  });
+
+  it("should allow access to auth callback path if unauthenticated", async () => {
+    // Set path to auth callback
+    mockRequest.nextUrl.pathname = "/auth/callback";
+
+    // Mock an unauthenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await middleware(mockRequest);
+
+    // Check if no redirect happened
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalled();
+  });
+
+  it("should allow access to API routes if unauthenticated", async () => {
+    // Set path to an API route
+    mockRequest.nextUrl.pathname = "/api/auth/sign-in";
+
+    // Mock an unauthenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await middleware(mockRequest);
+
+    // Check if no redirect happened for API routes
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalled();
+  });
+
+  it("should allow access to static assets if unauthenticated", async () => {
+    // Set path to a static asset
+    mockRequest.nextUrl.pathname = "/_next/static/chunks/main.js";
+
+    // Mock an unauthenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+
+    await middleware(mockRequest);
+
+    // Check if no redirect happened for static assets
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalled();
+  });
+
+  it("should handle authentication errors gracefully", async () => {
+    // Mock an authentication error
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: "Authentication error" },
+    });
+
+    await middleware(mockRequest);
+
+    // Should redirect to login on auth error
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe("/login");
+  });
+
+  it("should handle unexpected errors gracefully", async () => {
+    // Mock an unexpected error
+    mockGetUser.mockRejectedValue(new Error("Unexpected error"));
+
+    await middleware(mockRequest);
+
+    // Should redirect to login on unexpected error
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
+    expect(redirectCall.pathname).toBe("/login");
+  });
+
+  it("should maintain cookie state from Supabase response", async () => {
+    // Mock an authenticated user
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "test-user" } },
+      error: null,
+    });
+
+    // Create a mock response with cookies
+    const mockResponse = {
+      cookies: {
+        getAll: vi
+          .fn()
+          .mockReturnValue([{ name: "test-cookie", value: "test-value" }]),
+      },
+    };
+
+    (NextResponse.next as any).mockReturnValueOnce(mockResponse);
+
+    await middleware(mockRequest);
+
+    // Should return the Supabase response with cookies intact
+    expect(NextResponse.next).toHaveBeenCalled();
+  });
+
+  it("should properly pass cookie information to the Supabase client", async () => {
+    // Set up request cookies
+    const requestCookies = [{ name: "auth-token", value: "test-token" }];
+    mockRequest.cookies.getAll.mockReturnValue(requestCookies);
+
+    await middleware(mockRequest);
+
+    // Verify createServerClient was called with proper cookie configuration
+    expect(createServerClient).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        cookies: expect.objectContaining({
+          getAll: expect.any(Function),
+          setAll: expect.any(Function),
+        }),
+      })
     );
-    // Since we have the session established cookie, we should allow access to protected route
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
 
-  it("handles error during session check", async () => {
-    const mockRequest = createMockRequest("/dashboard");
-
-    // Mock console.error to prevent test output pollution
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
-    await middleware(mockRequest);
-
-    // Should redirect to login
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    // Check the redirect URL contains login
-    const redirectCall = NextResponse.redirect.mock.calls[0][0];
-    expect(redirectCall.toString()).toContain("/login");
+    // Verify cookie access
+    const cookieConfig = (createServerClient as any).mock.calls[0][2];
+    const getAllResult = cookieConfig.cookies.getAll();
+    expect(getAllResult).toEqual(requestCookies);
   });
 });

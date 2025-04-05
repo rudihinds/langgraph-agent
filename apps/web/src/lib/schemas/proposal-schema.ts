@@ -37,44 +37,47 @@ export const FunderDetailsSchema = z.object({
 export type FunderDetailsType = z.infer<typeof FunderDetailsSchema>;
 
 /**
- * Schema for application-type proposals
+ * Define metadata schema for additional fields
  */
-export const ApplicationProposalSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  proposal_type: z.literal("application"),
-  funder_details: FunderDetailsSchema,
-  questions: z.array(QuestionSchema).min(1, "At least one question is required"),
-  deadline: z.string().optional(),
-  status: z.enum(["draft", "in_progress", "completed", "submitted"]).default("draft"),
-});
+export const MetadataSchema = z
+  .object({
+    description: z.string().optional(),
+    funder_details: FunderDetailsSchema.optional(),
+    questions: z.array(QuestionSchema).optional(),
+    proposal_type: z.enum(["rfp", "application"]).optional(),
+    rfp_document: z
+      .object({
+        name: z.string(),
+        url: z.string().url("Invalid document URL"),
+        size: z.number().optional(),
+        type: z.string().optional(),
+      })
+      .optional(),
+  })
+  .passthrough() // Allow additional fields in metadata
+  .optional() // Make the entire metadata field optional
 
 /**
- * Schema for RFP-type proposals
+ * Schema for proposals that matches the database structure
  */
-export const RFPProposalSchema = z.object({
+export const ProposalSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  proposal_type: z.literal("rfp"),
-  funder_details: FunderDetailsSchema,
-  rfp_document: z.object({
-    name: z.string(),
-    url: z.string().url("Invalid document URL"),
-    size: z.number().optional(),
-    type: z.string().optional(),
-  }).optional(),
-  deadline: z.string().optional(),
-  status: z.enum(["draft", "in_progress", "completed", "submitted"]).default("draft"),
+  user_id: z.string().uuid("User ID must be a valid UUID"),
+  status: z
+    .enum([
+      "draft",
+      "in_progress",
+      "review",
+      "completed",
+      "submitted",
+      "approved",
+      "rejected",
+    ])
+    .default("draft"),
+  funder: z.string().optional().default(""),
+  applicant: z.string().optional().default(""),
+  deadline: z.string().optional().nullable(),
+  metadata: z.any().optional(), // Accept any object structure for metadata
 });
-
-/**
- * Combined proposal schema that handles both application and RFP types
- */
-export const ProposalSchema = z.discriminatedUnion("proposal_type", [
-  ApplicationProposalSchema,
-  RFPProposalSchema,
-]);
 
 export type ProposalType = z.infer<typeof ProposalSchema>;
-export type ApplicationProposalType = z.infer<typeof ApplicationProposalSchema>;
-export type RFPProposalType = z.infer<typeof RFPProposalSchema>;

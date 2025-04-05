@@ -371,7 +371,7 @@ function RFPResponseViewComponent({
             </div>
             <div className="flex justify-between text-xs text-muted-foreground">
               <div className="flex flex-col items-center font-medium text-muted">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 text-primary border-2 rounded-full border-primary bg-muted/30">
+                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 rounded-full text-primary border-primary bg-muted/30">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
                 <span>Funder Details</span>
@@ -692,14 +692,18 @@ function RFPResponseViewComponent({
 
         {/* Confirm Clear Dialog */}
         <Dialog open={confirmClearOpen} onOpenChange={closeConfirmClear}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Clear RFP Text?</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to clear the RFP text? This action cannot
-                be undone.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent
+            className="sm:max-w-md"
+            aria-labelledby="clear-rfp-dialog-title"
+            aria-describedby="clear-rfp-dialog-description"
+          >
+            <DialogTitle id="clear-rfp-dialog-title">
+              Clear RFP Text?
+            </DialogTitle>
+            <DialogDescription id="clear-rfp-dialog-description">
+              Are you sure you want to clear the RFP text? This action cannot be
+              undone.
+            </DialogDescription>
             <DialogFooter className="sm:justify-end">
               <Button
                 type="button"
