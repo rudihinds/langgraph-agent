@@ -8,6 +8,11 @@ import { z } from "zod";
 import { ensureUserExists } from "@/lib/user-management";
 import { Database } from "@/lib/schema/database";
 import { revalidatePath } from "next/cache";
+import { SupabaseClient } from "@supabase/supabase-js";
+import {
+  handleRfpUpload,
+  UploadResult,
+} from "@/lib/proposal-actions/upload-helper";
 
 // Type definition for createProposal result
 type ProposalResult = {
@@ -194,167 +199,108 @@ export async function createProposal(
   }
 }
 
-// Type definition for uploadProposalFile result
-type UploadResult = {
-  success: boolean;
-  filePath?: string;
-  error?: string;
-};
-
 /**
- * Server action to upload a proposal file
+ * Server action wrapper to upload an RFP file, store it, and update proposal metadata.
+ * Handles authentication, client initialization, and calls the core logic helper.
  */
 export async function uploadProposalFile(
   formData: FormData
 ): Promise<UploadResult> {
-  console.log("[Action] Starting uploadProposalFile action");
+  console.log("[Action][Upload] Starting uploadProposalFile action wrapper");
+
+  // 1. Validate Input
+  console.log("[Action][Upload] Validating input FormData");
+  const proposalId = formData.get("proposalId");
+  const file = formData.get("file");
+
+  if (!proposalId || typeof proposalId !== "string") {
+    console.error("[Action][UploadValidation] Missing or invalid proposalId");
+    return { success: false, message: "Proposal ID is required." };
+  }
+  if (!file) {
+    console.error("[Action][UploadValidation] Missing file");
+    return { success: false, message: "File is required." };
+  }
+  if (!(file instanceof File)) {
+    console.error(
+      "[Action][UploadValidation] Invalid file format - not a File object"
+    );
+    return { success: false, message: "Invalid file format." };
+  }
+  console.log(
+    `[Action][UploadValidation] Input validated: Proposal ID: ${proposalId}, File: ${file.name}`
+  );
 
   try {
-    // Create the Supabase client with proper awaiting
+    // 2. Initialize Supabase Client
     const cookieStore = cookies();
     const supabase = await createClient(cookieStore);
 
-    // Check if supabase or supabase.auth is undefined
-    if (!supabase || !supabase.auth) {
-      console.error("[Action] Failed to initialize Supabase client");
-      return {
-        success: false,
-        error: "Authentication service unavailable",
-      };
+    if (!supabase) {
+      console.error("[Action][Upload] Failed to initialize Supabase client");
+      return { success: false, message: "Service unavailable." };
     }
+    console.log("[Action][Upload] Supabase client initialized");
 
-    // 1. Ensure user is authenticated and exists in DB
+    // 3. Ensure user is authenticated
+    console.log("[Action][UploadAuth] Verifying user authentication");
     const userResult = await ensureUserExists(supabase);
+
     if (!userResult.success) {
       console.error(
-        "[Action][UploadAuth] User not authenticated or failed verification:",
+        "[Action][UploadAuth] User authentication failed:",
         userResult.error
       );
       return {
         success: false,
-        error: userResult.error?.message || "User authentication failed",
+        message: userResult.error?.message || "Authentication failed.",
+      };
+    }
+    if (!userResult.user) {
+      console.error(
+        "[Action][UploadAuth] Authentication succeeded but user data is missing."
+      );
+      return {
+        success: false,
+        message: "Authentication failed (user data missing).",
       };
     }
     const userId = userResult.user.id;
-    console.log(`[Action][UploadAuth] User ${userId} authenticated for upload`);
+    console.log(`[Action][UploadAuth] User ${userId} authenticated`);
 
-    // 2. Get file and proposal ID from FormData
-    const file = formData.get("file") as File | null;
-    const proposalId = formData.get("proposalId") as string | null;
-
-    if (!file || !proposalId) {
-      console.error("[Action][UploadValidation] Missing file or proposalId");
-      return { success: false, error: "Missing file or proposal ID" };
-    }
-    console.log(
-      `[Action][Upload] Received file: ${file.name} for proposal ${proposalId}`
+    // 4. Call the internal handler function with validated data
+    console.log(`[Action][Upload] Calling helper for proposal ${proposalId}`);
+    const handleResult = await handleRfpUpload(
+      supabase,
+      userId,
+      proposalId,
+      file
     );
 
-    // 3. Verify user owns the proposal (optional but recommended)
-    console.log(
-      `[Action][UploadVerify] Verifying ownership for proposal ${proposalId} by user ${userId}`
-    );
-    const { data: proposalOwner, error: ownerError } = await supabase
-      .from("proposals")
-      .select("user_id")
-      .eq("id", proposalId)
-      .single();
-
-    if (ownerError || !proposalOwner || proposalOwner.user_id !== userId) {
+    // 5. Revalidate paths if the handler was successful
+    if (handleResult.success) {
+      console.log(
+        `[Action][Upload] Helper successful for proposal ${proposalId}. Revalidating paths.`
+      );
+      revalidatePath(`/proposals/${proposalId}`);
+      revalidatePath("/dashboard");
+      // Return success message from the perspective of the action
+      return { success: true, message: "File uploaded successfully." };
+    } else {
       console.error(
-        `[Action][UploadVerify] Ownership verification failed for proposal ${proposalId}. Error:`,
-        ownerError
+        `[Action][Upload] Handler failed for proposal ${proposalId}: ${handleResult.message}`
       );
-      return {
-        success: false,
-        error: ownerError?.message || "Proposal not found or access denied",
-      };
-    }
-    console.log(
-      `[Action][UploadVerify] Ownership confirmed for proposal ${proposalId}`
-    );
-
-    // 4. Construct file path
-    const fileExtension = file.name.split(".").pop();
-    const filePath = `${userId}/${proposalId}/document.${fileExtension}`;
-    console.log(`[Action][Upload] Generated file path: ${filePath}`);
-
-    // 5. Upload file to Supabase Storage
-    console.log(`[Action][Upload] Uploading file to storage: ${filePath}`);
-    try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("proposals")
-        .upload(filePath, file, { upsert: true }); // Upsert allows overwriting
-
-      if (uploadError) {
-        console.error(
-          `[Action][UploadStorage] Storage upload failed for ${filePath}:`,
-          uploadError
-        );
-        return {
-          success: false,
-          error: uploadError.message || "File upload failed",
-        };
-      }
-
-      if (!uploadData) {
-        console.error(
-          `[Action][UploadStorage] Storage upload succeeded but no data returned for ${filePath}`
-        );
-        return {
-          success: false,
-          error: "File upload failed: No path returned",
-        };
-      }
-
-      console.log(
-        `[Action][UploadStorage] File uploaded successfully: ${uploadData.path}`
-      );
-
-      // 6. Update proposal record with file path
-      console.log(
-        `[Action][UploadUpdateDB] Updating proposal ${proposalId} with file path: ${uploadData.path}`
-      );
-      const { error: updateError } = await supabase
-        .from("proposals")
-        .update({ file_url: uploadData.path })
-        .eq("id", proposalId);
-
-      if (updateError) {
-        console.error(
-          `[Action][UploadUpdateDB] Failed to update proposal ${proposalId} with file path:`,
-          updateError
-        );
-        // Depending on requirements, you might want to delete the uploaded file here
-        return {
-          success: false,
-          error:
-            updateError.message || "Failed to update proposal with file path",
-        };
-      }
-
-      console.log(
-        `[Action][UploadUpdateDB] Proposal ${proposalId} updated successfully`
-      );
-
-      // 7. Return success
-      return { success: true, filePath: uploadData.path };
-    } catch (error) {
-      console.error(
-        "[Action][Upload] Unexpected error during file upload:",
-        error
-      );
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Unexpected upload error",
-      };
+      // Return the error message from the handler
+      return handleResult;
     }
   } catch (error) {
-    console.error("[Action] Unexpected error in uploadProposalFile:", error);
+    console.error(
+      "[Action][Upload] Unexpected error in uploadProposalFile wrapper:",
+      error
+    );
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unexpected error",
+      message: `An unexpected error occurred: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
   }
 }
