@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -35,14 +35,14 @@ export function EnhancedAppointmentPicker({
   const today = React.useMemo(() => new Date(), []);
   const [month, setMonth] = React.useState<Date>(date || today);
   const [inputValue, setInputValue] = React.useState<string>(
-    date ? format(date, "yyyy-MM-dd") : ""
+    date ? format(date, "dd/MM/yyyy") : ""
   );
   const [open, setOpen] = React.useState(false);
 
   const handleSelect = (selectedDate: Date | undefined) => {
     onDateChange(selectedDate);
     if (selectedDate) {
-      setInputValue(format(selectedDate, "yyyy-MM-dd"));
+      setInputValue(format(selectedDate, "dd/MM/yyyy"));
     }
     setOpen(false);
   };
@@ -51,18 +51,19 @@ export function EnhancedAppointmentPicker({
     const value = e.target.value;
     setInputValue(value);
     
-    // Try to parse the date from the input
-    const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    // Try to parse the date from the input in UK format (dd/mm/yyyy)
+    const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (dateMatch) {
-      const newDate = new Date(
-        parseInt(dateMatch[1]), 
-        parseInt(dateMatch[2]) - 1, 
-        parseInt(dateMatch[3])
-      );
-      
-      if (!isNaN(newDate.getTime())) {
-        onDateChange(newDate);
-        setMonth(newDate);
+      try {
+        // Use date-fns parse for more reliable date parsing
+        const newDate = parse(value, 'dd/MM/yyyy', new Date());
+        
+        if (!isNaN(newDate.getTime())) {
+          onDateChange(newDate);
+          setMonth(newDate);
+        }
+      } catch (err) {
+        // If parse fails, don't update the date
       }
     } else if (value === "") {
       onDateChange(undefined);
@@ -80,7 +81,7 @@ export function EnhancedAppointmentPicker({
   // Update input value when date prop changes
   React.useEffect(() => {
     if (date) {
-      setInputValue(format(date, "yyyy-MM-dd"));
+      setInputValue(format(date, "dd/MM/yyyy"));
       setMonth(date);
     } else {
       setInputValue("");
@@ -98,7 +99,7 @@ export function EnhancedAppointmentPicker({
               value={inputValue}
               onChange={handleInputChange}
               onClick={() => setOpen(true)}
-              placeholder={placeholder}
+              placeholder={placeholder || "DD/MM/YYYY"}
               disabled={disabled}
               className={cn(error && "border-destructive", "pr-10")}
             />
