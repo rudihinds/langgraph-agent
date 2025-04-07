@@ -19,6 +19,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { uploadProposalFile } from "@/lib/proposal-actions/actions";
 import { FileCheck, Upload, AlertCircle } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
+import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { formatDateForAPI } from "@/lib/utils/date-utils";
 
 // Simple validation helper function
 const validateField = (
@@ -54,7 +58,7 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [deadline, setDeadline] = useState<Date | undefined>(undefined);
   const [fundingAmount, setFundingAmount] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -127,11 +131,9 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
     const descriptionError = validateField(description, 10, "Description");
     if (descriptionError) newErrors.description = descriptionError;
 
-    const deadlineError = validateField(deadline, 1, "Deadline");
+    const deadlineError = !deadline ? "Deadline is required" : null;
     if (deadlineError) {
       newErrors.deadline = deadlineError;
-    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
-      newErrors.deadline = "Please enter a valid date in YYYY-MM-DD format";
     }
 
     const fundingAmountError = validateField(
@@ -194,14 +196,13 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
         message: "Uploading document...",
       });
 
-      // Perform the actual upload - Use default empty strings
-      // Zod will validate these server-side
+      // Perform the actual upload
       const result = await uploadProposalFile({
         userId,
         title,
         description,
-        deadline: deadline || "", // Pass empty string if undefined/null
-        fundingAmount: fundingAmount || "", // Pass empty string if undefined/null
+        deadline: deadline ? formatDateForAPI(deadline) : "",
+        fundingAmount: fundingAmount || "",
         file: file!,
       });
 
@@ -220,7 +221,9 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
         // Close overlay after short delay
         setTimeout(() => {
           setOverlayVisible(false);
-          if (onSuccess) onSuccess(result.proposalId);
+          if (result.proposalId && onSuccess) {
+            onSuccess(result.proposalId);
+          }
         }, 1500);
       } else {
         // Try parsing Zod error from the server
@@ -329,19 +332,14 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="deadline">Submission Deadline</Label>
-              <Input
-                id="deadline"
-                type="date"
-                placeholder="YYYY-MM-DD"
-                className={cn(errors.deadline && "border-destructive")}
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
+              <AppointmentPicker
+                date={deadline}
+                onDateChange={setDeadline}
+                label=""
+                error={errors.deadline}
+                className="w-full"
+                allowManualInput={true}
               />
-              {errors.deadline && (
-                <p className="text-sm font-medium text-destructive">
-                  {errors.deadline}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">

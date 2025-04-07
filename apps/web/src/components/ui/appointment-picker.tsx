@@ -2,78 +2,141 @@
 
 import * as React from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatDateForUI, parseUIDate } from "@/lib/utils/date-utils";
 
 /**
- * Props for the AppointmentPicker component
- * @interface AppointmentPickerProps
+ * AppointmentPicker component for selecting dates with both calendar UI and manual input.
+ * Uses DD/MM/YYYY format for display and input.
  */
 interface AppointmentPickerProps {
-  /**
-   * The currently selected date
-   */
   date: Date | undefined;
-
-  /**
-   * Callback function triggered when a date is selected or cleared
-   * @param date - The selected date or undefined if cleared
-   */
   onDateChange: (date: Date | undefined) => void;
-
-  /** Optional label to display above the picker */
   label?: string;
-
-  /** Placeholder text to display when no date is selected */
   placeholder?: string;
-
-  /** Whether the picker is disabled */
   disabled?: boolean;
-
-  /** Error message to display below the picker */
   error?: string;
-
-  /** Additional CSS classes to apply to the container */
   className?: string;
+  allowManualInput?: boolean;
 }
 
-/**
- * A date picker component that displays a calendar popover.
- *
- * Allows users to select a date from a calendar interface and displays
- * the selected date in a formatted, human-readable string.
- *
- * @example
- * ```tsx
- * <AppointmentPicker
- *   date={selectedDate}
- *   onDateChange={setSelectedDate}
- *   label="Appointment Date"
- *   placeholder="Select a date"
- *   error={errors.date}
- * />
- * ```
- */
 export function AppointmentPicker({
   date,
   onDateChange,
   label,
-  placeholder = "Select a date",
+  placeholder = "DD/MM/YYYY",
   disabled = false,
   error,
   className,
+  allowManualInput = true,
 }: AppointmentPickerProps) {
+  const today = React.useMemo(() => new Date(), []);
+  const [month, setMonth] = React.useState<Date>(date || today);
+  const [inputValue, setInputValue] = React.useState<string>(
+    date ? formatDateForUI(date) : ""
+  );
+  const [open, setOpen] = React.useState(false);
+
+  // Reset the month view when component mounts
+  React.useEffect(() => {
+    setMonth(date || today);
+  }, [date, today]);
+
+  const handleSelect = (selectedDate: Date | undefined) => {
+    onDateChange(selectedDate);
+    if (selectedDate) {
+      setInputValue(formatDateForUI(selectedDate));
+    }
+    setOpen(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    if (value === "") {
+      onDateChange(undefined);
+    } else {
+      const parsedDate = parseUIDate(value);
+      if (parsedDate) {
+        onDateChange(parsedDate);
+        setMonth(parsedDate);
+      }
+    }
+  };
+
+  // When opening the popover, always reset to today's month if no date is selected
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      setMonth(date || today);
+    }
+  };
+
+  // Update input value when date prop changes
+  React.useEffect(() => {
+    if (date) {
+      setInputValue(formatDateForUI(date));
+      setMonth(date);
+    } else {
+      setInputValue("");
+    }
+  }, [date]);
+
+  // Render different UI based on allowManualInput prop
+  if (allowManualInput) {
+    return (
+      <div className={cn("space-y-2", className)}>
+        {label && <Label>{label}</Label>}
+        <Popover open={open} onOpenChange={handleOpenChange}>
+          <PopoverTrigger asChild>
+            <div className="relative w-full">
+              <Input
+                type="text"
+                value={inputValue}
+                onChange={handleInputChange}
+                onClick={() => setOpen(true)}
+                placeholder={placeholder}
+                disabled={disabled}
+                className={cn(error && "border-destructive", "pr-10")}
+              />
+              <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-4" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleSelect}
+              disabled={disabled}
+              month={month}
+              onMonthChange={setMonth}
+              defaultMonth={today}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+        {error && (
+          <p className="text-sm font-medium text-destructive">{error}</p>
+        )}
+      </div>
+    );
+  }
+
+  // Simple button-only version (original style)
   return (
     <div className={cn("space-y-2", className)}>
       {label && <label className="text-sm font-medium">{label}</label>}
-      <Popover>
+      <Popover onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <div className="w-full cursor-pointer hover:opacity-90 transition-opacity">
             <Button
@@ -86,7 +149,7 @@ export function AppointmentPicker({
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, "PPP") : placeholder}
+              {date ? formatDateForUI(date) : placeholder}
             </Button>
           </div>
         </PopoverTrigger>
@@ -96,6 +159,9 @@ export function AppointmentPicker({
             selected={date}
             onSelect={onDateChange}
             initialFocus
+            defaultMonth={today}
+            month={month}
+            onMonthChange={setMonth}
           />
         </PopoverContent>
       </Popover>

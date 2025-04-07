@@ -1,108 +1,92 @@
-import { format, parse, isValid, isDate } from "date-fns";
+/**
+ * Date utilities for consistent date handling across the application.
+ * 
+ * These functions provide a standardized way to convert between:
+ * - UI dates (DD/MM/YYYY) - Used in the user interface
+ * - API dates (YYYY-MM-DD) - Used when communicating with the backend
+ * - JavaScript Date objects - Used in application logic
+ */
+
+import { format, parse, isValid } from "date-fns";
 
 /**
- * Standard date format constants
+ * Format a Date object for display in the UI
+ * @param date - The Date object to format
+ * @returns The formatted date string in DD/MM/YYYY format
  */
-export const DATE_FORMATS = {
-  /**
-   * British date format (DD/MM/YYYY)
-   */
-  UI: "dd/MM/yyyy",
-
-  /**
-   * ISO date format (YYYY-MM-DD)
-   */
-  API: "yyyy-MM-dd",
-};
-
-/**
- * Format a Date object to UI format (DD/MM/YYYY)
- */
-export function formatDateForUI(date?: Date | null): string {
-  if (!date || !isDate(date) || !isValid(date)) return "";
-  return format(date, DATE_FORMATS.UI);
+export function formatDateForUI(date: Date | null | undefined): string {
+  if (!date || !isValid(date)) return "";
+  return format(date, "dd/MM/yyyy");
 }
 
 /**
- * Format a Date object to API format (YYYY-MM-DD)
+ * Format a Date object for sending to the API
+ * @param date - The Date object to format
+ * @returns The formatted date string in YYYY-MM-DD format
  */
-export function formatDateForAPI(date?: Date | null): string | null {
-  if (!date || !isDate(date) || !isValid(date)) return null;
-  return format(date, DATE_FORMATS.API);
+export function formatDateForAPI(date: Date | null | undefined): string {
+  if (!date || !isValid(date)) return "";
+  return format(date, "yyyy-MM-dd");
 }
 
 /**
- * Parse a date string in UI format (DD/MM/YYYY) to a Date object
+ * Parse a date string from the UI format into a Date object
+ * @param input - The date string in DD/MM/YYYY format
+ * @returns A Date object, or null if parsing fails
  */
-export function parseUIDate(dateString: string): Date | null {
-  if (!dateString) return null;
+export function parseUIDate(input: string): Date | null {
+  if (!input) return null;
+  
   try {
-    const parsedDate = parse(dateString, DATE_FORMATS.UI, new Date());
+    // Validate date format with regex
+    if (!input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)) {
+      return null;
+    }
+    
+    const parsedDate = parse(input, "dd/MM/yyyy", new Date());
     return isValid(parsedDate) ? parsedDate : null;
   } catch (error) {
+    console.error("Failed to parse UI date:", error);
     return null;
   }
 }
 
 /**
- * Parse a date string in API format (YYYY-MM-DD) to a Date object
+ * Parse a date string from the API format into a Date object
+ * @param input - The date string in YYYY-MM-DD format
+ * @returns A Date object, or null if parsing fails
  */
-export function parseAPIDate(dateString: string): Date | null {
-  if (!dateString) return null;
+export function parseAPIDate(input: string): Date | null {
+  if (!input) return null;
+  
   try {
-    const parsedDate = parse(dateString, DATE_FORMATS.API, new Date());
+    // Validate date format with regex
+    if (!input.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return null;
+    }
+    
+    const parsedDate = parse(input, "yyyy-MM-dd", new Date());
     return isValid(parsedDate) ? parsedDate : null;
   } catch (error) {
+    console.error("Failed to parse API date:", error);
     return null;
   }
 }
 
 /**
- * Converts any valid date input to an API format string (YYYY-MM-DD)
+ * Check if a string is a valid date in UI format (DD/MM/YYYY)
+ * @param input - The date string to validate
+ * @returns True if the date is valid
  */
-export function toAPIDate(
-  input: Date | string | null | undefined
-): string | null {
-  if (!input) return null;
-
-  // If already a Date object
-  if (input instanceof Date) {
-    return formatDateForAPI(input);
-  }
-
-  // If it's a string, try parsing as UI format first
-  const uiDate = parseUIDate(input);
-  if (uiDate) return formatDateForAPI(uiDate);
-
-  // Then try parsing as API format
-  const apiDate = parseAPIDate(input);
-  if (apiDate) return formatDateForAPI(apiDate);
-
-  // If all parsing fails
-  return null;
+export function isValidUIDate(input: string): boolean {
+  return !!parseUIDate(input);
 }
 
 /**
- * Converts any valid date input to a Date object
+ * Check if a string is a valid date in API format (YYYY-MM-DD)
+ * @param input - The date string to validate
+ * @returns True if the date is valid
  */
-export function toDateObject(
-  input: Date | string | null | undefined
-): Date | null {
-  if (!input) return null;
-
-  // If already a Date object
-  if (input instanceof Date) {
-    return isValid(input) ? input : null;
-  }
-
-  // If it's a string, try parsing as UI format first
-  const uiDate = parseUIDate(input);
-  if (uiDate) return uiDate;
-
-  // Then try parsing as API format
-  const apiDate = parseAPIDate(input);
-  if (apiDate) return apiDate;
-
-  // If all parsing fails
-  return null;
+export function isValidAPIDate(input: string): boolean {
+  return !!parseAPIDate(input);
 }

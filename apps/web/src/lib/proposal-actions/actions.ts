@@ -15,7 +15,7 @@ const UploadProposalFileSchema = z.object({
     .string()
     .min(10, { message: "Description must be at least 10 characters" }),
   deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "Invalid date format (YYYY-MM-DD)",
+    message: "Invalid date format (YYYY-MM-DD required for API)",
   }),
   fundingAmount: z
     .string()
