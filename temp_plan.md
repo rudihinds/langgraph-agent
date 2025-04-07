@@ -46,15 +46,15 @@ Refactor the RFP document upload process to be reliable and performant by separa
 
 ### # 2.1: Define Tests for Frontend Upload Integration
 
-- [ ] **Purpose:** Define how the frontend should interact with the (now tested) backend action and handle responses. While pure TDD is harder for UI, we can test the submission logic.
-- [ ] **Implementation Steps:**
-  1. [ ] **Write Test Specification:** Outline integration tests for the submission logic within `ServerForm.tsx` or its related hook (`useProposalSubmission` if applicable). Focus on the `handleSubmit` part related to file uploads. Test cases:
-     - [ ] Calls `uploadProposalFile` action with correct `FormData` (mocking the action).
-     - [ ] Displays correct toast message on mocked success from `uploadProposalFile`.
-     - [ ] Displays correct toast message on mocked failure from `uploadProposalFile`.
-     - [ ] Sets `isSubmitting` state correctly during the process.
-  2. [ ] **Write Failing Integration Tests:** Implement tests using testing-library/react and Vitest/Jest. Mock the imported `uploadProposalFile` server action. Trigger form submission and assert on state changes and mock calls/toast calls.
-- [ ] **Success Criteria:** A suite of failing/skipped integration tests for the frontend submission logic exists.
+- [x] **Purpose:** Define how the frontend should interact with the (now tested) backend action and handle responses. While pure TDD is harder for UI, we can test the submission logic.
+- [x] **Implementation Steps:**
+  1. [x] **Write Test Specification:** Outline integration tests for the submission logic within `ServerForm.tsx` or its related hook (`useProposalSubmission` if applicable). Focus on the `handleSubmit` part related to file uploads. Test cases:
+     - [x] Calls `uploadProposalFile` action with correct `FormData` (mocking the action).
+     - [x] Displays correct toast message on mocked success from `uploadProposalFile`.
+     - [x] Displays correct toast message on mocked failure from `uploadProposalFile`.
+     - [x] Sets `isSubmitting` state correctly during the process.
+  2. [x] **Write Failing Integration Tests:** Implement tests using testing-library/react and Vitest/Jest. Mock the imported `uploadProposalFile` server action. Trigger form submission and assert on state changes and mock calls/toast calls.
+- [x] **Success Criteria:** A suite of failing/skipped integration tests for the frontend submission logic exists.
 
 ### # 2.2: Implement/Refine Frontend Integration (`ServerForm.tsx`)
 
@@ -63,7 +63,7 @@ Refactor the RFP document upload process to be reliable and performant by separa
   1. [x] **Implement/Refine `ServerForm.tsx` > `handleSubmit`:** Write or adjust the code related to preparing `fileData` and calling `uploadProposalFile`.
   2. [x] **Handle State & Feedback:** Ensure `isSubmitting` state covers the upload call. Implement clear loading indicators (spinner added previously) based on `isSubmitting`. Ensure toast messages accurately reflect the _storage_ operation outcome.
   3. [x] **Confirm Raw File:** Double-check that the raw `file` object is appended to `FormData`.
-  4. [ ] **Run Tests:** Execute the integration tests from #2.1. Iterate until they pass.
+  4. [x] **Run Tests:** Execute the integration tests from #2.1. Iterate until they pass.
 - [x] **Success Criteria:** Frontend integration tests pass. UI provides clear feedback during upload.
 
 ## Phase 3: Verification & Documentation
