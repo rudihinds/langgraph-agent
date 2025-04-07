@@ -62,6 +62,7 @@ import {
   type FunderDetailsForm,
 } from "@shared/types/ProposalSchema";
 import { DatePicker } from "@/components/ui/date-picker";
+import { AppointmentPicker } from "@/components/ui/appointment-picker";
 
 // MODEL
 export interface FunderDetailsViewProps {
@@ -450,9 +451,9 @@ function FunderDetailsViewComponent({
                         </TooltipContent>
                       </Tooltip>
                     </Label>
-                    <DatePicker
+                    <AppointmentPicker
                       date={formData.deadline}
-                      setDate={(date) =>
+                      onDateChange={(date) =>
                         handleChange("deadline", date || new Date())
                       }
                       placeholder="Select deadline date"
