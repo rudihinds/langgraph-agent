@@ -83,6 +83,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   // Toggle for testing empty vs populated states
   const [showDummyData, setShowDummyData] = useState(true);
+  // State for announcement banner visibility
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   useEffect(() => {
     async function fetchProposals() {
@@ -180,6 +182,33 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {showAnnouncement && (
+          <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+            <button
+              onClick={() => setShowAnnouncement(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label="Dismiss announcement"
+            >
+              ✕
+            </button>
+            <h3 className="font-semibold text-primary mb-1">
+              Enhanced RFP Form Now Available!
+            </h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              We've improved our RFP submission process with real-time
+              validation, progress tracking, and better file handling.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/proposals/new/rfp")}
+              className="text-xs mt-1"
+            >
+              Try it now
+            </Button>
+          </div>
+        )}
+
         <DashboardSkeleton />
       </div>
     );
@@ -212,6 +241,33 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        {showAnnouncement && (
+          <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+            <button
+              onClick={() => setShowAnnouncement(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label="Dismiss announcement"
+            >
+              ✕
+            </button>
+            <h3 className="font-semibold text-primary mb-1">
+              Enhanced RFP Form Now Available!
+            </h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              We've improved our RFP submission process with real-time
+              validation, progress tracking, and better file handling.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/proposals/new/rfp")}
+              className="text-xs mt-1"
+            >
+              Try it now
+            </Button>
+          </div>
+        )}
 
         <div className="p-4 border border-destructive/50 rounded bg-destructive/10 text-center">
           <p className="text-destructive">{error}</p>
@@ -255,6 +311,33 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {showAnnouncement && (
+          <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+            <button
+              onClick={() => setShowAnnouncement(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label="Dismiss announcement"
+            >
+              ✕
+            </button>
+            <h3 className="font-semibold text-primary mb-1">
+              Enhanced RFP Form Now Available!
+            </h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              We've improved our RFP submission process with real-time
+              validation, progress tracking, and better file handling.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/proposals/new/rfp")}
+              className="text-xs mt-1"
+            >
+              Try it now
+            </Button>
+          </div>
+        )}
+
         <EmptyProposalState onCreateClick={() => setIsTypeModalOpen(true)} />
 
         <ProposalTypeModal
@@ -291,6 +374,33 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {showAnnouncement && (
+        <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+          <button
+            onClick={() => setShowAnnouncement(false)}
+            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss announcement"
+          >
+            ✕
+          </button>
+          <h3 className="font-semibold text-primary mb-1">
+            Enhanced RFP Form Now Available!
+          </h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            We've improved our RFP submission process with real-time validation,
+            progress tracking, and better file handling.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/proposals/new/rfp")}
+            className="text-xs mt-1"
+          >
+            Try it now
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <NewProposalCard onClick={() => setIsTypeModalOpen(true)} />

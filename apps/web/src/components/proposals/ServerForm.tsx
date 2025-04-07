@@ -23,6 +23,7 @@ interface ServerFormProps {
   formData: Record<string, any>;
   file?: File | null;
   onCancel: () => void;
+  className?: string;
 }
 
 export default function ServerForm({
@@ -30,6 +31,7 @@ export default function ServerForm({
   formData,
   file: initialFile,
   onCancel,
+  className,
 }: ServerFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -325,7 +327,11 @@ export default function ServerForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className={cn("space-y-6", className)}
+    >
       <input type="hidden" name="proposal_type" value={proposalType} />
 
       {proposalType === "rfp" && (
@@ -392,17 +398,11 @@ export default function ServerForm({
         </div>
       )}
 
-      <div className="flex justify-end space-x-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
+      <div className="flex flex-col space-y-3 pt-4">
         <Button
           type="submit"
+          size="lg"
+          className="w-full"
           disabled={
             isSubmitting ||
             isVerifyingUser ||
@@ -422,6 +422,16 @@ export default function ServerForm({
           ) : (
             "Create Proposal"
           )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="w-full"
+        >
+          Back
         </Button>
       </div>
     </form>

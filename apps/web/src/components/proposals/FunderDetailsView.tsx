@@ -285,39 +285,6 @@ function FunderDetailsViewComponent({
   return (
     <TooltipProvider>
       <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
-        {/* Progress steps */}
-        <div className="mb-8">
-          <div className="relative">
-            <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
-              <div className="flex flex-col justify-center w-1/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <div className="flex flex-col items-center font-medium text-primary">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
-                  1
-                </div>
-                <span>Funder Details</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                  2
-                </div>
-                <span>
-                  {proposalType === "rfp"
-                    ? "Upload RFP Doc"
-                    : "Application Questions"}
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                  3
-                </div>
-                <span>Review & Create</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="flex flex-col gap-6 lg:flex-row">
           <div className="lg:w-3/4">
             <div className="mb-6">
@@ -650,7 +617,7 @@ function FunderDetailsViewComponent({
           </div>
 
           <div className="lg:w-1/4">
-            <div className="sticky space-y-6 top-8">
+            <div className="sticky space-y-6 top-32">
               <Card className="border-0 shadow-md">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Help & Tips</CardTitle>

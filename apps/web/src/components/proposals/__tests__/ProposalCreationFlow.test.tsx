@@ -9,6 +9,17 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+// Mock the ProgressStepper component
+vi.mock("../ProgressStepper", () => ({
+  ProgressStepper: ({ currentStep, totalSteps }: any) => (
+    <div data-testid="progress-stepper-mock">
+      <div>
+        Step {currentStep} of {totalSteps}
+      </div>
+    </div>
+  ),
+}));
+
 // Mock the useProposalSubmission hook
 vi.mock("@/hooks/useProposalSubmission", () => ({
   useProposalSubmission: ({ onSuccess, onError }: any) => ({

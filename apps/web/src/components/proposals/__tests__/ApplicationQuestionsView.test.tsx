@@ -12,6 +12,24 @@ vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
+// Mock the ProgressStepper component since we're testing ApplicationQuestionsView in isolation
+vi.mock("../ProgressStepper", () => ({
+  ProgressStepper: () => <div data-testid="progress-stepper-mock" />,
+}));
+
+// Mock the SubmitButton component
+vi.mock("../SubmitButton", () => ({
+  SubmitButton: ({ children, onClick, disabled }: any) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      data-testid="submit-button-mock"
+    >
+      {children}
+    </button>
+  ),
+}));
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};

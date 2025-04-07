@@ -51,6 +51,8 @@ import {
   Info,
   HelpCircle,
   CheckCircle2,
+  Loader2,
+  ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -94,6 +96,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProgressCircle } from "@/components/ui/progress-circle";
 import { debounce } from "@/lib/utils";
+import { SubmitButton } from "./SubmitButton";
 
 // MODEL
 // Extend the shared Question type to include ID for internal management
@@ -108,6 +111,7 @@ export interface Question extends Omit<SharedQuestion, "id"> {
 export interface ApplicationQuestionsViewProps {
   onSubmit: (data: { questions: Question[] }) => void;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
 interface UseApplicationQuestionsModel {
@@ -137,6 +141,13 @@ interface UseApplicationQuestionsModel {
       HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
     >
   ) => void;
+  handleBlur: () => void;
+}
+
+// Define the props interface for the view component
+interface ApplicationQuestionsViewComponentProps
+  extends UseApplicationQuestionsModel {
+  isSubmitting?: boolean;
 }
 
 const QUESTION_CATEGORIES = [
@@ -152,6 +163,7 @@ const QUESTION_CATEGORIES = [
 function useApplicationQuestions({
   onSubmit,
   onBack,
+  isSubmitting,
 }: ApplicationQuestionsViewProps): UseApplicationQuestionsModel {
   const { toast } = useToast();
   const [questions, setQuestions] = useState<Question[]>([
@@ -169,6 +181,7 @@ function useApplicationQuestions({
   const [bulkImportText, setBulkImportText] = useState("");
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [userInteracting, setUserInteracting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -197,24 +210,39 @@ function useApplicationQuestions({
 
   // Auto-save questions to localStorage when they change
   useEffect(() => {
-    const saveTimeout = setTimeout(() => {
-      setIsSaving(true);
-      localStorage.setItem(
-        "applicationQuestions",
-        JSON.stringify({
-          questions: questions.map(({ id, ...rest }) => rest),
-        })
-      );
+    // Don't auto-save if user is actively editing
+    if (userInteracting) return;
 
-      // Simulate a short delay to show the saving indicator
-      setTimeout(() => {
-        setIsSaving(false);
-        setLastSaved(new Date());
-      }, 600);
-    }, 1000); // Debounce for 1 second
+    const saveTimeout = setTimeout(() => {
+      // Only show saving indicator if there are actual questions to save
+      if (questions.length > 0 && questions.some((q) => q.text.trim() !== "")) {
+        setIsSaving(true);
+        try {
+          localStorage.setItem(
+            "applicationQuestions",
+            JSON.stringify({ questions, updatedAt: new Date() })
+          );
+          setLastSaved(new Date());
+        } catch (e) {
+          console.error("Failed to save questions:", e);
+        } finally {
+          // Short delay to show the saving indicator
+          setTimeout(() => setIsSaving(false), 500);
+        }
+      }
+    }, 1000);
 
     return () => clearTimeout(saveTimeout);
-  }, [questions]);
+  }, [questions, userInteracting]);
+
+  // Handle user interaction state
+  const handleUserInteractionStart = () => {
+    setUserInteracting(true);
+  };
+
+  const handleUserInteractionEnd = () => {
+    setUserInteracting(false);
+  };
 
   const addQuestion = useCallback(() => {
     const newId = Date.now().toString();
@@ -317,6 +345,10 @@ function useApplicationQuestions({
 
   const handleSubmit = useCallback(() => {
     if (validateForm()) {
+      console.log(
+        "ApplicationQuestionsView: Submitting questions data",
+        questions.length
+      );
       onSubmit({
         questions: questions.map((question) => ({
           id: question.id,
@@ -381,29 +413,33 @@ function useApplicationQuestions({
     setActivePanel((prev) => (prev === id ? null : id));
   }, []);
 
-  const handleFocus = useCallback(
-    (
-      e: React.FocusEvent<
-        HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
-      >
-    ) => {
-      // Move cursor to the end of text on focus if it's an input or textarea
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
-        const target = e.target;
-        const length = target.value.length;
+  // Updated handleFocus to track user interaction
+  const handleFocus = (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
+    >
+  ) => {
+    handleUserInteractionStart();
+    // Move cursor to the end of text on focus if it's an input or textarea
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    ) {
+      const target = e.target;
+      const length = target.value.length;
 
-        // Use setTimeout to ensure this happens after the default focus behavior
-        setTimeout(() => {
-          target.selectionStart = length;
-          target.selectionEnd = length;
-        }, 0);
-      }
-    },
-    []
-  );
+      // Use setTimeout to ensure this happens after the default focus behavior
+      setTimeout(() => {
+        target.selectionStart = length;
+        target.selectionEnd = length;
+      }, 0);
+    }
+  };
+
+  // Add blur handler to track when interaction ends
+  const handleBlur = () => {
+    handleUserInteractionEnd();
+  };
 
   return {
     questions,
@@ -428,39 +464,11 @@ function useApplicationQuestions({
     togglePanel,
     questionRefs,
     handleFocus,
+    handleBlur,
   };
 }
 
-// VIEW
-interface ApplicationQuestionsViewComponentProps
-  extends ApplicationQuestionsViewProps {
-  questions: Question[];
-  errors: Record<string, string>;
-  bulkImportOpen: boolean;
-  bulkImportText: string;
-  activePanel: string | null;
-  isSaving: boolean;
-  lastSaved: Date | null;
-  addQuestion: () => void;
-  removeQuestion: (id: string) => void;
-  updateQuestion: (id: string, updates: Partial<Omit<Question, "id">>) => void;
-  moveQuestionUp: (id: string) => void;
-  moveQuestionDown: (id: string) => void;
-  handleSubmit: () => void;
-  handleBack: () => void;
-  openBulkImport: () => void;
-  closeBulkImport: () => void;
-  updateBulkImportText: (text: string) => void;
-  processBulkImport: () => void;
-  togglePanel: (id: string) => void;
-  questionRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
-  handleFocus: (
-    e: React.FocusEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
-    >
-  ) => void;
-}
-
+// VIEW with updated styling
 function ApplicationQuestionsViewComponent({
   questions,
   errors,
@@ -483,39 +491,18 @@ function ApplicationQuestionsViewComponent({
   togglePanel,
   questionRefs,
   handleFocus,
+  handleBlur,
+  isSubmitting,
 }: ApplicationQuestionsViewComponentProps) {
+  const [currentFocus, setCurrentFocus] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(
+    QUESTION_CATEGORIES[0]
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
+
   return (
     <TooltipProvider>
       <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
-        {/* Progress steps */}
-        <div className="mb-8">
-          <div className="relative">
-            <div className="flex h-2 mb-6 overflow-hidden text-xs bg-gray-100 rounded">
-              <div className="flex flex-col justify-center w-2/3 text-center text-white shadow-none whitespace-nowrap bg-primary"></div>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <div className="flex flex-col items-center font-medium text-muted">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 bg-muted/30 text-primary border-2 rounded-full border-primary">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </div>
-                <span>Funder Details</span>
-              </div>
-              <div className="flex flex-col items-center font-medium text-primary">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 text-white border-2 rounded-full border-primary bg-primary">
-                  2
-                </div>
-                <span>Application Questions</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center w-6 h-6 mb-1 border-2 border-gray-300 rounded-full">
-                  3
-                </div>
-                <span>Review & Create</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="flex flex-col gap-6 lg:flex-row">
           <div className="lg:w-3/4">
             <div className="mb-6">
@@ -533,17 +520,18 @@ function ApplicationQuestionsViewComponent({
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl">Questions</CardTitle>
                   <div className="flex items-center gap-2">
-                    {isSaving && (
-                      <span className="flex items-center text-xs text-muted-foreground animate-pulse">
-                        <Save className="w-3 h-3 mr-1" />
+                    {isSaving ? (
+                      <span className="flex items-center text-xs text-muted-foreground">
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                         Saving...
                       </span>
-                    )}
-                    {!isSaving && lastSaved && (
-                      <span className="flex items-center text-xs text-muted-foreground">
-                        <Check className="w-3 h-3 mr-1 text-green-500" />
-                        Saved {lastSaved.toLocaleTimeString()}
-                      </span>
+                    ) : (
+                      lastSaved && (
+                        <span className="flex items-center text-xs text-muted-foreground">
+                          <Check className="w-3 h-3 mr-1 text-green-500" />
+                          Saved {lastSaved.toLocaleTimeString()}
+                        </span>
+                      )
                     )}
                     <Button
                       variant="outline"
@@ -577,7 +565,7 @@ function ApplicationQuestionsViewComponent({
                           : "border-muted hover:border-muted-foreground/20 hover:shadow-sm"
                       )}
                       data-testid={`question-${index + 1}`}
-                      ref={(el) => {
+                      ref={(el: HTMLDivElement | null) => {
                         questionRefs.current[question.id] = el;
                       }}
                     >
@@ -653,6 +641,7 @@ function ApplicationQuestionsViewComponent({
                               : undefined
                           }
                           onFocus={handleFocus}
+                          onBlur={handleBlur}
                         />
                         {errors[question.id] && (
                           <p
@@ -665,190 +654,220 @@ function ApplicationQuestionsViewComponent({
                         )}
                       </div>
 
-                      <Collapsible open={activePanel === question.id}>
-                        <CollapsibleTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => togglePanel(question.id)}
-                            className={cn(
-                              "flex items-center gap-1 px-3 text-sm font-normal w-full justify-between",
-                              activePanel === question.id
-                                ? "bg-muted/50 text-primary"
-                                : "text-muted-foreground hover:text-foreground"
-                            )}
-                            aria-label={`Options for question ${index + 1}`}
-                          >
+                      <Collapsible
+                        key={question.id}
+                        open={activePanel === question.id}
+                        onOpenChange={() => togglePanel(question.id)}
+                      >
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          ref={(el: HTMLDivElement | null) => {
+                            questionRefs.current[question.id] = el;
+                          }}
+                          className="mb-4 overflow-hidden bg-white border rounded-lg shadow-sm"
+                        >
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50 focus:outline-none focus-visible:ring focus-visible:ring-primary focus-visible:ring-opacity-75">
                             <span>Question Options</span>
                             {activePanel === question.id ? (
                               <ChevronUp className="h-3.5 w-3.5" />
                             ) : (
                               <ChevronDown className="h-3.5 w-3.5" />
                             )}
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent
-                          className={cn(
-                            "overflow-hidden transition-all",
-                            "data-[state=closed]:animate-collapsible-up",
-                            "data-[state=open]:animate-collapsible-down"
-                          )}
-                        >
-                          <div className="pt-4 pb-1 mt-3 space-y-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                              <div>
-                                <Label
-                                  htmlFor={`word-limit-${question.id}`}
-                                  className="text-sm flex items-center gap-1 mb-1.5"
-                                >
-                                  Word limit
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="top"
-                                      className="w-60 text-sm p-2"
-                                    >
-                                      <p>
-                                        Set a maximum word count for this
-                                        question's response.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </Label>
-                                <Input
-                                  id={`word-limit-${question.id}`}
-                                  type="number"
-                                  min="0"
-                                  placeholder="No limit"
-                                  value={
-                                    question.wordLimit !== null
-                                      ? question.wordLimit
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    updateQuestion(question.id, {
-                                      wordLimit: e.target.value
-                                        ? parseInt(e.target.value)
-                                        : null,
-                                    })
-                                  }
-                                  onFocus={handleFocus}
-                                />
-                              </div>
-                              <div>
-                                <Label
-                                  htmlFor={`char-limit-${question.id}`}
-                                  className="text-sm flex items-center gap-1 mb-1.5"
-                                >
-                                  Character limit
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="top"
-                                      className="w-60 text-sm p-2"
-                                    >
-                                      <p>
-                                        Set a maximum character count for this
-                                        question's response.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </Label>
-                                <Input
-                                  id={`char-limit-${question.id}`}
-                                  type="number"
-                                  min="0"
-                                  placeholder="No limit"
-                                  value={
-                                    question.charLimit !== null
-                                      ? question.charLimit
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    updateQuestion(question.id, {
-                                      charLimit: e.target.value
-                                        ? parseInt(e.target.value)
-                                        : null,
-                                    })
-                                  }
-                                  onFocus={handleFocus}
-                                />
-                              </div>
-                            </div>
-                            <div className="pt-1 pb-1">
-                              <Label
-                                htmlFor={`category-${question.id}`}
-                                className="flex items-center gap-1 mb-2 text-sm"
-                              >
-                                Question category
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="top"
-                                    className="w-60 text-sm p-2"
+                          </CollapsibleTrigger>
+                          <CollapsibleContent
+                            className={cn(
+                              "overflow-hidden transition-all",
+                              "data-[state=closed]:animate-collapsible-up",
+                              "data-[state=open]:animate-collapsible-down"
+                            )}
+                          >
+                            <div className="pt-4 pb-1 mt-3 space-y-4">
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                  <Label
+                                    htmlFor={`word-limit-${question.id}`}
+                                    className="text-sm flex items-center gap-1 mb-1.5"
                                   >
-                                    <p>
-                                      Categorizing questions helps organize and
-                                      improve AI-generated responses.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </Label>
-                              <div className="relative">
-                                <Select
-                                  value={question.category || ""}
-                                  onValueChange={(value) =>
-                                    updateQuestion(question.id, {
-                                      category: value || null,
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger
-                                    id={`category-${question.id}`}
-                                    className="w-full focus:ring-offset-0"
-                                  >
-                                    <SelectValue placeholder="Select a category (optional)" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {QUESTION_CATEGORIES.map((category) => (
-                                      <SelectItem
-                                        key={category}
-                                        value={category}
+                                    Word limit
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        side="top"
+                                        className="p-2 text-sm w-60"
                                       >
-                                        {category}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                        <p>
+                                          Set a maximum word count for this
+                                          question's response.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </Label>
+                                  <Input
+                                    id={`word-limit-${question.id}`}
+                                    type="number"
+                                    min="0"
+                                    placeholder="No limit"
+                                    value={
+                                      question.wordLimit !== null
+                                        ? question.wordLimit
+                                        : ""
+                                    }
+                                    onChange={(e) =>
+                                      updateQuestion(question.id, {
+                                        wordLimit: e.target.value
+                                          ? parseInt(e.target.value)
+                                          : null,
+                                      })
+                                    }
+                                    onFocus={handleFocus}
+                                    onBlur={handleBlur}
+                                  />
+                                </div>
+                                <div>
+                                  <Label
+                                    htmlFor={`char-limit-${question.id}`}
+                                    className="text-sm flex items-center gap-1 mb-1.5"
+                                  >
+                                    Character limit
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        side="top"
+                                        className="p-2 text-sm w-60"
+                                      >
+                                        <p>
+                                          Set a maximum character count for this
+                                          question's response.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </Label>
+                                  <Input
+                                    id={`char-limit-${question.id}`}
+                                    type="number"
+                                    min="0"
+                                    placeholder="No limit"
+                                    value={
+                                      question.charLimit !== null
+                                        ? question.charLimit
+                                        : ""
+                                    }
+                                    onChange={(e) =>
+                                      updateQuestion(question.id, {
+                                        charLimit: e.target.value
+                                          ? parseInt(e.target.value)
+                                          : null,
+                                      })
+                                    }
+                                    onFocus={handleFocus}
+                                    onBlur={handleBlur}
+                                  />
+                                </div>
+                              </div>
+                              <div className="pt-1 pb-1">
+                                <Label
+                                  htmlFor={`category-${question.id}`}
+                                  className="flex items-center gap-1 mb-2 text-sm"
+                                >
+                                  Question category
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="top"
+                                      className="p-2 text-sm w-60"
+                                    >
+                                      <p>
+                                        Categorizing questions helps organize
+                                        and improve AI-generated responses.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </Label>
+                                <div className="relative">
+                                  <Select
+                                    value={question.category || ""}
+                                    onValueChange={(value) =>
+                                      updateQuestion(question.id, {
+                                        category: value || null,
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      id={`category-${question.id}`}
+                                      className="w-full focus:ring-offset-0"
+                                    >
+                                      <SelectValue placeholder="Select a category (optional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {QUESTION_CATEGORIES.map((category) => (
+                                        <SelectItem
+                                          key={category}
+                                          value={category}
+                                        >
+                                          {category}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CollapsibleContent>
+                          </CollapsibleContent>
+                        </motion.div>
                       </Collapsible>
                     </motion.div>
                   ))}
                 </AnimatePresence>
 
                 <Button
-                  variant="outline"
                   onClick={addQuestion}
-                  className="flex items-center w-full gap-2 py-6 mt-2 border-dashed"
+                  variant="outline"
+                  className="w-full mt-4 border-dashed"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 mr-2" />
                   Add Another Question
                 </Button>
               </CardContent>
+              <CardFooter className="flex justify-between pt-5 pb-6 bg-white border-t">
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <SubmitButton
+                  onClick={handleSubmit}
+                  disabled={
+                    questions.length === 0 ||
+                    questions.some((q: Question) => !q.text.trim()) ||
+                    isSubmitting
+                  }
+                  state={isSubmitting ? "loading" : "idle"}
+                  className="flex items-center gap-1.5"
+                  disabledText="Add at least one question with text"
+                  loadingText="Processing..."
+                >
+                  Continue
+                  <ChevronRight className="w-4 h-4" />
+                </SubmitButton>
+              </CardFooter>
             </Card>
           </div>
 
           <div className="lg:w-1/4">
-            <div className="sticky space-y-6 top-8">
+            <div className="sticky space-y-6 top-32">
               <Card className="border-0 shadow-md">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Help & Tips</CardTitle>
@@ -856,30 +875,42 @@ function ApplicationQuestionsViewComponent({
                 <CardContent className="text-sm text-muted-foreground">
                   <ul className="space-y-2.5">
                     <CheckItem>
-                      Add all questions from your grant application
+                      Add all questions from your original application
                     </CheckItem>
                     <CheckItem>
-                      For multiple questions, use bulk import
+                      Keep the exact wording from the application
+                    </CheckItem>
+                    <CheckItem>
+                      Use "Bulk Import" to paste multiple questions at once
                     </CheckItem>
                     <CheckItem>
                       Add word limits if specified in the application
-                    </CheckItem>
-                    <CheckItem>
-                      Categorize questions to improve generated responses
                     </CheckItem>
                   </ul>
                 </CardContent>
               </Card>
 
-              <div className="flex flex-col pt-4 space-y-3">
-                <Button onClick={handleSubmit} size="lg" className="w-full">
+              <div className="flex flex-col space-y-3 pt-4">
+                <SubmitButton
+                  onClick={handleSubmit}
+                  disabled={
+                    questions.length === 0 ||
+                    questions.some((q: Question) => !q.text.trim()) ||
+                    isSubmitting
+                  }
+                  state={isSubmitting ? "loading" : "idle"}
+                  className="w-full"
+                  disabledText="Add at least one question with text"
+                  loadingText="Processing..."
+                >
                   Continue
-                </Button>
+                </SubmitButton>
                 <Button
                   variant="outline"
                   onClick={handleBack}
                   size="lg"
                   className="w-full"
+                  disabled={isSubmitting}
                 >
                   Back
                 </Button>
@@ -891,17 +922,19 @@ function ApplicationQuestionsViewComponent({
         {/* Bulk Import Dialog */}
         <Dialog open={bulkImportOpen} onOpenChange={closeBulkImport}>
           <DialogContent
-            className="max-w-2xl"
+            className="sm:max-w-md"
             aria-labelledby="bulk-import-dialog-title"
             aria-describedby="bulk-import-dialog-description"
           >
-            <DialogTitle id="bulk-import-dialog-title">
-              Bulk Import Questions
-            </DialogTitle>
-            <DialogDescription id="bulk-import-dialog-description">
-              Paste your questions below, one per line. These will replace your
-              current questions.
-            </DialogDescription>
+            <DialogHeader>
+              <DialogTitle id="bulk-import-dialog-title">
+                Bulk Import Questions
+              </DialogTitle>
+              <DialogDescription id="bulk-import-dialog-description">
+                Paste your questions below, one per line. These will replace
+                your current questions.
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="py-4">
               <Textarea
@@ -911,6 +944,7 @@ function ApplicationQuestionsViewComponent({
                 className="min-h-[300px]"
                 aria-label="Questions"
                 onFocus={handleFocus}
+                onBlur={handleBlur}
               />
             </div>
 

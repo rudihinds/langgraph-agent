@@ -11,6 +11,8 @@ import { useProposalSubmission } from "@/hooks/useProposalSubmission";
 import { useToast } from "@/components/ui/use-toast";
 import { Question } from "./ApplicationQuestionsView";
 import { FunderDetails } from "./FunderDetailsView";
+import { ProgressStepper } from "./ProgressStepper";
+import { cn } from "@/lib/utils";
 
 // MODEL
 export type ProposalType = "rfp" | "application";
@@ -103,11 +105,20 @@ function useProposalCreationFlow({
   }, [proposalType, onCancel]);
 
   const handleNext = async (data: any) => {
+    console.log("ProposalCreationFlow: handleNext called", {
+      currentStep,
+      totalSteps,
+    });
+
     // Save the data from the current step
     if (currentStep === 1) {
       setFunderDetails(data);
     } else if (currentStep === 2) {
       if (proposalType === "application") {
+        console.log(
+          "ProposalCreationFlow: Saving application questions",
+          data.questions?.length
+        );
         setApplicationQuestions(data.questions || []);
       } else {
         setRfpDetails(data);
@@ -116,18 +127,24 @@ function useProposalCreationFlow({
 
     // If this is the last step, submit the proposal
     if (currentStep === totalSteps) {
+      console.log("ProposalCreationFlow: Final step - submitting proposal");
       setIsSubmitting(true);
 
       try {
-        // If we're at the review step, the data should already be prepared 
+        // If we're at the review step, the data should already be prepared
         // in the correct format by the ReviewProposalView component
         console.log("Submitting proposal with data:", data);
-        
+
         // Submit the proposal
         const proposal = await submitProposal(data);
-        
+
         // If there's a file to upload and proposal was created successfully
-        if (proposalType === "rfp" && rfpDetails.file && proposal && proposal.id) {
+        if (
+          proposalType === "rfp" &&
+          rfpDetails.file &&
+          proposal &&
+          proposal.id
+        ) {
           await uploadFile(rfpDetails.file, proposal.id);
         }
       } catch (error) {
@@ -140,6 +157,10 @@ function useProposalCreationFlow({
 
     // Otherwise, go to the next step
     const nextStep = currentStep + 1;
+    console.log("ProposalCreationFlow: Moving to next step", {
+      currentStep,
+      nextStep,
+    });
 
     // Push the new step to history
     window.history.pushState(
@@ -149,6 +170,7 @@ function useProposalCreationFlow({
     );
 
     setCurrentStep(nextStep);
+    console.log("ProposalCreationFlow: Step updated", { newStep: nextStep });
   };
 
   const handleBack = () => {
@@ -209,7 +231,7 @@ interface ProposalCreationFlowViewProps extends ProposalCreationFlowProps {
   handleCancel: () => void;
 }
 
-function ProposalCreationFlowView({
+export function ProposalCreationFlowView({
   proposalType,
   currentStep,
   totalSteps,
@@ -222,62 +244,53 @@ function ProposalCreationFlowView({
   handleEdit,
   handleCancel,
 }: ProposalCreationFlowViewProps) {
-  // First step is now Funder Details for both proposal types
-  if (currentStep === 1) {
-    return (
-      <FunderDetailsView
-        onSubmit={handleNext}
-        onBack={handleBack}
-        proposalType={proposalType}
-      />
-    );
-  }
-
-  // Second step depends on proposal type
-  if (currentStep === 2) {
-    if (proposalType === "application") {
-      return (
-        <ApplicationQuestionsView onSubmit={handleNext} onBack={handleBack} />
-      );
-    }
-
-    if (proposalType === "rfp") {
-      return <RFPResponseView onSubmit={handleNext} onBack={handleBack} />;
-    }
-  }
-
-  // Third step is review for both proposal types
-  if (currentStep === 3) {
-    return (
-      <ReviewProposalView
-        onSubmit={handleNext}
-        onBack={handleBack}
-        onEdit={handleEdit}
-        funderDetails={funderDetails}
-        applicationQuestions={
-          proposalType === "application" ? applicationQuestions : []
-        }
-        proposalType={proposalType}
-        isSubmitting={isSubmitting}
-        rfpDetails={rfpDetails}
-      />
-    );
-  }
-
-  // Fallback for unimplemented steps
   return (
-    <div className="container max-w-3xl mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-4">
-        Step {currentStep} of {totalSteps}
-      </h1>
-      <p className="mb-8 text-muted-foreground">
-        This step is not yet implemented.
-      </p>
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={handleBack}>
-          Back
-        </Button>
-        <Button onClick={() => handleNext({})}>Continue</Button>
+    <div
+      className={cn(
+        "relative",
+        proposalType === "application" ? "pt-32" : "pt-8"
+      )}
+    >
+      {proposalType === "application" && (
+        <div className="fixed top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container py-4">
+            <ProgressStepper
+              currentStep={currentStep}
+              totalSteps={totalSteps}
+              isLoading={isSubmitting}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className={proposalType === "application" ? "pt-0" : "pt-8"}>
+        <div className="mt-8">
+          {currentStep === 1 && (
+            <FunderDetailsView onSubmit={handleNext} onBack={handleBack} />
+          )}
+          {currentStep === 2 && proposalType === "application" && (
+            <ApplicationQuestionsView
+              onSubmit={handleNext}
+              onBack={handleBack}
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {currentStep === 2 && proposalType === "rfp" && (
+            <RFPResponseView onSubmit={handleNext} onBack={handleBack} />
+          )}
+          {currentStep === 3 && (
+            <ReviewProposalView
+              funderDetails={funderDetails}
+              applicationQuestions={applicationQuestions}
+              rfpDetails={rfpDetails}
+              proposalType={proposalType}
+              onEdit={handleEdit}
+              onSubmit={handleNext}
+              onBack={handleBack}
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/proposals/new/rfp/page": "app/proposals/new/rfp/page.js",
-  "/proposals/created/page": "app/proposals/created/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/api/auth/verify-user/route": "app/api/auth/verify-user/route.js",
+  "/proposals/new/application/page": "app/proposals/new/application/page.js",
+  "/proposals/new/rfp/page": "app/proposals/new/rfp/page.js"
 }

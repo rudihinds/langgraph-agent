@@ -94,11 +94,11 @@ const ProposalTypeCard = React.forwardRef<
     >
       {selected && (
         <div className="absolute top-3 right-3 text-primary">
-          <Check className="h-5 w-5" />
+          <Check className="w-5 h-5" />
         </div>
       )}
-      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-        <Icon className="h-6 w-6 text-primary" />
+      <div className="flex items-center justify-center w-12 h-12 mb-2 rounded-full bg-primary/10">
+        <Icon className="w-6 h-6 text-primary" />
       </div>
       <h3 className="text-lg font-medium">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
@@ -143,7 +143,7 @@ function ProposalTypeModalView({
         </DialogDescription>
 
         <div
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
           role="radiogroup"
           aria-labelledby="proposal-type-modal-title"
         >
@@ -166,7 +166,7 @@ function ProposalTypeModalView({
           />
         </div>
 
-        <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground mt-2">
+        <div className="p-3 mt-2 text-sm rounded-md bg-muted/50 text-muted-foreground">
           <p>
             <span className="font-medium">Not sure which to choose?</span> RFP
             Response is best for structured procurement documents, while
@@ -174,7 +174,7 @@ function ProposalTypeModalView({
           </p>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-2">
+        <DialogFooter className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>

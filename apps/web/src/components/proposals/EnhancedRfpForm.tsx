@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { FilePreview } from "./FilePreview";
-import { ProgressStepper } from "./ProgressStepper";
 import { SubmitButton } from "./SubmitButton";
 import { FormOverlay } from "./FormOverlay";
 import { useFileUploadToast } from "./UploadToast";
@@ -13,8 +12,8 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
   CardDescription,
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -128,17 +127,27 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
     const descriptionError = validateField(description, 10, "Description");
     if (descriptionError) newErrors.description = descriptionError;
 
-    if (!file || !fileInfo?.isValid) {
-      newErrors.file = "Please select a valid file to upload.";
-    }
-
-    // Deadline and funding amount are optional, but we can validate their format if provided
-    if (deadline && !/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
+    const deadlineError = validateField(deadline, 1, "Deadline");
+    if (deadlineError) {
+      newErrors.deadline = deadlineError;
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
       newErrors.deadline = "Please enter a valid date in YYYY-MM-DD format";
     }
 
-    if (fundingAmount && !/^\d+(\.\d{1,2})?$/.test(fundingAmount)) {
-      newErrors.fundingAmount = "Please enter a valid funding amount";
+    const fundingAmountError = validateField(
+      fundingAmount,
+      1,
+      "Funding Amount"
+    );
+    if (fundingAmountError) {
+      newErrors.fundingAmount = fundingAmountError;
+    } else if (!/^\d+(\.\d{1,2})?$/.test(fundingAmount)) {
+      newErrors.fundingAmount =
+        "Please enter a valid funding amount (e.g., 10000 or 10000.00)";
+    }
+
+    if (!file || !fileInfo?.isValid) {
+      newErrors.file = "Please select a valid file to upload.";
     }
 
     setErrors(newErrors);
@@ -185,13 +194,14 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
         message: "Uploading document...",
       });
 
-      // Perform the actual upload
+      // Perform the actual upload - Use default empty strings
+      // Zod will validate these server-side
       const result = await uploadProposalFile({
         userId,
         title,
         description,
-        deadline,
-        fundingAmount,
+        deadline: deadline || "", // Pass empty string if undefined/null
+        fundingAmount: fundingAmount || "", // Pass empty string if undefined/null
         file: file!,
       });
 
@@ -213,7 +223,17 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
           if (onSuccess) onSuccess(result.proposalId);
         }, 1500);
       } else {
-        throw new Error(result.error || "Failed to upload document");
+        // Try parsing Zod error from the server
+        let errorMessage = result.error || "Failed to upload document";
+        try {
+          const parsedError = JSON.parse(errorMessage);
+          // Format Zod error messages if possible
+          const messages = Object.values(parsedError).flat().join(", ");
+          if (messages) errorMessage = messages;
+        } catch (e) {
+          // Ignore if parsing fails, use original error string
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Upload error:", error);
@@ -242,7 +262,8 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
 
   return (
     <div className="relative w-full max-w-3xl mx-auto">
-      {/* Progress Stepper */}
+      {/* Remove the entire Progress Stepper section */}
+      {/* 
       <ProgressStepper
         activeStep={formStep}
         steps={[
@@ -253,131 +274,135 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
           { title: "Completed", description: "Process complete" },
         ]}
         fixed={true}
-      />
+      /> 
+      */}
 
-      {/* Add padding to account for the fixed header */}
-      <div className="pt-8">
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl">Create New Proposal</CardTitle>
-            <CardDescription>
-              Upload an RFP document to create a new proposal. Supported formats
-              include PDF, DOC, DOCX, TXT, XLS, and XLSX.
-            </CardDescription>
-          </CardHeader>
+      {/* Remove the extra padding div, as the stepper is gone */}
+      {/* <div className="pt-8"> */}
+      {/* Ensure the Card has some top margin now */}
+      <Card className="mt-8 shadow-md">
+        <CardHeader>
+          {/* Remove the CardTitle */}
+          <CardTitle className="text-2xl">Create New Proposal</CardTitle>
+          <CardDescription>
+            Upload an RFP document to create a new proposal. Supported formats
+            include PDF, DOC, DOCX, TXT, XLS, and XLSX.
+          </CardDescription>
+        </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Proposal Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter the title of your proposal"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className={cn(errors.title && "border-destructive")}
-                />
-                {errors.title && (
-                  <p className="text-sm font-medium text-destructive">
-                    {errors.title}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Provide a brief description of the proposal"
-                  className={cn(
-                    "min-h-24",
-                    errors.description && "border-destructive"
-                  )}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-                {errors.description && (
-                  <p className="text-sm font-medium text-destructive">
-                    {errors.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="deadline">Submission Deadline</Label>
-                <Input
-                  id="deadline"
-                  type="date"
-                  placeholder="YYYY-MM-DD"
-                  className={cn(errors.deadline && "border-destructive")}
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
-                {errors.deadline && (
-                  <p className="text-sm font-medium text-destructive">
-                    {errors.deadline}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fundingAmount">Funding Amount</Label>
-                <Input
-                  id="fundingAmount"
-                  type="text"
-                  placeholder="Enter the funding amount"
-                  className={cn(errors.fundingAmount && "border-destructive")}
-                  value={fundingAmount}
-                  onChange={(e) => setFundingAmount(e.target.value)}
-                />
-                {errors.fundingAmount && (
-                  <p className="text-sm font-medium text-destructive">
-                    {errors.fundingAmount}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="file">RFP Document</Label>
-                <FilePreview
-                  file={file}
-                  onFileChange={handleFileChange}
-                  maxSize={MAX_FILE_SIZE}
-                  acceptedTypes={ACCEPTED_FILE_TYPES}
-                />
-                {errors.file && (
-                  <p className="text-sm font-medium text-destructive">
-                    {errors.file}
-                  </p>
-                )}
-              </div>
-
-              {errors.submit && (
-                <div className="bg-destructive/10 border border-destructive text-destructive p-3 rounded-md flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">{errors.submit}</p>
-                </div>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Proposal Title</Label>
+              <Input
+                id="title"
+                placeholder="Enter the title of your proposal"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={cn(errors.title && "border-destructive")}
+              />
+              {errors.title && (
+                <p className="text-sm font-medium text-destructive">
+                  {errors.title}
+                </p>
               )}
+            </div>
 
-              <div className="flex justify-end pt-2">
-                <SubmitButton
-                  type="submit"
-                  disabled={!fileInfo?.isValid || isSubmitting}
-                  state={isSubmitting ? "loading" : "idle"}
-                  loadingText="Uploading..."
-                  successText="Uploaded!"
-                  errorText="Failed"
-                  disabledText="Select Valid File"
-                  icon={<Upload className="h-4 w-4 mr-2" />}
-                  successIcon={<FileCheck className="h-4 w-4 mr-2" />}
-                >
-                  Upload RFP
-                </SubmitButton>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Provide a brief description of the proposal"
+                className={cn(
+                  "min-h-24",
+                  errors.description && "border-destructive"
+                )}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              {errors.description && (
+                <p className="text-sm font-medium text-destructive">
+                  {errors.description}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Submission Deadline</Label>
+              <Input
+                id="deadline"
+                type="date"
+                placeholder="YYYY-MM-DD"
+                className={cn(errors.deadline && "border-destructive")}
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+              {errors.deadline && (
+                <p className="text-sm font-medium text-destructive">
+                  {errors.deadline}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fundingAmount">Funding Amount</Label>
+              <Input
+                id="fundingAmount"
+                type="text"
+                placeholder="Enter the funding amount"
+                className={cn(errors.fundingAmount && "border-destructive")}
+                value={fundingAmount}
+                onChange={(e) => setFundingAmount(e.target.value)}
+              />
+              {errors.fundingAmount && (
+                <p className="text-sm font-medium text-destructive">
+                  {errors.fundingAmount}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="file">RFP Document</Label>
+              <FilePreview
+                file={file}
+                onFileChange={handleFileChange}
+                maxSize={MAX_FILE_SIZE}
+                acceptedTypes={ACCEPTED_FILE_TYPES}
+              />
+              {errors.file && (
+                <p className="text-sm font-medium text-destructive">
+                  {errors.file}
+                </p>
+              )}
+            </div>
+
+            {errors.submit && (
+              <div className="flex items-start gap-2 p-3 border rounded-md bg-destructive/10 border-destructive text-destructive">
+                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <p className="text-sm">{errors.submit}</p>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                type="submit"
+                disabled={!fileInfo?.isValid || isSubmitting}
+                state={isSubmitting ? "loading" : "idle"}
+                loadingText="Uploading..."
+                successText="Uploaded!"
+                errorText="Failed"
+                disabledText="Select Valid File"
+                icon={<Upload className="w-4 h-4 mr-2" />}
+                successIcon={<FileCheck className="w-4 h-4 mr-2" />}
+              >
+                Upload RFP
+              </SubmitButton>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      {/* Remove the closing div for the extra padding */}
+      {/* </div> */}
 
       {/* Loading Overlay */}
       <FormOverlay

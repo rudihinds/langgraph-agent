@@ -4,26 +4,30 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { CheckIcon, LoaderCircle } from "lucide-react";
 
-type Step = {
-  title: string;
-  description: string;
-};
-
 type ProgressStepperProps = {
-  activeStep: number;
-  steps: Step[];
+  currentStep: number;
+  totalSteps: number;
   /** Whether to make the stepper fixed at the top of the screen */
   fixed?: boolean;
   /** Optional title to display when in fixed mode */
   title?: string;
+  /** Whether the current step is in a loading state */
+  isLoading?: boolean;
 };
 
 export function ProgressStepper({
-  activeStep,
-  steps,
+  currentStep = 1,
+  totalSteps = 3,
   fixed = false,
-  title = "Create New RFP Proposal",
+  title = "Create New Proposal",
+  isLoading = false,
 }: ProgressStepperProps) {
+  // Create default steps
+  const stepsArray = Array.from({ length: totalSteps }, (_, i) => ({
+    title: `Step ${i + 1}`,
+    description: `Step ${i + 1}`,
+  }));
+
   return (
     <div
       className={cn(
@@ -35,28 +39,35 @@ export function ProgressStepper({
       <div className="relative max-w-3xl mx-auto">
         {/* Title - only shown in fixed mode */}
         {fixed && (
-          <h1 className="text-xl font-semibold text-center mb-4">{title}</h1>
+          <h1 className="mb-4 text-xl font-semibold text-center">{title}</h1>
         )}
 
         {/* Progress bar */}
-        <div className="h-2 bg-muted rounded overflow-hidden mb-6">
+        <div className="h-2 mb-6 overflow-hidden rounded bg-muted">
           <div
-            className="h-full bg-primary transition-all duration-300 ease-in-out"
+            className="h-full transition-all duration-300 ease-in-out bg-primary"
             style={{
-              width: `${Math.max(((activeStep - 1) / (steps.length - 1)) * 100, 0)}%`,
+              width: `${Math.max(((currentStep - 1) / (totalSteps - 1)) * 100, 0)}%`,
             }}
           />
         </div>
 
         {/* Steps */}
         <div className="flex justify-between">
-          {steps.map((step, index) => {
+          {stepsArray.map((step, index) => {
             const stepNumber = index + 1;
-            const isActive = stepNumber === activeStep;
-            const isCompleted = stepNumber < activeStep;
-            const isLoading =
-              isActive &&
-              (activeStep === 2 || activeStep === 3 || activeStep === 4);
+            const isActive = stepNumber === currentStep;
+            const isCompleted = stepNumber < currentStep;
+
+            // Only show loading if it's the active step and isLoading is true
+            const stepIsLoading = isActive && isLoading;
+
+            console.log(`ProgressStepper: Step ${stepNumber}`, {
+              isActive,
+              isCompleted,
+              isLoading: stepIsLoading,
+              currentStep,
+            });
 
             return (
               <div
@@ -81,13 +92,13 @@ export function ProgressStepper({
                         : "border-muted-foreground/30 bg-background"
                   )}
                 >
-                  {isLoading && (
+                  {stepIsLoading && (
                     <LoaderCircle className="w-4 h-4 animate-spin" />
                   )}
-                  {isCompleted && !isLoading && (
+                  {isCompleted && !stepIsLoading && (
                     <CheckIcon className="w-4 h-4" />
                   )}
-                  {!isCompleted && !isLoading && (
+                  {!isCompleted && !stepIsLoading && (
                     <span className="text-sm font-medium">{stepNumber}</span>
                   )}
                 </div>
