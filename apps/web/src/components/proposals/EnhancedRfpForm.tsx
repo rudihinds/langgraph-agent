@@ -22,6 +22,7 @@ import { FileCheck, Upload, AlertCircle } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { EnhancedAppointmentPicker } from "@/components/ui/enhanced-appointment-picker";
 
 // Simple validation helper function
 const validateField = (
@@ -331,10 +332,10 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="deadline">Submission Deadline</Label>
-              <AppointmentPicker
+              <EnhancedAppointmentPicker
                 date={deadline}
                 onDateChange={setDeadline}
-                placeholder="Select deadline date"
+                label=""
                 error={errors.deadline}
                 className="w-full"
               />

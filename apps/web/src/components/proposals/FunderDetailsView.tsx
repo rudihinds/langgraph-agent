@@ -63,6 +63,9 @@ import {
 } from "@shared/types/ProposalSchema";
 import { DatePicker } from "@/components/ui/date-picker";
 import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { EnhancedAppointmentPicker } from "@/components/ui/enhanced-appointment-picker";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 // MODEL
 export interface FunderDetailsViewProps {
@@ -451,12 +454,12 @@ function FunderDetailsViewComponent({
                         </TooltipContent>
                       </Tooltip>
                     </Label>
-                    <AppointmentPicker
+                    <EnhancedAppointmentPicker
                       date={formData.deadline}
                       onDateChange={(date) =>
                         handleChange("deadline", date || new Date())
                       }
-                      placeholder="Select deadline date"
+                      label=""
                       error={errors.deadline}
                       className="w-full"
                     />
