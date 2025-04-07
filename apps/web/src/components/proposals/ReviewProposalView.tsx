@@ -29,7 +29,6 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { FunderDetails } from "./FunderDetailsView";
 import { CheckItem } from "@/components/ui/check-item";
-import { formatDateForAPI, formatDateForUI } from "@/lib/utils/date-utils";
 import { z } from "zod";
 import { Question } from "./ApplicationQuestionsView";
 import { ProposalType } from "./ProposalCreationFlow";
@@ -81,7 +80,7 @@ function useReviewProposal({
       "Untitled Proposal",
     status: "draft",
     deadline: funderDetails.deadline
-      ? formatDateForAPI(funderDetails.deadline)
+      ? funderDetails.deadline.toISOString()
       : null,
     // Use the funder field from the database
     funder: funderDetails.organizationName || "",
@@ -92,7 +91,7 @@ function useReviewProposal({
         funderName: funderDetails.organizationName,
         programName: funderDetails.fundingTitle,
         deadline: funderDetails.deadline
-          ? formatDateForAPI(funderDetails.deadline)
+          ? funderDetails.deadline.toISOString()
           : null,
         funderType: "Unknown", // Default value
         budgetRange: funderDetails.budgetRange,
@@ -355,7 +354,7 @@ function ReviewProposalViewComponent({
         </div>
 
         <div className="lg:w-1/4">
-          <div className="sticky space-y-6 top-24">
+          <div className="sticky space-y-6 top-32">
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Final Steps</CardTitle>
@@ -375,16 +374,14 @@ function ReviewProposalViewComponent({
                   <CheckItem>You'll receive a confirmation email</CheckItem>
                 </ul>
               </CardContent>
-              <CardFooter className="pt-0">
-                {/* Replace manual buttons with ServerForm */}
-                <ServerForm
-                  proposalType={proposalType}
-                  formData={preparedFormData}
-                  file={proposalType === "rfp" ? rfpDetails?.file : null}
-                  onCancel={handleBack}
-                />
-              </CardFooter>
             </Card>
+
+            <ServerForm
+              proposalType={proposalType}
+              formData={preparedFormData}
+              file={proposalType === "rfp" ? rfpDetails?.file : null}
+              onCancel={handleBack}
+            />
           </div>
         </div>
       </div>
