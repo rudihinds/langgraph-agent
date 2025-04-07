@@ -107,7 +107,7 @@ export function EnhancedAppointmentPicker({
             />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-4" align="start">
           <Calendar
             mode="single"
             selected={date}
