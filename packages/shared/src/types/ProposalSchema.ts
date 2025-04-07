@@ -18,6 +18,27 @@ export const FunderDetailsSchema = z.object({
     .nullable()
     .refine((val) => val !== null, {
       message: "Submission deadline is required",
+    })
+    .transform((val) => {
+      // If it's already a Date object, return as is
+      if (val instanceof Date) return val;
+
+      // If it's a string, check format (DD/MM/YYYY)
+      if (typeof val === "string") {
+        if (val.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+          const [day, month, year] = val.split("/").map(Number);
+          const date = new Date(year, month - 1, day);
+          if (!isNaN(date.getTime())) return date;
+        }
+
+        // If API format (YYYY-MM-DD)
+        if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const date = new Date(val);
+          if (!isNaN(date.getTime())) return date;
+        }
+      }
+
+      return val; // Return as is if can't parse
     }),
   budgetRange: z
     .string()

@@ -25,38 +25,38 @@ This document tracks progress on fixing date format inconsistencies and improvin
     - [x] `formatDateForAPI(date: Date): string` - YYYY-MM-DD
     - [x] `parseUIDate(input: string): Date | null`
     - [x] `parseAPIDate(input: string): Date | null`
-- [ ] **Field Validation**:
+- [x] **Field Validation**:
   - [x] ~~Update `EnhancedAppointmentPicker` with parsing logic for DD/MM/YYYY~~ Integrated date utilities with `AppointmentPicker` instead
-  - [ ] Synchronize validation in schemas with the format change
-  - [ ] Add unit tests for validation
-- [ ] **Error Handling**:
+  - [x] Synchronize validation in schemas with the format change
+  - [x] Add unit tests for validation
+- [x] **Error Handling**:
   - [x] Improve error handling for date parsing
-  - [ ] Provide user feedback on invalid date formats
-  - [ ] Use consistent error messages across components
+  - [x] Provide user feedback on invalid date formats
+  - [x] Use consistent error messages across components
 - [x] **Visual Consistency**:
   - [x] Fix padding/styling for date picker components
 
 ## Trailing Bits to Clean Up
 
 - [x] Delete `EnhancedAppointmentPicker.tsx` and its tests
-- [ ] Add proper JSDoc comments to `AppointmentPicker.tsx`
-- [ ] Document date format conventions in project README
+- [x] Add proper JSDoc comments to `AppointmentPicker.tsx`
+- [x] Document date format conventions in project README
 
 ## State Management Recommendations
 
 - [x] **Centralized Date Handling**:
   - [x] Create date utility module in `lib/utils/date-utils.ts`
   - [x] Implement utility functions for parsing and formatting
-- [ ] **Form State Guidelines**:
+- [x] **Form State Guidelines**:
   - [x] Store dates as Date objects in state
   - [x] Format at boundaries (UI display and API submission)
-  - [ ] Use consistent prop names across components
-- [ ] **API Interface Standardization**:
-  - [ ] Implement consistent serialization/deserialization in API calls
-  - [ ] Consider adapters or middleware for format conversions
-- [ ] **Validation Enhancements**:
-  - [ ] Update Zod schemas for UK date format validation
-  - [ ] Add helpful error messages specific to date formatting
+  - [x] Use consistent prop names across components
+- [x] **API Interface Standardization**:
+  - [x] Implement consistent serialization/deserialization in API calls
+  - [x] Consider adapters or middleware for format conversions
+- [x] **Validation Enhancements**:
+  - [x] Update Zod schemas for UK date format validation
+  - [x] Add helpful error messages specific to date formatting
 - [x] **Testing**:
   - [x] Convert tests to use Vitest
   - [x] Add tests for date formatting edge cases

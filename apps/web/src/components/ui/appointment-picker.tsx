@@ -17,18 +17,83 @@ import { formatDateForUI, parseUIDate } from "@/lib/utils/date-utils";
 /**
  * AppointmentPicker component for selecting dates with both calendar UI and manual input.
  * Uses DD/MM/YYYY format for display and input.
+ *
+ * @component
+ * @example
+ * ```tsx
+ * // Basic usage
+ * const [date, setDate] = useState<Date | undefined>(undefined);
+ *
+ * <AppointmentPicker
+ *   date={date}
+ *   onDateChange={setDate}
+ *   label="Select Date"
+ * />
+ *
+ * // With manual input disabled (button-only)
+ * <AppointmentPicker
+ *   date={date}
+ *   onDateChange={setDate}
+ *   allowManualInput={false}
+ * />
+ *
+ * // With error handling
+ * <AppointmentPicker
+ *   date={date}
+ *   onDateChange={setDate}
+ *   error={errors.date}
+ * />
+ * ```
  */
 interface AppointmentPickerProps {
+  /**
+   * The currently selected date
+   */
   date: Date | undefined;
+
+  /**
+   * Callback function that is called when the date changes
+   * @param date - The new date or undefined if cleared
+   */
   onDateChange: (date: Date | undefined) => void;
+
+  /**
+   * Label text displayed above the input
+   */
   label?: string;
+
+  /**
+   * Placeholder text displayed when no date is selected
+   */
   placeholder?: string;
+
+  /**
+   * Whether the input is disabled
+   */
   disabled?: boolean;
+
+  /**
+   * Error message to display below the input
+   */
   error?: string;
+
+  /**
+   * Additional CSS classes to apply to the component
+   */
   className?: string;
+
+  /**
+   * Whether to allow manual input of dates via text input
+   * If false, only the calendar button will be shown
+   */
   allowManualInput?: boolean;
 }
 
+/**
+ * Date picker component that supports both calendar selection and manual input.
+ * Consistently formats dates in DD/MM/YYYY format for display and handles
+ * conversion between string representations and Date objects.
+ */
 export function AppointmentPicker({
   date,
   onDateChange,
@@ -51,6 +116,9 @@ export function AppointmentPicker({
     setMonth(date || today);
   }, [date, today]);
 
+  /**
+   * Handle date selection from the calendar component
+   */
   const handleSelect = (selectedDate: Date | undefined) => {
     onDateChange(selectedDate);
     if (selectedDate) {
@@ -59,6 +127,10 @@ export function AppointmentPicker({
     setOpen(false);
   };
 
+  /**
+   * Handle manual text input changes
+   * Parses input in DD/MM/YYYY format and updates the date if valid
+   */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
@@ -66,15 +138,29 @@ export function AppointmentPicker({
     if (value === "") {
       onDateChange(undefined);
     } else {
-      const parsedDate = parseUIDate(value);
-      if (parsedDate) {
-        onDateChange(parsedDate);
-        setMonth(parsedDate);
+      // Only attempt to parse and validate if we have a full input
+      // (otherwise, we'd be showing validation errors while the user is still typing)
+      if (value.length === 10) {
+        // DD/MM/YYYY = 10 characters
+        const parsedDate = parseUIDate(value);
+        if (parsedDate) {
+          onDateChange(parsedDate);
+          setMonth(parsedDate);
+        } else {
+          // If the format matches DD/MM/YYYY but parsing failed, it's likely an invalid date
+          if (value.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+            onDateChange(undefined);
+            // Let the validation show the error - don't set it directly here
+          }
+        }
       }
     }
   };
 
-  // When opening the popover, always reset to today's month if no date is selected
+  /**
+   * Handle popover open/close events
+   * Resets the calendar view to the current month when opening
+   */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (isOpen) {
