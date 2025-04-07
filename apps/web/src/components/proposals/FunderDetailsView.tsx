@@ -37,6 +37,7 @@ import {
   DollarSign,
   Target,
   CheckCircle2,
+  ChevronLeft,
 } from "lucide-react";
 import {
   Tooltip,
@@ -60,6 +61,7 @@ import {
   FunderDetailsFormSchema,
   type FunderDetailsForm,
 } from "@shared/types/ProposalSchema";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // MODEL
 export interface FunderDetailsViewProps {
@@ -431,97 +433,32 @@ function FunderDetailsViewComponent({
                   <div>
                     <Label
                       htmlFor="deadline"
-                      className="flex items-center mb-2 text-base font-medium"
+                      className="text-base font-medium flex items-center mb-2"
                     >
-                      Submission Deadline
-                      <span className="ml-1 text-destructive">*</span>
+                      Application Deadline
+                      <span className="text-destructive ml-1">*</span>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="p-3 text-sm w-80">
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
                           <p>
-                            Select the final date for submitting your proposal.
-                            Be sure to check if the deadline refers to a
-                            specific time zone, and plan to submit well before
-                            the deadline to avoid technical issues.
+                            Enter the submission deadline for the grant or
+                            funding opportunity. This helps ensure your proposal
+                            is completed and submitted on time.
                           </p>
                         </TooltipContent>
                       </Tooltip>
                     </Label>
-                    <div className="relative">
-                      <AutoClosePopover>
-                        <PopoverTrigger asChild>
-                          <div
-                            className="cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() =>
-                              document.getElementById("deadline")?.click()
-                            }
-                          >
-                            <Button
-                              id="deadline"
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.deadline && "text-muted-foreground",
-                                errors.deadline && "border-destructive"
-                              )}
-                              aria-invalid={!!errors.deadline}
-                              aria-describedby={
-                                errors.deadline ? "deadline-error" : undefined
-                              }
-                              onFocus={handleFocus}
-                            >
-                              <Calendar className="w-4 h-4 mr-2" />
-                              {formData.deadline
-                                ? format(formData.deadline, "PPP")
-                                : "Select deadline date"}
-                            </Button>
-                          </div>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={formData.deadline}
-                            onSelect={(date) => {
-                              handleChange("deadline", date || new Date());
-                              // Close the popover after selection
-                              const closeEvent = new CustomEvent(
-                                "close-popover"
-                              );
-                              document.dispatchEvent(closeEvent);
-                            }}
-                            initialFocus
-                            showOutsideDays={false}
-                            className="border rounded-md shadow-sm"
-                            classNames={{
-                              day_selected:
-                                "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                              head_row: "flex",
-                              head_cell:
-                                "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] py-1.5",
-                              day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 data-[state=inactive]:opacity-50 cursor-pointer hover:bg-accent transition-colors",
-                              caption:
-                                "flex justify-center pt-1 relative items-center mb-2",
-                              caption_label: "text-sm font-medium",
-                              nav: "space-x-1 flex items-center",
-                              nav_button:
-                                "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 transition-opacity",
-                              table: "w-full border-collapse space-y-1",
-                            }}
-                          />
-                        </PopoverContent>
-                      </AutoClosePopover>
-                    </div>
-                    {errors.deadline && (
-                      <p
-                        id="deadline-error"
-                        className="flex items-center mt-1 text-sm text-destructive"
-                      >
-                        <Info className="w-3 h-3 mr-1" />
-                        {errors.deadline}
-                      </p>
-                    )}
+                    <DatePicker
+                      date={formData.deadline}
+                      setDate={(date) =>
+                        handleChange("deadline", date || new Date())
+                      }
+                      placeholder="Select deadline date"
+                      error={errors.deadline}
+                      className="w-full"
+                    />
                   </div>
 
                   <div>

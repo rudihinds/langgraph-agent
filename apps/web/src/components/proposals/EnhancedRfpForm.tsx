@@ -19,15 +19,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { uploadProposalFile } from "@/lib/proposal-actions/actions";
 import { FileCheck, Upload, AlertCircle } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
-import { Calendar } from "lucide-react";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  AutoClosePopover,
-} from "@/components/ui/popover";
 
 // Simple validation helper function
 const validateField = (
@@ -337,68 +330,13 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="deadline">Submission Deadline</Label>
-              <div className="relative">
-                <AutoClosePopover>
-                  <PopoverTrigger asChild>
-                    <div
-                      className="transition-opacity cursor-pointer hover:opacity-90"
-                      onClick={() =>
-                        document.getElementById("deadline")?.click()
-                      }
-                    >
-                      <Button
-                        id="deadline"
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !deadline && "text-muted-foreground",
-                          errors.deadline && "border-destructive"
-                        )}
-                      >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {deadline
-                          ? format(deadline, "PPP")
-                          : "Select deadline date"}
-                      </Button>
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={deadline}
-                      onSelect={(date) => {
-                        setDeadline(date || undefined);
-                        // Close the popover after selection
-                        const closeEvent = new CustomEvent("close-popover");
-                        document.dispatchEvent(closeEvent);
-                      }}
-                      initialFocus
-                      showOutsideDays={false}
-                      className="border rounded-md shadow-sm"
-                      classNames={{
-                        day_selected:
-                          "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                        head_row: "flex",
-                        head_cell:
-                          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] py-1.5",
-                        day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 data-[state=inactive]:opacity-50 cursor-pointer hover:bg-accent transition-colors",
-                        caption:
-                          "flex justify-center pt-1 relative items-center mb-2",
-                        caption_label: "text-sm font-medium",
-                        nav: "space-x-1 flex items-center",
-                        nav_button:
-                          "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 transition-opacity",
-                        table: "w-full border-collapse space-y-1",
-                      }}
-                    />
-                  </PopoverContent>
-                </AutoClosePopover>
-              </div>
-              {errors.deadline && (
-                <p className="text-sm font-medium text-destructive">
-                  {errors.deadline}
-                </p>
-              )}
+              <DatePicker
+                date={deadline}
+                setDate={setDeadline}
+                placeholder="Select deadline date"
+                error={errors.deadline}
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-2">
