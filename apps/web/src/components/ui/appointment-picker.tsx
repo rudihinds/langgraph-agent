@@ -12,16 +12,55 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+/**
+ * Props for the AppointmentPicker component
+ * @interface AppointmentPickerProps
+ */
 interface AppointmentPickerProps {
+  /**
+   * The currently selected date
+   */
   date: Date | undefined;
+
+  /**
+   * Callback function triggered when a date is selected or cleared
+   * @param date - The selected date or undefined if cleared
+   */
   onDateChange: (date: Date | undefined) => void;
+
+  /** Optional label to display above the picker */
   label?: string;
+
+  /** Placeholder text to display when no date is selected */
   placeholder?: string;
+
+  /** Whether the picker is disabled */
   disabled?: boolean;
+
+  /** Error message to display below the picker */
   error?: string;
+
+  /** Additional CSS classes to apply to the container */
   className?: string;
 }
 
+/**
+ * A date picker component that displays a calendar popover.
+ *
+ * Allows users to select a date from a calendar interface and displays
+ * the selected date in a formatted, human-readable string.
+ *
+ * @example
+ * ```tsx
+ * <AppointmentPicker
+ *   date={selectedDate}
+ *   onDateChange={setSelectedDate}
+ *   label="Appointment Date"
+ *   placeholder="Select a date"
+ *   error={errors.date}
+ * />
+ * ```
+ */
 export function AppointmentPicker({
   date,
   onDateChange,
@@ -63,4 +102,4 @@ export function AppointmentPicker({
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
-} 
+}

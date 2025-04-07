@@ -4,25 +4,15 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import FunderDetailsView from "@/components/proposals/FunderDetailsView";
 import { formatDateForAPI, parseAPIDate } from "@/lib/utils/date-utils";
 
-// Mock the date-related components
-vi.mock("@/components/ui/enhanced-appointment-picker", () => ({
-  EnhancedAppointmentPicker: ({ date, onDateChange, error }: any) => (
-    <div data-testid="enhanced-appointment-picker">
-      <input
-        type="text"
-        data-testid="date-input"
-        value={date ? date.toISOString().split("T")[0] : ""}
-        onChange={(e) => {
-          // Simulate date change on input
-          const dateStr = e.target.value;
-          if (dateStr) {
-            onDateChange(new Date(dateStr));
-          } else {
-            onDateChange(undefined);
-          }
-        }}
-      />
-      {error && <span data-testid="date-error">{error}</span>}
+// Mock the enhanced appointment picker
+vi.mock("@/components/ui/appointment-picker", () => ({
+  AppointmentPicker: ({ date, onDateChange, error }: any) => (
+    <div data-testid="appointment-picker">
+      <input type="text" value={date?.toISOString() || ""} readOnly />
+      <button onClick={() => onDateChange(new Date(2023, 0, 15))}>
+        Select date
+      </button>
+      {error && <p>{error}</p>}
     </div>
   ),
 }));
@@ -131,8 +121,8 @@ describe("FunderDetailsView", () => {
     );
 
     // Set date via the mocked date picker
-    const dateInput = screen.getByTestId("date-input");
-    fireEvent.change(dateInput, { target: { value: "2024-02-15" } });
+    const dateInput = screen.getByTestId("appointment-picker");
+    fireEvent.click(screen.getByText("Select date"));
 
     fireEvent.change(screen.getByPlaceholderText(/Enter budget amount/i), {
       target: { value: "75000" },

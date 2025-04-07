@@ -12,12 +12,12 @@ This document tracks progress on fixing date format inconsistencies and improvin
   - [ ] FunderDetailsView uses `deadline` for the proposal due date
   - [ ] EnhancedRfpForm also uses `deadline` for the same concept
   - [ ] Standardize field naming across components for better maintainability
-- [ ] **Multiple Date Picker Components**:
-  - [x] Create centralized `EnhancedAppointmentPicker` component
-  - [ ] Replace all instances of older components:
+- [x] **Date Picker Component Decision**:
+  - [x] ~~Create centralized `EnhancedAppointmentPicker` component~~ Decided to use original `AppointmentPicker`
+  - [x] Replace all instances of older components:
     - [ ] Remove `DatePicker.tsx` (original)
-    - [ ] Remove `AppointmentPicker.tsx` (intermediate implementation)
-    - [x] Use `EnhancedAppointmentPicker.tsx` consistently
+    - [x] Keep `AppointmentPicker.tsx` as preferred implementation
+    - [x] ~~Use `EnhancedAppointmentPicker.tsx` consistently~~ Removed `EnhancedAppointmentPicker.tsx`
 
 ## Minor Issues
 
@@ -28,7 +28,7 @@ This document tracks progress on fixing date format inconsistencies and improvin
     - [x] `parseUIDate(input: string): Date | null`
     - [x] `parseAPIDate(input: string): Date | null`
 - [ ] **Field Validation**:
-  - [x] Update `EnhancedAppointmentPicker` with parsing logic for DD/MM/YYYY
+  - [x] ~~Update `EnhancedAppointmentPicker` with parsing logic for DD/MM/YYYY~~ Integrated date utilities with `AppointmentPicker` instead
   - [ ] Synchronize validation in schemas with the format change
   - [ ] Add unit tests for validation
 - [ ] **Error Handling**:
@@ -40,17 +40,9 @@ This document tracks progress on fixing date format inconsistencies and improvin
 
 ## Trailing Bits to Clean Up
 
-- [ ] **Orphaned Components**:
-  - [ ] Remove old `DatePicker` component
-  - [ ] Remove old `AppointmentPicker` component
-  - [ ] Clean up import statements across the app
-- [ ] **Documentation**:
-  - [ ] Add proper JSDoc comments to `EnhancedAppointmentPicker`
-  - [ ] Document date format expectations for developers
-  - [ ] Update README with date handling conventions
-- [x] **Duplicate Date Logic**:
-  - [x] Extract common date parsing/formatting logic to utility functions
-  - [x] Use utilities consistently across components
+- [x] Delete `EnhancedAppointmentPicker.tsx` and its tests
+- [ ] Add proper JSDoc comments to `AppointmentPicker.tsx`
+- [ ] Document date format conventions in project README
 
 ## State Management Recommendations
 
