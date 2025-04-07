@@ -1,5 +1,5 @@
-import { format, parse, isValid, isDate } from 'date-fns';
-import { DATE_FORMATS } from '@/lib/utils/date-utils';
+import { format, parse, isValid, isDate } from "date-fns";
+import { DATE_FORMATS } from "@/lib/utils/date-utils";
 
 /**
  * Hook that provides utilities for consistent date formatting across the application
@@ -9,7 +9,7 @@ export function useDateFormatting() {
    * Format a date for UI display (DD/MM/YYYY)
    */
   const formatForUI = (date?: Date | null): string => {
-    if (!date || !isDate(date) || !isValid(date)) return '';
+    if (!date || !isDate(date) || !isValid(date)) return "";
     return format(date, DATE_FORMATS.UI);
   };
 
@@ -25,8 +25,8 @@ export function useDateFormatting() {
    * Format a date for human-readable display (e.g., "January 15, 2024")
    */
   const formatForHuman = (date?: Date | null): string => {
-    if (!date || !isDate(date) || !isValid(date)) return '';
-    return format(date, 'MMMM d, yyyy');
+    if (!date || !isDate(date) || !isValid(date)) return "";
+    return format(date, "MMMM d, yyyy");
   };
 
   /**
@@ -114,4 +114,4 @@ export function useDateFormatting() {
     isValidUIFormat,
     isValidAPIFormat,
   };
-} 
+}

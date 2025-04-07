@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { uploadProposalFile } from "@/lib/proposal-actions/actions";
 import { createClient } from "@/lib/supabase/server";
 import { handleRfpUpload } from "@/lib/proposal-actions/upload-helper";
@@ -6,10 +7,10 @@ import { revalidatePath } from "next/cache";
 import { DATE_FORMATS } from "@/lib/utils/date-utils";
 
 // Mock the required dependencies
-jest.mock("@/lib/supabase/server");
-jest.mock("@/lib/proposal-actions/upload-helper");
-jest.mock("@/lib/user-management");
-jest.mock("next/cache");
+vi.mock("@/lib/supabase/server");
+vi.mock("@/lib/proposal-actions/upload-helper");
+vi.mock("@/lib/user-management");
+vi.mock("next/cache");
 
 describe("uploadProposalFile Server Action", () => {
   const mockFile = new File(["test content"], "test.pdf", {
@@ -28,21 +29,21 @@ describe("uploadProposalFile Server Action", () => {
 
   // Setup mock implementations
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Mock Supabase client
     const mockSupabase = {
-      from: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      single: jest.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnThis(),
     };
-    (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    (createClient as any).mockResolvedValue(mockSupabase);
 
     // Mock successful user verification
-    (ensureUserExists as jest.Mock).mockResolvedValue({
+    (ensureUserExists as any).mockResolvedValue({
       success: true,
       user: { id: "test-user-id" },
     });
@@ -54,7 +55,7 @@ describe("uploadProposalFile Server Action", () => {
     });
 
     // Mock successful file upload
-    (handleRfpUpload as jest.Mock).mockResolvedValue({
+    (handleRfpUpload as any).mockResolvedValue({
       success: true,
       message: "File uploaded successfully",
     });

@@ -6,7 +6,6 @@ import { z } from "zod";
 import { ensureUserExists } from "@/lib/user-management";
 import { revalidatePath } from "next/cache";
 import { handleRfpUpload, UploadResult } from "./upload-helper";
-import { DATE_FORMATS } from "@/lib/utils/date-utils";
 
 // Define Zod schema for input validation
 const UploadProposalFileSchema = z.object({
@@ -15,11 +14,9 @@ const UploadProposalFileSchema = z.object({
   description: z
     .string()
     .min(10, { message: "Description must be at least 10 characters" }),
-  deadline: z
-    .string()
-    .regex(new RegExp(`^\\d{4}-\\d{2}-\\d{2}$`), {
-      message: `Invalid date format (${DATE_FORMATS.API})`,
-    }),
+  deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "Invalid date format (YYYY-MM-DD)",
+  }),
   fundingAmount: z
     .string()
     .regex(/^\d+(\.\d{1,2})?$/, { message: "Invalid funding amount format" }),

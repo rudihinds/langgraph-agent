@@ -115,14 +115,14 @@ The Proposal Agent System is an AI-powered application that assists users in cre
  - Organize lists with semantic `ul`/`ol` elements
  - Apply proper landmark roles for major page sections
 - **Testing and Validation**:
- - Conduct automated accessibility testing as part of the CI/CD pipeline
+ - Use Vitest NOT jest
  - Perform manual testing with screen readers (NVDA, JAWS, VoiceOver)
  - Include keyboard-only testing protocols
  - Document accessibility features in user documentation
 
 ## Development Approach
 - Modular implementation with focused subgraphs
-- Test-driven development for core functionality
+- Test-driven development for core functionality (Vitest)
 - Iterative UI development integrated with agent capabilities
 - Strict adherence to the 21st.dev design system for UI components
 - Continuous integration with GitHub Actions

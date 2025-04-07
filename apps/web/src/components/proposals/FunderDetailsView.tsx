@@ -37,7 +37,6 @@ import {
   DollarSign,
   Target,
   CheckCircle2,
-  ChevronLeft,
 } from "lucide-react";
 import {
   Tooltip,
@@ -61,16 +60,6 @@ import {
   FunderDetailsFormSchema,
   type FunderDetailsForm,
 } from "@shared/types/ProposalSchema";
-import { DatePicker } from "@/components/ui/date-picker";
-import { AppointmentPicker } from "@/components/ui/appointment-picker";
-import { EnhancedAppointmentPicker } from "@/components/ui/enhanced-appointment-picker";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import {
-  formatDateForAPI,
-  parseAPIDate,
-  toDateObject,
-} from "@/lib/utils/date-utils";
 
 // MODEL
 export interface FunderDetailsViewProps {
@@ -139,7 +128,7 @@ function useFunderDetails({
         const parsedData = JSON.parse(savedData);
         // Convert deadline string back to Date object if it exists
         if (parsedData.deadline) {
-          parsedData.deadline = toDateObject(parsedData.deadline);
+          parsedData.deadline = new Date(parsedData.deadline);
         }
         setFormData(parsedData);
       } catch (e) {
@@ -159,10 +148,8 @@ function useFunderDetails({
       // Create a copy for localStorage that handles Date objects
       const dataToSave = {
         ...formData,
-        // Convert Date to string for storage
-        deadline: formData.deadline
-          ? formatDateForAPI(formData.deadline)
-          : null,
+        // Convert Date to ISO string for storage
+        deadline: formData.deadline ? formData.deadline.toISOString() : null,
       };
 
       localStorage.setItem("funderDetailsData", JSON.stringify(dataToSave));
@@ -344,15 +331,15 @@ function FunderDetailsViewComponent({
                   <div>
                     <Label
                       htmlFor="organizationName"
-                      className="flex items-center mb-2 text-base font-medium"
+                      className="text-base font-medium flex items-center mb-2"
                     >
                       Organization Name
-                      <span className="ml-1 text-destructive">*</span>
+                      <span className="text-destructive ml-1">*</span>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="p-3 text-sm w-80">
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
                           <p>
                             Enter the official name of the funding organization
                             exactly as it appears in their documents. This
@@ -394,15 +381,15 @@ function FunderDetailsViewComponent({
                   <div>
                     <Label
                       htmlFor="fundingTitle"
-                      className="flex items-center mb-2 text-base font-medium"
+                      className="text-base font-medium flex items-center mb-2"
                     >
                       Grant/Funding Opportunity Title
-                      <span className="ml-1 text-destructive">*</span>
+                      <span className="text-destructive ml-1">*</span>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="p-3 text-sm w-80">
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
                           <p>
                             Enter the complete title of the grant or funding
                             opportunity. Using the exact title will help ensure
@@ -446,7 +433,7 @@ function FunderDetailsViewComponent({
                       htmlFor="deadline"
                       className="text-base font-medium flex items-center mb-2"
                     >
-                      Application Deadline
+                      Submission Deadline
                       <span className="text-destructive ml-1">*</span>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -454,36 +441,85 @@ function FunderDetailsViewComponent({
                         </TooltipTrigger>
                         <TooltipContent side="top" className="w-80 text-sm p-3">
                           <p>
-                            Enter the submission deadline for the grant or
-                            funding opportunity. This helps ensure your proposal
-                            is completed and submitted on time.
+                            Select the final date for submitting your proposal.
+                            Be sure to check if the deadline refers to a
+                            specific time zone, and plan to submit well before
+                            the deadline to avoid technical issues.
                           </p>
                         </TooltipContent>
                       </Tooltip>
                     </Label>
-                    <EnhancedAppointmentPicker
-                      date={formData.deadline}
-                      onDateChange={(date) =>
-                        handleChange("deadline", date || new Date())
-                      }
-                      label=""
-                      error={errors.deadline}
-                      className="w-full"
-                    />
+                    <div className="relative">
+                      <AutoClosePopover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="deadline"
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !formData.deadline && "text-muted-foreground",
+                              errors.deadline && "border-destructive"
+                            )}
+                            aria-invalid={!!errors.deadline}
+                            aria-describedby={
+                              errors.deadline ? "deadline-error" : undefined
+                            }
+                            onFocus={handleFocus}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {formData.deadline
+                              ? format(formData.deadline, "PPP")
+                              : "Select deadline date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={formData.deadline}
+                            onSelect={(date) => {
+                              handleChange("deadline", date || new Date());
+                              // Close the popover after selection
+                              const closeEvent = new CustomEvent(
+                                "close-popover"
+                              );
+                              document.dispatchEvent(closeEvent);
+                            }}
+                            initialFocus
+                            showOutsideDays={false}
+                            className="rounded-md border"
+                            classNames={{
+                              day_selected:
+                                "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
+                              head_row: "hidden",
+                              day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 data-[state=inactive]:opacity-50 cursor-pointer",
+                            }}
+                          />
+                        </PopoverContent>
+                      </AutoClosePopover>
+                    </div>
+                    {errors.deadline && (
+                      <p
+                        id="deadline-error"
+                        className="flex items-center mt-1 text-sm text-destructive"
+                      >
+                        <Info className="w-3 h-3 mr-1" />
+                        {errors.deadline}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <Label
                       htmlFor="budgetRange"
-                      className="flex items-center mb-2 text-base font-medium"
+                      className="text-base font-medium flex items-center mb-2"
                     >
                       Approximate Budget ($)
-                      <span className="ml-1 text-destructive">*</span>
+                      <span className="text-destructive ml-1">*</span>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="p-3 text-sm w-80">
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
                           <p>
                             Enter the total amount you're requesting in USD
                             (numbers only). This should align with the funder's
@@ -531,15 +567,15 @@ function FunderDetailsViewComponent({
                   <div>
                     <Label
                       htmlFor="focusArea"
-                      className="flex items-center mb-2 text-base font-medium"
+                      className="text-base font-medium flex items-center mb-2"
                     >
                       Primary Focus Area
-                      <span className="ml-1 text-destructive">*</span>
+                      <span className="text-destructive ml-1">*</span>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="p-3 text-sm w-80">
+                        <TooltipContent side="top" className="w-80 text-sm p-3">
                           <p>
                             Enter the main category or field that your proposal
                             addresses (e.g., "Education", "Climate Action",
@@ -581,7 +617,7 @@ function FunderDetailsViewComponent({
           </div>
 
           <div className="lg:w-1/4">
-            <div className="sticky space-y-6 top-32">
+            <div className="sticky space-y-6 top-24">
               <Card className="border-0 shadow-md">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Help & Tips</CardTitle>
@@ -604,7 +640,7 @@ function FunderDetailsViewComponent({
                 </CardContent>
               </Card>
 
-              <div className="flex flex-col pt-4 space-y-3">
+              <div className="flex flex-col space-y-3 pt-4">
                 <Button onClick={handleSubmit} size="lg" className="w-full">
                   Continue
                 </Button>

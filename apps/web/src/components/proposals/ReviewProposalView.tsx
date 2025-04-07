@@ -33,7 +33,6 @@ import { z } from "zod";
 import { Question } from "./ApplicationQuestionsView";
 import { ProposalType } from "./ProposalCreationFlow";
 import ServerForm from "./ServerForm";
-import { formatDateForAPI, formatDateForUI } from "@/lib/utils/date-utils";
 
 // MODEL
 export interface ReviewProposalViewProps {
@@ -355,7 +354,7 @@ function ReviewProposalViewComponent({
         </div>
 
         <div className="lg:w-1/4">
-          <div className="sticky space-y-6 top-32">
+          <div className="sticky space-y-6 top-24">
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Final Steps</CardTitle>
@@ -375,14 +374,16 @@ function ReviewProposalViewComponent({
                   <CheckItem>You'll receive a confirmation email</CheckItem>
                 </ul>
               </CardContent>
+              <CardFooter className="pt-0">
+                {/* Replace manual buttons with ServerForm */}
+                <ServerForm
+                  proposalType={proposalType}
+                  formData={preparedFormData}
+                  file={proposalType === "rfp" ? rfpDetails?.file : null}
+                  onCancel={handleBack}
+                />
+              </CardFooter>
             </Card>
-
-            <ServerForm
-              proposalType={proposalType}
-              formData={preparedFormData}
-              file={proposalType === "rfp" ? rfpDetails?.file : null}
-              onCancel={handleBack}
-            />
           </div>
         </div>
       </div>
