@@ -10,6 +10,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/proposals/new/rfp/page.js"
+    ],
+    "/proposals/new/application/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/proposals/new/application/page.js"
     ]
   }
 }

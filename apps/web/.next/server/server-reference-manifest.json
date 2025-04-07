@@ -10,6 +10,28 @@
       "layer": {
         "app/proposals/new/rfp/page": "action-browser"
       }
+    },
+    "4008365213037baaf126ae3caf76376b3a2c7a0f29": {
+      "workers": {
+        "app/proposals/new/application/page": {
+          "moduleId": "(action-browser)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Fapp%2Fapi%2Fproposals%2Factions.ts%22%2C%5B%7B%22id%22%3A%224008365213037baaf126ae3caf76376b3a2c7a0f29%22%2C%22exportedName%22%3A%22uploadProposalFile%22%7D%2C%7B%22id%22%3A%224009609e2df8716ce690cc3ef6f1fe0d439c009c6c%22%2C%22exportedName%22%3A%22createProposal%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/proposals/new/application/page": "action-browser"
+      }
+    },
+    "4009609e2df8716ce690cc3ef6f1fe0d439c009c6c": {
+      "workers": {
+        "app/proposals/new/application/page": {
+          "moduleId": "(action-browser)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Fapp%2Fapi%2Fproposals%2Factions.ts%22%2C%5B%7B%22id%22%3A%224008365213037baaf126ae3caf76376b3a2c7a0f29%22%2C%22exportedName%22%3A%22uploadProposalFile%22%7D%2C%7B%22id%22%3A%224009609e2df8716ce690cc3ef6f1fe0d439c009c6c%22%2C%22exportedName%22%3A%22createProposal%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/proposals/new/application/page": "action-browser"
+      }
     }
   },
   "edge": {},

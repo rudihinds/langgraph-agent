@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { format, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -12,6 +11,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
+import {
+  formatDateForUI,
+  parseUIDate,
+  DATE_FORMATS,
+} from "@/lib/utils/date-utils";
 
 interface EnhancedAppointmentPickerProps {
   date: Date | undefined;
@@ -35,14 +39,14 @@ export function EnhancedAppointmentPicker({
   const today = React.useMemo(() => new Date(), []);
   const [month, setMonth] = React.useState<Date>(date || today);
   const [inputValue, setInputValue] = React.useState<string>(
-    date ? format(date, "dd/MM/yyyy") : ""
+    date ? formatDateForUI(date) : ""
   );
   const [open, setOpen] = React.useState(false);
 
   const handleSelect = (selectedDate: Date | undefined) => {
     onDateChange(selectedDate);
     if (selectedDate) {
-      setInputValue(format(selectedDate, "dd/MM/yyyy"));
+      setInputValue(formatDateForUI(selectedDate));
     }
     setOpen(false);
   };
@@ -50,21 +54,13 @@ export function EnhancedAppointmentPicker({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    
+
     // Try to parse the date from the input in UK format (dd/mm/yyyy)
-    const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (dateMatch) {
-      try {
-        // Use date-fns parse for more reliable date parsing
-        const newDate = parse(value, 'dd/MM/yyyy', new Date());
-        
-        if (!isNaN(newDate.getTime())) {
-          onDateChange(newDate);
-          setMonth(newDate);
-        }
-      } catch (err) {
-        // If parse fails, don't update the date
-      }
+    const newDate = parseUIDate(value);
+
+    if (newDate) {
+      onDateChange(newDate);
+      setMonth(newDate);
     } else if (value === "") {
       onDateChange(undefined);
     }
@@ -81,7 +77,7 @@ export function EnhancedAppointmentPicker({
   // Update input value when date prop changes
   React.useEffect(() => {
     if (date) {
-      setInputValue(format(date, "dd/MM/yyyy"));
+      setInputValue(formatDateForUI(date));
       setMonth(date);
     } else {
       setInputValue("");
@@ -99,13 +95,11 @@ export function EnhancedAppointmentPicker({
               value={inputValue}
               onChange={handleInputChange}
               onClick={() => setOpen(true)}
-              placeholder={placeholder || "DD/MM/YYYY"}
+              placeholder={placeholder || DATE_FORMATS.UI.toUpperCase()}
               disabled={disabled}
               className={cn(error && "border-destructive", "pr-10")}
             />
-            <CalendarIcon 
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" 
-            />
+            <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-4" align="start">
@@ -121,9 +115,7 @@ export function EnhancedAppointmentPicker({
           />
         </PopoverContent>
       </Popover>
-      {error && (
-        <p className="text-sm font-medium text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
     </div>
   );
-} 
+}

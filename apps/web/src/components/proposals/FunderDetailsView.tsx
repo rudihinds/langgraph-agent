@@ -66,6 +66,11 @@ import { AppointmentPicker } from "@/components/ui/appointment-picker";
 import { EnhancedAppointmentPicker } from "@/components/ui/enhanced-appointment-picker";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import {
+  formatDateForAPI,
+  parseAPIDate,
+  toDateObject,
+} from "@/lib/utils/date-utils";
 
 // MODEL
 export interface FunderDetailsViewProps {
@@ -134,7 +139,7 @@ function useFunderDetails({
         const parsedData = JSON.parse(savedData);
         // Convert deadline string back to Date object if it exists
         if (parsedData.deadline) {
-          parsedData.deadline = new Date(parsedData.deadline);
+          parsedData.deadline = toDateObject(parsedData.deadline);
         }
         setFormData(parsedData);
       } catch (e) {
@@ -154,8 +159,10 @@ function useFunderDetails({
       // Create a copy for localStorage that handles Date objects
       const dataToSave = {
         ...formData,
-        // Convert Date to ISO string for storage
-        deadline: formData.deadline ? formData.deadline.toISOString() : null,
+        // Convert Date to string for storage
+        deadline: formData.deadline
+          ? formatDateForAPI(formData.deadline)
+          : null,
       };
 
       localStorage.setItem("funderDetailsData", JSON.stringify(dataToSave));

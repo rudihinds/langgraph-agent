@@ -23,6 +23,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { AppointmentPicker } from "@/components/ui/appointment-picker";
 import { EnhancedAppointmentPicker } from "@/components/ui/enhanced-appointment-picker";
+import { formatDateForAPI } from "@/lib/utils/date-utils";
 
 // Simple validation helper function
 const validateField = (
@@ -201,7 +202,7 @@ export function EnhancedRfpForm({ userId, onSuccess }: EnhancedRfpFormProps) {
         userId,
         title,
         description,
-        deadline: deadline ? format(deadline, "yyyy-MM-dd") : "", // Format as string
+        deadline: formatDateForAPI(deadline) || "", // Format as string for API
         fundingAmount: fundingAmount || "",
         file: file!,
       });
