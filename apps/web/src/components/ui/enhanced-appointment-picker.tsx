@@ -6,6 +6,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 
 interface EnhancedAppointmentPickerProps {
   date: Date | undefined;
@@ -30,12 +36,14 @@ export function EnhancedAppointmentPicker({
   const [inputValue, setInputValue] = React.useState<string>(
     date ? format(date, "yyyy-MM-dd") : ""
   );
+  const [open, setOpen] = React.useState(false);
 
   const handleSelect = (selectedDate: Date | undefined) => {
     onDateChange(selectedDate);
     if (selectedDate) {
       setInputValue(format(selectedDate, "yyyy-MM-dd"));
     }
+    setOpen(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,25 +80,35 @@ export function EnhancedAppointmentPicker({
   return (
     <div className={cn("space-y-2", className)}>
       {label && <Label>{label}</Label>}
-      <div className="flex flex-col space-y-2 rounded-md border p-3">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={handleSelect}
-          disabled={disabled}
-          month={month}
-          onMonthChange={setMonth}
-          className="mx-auto"
-        />
-        <Input
-          type="date"
-          value={inputValue}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          className={cn("mt-2", error && "border-destructive")}
-        />
-      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <div className="relative w-full">
+            <Input
+              type="date"
+              value={inputValue}
+              onChange={handleInputChange}
+              onClick={() => setOpen(true)}
+              placeholder={placeholder}
+              disabled={disabled}
+              className={cn(error && "border-destructive", "pr-10")}
+            />
+            <CalendarIcon 
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" 
+            />
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={handleSelect}
+            disabled={disabled}
+            month={month}
+            onMonthChange={setMonth}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
       {error && (
         <p className="text-sm font-medium text-destructive">{error}</p>
       )}
