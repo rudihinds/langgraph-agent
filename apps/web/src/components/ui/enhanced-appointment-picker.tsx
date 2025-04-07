@@ -32,7 +32,8 @@ export function EnhancedAppointmentPicker({
   error,
   className,
 }: EnhancedAppointmentPickerProps) {
-  const [month, setMonth] = React.useState<Date>(date || new Date());
+  const today = React.useMemo(() => new Date(), []);
+  const [month, setMonth] = React.useState<Date>(date || today);
   const [inputValue, setInputValue] = React.useState<string>(
     date ? format(date, "yyyy-MM-dd") : ""
   );
@@ -68,10 +69,19 @@ export function EnhancedAppointmentPicker({
     }
   };
 
+  // When opening the popover, reset to today's month if no date is selected
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen && !date) {
+      setMonth(today);
+    }
+  };
+
   // Update input value when date prop changes
   React.useEffect(() => {
     if (date) {
       setInputValue(format(date, "yyyy-MM-dd"));
+      setMonth(date);
     } else {
       setInputValue("");
     }
@@ -80,11 +90,11 @@ export function EnhancedAppointmentPicker({
   return (
     <div className={cn("space-y-2", className)}>
       {label && <Label>{label}</Label>}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <div className="relative w-full">
             <Input
-              type="date"
+              type="text"
               value={inputValue}
               onChange={handleInputChange}
               onClick={() => setOpen(true)}
@@ -105,6 +115,7 @@ export function EnhancedAppointmentPicker({
             disabled={disabled}
             month={month}
             onMonthChange={setMonth}
+            defaultMonth={today}
             initialFocus
           />
         </PopoverContent>
