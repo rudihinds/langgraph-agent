@@ -5,19 +5,17 @@ This document tracks progress on fixing date format inconsistencies and improvin
 ## Major Issues
 
 - [x] **Date Format Inconsistency**:
+  - [x] Change date format to dd/mm/yyyy
   - [x] The backend API expects dates in "YYYY-MM-DD" format (as seen in actions.ts line 19)
   - [x] The UI now uses "DD/MM/YYYY" format (British format)
-  - [x] Create date utility module to standardize conversions
-- [ ] **Inconsistent Naming**:
-  - [ ] FunderDetailsView uses `deadline` for the proposal due date
-  - [ ] EnhancedRfpForm also uses `deadline` for the same concept
-  - [ ] Standardize field naming across components for better maintainability
+  - [x] Create date utility module to standardize conversions. implement where needed.
+- [x] **Inconsistent Naming**:
+  - [x] FunderDetailsView uses `deadline` for the proposal due date
+  - [x] EnhancedRfpForm also uses `deadline` for the same concept
+  - [x] Standardize field naming across components for better maintainability - Both now consistently use the `deadline` field name in code, though UI labels differ slightly ("Application Deadline" vs "Submission Deadline")
 - [x] **Date Picker Component Decision**:
-  - [x] ~~Create centralized `EnhancedAppointmentPicker` component~~ Decided to use original `AppointmentPicker`
-  - [x] Replace all instances of older components:
-    - [ ] Remove `DatePicker.tsx` (original)
-    - [x] Keep `AppointmentPicker.tsx` as preferred implementation
-    - [x] ~~Use `EnhancedAppointmentPicker.tsx` consistently~~ Removed `EnhancedAppointmentPicker.tsx`
+  - [x] Create centralized `AppointmentPicker` component, delete the rest. ensure all the datepicker functionality as it currently is, is preserved, do not change anything, just centralise the component
+  - [x] Delete all instances of older components and code
 
 ## Minor Issues
 
