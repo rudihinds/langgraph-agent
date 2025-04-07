@@ -55,6 +55,8 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { CheckItem } from "@/components/ui/check-item";
+import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { formatDateForAPI, formatDateForUI } from "@/lib/utils/date-utils";
 import { z } from "zod";
 import {
   FunderDetailsFormSchema,
@@ -148,8 +150,10 @@ function useFunderDetails({
       // Create a copy for localStorage that handles Date objects
       const dataToSave = {
         ...formData,
-        // Convert Date to ISO string for storage
-        deadline: formData.deadline ? formData.deadline.toISOString() : null,
+        // Convert Date to ISO string for storage using our utility
+        deadline: formData.deadline
+          ? formatDateForAPI(formData.deadline)
+          : null,
       };
 
       localStorage.setItem("funderDetailsData", JSON.stringify(dataToSave));
@@ -428,84 +432,31 @@ function FunderDetailsViewComponent({
                     )}
                   </div>
 
-                  <div>
-                    <Label
-                      htmlFor="deadline"
-                      className="text-base font-medium flex items-center mb-2"
-                    >
+                  <div className="form-group">
+                    <Label htmlFor="deadline" className="text-base font-medium">
                       Submission Deadline
-                      <span className="text-destructive ml-1">*</span>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-4 w-4 text-muted-foreground ml-1.5 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="w-80 text-sm p-3">
-                          <p>
-                            Select the final date for submitting your proposal.
-                            Be sure to check if the deadline refers to a
-                            specific time zone, and plan to submit well before
-                            the deadline to avoid technical issues.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 ml-1 inline text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[350px] text-sm bg-white p-3 shadow-lg rounded-lg">
+                            The date by which all applications for this funding
+                            must be submitted. This helps applicants plan
+                            accordingly.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </Label>
-                    <div className="relative">
-                      <AutoClosePopover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="deadline"
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !formData.deadline && "text-muted-foreground",
-                              errors.deadline && "border-destructive"
-                            )}
-                            aria-invalid={!!errors.deadline}
-                            aria-describedby={
-                              errors.deadline ? "deadline-error" : undefined
-                            }
-                            onFocus={handleFocus}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {formData.deadline
-                              ? format(formData.deadline, "PPP")
-                              : "Select deadline date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={formData.deadline}
-                            onSelect={(date) => {
-                              handleChange("deadline", date || new Date());
-                              // Close the popover after selection
-                              const closeEvent = new CustomEvent(
-                                "close-popover"
-                              );
-                              document.dispatchEvent(closeEvent);
-                            }}
-                            initialFocus
-                            showOutsideDays={false}
-                            className="rounded-md border"
-                            classNames={{
-                              day_selected:
-                                "bg-primary text-primary-foreground font-bold hover:bg-primary hover:text-primary-foreground",
-                              head_row: "hidden",
-                              day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 data-[state=inactive]:opacity-50 cursor-pointer",
-                            }}
-                          />
-                        </PopoverContent>
-                      </AutoClosePopover>
-                    </div>
-                    {errors.deadline && (
-                      <p
-                        id="deadline-error"
-                        className="flex items-center mt-1 text-sm text-destructive"
-                      >
-                        <Info className="w-3 h-3 mr-1" />
-                        {errors.deadline}
-                      </p>
-                    )}
+                    <AppointmentPicker
+                      date={formData.deadline || new Date()}
+                      onDateChange={(date) =>
+                        handleChange("deadline", date || new Date())
+                      }
+                      error={errors.deadline}
+                      placeholder="Select deadline date"
+                      className="w-full"
+                    />
                   </div>
 
                   <div>

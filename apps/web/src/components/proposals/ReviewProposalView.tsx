@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { FunderDetails } from "./FunderDetailsView";
 import { CheckItem } from "@/components/ui/check-item";
+import { formatDateForAPI, formatDateForUI } from "@/lib/utils/date-utils";
 import { z } from "zod";
 import { Question } from "./ApplicationQuestionsView";
 import { ProposalType } from "./ProposalCreationFlow";
@@ -80,7 +81,7 @@ function useReviewProposal({
       "Untitled Proposal",
     status: "draft",
     deadline: funderDetails.deadline
-      ? funderDetails.deadline.toISOString()
+      ? formatDateForAPI(funderDetails.deadline)
       : null,
     // Use the funder field from the database
     funder: funderDetails.organizationName || "",
@@ -91,7 +92,7 @@ function useReviewProposal({
         funderName: funderDetails.organizationName,
         programName: funderDetails.fundingTitle,
         deadline: funderDetails.deadline
-          ? funderDetails.deadline.toISOString()
+          ? formatDateForAPI(funderDetails.deadline)
           : null,
         funderType: "Unknown", // Default value
         budgetRange: funderDetails.budgetRange,
