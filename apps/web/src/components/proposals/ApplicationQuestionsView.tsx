@@ -594,10 +594,10 @@ function ApplicationQuestionsViewComponent({
                       variant="outline"
                       size="sm"
                       onClick={openBulkImport}
-                      className="flex items-center gap-1 text-sm"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background hover:bg-muted"
                     >
-                      <Clipboard className="w-4 h-4" />
-                      <span className="hidden sm:inline">Bulk Import</span>
+                      <Upload className="w-4 h-4" />
+                      <span className="hidden sm:inline">Import Questions</span>
                     </Button>
                   </div>
                 </div>
