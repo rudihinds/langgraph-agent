@@ -452,25 +452,32 @@ function FunderDetailsViewComponent({
                     <div className="relative">
                       <AutoClosePopover>
                         <PopoverTrigger asChild>
-                          <Button
-                            id="deadline"
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !formData.deadline && "text-muted-foreground",
-                              errors.deadline && "border-destructive"
-                            )}
-                            aria-invalid={!!errors.deadline}
-                            aria-describedby={
-                              errors.deadline ? "deadline-error" : undefined
+                          <div
+                            className="cursor-pointer"
+                            onClick={() =>
+                              document.getElementById("deadline")?.click()
                             }
-                            onFocus={handleFocus}
                           >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {formData.deadline
-                              ? format(formData.deadline, "PPP")
-                              : "Select deadline date"}
-                          </Button>
+                            <Button
+                              id="deadline"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.deadline && "text-muted-foreground",
+                                errors.deadline && "border-destructive"
+                              )}
+                              aria-invalid={!!errors.deadline}
+                              aria-describedby={
+                                errors.deadline ? "deadline-error" : undefined
+                              }
+                              onFocus={handleFocus}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {formData.deadline
+                                ? format(formData.deadline, "PPP")
+                                : "Select deadline date"}
+                            </Button>
+                          </div>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <CalendarComponent

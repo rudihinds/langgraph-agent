@@ -53,6 +53,9 @@ import {
   CheckCircle2,
   Loader2,
   ChevronLeft,
+  Upload,
+  FileText,
+  File,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -61,6 +64,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  AutoClosePopover,
 } from "@/components/ui/popover";
 import {
   Tooltip,
@@ -122,6 +126,8 @@ interface UseApplicationQuestionsModel {
   activePanel: string | null;
   isSaving: boolean;
   lastSaved: Date | null;
+  fileName: string | null;
+  isUploading: boolean;
   addQuestion: () => void;
   removeQuestion: (id: string) => void;
   updateQuestion: (id: string, updates: Partial<Omit<Question, "id">>) => void;
@@ -142,6 +148,8 @@ interface UseApplicationQuestionsModel {
     >
   ) => void;
   handleBlur: () => void;
+  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveFile: () => void;
 }
 
 // Define the props interface for the view component
@@ -183,6 +191,8 @@ function useApplicationQuestions({
   const [isSaving, setIsSaving] = useState(false);
   const [userInteracting, setUserInteracting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Load saved questions from localStorage on mount
@@ -441,6 +451,45 @@ function useApplicationQuestions({
     handleUserInteractionEnd();
   };
 
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setFileName(file.name);
+      setIsUploading(true);
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        if (content) {
+          setBulkImportText(content);
+        }
+        setIsUploading(false);
+      };
+
+      reader.onerror = () => {
+        setIsUploading(false);
+        // Reset file input
+        e.target.value = "";
+        setFileName(null);
+        toast({
+          title: "Error",
+          description: "Failed to read file. Please try again.",
+          variant: "destructive",
+        });
+      };
+
+      reader.readAsText(file);
+    },
+    []
+  );
+
+  const handleRemoveFile = useCallback(() => {
+    setFileName(null);
+    setBulkImportText("");
+  }, []);
+
   return {
     questions,
     errors,
@@ -449,6 +498,8 @@ function useApplicationQuestions({
     activePanel,
     isSaving,
     lastSaved,
+    fileName,
+    isUploading,
     addQuestion,
     removeQuestion,
     updateQuestion,
@@ -465,6 +516,8 @@ function useApplicationQuestions({
     questionRefs,
     handleFocus,
     handleBlur,
+    handleFileUpload,
+    handleRemoveFile,
   };
 }
 
@@ -477,6 +530,8 @@ function ApplicationQuestionsViewComponent({
   activePanel,
   isSaving,
   lastSaved,
+  fileName,
+  isUploading,
   addQuestion,
   removeQuestion,
   updateQuestion,
@@ -492,6 +547,8 @@ function ApplicationQuestionsViewComponent({
   questionRefs,
   handleFocus,
   handleBlur,
+  handleFileUpload,
+  handleRemoveFile,
   isSubmitting,
 }: ApplicationQuestionsViewComponentProps) {
   const [currentFocus, setCurrentFocus] = useState<string | null>(null);
@@ -931,21 +988,74 @@ function ApplicationQuestionsViewComponent({
                 Bulk Import Questions
               </DialogTitle>
               <DialogDescription id="bulk-import-dialog-description">
-                Paste your questions below, one per line. These will replace
-                your current questions.
+                Paste your questions below, one per line, or upload a text file.
+                These will replace your current questions.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-4">
-              <Textarea
-                value={bulkImportText}
-                onChange={(e) => updateBulkImportText(e.target.value)}
-                placeholder="What is your organization's mission?&#10;Describe your project goals.&#10;What is your proposed budget?"
-                className="min-h-[300px]"
-                aria-label="Questions"
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
+            <div className="py-4 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <label
+                  htmlFor="question-file-upload"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background",
+                    "hover:bg-muted cursor-pointer"
+                  )}
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload Questions File
+                </label>
+                <input
+                  id="question-file-upload"
+                  type="file"
+                  accept=".txt,.csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  onFocus={handleFocus}
+                />
+
+                {fileName && (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground truncate max-w-[200px]">
+                      {fileName}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRemoveFile}
+                      className="w-6 h-6 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Remove file"
+                      onFocus={handleFocus}
+                    >
+                      <Trash className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {isUploading ? (
+                <div className="min-h-[250px] border rounded-md p-4 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="animate-pulse">
+                      <File className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Processing file...
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <Textarea
+                  value={bulkImportText}
+                  onChange={(e) => updateBulkImportText(e.target.value)}
+                  placeholder="What is your organization's mission?&#10;Describe your project goals.&#10;What is your proposed budget?"
+                  className="min-h-[250px]"
+                  aria-label="Questions"
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+              )}
             </div>
 
             <DialogFooter>

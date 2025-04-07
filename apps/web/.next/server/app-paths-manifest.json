@@ -1,5 +1,3 @@
 {
-  "/api/auth/verify-user/route": "app/api/auth/verify-user/route.js",
-  "/proposals/new/application/page": "app/proposals/new/application/page.js",
-  "/proposals/new/rfp/page": "app/proposals/new/rfp/page.js"
+  "/proposals/new/application/page": "app/proposals/new/application/page.js"
 }
