@@ -18,7 +18,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./src/*", "./*"],
       "@shared/*": ["../../packages/shared/src/*"]
     },
     "target": "ES2017"
@@ -29,7 +29,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src/hooks/use-threads",
-    "src/app/thread/[threadId]"
+    "src/app/thread/[threadId]",
+    "app/**/*.ts",
+    "app/**/*.tsx"
   ],
   "exclude": ["node_modules"]
 }
