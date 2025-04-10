@@ -1,33 +1,31 @@
 import { BaseMessage } from "@langchain/core/messages";
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import { z } from "zod";
-import { 
-  ConnectionPair, 
-  ResearchData, 
-  SolutionRequirements, 
-  SectionContent, 
+import {
+  ConnectionPair,
+  ResearchData,
+  SolutionRequirements,
+  SectionContent,
   EvaluationResult,
   connectionPairsReducer,
   proposalSectionsReducer,
-  researchDataReducer,
-  solutionRequirementsReducer,
   ConnectionPairSchema,
   ResearchDataSchema,
   SolutionRequirementsSchema,
   SectionContentSchema,
-  EvaluationResultSchema
-} from "./reducers";
+  EvaluationResultSchema,
+} from "./reducers.js";
 
 /**
  * Workflow phase for tracking the current stage of proposal development
  */
-export type WorkflowPhase = 
-  | "research" 
-  | "solution_analysis" 
-  | "connection_pairs" 
-  | "section_generation" 
-  | "evaluation" 
-  | "revision" 
+export type WorkflowPhase =
+  | "research"
+  | "solution_analysis"
+  | "connection_pairs"
+  | "section_generation"
+  | "evaluation"
+  | "revision"
   | "complete";
 
 /**
@@ -49,63 +47,138 @@ export const ProposalStateAnnotation = Annotation.Root({
     reducer: messagesStateReducer,
     default: () => [],
   }),
-  
+
   // Document content
   rfpDocument: Annotation<string | undefined>({
+    value: (existing, newValue) => newValue ?? existing,
     default: () => undefined,
   }),
-  
+
   // Basic funder information
   funderInfo: Annotation<string | undefined>({
+    value: (existing, newValue) => newValue ?? existing,
     default: () => undefined,
   }),
-  
-  // Structured research data with specialized reducer
+
+  // Structured research data with custom value function
   research: Annotation<ResearchData | null>({
-    reducer: researchDataReducer,
+    value: (existing, newValue) => {
+      if (!existing && !newValue) return null;
+      if (!existing) return newValue;
+      if (!newValue) return existing;
+
+      return {
+        keyFindings: [
+          ...new Set([
+            ...existing.keyFindings,
+            ...(newValue.keyFindings || []),
+          ]),
+        ],
+        funderPriorities: [
+          ...new Set([
+            ...existing.funderPriorities,
+            ...(newValue.funderPriorities || []),
+          ]),
+        ],
+        fundingHistory: newValue.fundingHistory || existing.fundingHistory,
+        relevantProjects:
+          newValue.relevantProjects || existing.relevantProjects,
+        competitiveAnalysis:
+          newValue.competitiveAnalysis || existing.competitiveAnalysis,
+        additionalNotes: newValue.additionalNotes || existing.additionalNotes,
+      };
+    },
     default: () => null,
   }),
-  
-  // Structured solution requirements with specialized reducer
+
+  // Structured solution requirements with custom value function
   solutionSought: Annotation<SolutionRequirements | null>({
-    reducer: solutionRequirementsReducer,
+    value: (existing, newValue) => {
+      if (!existing && !newValue) return null;
+      if (!existing) return newValue;
+      if (!newValue) return existing;
+
+      return {
+        primaryGoals: [
+          ...new Set([
+            ...existing.primaryGoals,
+            ...(newValue.primaryGoals || []),
+          ]),
+        ],
+        secondaryObjectives: [
+          ...new Set([
+            ...(existing.secondaryObjectives || []),
+            ...(newValue.secondaryObjectives || []),
+          ]),
+        ],
+        constraints: [
+          ...new Set([
+            ...existing.constraints,
+            ...(newValue.constraints || []),
+          ]),
+        ],
+        successMetrics: [
+          ...new Set([
+            ...existing.successMetrics,
+            ...(newValue.successMetrics || []),
+          ]),
+        ],
+        preferredApproaches: [
+          ...new Set([
+            ...(existing.preferredApproaches || []),
+            ...(newValue.preferredApproaches || []),
+          ]),
+        ],
+        explicitExclusions: [
+          ...new Set([
+            ...(existing.explicitExclusions || []),
+            ...(newValue.explicitExclusions || []),
+          ]),
+        ],
+      };
+    },
     default: () => null,
   }),
-  
+
   // Connection pairs with deduplication reducer
   connectionPairs: Annotation<ConnectionPair[]>({
-    reducer: connectionPairsReducer,
+    value: connectionPairsReducer,
     default: () => [],
   }),
-  
+
   // Proposal sections with versioning reducer
   proposalSections: Annotation<Record<string, SectionContent>>({
-    reducer: proposalSectionsReducer,
+    value: proposalSectionsReducer,
     default: () => ({}),
   }),
-  
+
   // Evaluation results for sections
   evaluations: Annotation<Record<string, EvaluationResult>>({
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
     default: () => ({}),
   }),
-  
+
   // Current section being worked on
   currentSection: Annotation<string | undefined>({
+    value: (existing, newValue) => newValue ?? existing,
     default: () => undefined,
   }),
-  
+
   // Current phase of the workflow
   currentPhase: Annotation<WorkflowPhase>({
+    value: (existing, newValue) => newValue ?? existing,
     default: () => "research",
   }),
-  
+
   // User feedback with timestamp
   userFeedback: Annotation<UserFeedback | undefined>({
+    value: (existing, newValue) => newValue ?? existing,
     default: () => undefined,
   }),
-  
+
   // Metadata for tracking and persistence
   metadata: Annotation<Record<string, any>>({
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
     default: () => ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -113,6 +186,12 @@ export const ProposalStateAnnotation = Annotation.Root({
       userId: "",
       proposalTitle: "",
     }),
+  }),
+
+  // Track sections impacted by revisions
+  sectionsImpactedByRevision: Annotation<Record<string, string[]>>({
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
+    default: () => ({}),
   }),
 });
 
@@ -135,19 +214,22 @@ export const ProposalStateSchema = z.object({
   evaluations: z.record(z.string(), EvaluationResultSchema),
   currentSection: z.string().optional(),
   currentPhase: z.enum([
-    "research", 
-    "solution_analysis", 
-    "connection_pairs", 
-    "section_generation", 
-    "evaluation", 
-    "revision", 
-    "complete"
+    "research",
+    "solution_analysis",
+    "connection_pairs",
+    "section_generation",
+    "evaluation",
+    "revision",
+    "complete",
   ]),
-  userFeedback: z.object({
-    targetSection: z.string().optional(),
-    feedback: z.string(),
-    requestedChanges: z.array(z.string()).optional(),
-    timestamp: z.string(),
-  }).optional(),
+  userFeedback: z
+    .object({
+      targetSection: z.string().optional(),
+      feedback: z.string(),
+      requestedChanges: z.array(z.string()).optional(),
+      timestamp: z.string(),
+    })
+    .optional(),
   metadata: z.record(z.string(), z.any()),
+  sectionsImpactedByRevision: z.record(z.string(), z.array(z.string())),
 });
