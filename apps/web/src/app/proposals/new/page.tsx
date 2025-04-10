@@ -21,23 +21,23 @@ export const metadata: Metadata = {
 
 export default function NewProposalPage() {
   return (
-    <div className="container px-4 py-6 mx-auto">
+    <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1 transition-colors text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Link>
       </div>
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Create New Proposal
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Start a new proposal by filling out basic information and uploading
             your RFP document
           </p>
@@ -88,12 +88,12 @@ export default function NewProposalPage() {
 
             <div className="space-y-2">
               <Label htmlFor="rfp-document">RFP Document</Label>
-              <div className="p-4 border rounded-md border-input">
+              <div className="border border-input rounded-md p-4">
                 <div className="text-center">
-                  <div className="flex mt-2 text-sm leading-6 text-muted-foreground">
+                  <div className="mt-2 flex text-sm leading-6 text-muted-foreground">
                     <label
                       htmlFor="file-upload"
-                      className="relative font-semibold rounded-md cursor-pointer bg-background text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/70"
+                      className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/70"
                     >
                       <span>Upload a file</span>
                       <input
