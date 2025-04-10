@@ -2,7 +2,7 @@ import { createServer } from "http";
 import { createCustomAgent } from "./agents/basic-agent";
 import { runMultiAgentExample } from "./agents/multi-agent";
 import { runProposalAgent } from "./agents/proposal-agent/graph";
-import { runProposalAgent as runRefactoredProposalAgent } from "./agents/proposal-agent/graph-refactored.js";
+import { runStreamingProposalAgent } from "./agents/proposal-agent/graph-streaming.js";
 import "dotenv/config";
 
 // Start a basic HTTP server
@@ -79,7 +79,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ error: "Server error" }));
     }
   } else if (
-    req.url === "/api/proposal-agent-refactored" &&
+    req.url === "/api/proposal-agent-streaming" &&
     req.method === "POST"
   ) {
     try {
@@ -90,13 +90,13 @@ const server = createServer(async (req, res) => {
 
       req.on("end", async () => {
         const { query } = JSON.parse(body);
-        const result = await runRefactoredProposalAgent(query);
+        const result = await runStreamingProposalAgent(query);
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(result));
       });
     } catch (error) {
-      console.error("Error in refactored proposal agent:", error);
+      console.error("Error in streaming proposal agent:", error);
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Server error" }));
     }
@@ -119,7 +119,7 @@ server.listen(PORT, () => {
   console.log("- POST /api/multi-agent - Multi-agent system");
   console.log("- POST /api/proposal-agent - Proposal agent");
   console.log(
-    "- POST /api/proposal-agent-refactored - Refactored proposal agent"
+    "- POST /api/proposal-agent-streaming - Streaming proposal agent"
   );
   console.log(
     "\nNote: You can also use the LangGraph server with 'npm run dev:agents'"
