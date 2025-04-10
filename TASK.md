@@ -60,6 +60,11 @@
 - [x] Handle authentication state in the UI (`Header`, Homepage buttons)
 - [x] Implement token refresh and session persistence
 - [x] Test authentication flow end-to-end
+- [x] Fix user record creation in database after sign-up (2024-06-26)
+  - [x] Implement synchronization between Supabase Auth and users table
+  - [x] Create helper function for consistent user creation/updates
+  - [x] Add comprehensive tests for user creation flow
+  - [x] Update sign-up, sign-in, and callback routes to ensure user records exist
 
 ### Persistence Layer
 
@@ -86,10 +91,17 @@
 
 - [x] Create basic application layout (`RootLayout`, `Header`)
 - [x] Create basic Homepage (`page.tsx`)
+- [x] Create dashboard layout with sidebar navigation (2023-07-25)
+  - [x] Implement DashboardLayout component with responsive sidebar
+  - [x] Create tests for the layout component
+  - [x] Add conditional header visibility for dashboard routes
 - [x] Create proposal dashboard layout (2023-07-25)
 - [x] Design and implement proposal listing view (2023-07-25)
   - [x] Implement ProposalCard component (2023-07-25)
   - [x] Create EmptyDashboard state component (2023-07-25)
+  - [x] Enhance EmptyProposalState component with improved UI and MCP pattern
+  - [x] Implement ProposalCard component with enhanced UI, deadline tracking, and MCP pattern
+  - [x] Implement ProposalGrid component with responsive layout and MCP pattern
   - [x] Add filtering functionality for proposals (2023-07-25)
   - [x] Implement skeleton loading states (2023-07-25)
 - [x] Write comprehensive tests for dashboard components (2023-07-25)
@@ -97,23 +109,72 @@
   - [x] Test for ProposalList component (2023-07-25)
   - [x] Test for DashboardFilters component (2023-07-25)
   - [x] Test for EmptyDashboard component (2023-07-25)
+  - [x] Test for Enhanced EmptyProposalState component
+  - [x] Test for Enhanced ProposalCard with deadline tracking and status badges
+  - [x] Test for ProposalGrid component with responsive layout
   - [x] Test for Dashboard page (2023-07-25)
   - [x] Test for Header component (2023-07-25)
   - [x] Test for authentication utilities (2023-07-25)
   - [x] Test for proposals API (2023-07-25)
-- [x] Connect homepage to dashboard (2023-07-25)
-  - [x] Update links in homepage (2023-07-25)
-  - [x] Create proposal creation flow skeleton (2023-07-25)
-  - [x] Add tests for homepage links (2023-07-25)
-  - [x] Add tests for new proposal page (2023-07-25)
+  - [x] Test for toggle functionality between empty and populated states
+  - [x] Connect homepage to dashboard (2023-07-25)
+    - [x] Update links in homepage (2023-07-25)
+    - [x] Create proposal creation flow skeleton (2023-07-25)
+    - [x] Add tests for homepage links (2023-07-25)
+    - [x] Add tests for new proposal page (2023-07-25)
+- [x] Dashboard UI refinements
+  - [x] Remove test links from dashboard page
+  - [x] Fix empty state component to fit properly in viewport
+  - [x] Remove user profile from sidebar for cleaner interface
+  - [x] Standardize footer heights across layout components
+  - [x] Improve vertical centering and spacing
+  - [x] Remove diagnostics from home page for production readiness
+  - [x] Integrate proposal list with empty state conditional display
+  - [x] Fix module import paths for shared package components
+  - [x] Add toggle for testing empty/filled proposal states
+- [x] Create proposal creation flow
+  - [x] Create NewProposalModal component with form validation
+  - [x] Implement tests for the NewProposalModal component
+  - [x] Connect modal to dashboard and empty state components
+  - [x] Create NewProposalCard for dashboard grid
+  - [x] Implement tests for the NewProposalCard component
+  - [x] Create ProposalTypeModal for selecting proposal type
+  - [x] Implement tests for the ProposalTypeModal component
+  - [x] Connect ProposalTypeModal to dashboard and NewProposalModal
+  - [x] Create ApplicationQuestionsView for entering application questions
+  - [x] Implement test for the ApplicationQuestionsView component
+  - [x] Create ProposalCreationFlow to manage multi-step creation process
+  - [x] Create ReviewProposalView for reviewing and submitting the proposal (2024-06-20)
+  - [x] Implement consistent UI components with shared styling across all views (2024-06-20)
+  - [x] Create reusable CheckItem component for consistent styling (2024-06-20)
+  - [x] Add scroll-to-error feature in ApplicationQuestionsView for improved validation UX (2024-06-22)
+  - [x] Implement API endpoint for saving new proposals
+  - [x] Fix database schema mismatches in the proposal submission process
+  - [x] Fix RFP flow to properly handle document uploads
+  - [x] Improve error handling and logging for proposal submission
+  - [x] Update metadata schema handling to support flexible data structures
+  - [x] Add form for detailed proposal information
 - [ ] Design chat interface for agent interaction
   - [ ] Create message components for different agent roles
   - [ ] Implement streaming response display
   - [ ] Add human-in-the-loop interaction components
-- [ ] Implement file upload for RFP documents
-  - [ ] Create file upload component with validation
-  - [ ] Add document preview functionality
-  - [ ] Show upload progress indicators
+- [x] Implement file upload for RFP documents
+  - [x] Create file upload component with validation
+  - [x] Add document preview functionality
+  - [x] Show upload progress indicators
+  - [x] Implement proper metadata handling for RFP documents
+  - [x] Add comprehensive logging for file upload process
+
+### Discovered During Work on Proposal Creation Flow
+
+- [x] Fixed database schema mismatches between form data and database tables
+- [x] Improved metadata handling to use Supabase JSONB for flexible data structures
+- [x] Enhanced error handling in proposal submission process
+- [x] Added comprehensive logging for debugging submission issues
+- [x] Fixed RFP flow to properly handle document uploads
+- [x] Created solution documentation for database schema and API implementation
+- [x] Fixed accessibility issues with dialog components
+- [x] Fixed linter errors in UI components for better code quality
 
 ## Phase 3: Agent Foundation (Week 3)
 
@@ -130,8 +191,8 @@
   - [ ] Set up Pinecone client with proper indexing
   - [ ] Create document chunking and embedding pipeline
   - [ ] Implement similarity search functionality
-- [ ] Create embeddings generation pipeline using Gemini
-  - [ ] Add Gemini API integration for text embeddings
+- [x] Create embeddings generation pipeline using Gemini
+  - [x] Add Gemini API integration for text embeddings
   - [ ] Implement batch processing for large documents
   - [ ] Create caching mechanism for generated embeddings
 - [ ] Build tool access framework for agents
@@ -413,6 +474,47 @@
 - [x] Create new proposal page structure for basic flow (2023-07-25)
 - [x] Implement homepage to dashboard navigation (2023-07-25)
 
+## Discovered During Work (April 3)
+
+- [x] Switch from Jest to Vitest for better ESM support
+- [x] Create mock for OpenAI API calls in tests
+- [x] Remove Jest configuration files after successful switch to Vitest
+- [x] Fix `require.main === module` checks for ESM compatibility in agent files
+- [x] Fix `use client` directive issues in Next.js components
+- [x] Restructure project into a monorepo with `apps` and `packages`
+- [x] Create `packages/shared` for common types/utils
+- [x] Resolve initial linting errors (unused variables)
+- [x] Fix Tailwind CSS configuration to ensure consistent styling (2024-04-03)
+  - [x] Downgrade from Tailwind v4 to v3 for better compatibility
+  - [x] Fix PostCSS configuration to use correct plugin syntax
+  - [x] Update globals.css to use proper Tailwind directives
+  - [x] Update Next.js config to use current syntax for external packages
+- [x] Improve proposal creation flow (2024-04-04)
+  - [x] Implement two-step proposal creation with type selection
+  - [x] Create accessible UI components with proper keyboard navigation
+  - [x] Implement the MCP pattern for component organization
+  - [x] Fix runtime errors related to missing exports (SheetOverlay component)
+  - [x] Ensure all components follow consistent design patterns
+- [x] Add missing UI components (2024-04-04)
+  - [x] Create dialog.tsx component from Shadcn UI for modal dialogs
+  - [x] Ensure proper exports for all UI components
+  - [x] Add missing images for empty states and UI elements
+  - [x] Create public/images directory for static assets
+
+## Discovered During Work (June 20)
+
+- [x] Create ReviewProposalView component to complete the proposal creation flow (2024-06-20)
+- [x] Remove redundant navigation components from all proposal views (2024-06-20)
+- [x] Standardize icon styling and size across all views (2024-06-20)
+- [x] Create reusable CheckItem component for consistent UI patterns (2024-06-20)
+- [x] Fix runtime errors related to object rendering in React (2024-06-20)
+- [x] Enhance spacing and layout for better visual hierarchy (2024-06-20)
+- [x] Implement Edit functionality on the Review page to navigate back to specific steps (2024-06-20)
+- [x] Update RFP flow naming for consistent terminology (2024-06-22)
+  - [x] Change "RFP Details" to "Upload RFP Doc" in RFPResponseView component
+  - [x] Add conditional display in ReviewProposalView to show "RFP Details" for RFP proposals
+  - [x] Ensure consistent naming across the entire proposal creation flow
+
 ## Next Steps
 
 - [x] Implement a basic agent with LangGraph
@@ -422,3 +524,54 @@
 - [ ] Implement Supabase UI components for login
 - [ ] Create a human-in-the-loop interface
 - [x] Implement persistence layer
+
+### Enhanced RFP Form UI Implementation (2024-07-12)
+
+- [x] Create FilePreview component for visual preview of uploaded file
+- [x] Create ProgressStepper component for multi-step form navigation
+- [x] Create SubmitButton component with various states
+- [x] Create FormOverlay for progress during form submission
+- [x] Create UploadToast for file upload status
+- [x] Implement form validation with error messages
+- [x] Add enhanced form to proposal creation flow
+- [x] Apply consistent UI across proposal creation flows
+  - [x] Update application questions flow to use the same components
+  - [x] Stop progress icon spinning during form entry
+  - [x] Add fixed-position progress bar to all form steps
+  - [x] Apply consistent styling to form pages
+  - [x] Improve mobile responsiveness
+
+### Discovered During RFP Form Enhancement Work
+
+- [x] Add proper form validation including title, description, and file requirements
+- [x] Implement graceful error handling in the proposal submission process
+- [x] Add support for deadline and funding amount fields in the RFP form
+- [x] Create reusable form components in the UI components directory
+- [x] Improve user feedback mechanisms during the upload process
+- [x] Add announcement banner to inform users of enhanced functionality
+
+### Frontend Test Implementation for RFP Document Upload (2024-07-30)
+
+- [x] Create test directory structure for RFP form components (2024-08-01)
+- [x] Implement EnhancedRfpForm integration tests covering: (2024-08-01)
+  - [x] Basic rendering and accessibility validation (2024-08-01)
+  - [x] Form validation for required fields and file inputs (2024-08-01)
+  - [x] File upload state management and preview functionality (2024-08-01)
+  - [x] Form submission with success and error handling (2024-08-01)
+  - [x] Loading state and UI feedback during submission (2024-08-01)
+  - [x] Toast notification integration for user feedback (2024-08-01)
+- [x] Create mock implementations for: (2024-08-01)
+  - [x] Server actions (uploadProposalFile) (2024-08-01)
+  - [x] Toast notifications (2024-08-01)
+  - [x] Form submission state (2024-08-01)
+- [x] Ensure tests cover both success and error paths (2024-08-01)
+- [x] Validate proper UI state transitions during submission process (2024-08-01)
+
+### Discovered During Test Implementation Work (2024-08-01)
+
+- [x] Simplified test suite to focus on core functionality rather than complex interactions (2024-08-01)
+- [x] Fixed import path inconsistencies between test and implementation files (2024-08-01)
+- [x] Created specialized mocks for complex components like AppointmentPicker (2024-08-01)
+- [x] Implemented proper test isolation for independent test case execution (2024-08-01)
+- [x] Improved test reliability by focusing on essential user interactions (2024-08-01)
+- [x] Added test for verifying button state based on form completion (2024-08-01)

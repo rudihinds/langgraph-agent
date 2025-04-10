@@ -5,11 +5,15 @@ node_modules/
 
 # Testing
 coverage/
+test-results/
+playwright-report/
 
 # Production
 build/
 dist/
 out/
+.next/
+.turbo/
 
 # Misc
 .DS_Store
@@ -18,6 +22,8 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.task-master
+*.log
 
 # Debug
 npm-debug.log*
@@ -33,3 +39,28 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Temporary directories
+temp/
+temp_recovery/
+
+# Added by Claude Task Master
+# Logs
+logs
+dev-debug.log
+# Dependency directories
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/ 
+# LangGraph API
+.langgraph_api

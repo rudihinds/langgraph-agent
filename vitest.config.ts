@@ -14,8 +14,5 @@ export default defineConfig({
       ".git/**",
     ],
     setupFiles: ["./vitest.setup.ts"],
-    alias: {
-      "@": resolve(__dirname, "./src"),
-    },
   },
 });

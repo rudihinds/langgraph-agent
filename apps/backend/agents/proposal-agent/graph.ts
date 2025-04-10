@@ -1,4 +1,4 @@
-import { StateGraph, MessagesAnnotation } from "@langchain/langgraph";
+import { StateGraph } from "@langchain/langgraph";
 import { HumanMessage } from "@langchain/core/messages";
 import {
   orchestratorNode,
@@ -8,16 +8,19 @@ import {
   sectionGeneratorNode,
   evaluatorNode,
   humanFeedbackNode,
-} from "./nodes.js";
+} from "./nodes.ts";
 import { RunnableConfig } from "@langchain/core/runnables";
+import { ProposalState, ProposalStateAnnotation } from "./state";
 
 /**
  * Create a proposal agent with a multi-stage workflow
  * @returns Compiled graph for the proposal agent
  */
 function createProposalAgent() {
-  // Use MessagesAnnotation for message state
-  const graph = new StateGraph(MessagesAnnotation)
+  // Initialize StateGraph with the state annotation
+  const graph = new StateGraph({
+    channels: ProposalStateAnnotation,
+  })
     .addNode("orchestrator", orchestratorNode)
     .addNode("research", researchNode)
     .addNode("solution_sought", solutionSoughtNode)
@@ -30,9 +33,9 @@ function createProposalAgent() {
   graph.setEntryPoint("orchestrator");
 
   // Define conditional edges
-  graph.addConditionalEdges(
-    "orchestrator",
-    (state) => {
+  graph.addConditionalEdges({
+    source: "orchestrator",
+    condition: (state) => {
       const messages = state.messages;
       const lastMessage = messages[messages.length - 1];
       const content = lastMessage.content as string;
@@ -65,7 +68,7 @@ function createProposalAgent() {
         return "orchestrator";
       }
     },
-    {
+    edges: {
       research: "research",
       solution_sought: "solution_sought",
       connection_pairs: "connection_pairs",
@@ -73,8 +76,8 @@ function createProposalAgent() {
       evaluator: "evaluator",
       human_feedback: "human_feedback",
       orchestrator: "orchestrator",
-    }
-  );
+    },
+  });
 
   // Define edges from each node back to the orchestrator
   graph.addEdge("research", "orchestrator");
@@ -98,8 +101,8 @@ export const graph = createProposalAgent();
  * @param query Initial user query
  * @returns Final state after workflow execution
  */
-export async function runProposalAgent(query: string) {
-  // Initialize with a question
+export async function runProposalAgent(query: string): Promise<any> {
+  // Initialize state with just the initial message
   const initialState = {
     messages: [new HumanMessage(query)],
   };

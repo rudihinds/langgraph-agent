@@ -1,91 +1,100 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-// Create a singleton Supabase client with automatic token refresh
-let supabaseInstance: ReturnType<typeof createSupabaseClient> | null = null;
-
+// Create a client for client-side usage
 export function createClient() {
-  if (supabaseInstance) return supabaseInstance;
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  // Create Supabase client with persisted auth state
-  supabaseInstance = createSupabaseClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true, // Enable persisted auth
-      autoRefreshToken: true, // Enable auto refresh token
-      detectSessionInUrl: true, // Look for access token in URL
-      storageKey: "sb-auth-token", // Custom storage key
-    },
-  });
-
-  return supabaseInstance;
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 }
 
-export async function signIn() {
-  const supabase = createClient();
+// Get the current origin for redirect URLs
+export function getRedirectURL() {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  // Fallback to default URL in SSR context
+  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+}
 
+/**
+ * Initiates the sign-in with Google OAuth flow
+ * This redirects the user to Google's authentication page
+ */
+export async function signIn() {
   try {
-    // Use OAuth with Google
+    const supabase = createClient();
+    const redirectURL = getRedirectURL() + "/auth/callback";
+
+    console.log("[Auth] Starting sign-in with redirect URL:", redirectURL);
+
+    // Record auth start time for debugging
+    if (typeof window !== "undefined") {
+      localStorage.setItem("auth_start_time", new Date().toISOString());
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectURL,
         queryParams: {
-          access_type: "offline", // For refresh token
-          prompt: "consent", // Force consent screen to get refresh token every time
+          access_type: "offline",
+          prompt: "consent",
         },
       },
     });
 
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error("Error signing in:", error);
-    throw error;
-  }
-}
-
-export async function signOut() {
-  const supabase = createClient();
-
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  } catch (error) {
-    console.error("Error signing out:", error);
-    throw error;
-  }
-}
-
-export async function getCurrentUser() {
-  try {
-    const supabase = createClient();
-    console.log("Attempting to get current user session");
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    console.log(
-      "Session response:",
-      session ? "Session found" : "No session found"
-    );
-
-    if (!session) {
-      console.log("No active session found");
-      return null;
+    if (error) {
+      console.error("[Auth] Error during OAuth sign-in:", error);
+      throw error;
     }
 
-    console.log("User found:", session.user.email);
-    return session.user;
+    // If we got this far without a redirect, manually navigate to the auth URL
+    if (data?.url && window) {
+      console.log("[Auth] Manually navigating to auth URL:", data.url);
+      window.location.href = data.url;
+    }
+
+    return { data, error };
   } catch (error) {
-    console.error("Error in getCurrentUser:", error);
-    return null;
+    console.error("[Auth] Error in signIn:", error);
+    throw error;
   }
+}
+
+/**
+ * Signs out the current user
+ */
+export async function signOut() {
+  try {
+    // First call server-side sign-out endpoint
+    await fetch("/api/auth/sign-out", { method: "POST" });
+
+    // Then sign out on the client side
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("[Auth] Error in signOut:", error);
+      throw error;
+    }
+
+    // Redirect to login page
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  } catch (error) {
+    console.error("[Auth] Error in signOut:", error);
+    throw error;
+  }
+}
+
+/**
+ * Gets the current session if available
+ */
+export async function getSession() {
+  const supabase = createClient();
+  return await supabase.auth.getSession();
 }
 
 /**
@@ -131,5 +140,20 @@ export async function validateSession(): Promise<boolean> {
   } catch (error) {
     console.error("Error validating session:", error);
     return false;
+  }
+}
+
+/**
+ * Gets the current user if authenticated
+ * Returns null if not authenticated
+ */
+export async function getCurrentUser() {
+  try {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    return data.user;
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
   }
 }

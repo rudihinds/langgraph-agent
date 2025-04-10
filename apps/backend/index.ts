@@ -2,6 +2,7 @@ import { createServer } from "http";
 import { createCustomAgent } from "./agents/basic-agent";
 import { runMultiAgentExample } from "./agents/multi-agent";
 import { runProposalAgent } from "./agents/proposal-agent/graph";
+import { runStreamingProposalAgent } from "./agents/proposal-agent/graph-streaming.js";
 import "dotenv/config";
 
 // Start a basic HTTP server
@@ -77,6 +78,28 @@ const server = createServer(async (req, res) => {
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Server error" }));
     }
+  } else if (
+    req.url === "/api/proposal-agent-streaming" &&
+    req.method === "POST"
+  ) {
+    try {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk.toString();
+      });
+
+      req.on("end", async () => {
+        const { query } = JSON.parse(body);
+        const result = await runStreamingProposalAgent(query);
+
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(result));
+      });
+    } catch (error) {
+      console.error("Error in streaming proposal agent:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Server error" }));
+    }
   } else if (req.url === "/api/health" && req.method === "GET") {
     // Health check endpoint
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -95,6 +118,9 @@ server.listen(PORT, () => {
   console.log("- POST /api/basic-agent - Basic agent");
   console.log("- POST /api/multi-agent - Multi-agent system");
   console.log("- POST /api/proposal-agent - Proposal agent");
+  console.log(
+    "- POST /api/proposal-agent-streaming - Streaming proposal agent"
+  );
   console.log(
     "\nNote: You can also use the LangGraph server with 'npm run dev:agents'"
   );

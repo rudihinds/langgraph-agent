@@ -29,6 +29,31 @@ pnpm dev
 
 The app will be available at `http://localhost:5173`.
 
+## Date Format Conventions
+
+This application follows specific date format conventions:
+
+- **UI Display Format**: `DD/MM/YYYY` (British format)
+
+  - All dates shown to users in the UI follow this format
+  - Date input fields expect dates in this format
+
+- **API Format**: `YYYY-MM-DD` (ISO format)
+
+  - All dates sent to or received from the API use this format
+  - This format is used for database storage
+
+- **Internal Handling**:
+  - Dates are stored as JavaScript `Date` objects in component state
+  - Conversion between formats happens at the boundaries (UI display and API calls)
+  - Utilities for date handling are in `lib/utils/date-utils.ts`
+
+When implementing new features that use dates:
+
+1. Use the `AppointmentPicker` component for date selection
+2. Use `formatDateForUI()` to display dates
+3. Use `formatDateForAPI()` when sending dates to the API
+
 ## Usage
 
 Once the app is running (or if using the deployed site), you'll be prompted to enter:

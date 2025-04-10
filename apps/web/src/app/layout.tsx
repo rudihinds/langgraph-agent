@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
 import { SessionProvider } from "@/hooks/useSession";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { DashboardLayoutProvider } from "@/components/layout/DashboardLayoutContext";
+import MainContent from "@/components/layout/MainContent";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Proposal Writer",
@@ -17,19 +19,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <SessionProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <footer className="w-full border-t py-4">
-              <div className="max-w-5xl mx-auto px-4 text-center text-sm text-muted-foreground">
-                © {new Date().getFullYear()} Proposal Writer
-              </div>
-            </footer>
-          </div>
-        </SessionProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+          storageKey="proposal-writer-theme"
+        >
+          <SessionProvider>
+            <DashboardLayoutProvider>
+              <MainContent>{children}</MainContent>
+            </DashboardLayoutProvider>
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

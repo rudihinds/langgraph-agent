@@ -1,0 +1,247 @@
+<context>
+# Overview  
+The Proposal Agent System is a multi-agent architecture built on LangGraph.js that assists users in creating high-quality proposals for grants and RFPs. The system analyzes requirements, conducts research, identifies strategic alignment opportunities, and generates proposal content with an iterative feedback loop.
+
+</context>
+<PRD>
+# Product Requirements Document: Proposal Agent System
+
+## 1. Overview
+The Proposal Agent System is a multi-agent architecture built on LangGraph.js that assists users in creating high-quality proposals for grants and RFPs. The system analyzes requirements, conducts research, identifies strategic alignment opportunities, and generates proposal content with an iterative feedback loop.
+
+## 2. Architecture
+
+### 2.1 Agent Structure
+The system utilizes a multi-agent architecture with these primary components:
+
+- **Orchestrator Agent**: Central controller managing workflow and user interactions
+- **Research Agent**: Analyzes RFP documents and conducts funder research
+- **Solution Sought Agent**: Determines specific solution requirements
+- **Connection Pairs Agent**: Identifies alignment between applicant and funder
+- **Proposal Manager Agent**: Coordinates section generation with dependency tracking
+- **Section Agents**: Specialized agents for generating each proposal section
+- **Evaluation Agent**: Assesses content quality against defined criteria
+
+### 2.2 State Management
+- **Checkpointing System**: Leveraging LangGraph's built-in persistence layer to save snapshots at every superstep
+- **Thread Organization**: One thread per proposal with complete history, using LangGraph's thread ID-based persistence
+- **Time-Travel Capability**: Utilizing LangGraph's state history functionality to revisit and fork from any checkpoint
+- **Namespace Management**: Custom namespaces for organizing long-term memory beyond thread boundaries
+
+## 3. Functional Requirements
+
+### 3.1 Research Capabilities
+- Analyze RFP documents to extract key requirements and evaluation criteria
+- Conduct targeted research on funding organizations using vector store integration
+- Identify funding priorities, previous grants, and strategic focus areas
+- Process and summarize research findings for use in proposal development
+
+### 3.2 Solution Analysis
+- Determine specific solution requirements based on RFP and research
+- Identify preferred approaches and methodologies
+- Recognize explicitly unwanted approaches
+- Generate structured solution framework that aligns with funder preferences
+
+### 3.3 Connection Identification
+- Analyze applicant capabilities against funder priorities
+- Generate specific connection pairs showing alignment points
+- Provide evidence and rationale for each connection
+- Prioritize connections by strength and relevance
+
+### 3.4 Proposal Generation
+- Generate section content based on dependencies:
+ - Problem Statement
+ - Solution
+ - Organizational Capacity
+ - Implementation Plan
+ - Evaluation Approach
+ - Budget
+ - Executive Summary
+ - Conclusion
+- Enforce section dependencies to ensure logical flow
+- Support section revision with dependency impact awareness
+- Implement map-reduce patterns for parallel processing where dependencies allow
+
+### 3.5 Quality Evaluation
+- Implement evaluator-optimizer pattern for iterative improvement
+- Assess content against evaluation criteria including:
+ - Alignment with funder priorities
+ - Adherence to RFP requirements
+ - Evidence quality and persuasiveness
+ - Overall coherence and clarity
+- Provide specific feedback for improvement
+- Iterate until quality thresholds are met
+
+### 3.6 Human-in-the-Loop Integration
+- Utilize LangGraph's interrupt() function for pausing execution at key decision points
+- Collect and incorporate human feedback using Command primitive for resumption
+- Support section revision with context-aware assistance
+- Allow override of agent recommendations when needed
+- Provide clear warnings about dependency impacts when revising sections
+
+## 4. Technical Requirements
+
+### 4.1 LangGraph Implementation
+- **State Graph Structure**: Implement node structure following agent architecture patterns
+- **State Annotations**: Define appropriate state annotations with efficient reducers for complex state management
+- **Checkpointing**: Configure checkpointing for persistence across sessions, utilizing MemorySaver for development
+- **Time Travel**: Implement LangGraph's history retrieval for replaying and forking states
+- **Human-in-the-Loop**: Support feedback collection using interrupt() function with proper resumption via Command primitive
+- **Superstep Management**: Set appropriate recursion limits to prevent infinite loops
+- **Error Handling**: Implement node-level retry policies for resilience against transient errors
+
+### 4.2 Model Integration
+- **LLMs**:
+ - Claude 3.7 Sonnet (primary thinking/writing model)
+ - GPT-o3-mini (deep research)
+ - GPT-4o-mini (vector store interactions)
+- **Context Window Management**: Implement conversation summarization or filtering to prevent context overflow
+- **Tool Binding**: Properly bind tools to models using LangGraph tool integration patterns
+- **Streaming**: Utilize LangGraph's streaming functionality to provide real-time feedback
+- **Fallback Strategies**: Implement error handling and fallback approaches for model failures
+
+### 4.3 State Schema
+// Core state schema with appropriate reducers
+const ProposalStateAnnotation = Annotation.Root({
+ messages: Annotation<BaseMessage[]>({
+   reducer: messagesStateReducer,
+   default: () => [],
+ }),
+ rfpDocument: Annotation<Document>,
+ funderInfo: Annotation<ResearchData>,
+ solutionSought: Annotation<SolutionRequirements>,
+ connectionPairs: Annotation<ConnectionPair[]>({
+   reducer: (state, update) => [...state, ...update],
+   default: () => [],
+ }),
+ proposalSections: Annotation<Record<string, SectionContent>>({
+   reducer: (state, update) => ({...state, ...update}),
+   default: () => ({}),
+ }),
+ sectionDependencies: Annotation<Record<string, string[]>>,
+ evaluationHistory: Annotation<EvaluationResult[]>({
+   reducer: (state, update) => [...state, ...update],
+   default: () => [],
+ }),
+ uiState: Annotation<UIState>
+});
+
+### 4.4 Persistence Requirements
+- **Memory Persistence**: Implement MemorySaver for development, configurable at compile time
+- **Supabase Integration**: Support Supabase-backed checkpointer for production
+- **Thread Management**: Define clear threading model for proposal organization with thread_id as primary identifier
+- **Serialization**: Implement efficient state serialization using LangGraph's serialization protocols
+- **Cross-Thread Memory**: Utilize LangGraph's Store interface for sharing information across threads
+
+### 4.5 Error Handling and Resilience
+- **Node-Level Retries**: Implement retry policies for LLM calls and external API interactions
+- **Error Classification**: Categorize errors and implement specialized handling for each type
+- **Checkpoint Recovery**: Utilize LangGraph's ability to resume from previous checkpoints after failures
+- **Graceful Degradation**: Implement fallback strategies when optimal paths fail
+- **Human Escalation**: Utilize interrupt() for complex error scenarios requiring human intervention
+
+## 5. Multi-Agent Architecture Patterns
+
+### 5.1 Orchestrator-Workers Pattern
+- Implement Proposal Manager as the orchestrator node
+- Section generators as worker nodes handling specialized tasks
+- Use clear messaging protocols between orchestrator and workers
+- Maintain centralized state for cross-section consistency
+
+### 5.2 Parallelization 
+- Utilize LangGraph's superstep architecture for concurrent processing
+- Implement map-reduce pattern for multi-section analysis
+- Use Send API for dynamic branching based on analysis needs
+- Configure parallel execution where section dependencies allow
+
+### 5.3 Evaluator-Optimizer
+- Implement feedback loops for each section
+- Use separate evaluation nodes for quality assessment
+- Apply iterative refinement based on evaluation results
+- Integrate human feedback into optimization loop
+
+### 5.4 Subgraphs for Modular Components
+- Encapsulate section generators as reusable subgraphs
+- Define clear interfaces between subgraphs with shared state keys
+- Implement specialized state transformations between parent and subgraphs
+- Maintain isolated state for agent-specific reasoning
+
+## 6. Integration Points
+
+### 6.1 Frontend Integration
+- Expose state updates via structured API
+- Provide streaming capability for real-time updates using LangGraph's streaming modes
+- Support interrupt resumption via Command API
+- Implement time-travel capability with UI representation using checkpoint history
+
+### 6.2 Database Integration
+- Store checkpoints in Supabase PostgreSQL
+- Index checkpoints by thread ID and checkpoint ID
+- Store document references with appropriate schema
+- Implement secure access patterns for proposal data
+
+## 7. Development Plan
+
+### 7.1 Phase 1: Core Agent Structure
+- Implement orchestrator node
+- Create research and analysis agents
+- Build basic state management with appropriate annotations and reducers
+- Develop initial tools integration with proper error handling
+
+### 7.2 Phase 2: Section Generation
+- Implement section-specific nodes with dependency awareness
+- Build dependency tracking using LangGraph's state management
+- Create evaluation loop using evaluator-optimizer pattern
+- Develop section revision capability with state forking
+
+### 7.3 Phase 3: Human Integration
+- Implement interrupt handling for feedback collection
+- Build feedback integration using Command primitive
+- Create warning system for dependency impacts
+- Develop time travel navigation using checkpoint history
+
+### 7.4 Phase 4: Performance Optimization
+- Optimize state serialization to minimize storage requirements
+- Implement context window management strategies
+- Refine prompt engineering for optimal model performance
+- Enhance error handling with comprehensive retry policies
+
+## 8. Performance and Optimization
+
+### 8.1 LLM Context Management
+- Implement message filtering before LLM calls to maintain context window limits
+- Create conversation summarization for long-running proposal sessions
+- Utilize LangGraph's message management utilities for efficient pruning
+- Implement message prioritization based on relevance to current section
+
+### 8.2 State Optimization
+- Apply efficient state serialization to minimize storage requirements
+- Implement strategic checkpointing to reduce database load
+- Use namespace-specific memory for cross-thread information sharing
+- Configure appropriate recursion limits to prevent infinite loops
+
+### 8.3 Error Handling Strategy
+- Implement comprehensive retry logic for external API calls
+- Create error classification system for targeted handling
+- Utilize LangGraph's error tracking in checkpointer
+- Develop fallback mechanisms for graceful degradation
+
+## 9. Future Considerations
+- Memory integration for long-term context
+- User-configurable evaluation criteria
+- Advanced template customization
+- Integration with external grant databases
+- Collaborative editing capabilities
+
+## 10. Technical Milestones
+- Complete agent architecture with nodes and state definition
+- Implement research and analysis with vector store integration
+- Build section generation with dependency tracking
+- Complete evaluation and revision loop
+- Implement full human-in-the-loop functionality
+- Add time travel capabilities for navigation
+- Integrate with Supabase for persistence
+- Connect with frontend components
+
+This PRD focuses specifically on the LangGraph multi-agent system, with particular attention to the agent architecture, state management, and functional capabilities required for proposal generation, leveraging LangGraph.js's native capabilities for resilience, human-in-the-loop interactions, and parallel execution.
+</PRD>
