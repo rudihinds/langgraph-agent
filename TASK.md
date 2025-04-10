@@ -186,8 +186,8 @@
   - [ ] Set up Pinecone client with proper indexing
   - [ ] Create document chunking and embedding pipeline
   - [ ] Implement similarity search functionality
-- [ ] Create embeddings generation pipeline using Gemini
-  - [ ] Add Gemini API integration for text embeddings
+- [x] Create embeddings generation pipeline using Gemini
+  - [x] Add Gemini API integration for text embeddings
   - [ ] Implement batch processing for large documents
   - [ ] Create caching mechanism for generated embeddings
 - [ ] Build tool access framework for agents
