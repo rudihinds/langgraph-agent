@@ -8,9 +8,10 @@ import {
   sectionGeneratorNode,
   evaluatorNode,
   humanFeedbackNode,
-} from "./nodes.ts";
+} from "./nodes.js";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { ProposalState, ProposalStateAnnotation } from "./state";
+import { ProposalState, ProposalStateAnnotation } from "./state.js";
+import { withErrorHandling } from "../../lib/llm/error-handlers.js";
 
 /**
  * Create a proposal agent with a multi-stage workflow
@@ -18,9 +19,7 @@ import { ProposalState, ProposalStateAnnotation } from "./state";
  */
 function createProposalAgent() {
   // Initialize StateGraph with the state annotation
-  const graph = new StateGraph({
-    channels: ProposalStateAnnotation,
-  })
+  const graph = new StateGraph(ProposalStateAnnotation)
     .addNode("orchestrator", orchestratorNode)
     .addNode("research", researchNode)
     .addNode("solution_sought", solutionSoughtNode)
@@ -33,9 +32,9 @@ function createProposalAgent() {
   graph.setEntryPoint("orchestrator");
 
   // Define conditional edges
-  graph.addConditionalEdges({
-    source: "orchestrator",
-    condition: (state) => {
+  graph.addConditionalEdges(
+    "orchestrator",
+    (state: ProposalState) => {
       const messages = state.messages;
       const lastMessage = messages[messages.length - 1];
       const content = lastMessage.content as string;
@@ -68,7 +67,7 @@ function createProposalAgent() {
         return "orchestrator";
       }
     },
-    edges: {
+    {
       research: "research",
       solution_sought: "solution_sought",
       connection_pairs: "connection_pairs",
@@ -76,8 +75,8 @@ function createProposalAgent() {
       evaluator: "evaluator",
       human_feedback: "human_feedback",
       orchestrator: "orchestrator",
-    },
-  });
+    }
+  );
 
   // Define edges from each node back to the orchestrator
   graph.addEdge("research", "orchestrator");
@@ -89,8 +88,11 @@ function createProposalAgent() {
   // Human feedback node needs special handling for interrupts
   graph.addEdge("human_feedback", "orchestrator");
 
-  // Compile the graph
-  return graph.compile();
+  // Wrap the compile function with error handling
+  return withErrorHandling<any, any>(graph, (err) => {
+    console.error("Error occurred during graph compilation:", err);
+    // Log the error for debugging and future resilience improvements
+  })();
 }
 
 // Create the agent
@@ -112,8 +114,22 @@ export async function runProposalAgent(query: string): Promise<any> {
     recursionLimit: 25,
   };
 
-  // Run the agent
-  return await graph.invoke(initialState, config);
+  try {
+    // Run the agent with error handling
+    return await graph.invoke(initialState, config);
+  } catch (error) {
+    console.error("Error running proposal agent:", error);
+    // Return a graceful failure state
+    return {
+      messages: [
+        ...initialState.messages,
+        new HumanMessage(
+          "I encountered an error processing your request. Please try again or contact support if the issue persists."
+        ),
+      ],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 // Example usage if this file is run directly

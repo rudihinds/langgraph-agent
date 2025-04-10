@@ -1,6 +1,6 @@
 /**
  * Streaming implementation of the proposal agent graph
- * 
+ *
  * This file implements the proposal agent using standard LangGraph streaming
  * mechanisms for better compatibility with the LangGraph ecosystem.
  */
@@ -17,7 +17,7 @@ import {
   streamingSectionGeneratorNode,
   streamingEvaluatorNode,
   streamingHumanFeedbackNode,
-  processHumanFeedback
+  processHumanFeedback,
 } from "./nodes-streaming.js";
 
 /**
@@ -27,9 +27,7 @@ import {
  */
 function createStreamingProposalAgent() {
   // Initialize StateGraph with the state annotation
-  const graph = new StateGraph({
-    channels: ProposalStateAnnotation,
-  })
+  const graph = new StateGraph(ProposalStateAnnotation)
     .addNode("orchestrator", streamingOrchestratorNode)
     .addNode("research", streamingResearchNode)
     .addNode("solution_sought", streamingSolutionSoughtNode)
@@ -43,9 +41,9 @@ function createStreamingProposalAgent() {
   graph.setEntryPoint("orchestrator");
 
   // Define conditional edges
-  graph.addConditionalEdges({
-    source: "orchestrator",
-    condition: (state) => {
+  graph.addConditionalEdges(
+    "orchestrator",
+    (state: ProposalState) => {
       const messages = state.messages;
       const lastMessage = messages[messages.length - 1];
       const content = lastMessage.content as string;
@@ -78,7 +76,7 @@ function createStreamingProposalAgent() {
         return "orchestrator";
       }
     },
-    edges: {
+    {
       research: "research",
       solution_sought: "solution_sought",
       connection_pairs: "connection_pairs",
@@ -86,8 +84,8 @@ function createStreamingProposalAgent() {
       evaluator: "evaluator",
       human_feedback: "human_feedback",
       orchestrator: "orchestrator",
-    },
-  });
+    }
+  );
 
   // Define edges from each node back to the orchestrator
   graph.addEdge("research", "orchestrator");
