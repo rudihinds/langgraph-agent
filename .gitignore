@@ -42,3 +42,24 @@ next-env.d.ts
 # Temporary directories
 temp/
 temp_recovery/
+
+# Added by Claude Task Master
+# Logs
+logs
+dev-debug.log
+# Dependency directories
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/ 
+# LangGraph API
+.langgraph_api

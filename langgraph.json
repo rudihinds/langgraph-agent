@@ -1,12 +1,7 @@
 {
-  "node_version": "20",
-  "dependencies": [
-    "."
-  ],
   "graphs": {
-    "basic_agent": "./src/agents/basic-agent.ts:graph",
-    "multi_agent": "./src/agents/multi-agent.ts:multiAgentGraph",
-    "proposal_agent": "./src/agents/proposal-agent/graph.ts:graph"
+    "proposal-agent": "apps/backend/agents/proposal-agent/graph.js:graph"
   },
-  "env": ".env"
+  "env": ".env",
+  "static_dir": "apps/backend/public"
 }
