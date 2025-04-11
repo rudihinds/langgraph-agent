@@ -107,15 +107,23 @@ function UserMenu({
     await onSignOut();
   };
 
+  // Extract name from user metadata
+  const userName =
+    user?.user_metadata?.name ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "User";
+
+  // Get avatar URL from metadata if available
+  const avatarUrl =
+    user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-            <AvatarImage
-              src={user.user_metadata?.avatar_url}
-              alt={user.email || ""}
-            />
+            <AvatarImage src={avatarUrl} alt={userName} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -123,9 +131,9 @@ function UserMenu({
       <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.email}</p>
+            <p className="text-sm font-medium leading-none">{userName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.user_metadata?.name || user.email}
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -164,6 +172,12 @@ function UserMenu({
 function getUserInitials(email: string): string {
   if (!email) return "?";
 
-  // Use first two characters of email if no name
+  // Try to get name parts if available
+  const nameParts = email.split("@")[0].split(/[._-]/);
+  if (nameParts.length > 1) {
+    return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+  }
+
+  // Fallback to first two characters of email
   return email.substring(0, 2).toUpperCase();
 }

@@ -13,6 +13,8 @@ export default function Home() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Temporarily disabled for debugging
+    /*
     async function loadUser() {
       try {
         const { data, error } = await getSession();
@@ -35,16 +37,20 @@ export default function Home() {
     }
 
     loadUser();
+    */
+
+    // Set default state for debugging
+    setHasAttemptedAuth(true);
   }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
       <Header user={user} />
 
-      <main className="flex-1">
-        <div className="flex flex-col items-center">
-          <div className="w-full max-w-5xl px-4 py-16 mx-auto sm:py-24">
-            <div className="mb-16 space-y-6 text-center">
+      <main className="flex-1 flex flex-col">
+        <div className="flex flex-col flex-1 items-center justify-center py-16 md:py-24">
+          <div className="w-full max-w-5xl px-4 mx-auto">
+            <div className="mb-16 space-y-8 text-center">
               <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
                 Proposal Writer
               </h1>
@@ -151,7 +157,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="py-6 border-t">
+      <footer className="py-6 border-t mt-auto">
         <div className="container text-center text-sm text-muted-foreground">
           <p>
             © {new Date().getFullYear()} Proposal Writer System. All rights

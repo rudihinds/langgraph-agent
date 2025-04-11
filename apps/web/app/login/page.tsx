@@ -53,6 +53,8 @@ function LoginContent() {
     }
 
     // Check if already authenticated and no recovery needed
+    // Temporarily disabled for debugging
+    /*
     if (typeof window !== "undefined") {
       // If we find a valid auth cookie and we're not in recovery mode
       const hasAuthCookie =
@@ -65,6 +67,7 @@ function LoginContent() {
         router.push("/dashboard");
       }
     }
+    */
   }, [searchParams, router]);
 
   const handleSignIn = async () => {

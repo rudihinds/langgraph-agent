@@ -11,9 +11,10 @@ import ProposalTypeModal, {
 import { ProposalGrid } from "@/components/dashboard/ProposalGrid";
 import { ProposalCard } from "@/components/dashboard/ProposalCard";
 import NewProposalCard from "@/components/dashboard/NewProposalCard";
-import { getProposals, Proposal } from "@/lib/api/proposals";
+import { getUserProposals, Proposal } from "@/lib/api/proposals";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import { useRouter } from "next/navigation";
+import { useSession } from "@/hooks/useSession";
 
 // Dummy proposal data for testing
 const dummyProposals: Proposal[] = [
@@ -75,41 +76,55 @@ const dummyProposals: Proposal[] = [
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user, isLoading, error } = useSession();
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<ProposalType | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   // Toggle for testing empty vs populated states
   const [showDummyData, setShowDummyData] = useState(true);
   // State for announcement banner visibility
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
+  // Log authentication state - authentication check
   useEffect(() => {
-    async function fetchProposals() {
-      try {
-        setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-          setProposals(showDummyData ? dummyProposals : []);
-          setError(null);
-          setIsLoading(false);
-        }, 1000);
-
-        // Uncomment to use real API once it's working
-        // const data = await getProposals();
-        // setProposals(data);
-        // setError(null);
-      } catch (err) {
-        console.error("Error fetching proposals:", err);
-        setError("Failed to load proposals");
-        setIsLoading(false);
-      }
+    if (!isLoading) {
+      console.log(
+        "[Dashboard] Auth state loaded, user:",
+        user ? "authenticated" : "not authenticated"
+      );
     }
+  }, [user, isLoading]);
 
-    fetchProposals();
-  }, [showDummyData]);
+  // Fetch proposals when authenticated
+  useEffect(() => {
+    if (user) {
+      async function fetchProposals() {
+        try {
+          setIsDataLoading(true);
+          // Simulate API call
+          setTimeout(() => {
+            setProposals(showDummyData ? dummyProposals : []);
+            setDataError(null);
+            setIsDataLoading(false);
+          }, 1000);
+
+          // Uncomment to use real API once it's working
+          // const data = await getUserProposals();
+          // setProposals(data);
+          // setDataError(null);
+        } catch (err) {
+          console.error("Error fetching proposals:", err);
+          setDataError("Failed to load proposals");
+          setIsDataLoading(false);
+        }
+      }
+
+      fetchProposals();
+    }
+  }, [user, showDummyData]);
 
   // Handlers for proposal actions
   const handleEditProposal = (id: string) => {
@@ -154,68 +169,26 @@ export default function DashboardPage() {
     setIsProposalModalOpen(false);
   };
 
-  // Show loading state
+  // If still checking authentication, show loading
   if (isLoading) {
     return (
       <div className="container px-4 py-6 mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Your Proposals
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              Manage your proposal drafts, works in progress, and submissions
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={toggleDummyData}
-              className="gap-1"
-            >
-              {showDummyData ? "Show Empty State" : "Show Proposals"}
-            </Button>
-            <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
-              <PlusIcon className="w-4 h-4" />
-              New Proposal
-            </Button>
-          </div>
-        </div>
+        <DashboardSkeleton />
+      </div>
+    );
+  }
 
-        {showAnnouncement && (
-          <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
-            <button
-              onClick={() => setShowAnnouncement(false)}
-              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-              aria-label="Dismiss announcement"
-            >
-              ✕
-            </button>
-            <h3 className="font-semibold text-primary mb-1">
-              Enhanced RFP Form Now Available!
-            </h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              We've improved our RFP submission process with real-time
-              validation, progress tracking, and better file handling.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/proposals/new/rfp")}
-              className="text-xs mt-1"
-            >
-              Try it now
-            </Button>
-          </div>
-        )}
-
+  // Show loading state if data is loading
+  if (isDataLoading) {
+    return (
+      <div className="container px-4 py-6 mx-auto">
         <DashboardSkeleton />
       </div>
     );
   }
 
   // Show error state
-  if (error) {
+  if (dataError) {
     return (
       <div className="container px-4 py-6 mx-auto">
         <div className="flex items-center justify-between mb-8">
@@ -243,7 +216,7 @@ export default function DashboardPage() {
         </div>
 
         {showAnnouncement && (
-          <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+          <div className="relative p-4 mb-6 border rounded-lg border-primary/30 bg-primary/5">
             <button
               onClick={() => setShowAnnouncement(false)}
               className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
@@ -251,10 +224,10 @@ export default function DashboardPage() {
             >
               ✕
             </button>
-            <h3 className="font-semibold text-primary mb-1">
+            <h3 className="mb-1 font-semibold text-primary">
               Enhanced RFP Form Now Available!
             </h3>
-            <p className="text-sm text-muted-foreground mb-2">
+            <p className="mb-2 text-sm text-muted-foreground">
               We've improved our RFP submission process with real-time
               validation, progress tracking, and better file handling.
             </p>
@@ -262,15 +235,15 @@ export default function DashboardPage() {
               variant="outline"
               size="sm"
               onClick={() => router.push("/proposals/new/rfp")}
-              className="text-xs mt-1"
+              className="mt-1 text-xs"
             >
               Try it now
             </Button>
           </div>
         )}
 
-        <div className="p-4 border border-destructive/50 rounded bg-destructive/10 text-center">
-          <p className="text-destructive">{error}</p>
+        <div className="p-4 text-center border rounded border-destructive/50 bg-destructive/10">
+          <p className="text-destructive">{dataError}</p>
           <Button
             variant="outline"
             className="mt-2"
@@ -312,7 +285,7 @@ export default function DashboardPage() {
         </div>
 
         {showAnnouncement && (
-          <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+          <div className="relative p-4 mb-6 border rounded-lg border-primary/30 bg-primary/5">
             <button
               onClick={() => setShowAnnouncement(false)}
               className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
@@ -320,10 +293,10 @@ export default function DashboardPage() {
             >
               ✕
             </button>
-            <h3 className="font-semibold text-primary mb-1">
+            <h3 className="mb-1 font-semibold text-primary">
               Enhanced RFP Form Now Available!
             </h3>
-            <p className="text-sm text-muted-foreground mb-2">
+            <p className="mb-2 text-sm text-muted-foreground">
               We've improved our RFP submission process with real-time
               validation, progress tracking, and better file handling.
             </p>
@@ -331,7 +304,7 @@ export default function DashboardPage() {
               variant="outline"
               size="sm"
               onClick={() => router.push("/proposals/new/rfp")}
-              className="text-xs mt-1"
+              className="mt-1 text-xs"
             >
               Try it now
             </Button>
@@ -376,7 +349,7 @@ export default function DashboardPage() {
       </div>
 
       {showAnnouncement && (
-        <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5 relative">
+        <div className="relative p-4 mb-6 border rounded-lg border-primary/30 bg-primary/5">
           <button
             onClick={() => setShowAnnouncement(false)}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
@@ -384,10 +357,10 @@ export default function DashboardPage() {
           >
             ✕
           </button>
-          <h3 className="font-semibold text-primary mb-1">
+          <h3 className="mb-1 font-semibold text-primary">
             Enhanced RFP Form Now Available!
           </h3>
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className="mb-2 text-sm text-muted-foreground">
             We've improved our RFP submission process with real-time validation,
             progress tracking, and better file handling.
           </p>
@@ -395,14 +368,14 @@ export default function DashboardPage() {
             variant="outline"
             size="sm"
             onClick={() => router.push("/proposals/new/rfp")}
-            className="text-xs mt-1"
+            className="mt-1 text-xs"
           >
             Try it now
           </Button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <NewProposalCard onClick={() => setIsTypeModalOpen(true)} />
 
         {proposals.map((proposal) => (

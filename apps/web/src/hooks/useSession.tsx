@@ -4,7 +4,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { createClient, getSession, signOut } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
+import { getSession, signOut } from "@/lib/supabase/auth";
 
 // Types for our auth context
 type AuthContextType = {
@@ -70,12 +71,30 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [recoveryAttempted, setRecoveryAttempted] = useState<boolean>(false);
-  const [debugMode, setDebugMode] = useState<boolean>(true); // Enable debug mode
+  const [debugMode, setDebugMode] = useState<boolean>(false); // Disable debug mode by default
+  const refreshAttempts = React.useRef<number>(0);
 
   // Function to refresh the session data
   const refreshSession = async () => {
     try {
-      console.log("[SessionProvider] Refreshing session...");
+      // Only log session refreshes in debug mode to reduce spam
+      if (debugMode) {
+        console.log("[SessionProvider] Refreshing session...");
+      }
+
+      // Keep track of refresh attempts to prevent infinite loops
+      const currentRefreshAttempt = refreshAttempts.current + 1;
+      refreshAttempts.current = currentRefreshAttempt;
+
+      // Limit refresh attempts to prevent infinite loops
+      if (currentRefreshAttempt > 3) {
+        console.warn(
+          "[SessionProvider] Too many refresh attempts, breaking potential loop"
+        );
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await getSession();
 
       if (error) {
@@ -83,29 +102,42 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setError(error);
       }
 
-      console.log(
-        "[SessionProvider] Session status:",
-        data?.session ? "active" : "none"
-      );
+      // Only update the session state if it has changed
+      // This prevents unnecessary re-renders
+      const sessionChanged = 
+        !session && data?.session || 
+        session && !data?.session ||
+        (session?.user?.id !== data?.session?.user?.id);
 
-      // Set session state
-      setSession(data?.session || null);
-      setUser(data?.session?.user || null);
+      if (sessionChanged) {
+        // Set session state
+        setSession(data?.session || null);
+        setUser(data?.session?.user || null);
+        
+        if (debugMode) {
+          console.log("[SessionProvider] Session state updated");
+        }
+      }
 
-      // DEBUG: Always log cookie state
-      const markerExists = hasMarkerCookie();
-      const authTokenExists = hasAuthTokenCookie();
-      console.log("[SessionProvider] Auth marker cookie exists:", markerExists);
-      console.log(
-        "[SessionProvider] Auth token cookie exists:",
-        authTokenExists
-      );
-      console.log("[SessionProvider] All cookies:", document.cookie);
+      // DEBUG: Log cookie state but limit frequency and only in debug mode
+      if (debugMode && currentRefreshAttempt <= 2) {
+        const markerExists = hasMarkerCookie();
+        const authTokenExists = hasAuthTokenCookie();
+        console.log(
+          "[SessionProvider] Auth marker cookie exists:",
+          markerExists
+        );
+        console.log(
+          "[SessionProvider] Auth token cookie exists:",
+          authTokenExists
+        );
+      }
 
-      // If we have auth token cookies but no session, try force relogin
+      // If we have auth token cookies but no session, try to resolve the mismatch
+      // But only once to prevent loops, and only in debug mode
       if (
         !data?.session &&
-        authTokenExists &&
+        hasAuthTokenCookie() &&
         !recoveryAttempted &&
         debugMode
       ) {
@@ -115,9 +147,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // This should resolve the token/session mismatch
         clearAuthCookies();
         setRecoveryAttempted(true);
+
+        // Reset refresh attempts counter after recovery attempt
+        refreshAttempts.current = 0;
       } else if (data?.session) {
-        // We have a session, reset recovery flag
+        // We have a session, reset recovery flag and refresh attempts
         setRecoveryAttempted(false);
+        refreshAttempts.current = 0;
       }
     } catch (error) {
       console.error("[SessionProvider] Error refreshing session:", error);
@@ -142,6 +178,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       clearAuthCookies();
 
       console.log("[SessionProvider] User signed out successfully");
+
+      // Let the middleware handle redirects after sign out
+      // Don't manually redirect here
     } catch (error) {
       console.error("[SessionProvider] Error signing out:", error);
       setError(error as Error);
@@ -152,11 +191,34 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Initial session check and setup auth listener
   useEffect(() => {
+    let isActive = true; // To prevent state updates after unmount
     console.log("[SessionProvider] Setting up auth state");
-    console.log("[SessionProvider] Initial cookies:", document.cookie);
 
     // Get initial session
-    refreshSession();
+    setIsLoading(true);
+    
+    const initSession = async () => {
+      try {
+        if (isActive) {
+          await refreshSession();
+        }
+      } catch (err) {
+        console.error("[SessionProvider] Initial session setup error:", err);
+      }
+    };
+    
+    initSession();
+
+    // Set up a timer to periodically check session status
+    // Use longer interval (15 minutes) to reduce chances of infinite loops
+    const sessionCheckInterval = setInterval(
+      () => {
+        if (isActive) {
+          refreshSession();
+        }
+      },
+      15 * 60 * 1000
+    ); // Check every 15 minutes
 
     // Set up auth state listener
     const supabase = createClient();
@@ -165,14 +227,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (event: string, session: Session | null) => {
-        console.log("[SessionProvider] Auth state changed:", event);
-        console.log(
-          "[SessionProvider] Cookies after state change:",
-          document.cookie
-        );
+        if (debugMode) {
+          console.log("[SessionProvider] Auth state changed:", event);
+        }
+
+        // Skip processing if component is unmounted
+        if (!isActive) return;
 
         if (event === "SIGNED_IN") {
-          console.log("[SessionProvider] User signed in, updating auth state");
+          if (debugMode || !user) {
+            // Only log this when debug is on or user is null (first sign in)
+            console.log("[SessionProvider] User signed in, updating auth state");
+          }
+          
+          // Only update if the session has changed
+          if (!user || user.id !== session?.user.id) {
+            setSession(session);
+            setUser(session?.user);
+          }
+
           // Set marker cookie to track successful sign-in
           document.cookie =
             "auth-session-established=true; path=/; max-age=86400";
@@ -180,20 +253,39 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           console.log("[SessionProvider] User signed out, clearing auth state");
           // Also manually clear cookies on sign out event
           clearAuthCookies();
+
+          // Clear user and session state
+          setUser(null);
+          setSession(null);
+        } else if (event === "TOKEN_REFRESHED") {
+          if (debugMode) {
+            console.log("[SessionProvider] Token refreshed, updating session");
+          }
+          
+          // Only update if the session is different
+          if (session?.access_token !== session?.access_token) {
+            setSession(session);
+            setUser(session?.user);
+          }
         }
 
-        setSession(session);
-        setUser(session?.user || null);
         setIsLoading(false);
       }
     );
 
-    // Cleanup subscription
+    // Cleanup subscription and interval
     return () => {
-      console.log("[SessionProvider] Cleaning up auth subscription");
+      isActive = false;
+      clearInterval(sessionCheckInterval);
       subscription.unsubscribe();
+      
+      if (debugMode) {
+        console.log("[SessionProvider] Cleaning up auth subscription");
+      }
     };
-  }, []);
+  // Only depend on debugMode to prevent infinite re-renders
+  // We don't want to re-run this effect when user/session changes
+  }, [debugMode]);
 
   // Context value
   const value = {

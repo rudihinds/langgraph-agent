@@ -84,12 +84,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Redirect if not authenticated
   useEffect(() => {
+    // Temporarily disabled for debugging
+    /*
     if (authChecked && !isLoading && !user) {
       if (typeof window !== "undefined") {
         localStorage.setItem("redirectAfterLogin", pathname);
       }
       router.replace("/login?redirected=true");
     }
+    */
+
+    // Force auth checked to true
+    setAuthChecked(true);
   }, [user, isLoading, router, authChecked, pathname]);
 
   // Helper function to check for auth cookie
@@ -114,9 +120,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // If not authenticated, the useEffect will handle redirect
+  // Temporarily disabled for debugging
+  /*
   if (!user) {
     return null;
   }
+  */
 
   return (
     <div className="flex h-screen bg-background">
@@ -270,8 +279,10 @@ function UserProfileMenu({
   user: any;
   onSignOut: () => Promise<void>;
 }) {
-  const userInitials =
-    user.user_metadata?.name?.charAt(0) || user.email?.charAt(0) || "U";
+  // Add null checks to avoid errors when user is null during logout
+  const userInitials = user
+    ? user.user_metadata?.name?.charAt(0) || user.email?.charAt(0) || "?"
+    : "?";
 
   const handleSignOut = async () => {
     await onSignOut();
@@ -283,8 +294,8 @@ function UserProfileMenu({
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
             <AvatarImage
-              src={user.user_metadata?.avatar_url}
-              alt={user.email || ""}
+              src={user?.user_metadata?.avatar_url}
+              alt={user?.email || ""}
             />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
@@ -293,9 +304,11 @@ function UserProfileMenu({
       <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.email}</p>
+            <p className="text-sm font-medium leading-none">
+              {user?.email || "User"}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.user_metadata?.name || user.email}
+              {user?.user_metadata?.name || user?.email || "User"}
             </p>
           </div>
         </DropdownMenuLabel>

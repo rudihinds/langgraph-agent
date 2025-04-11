@@ -1,5 +1,71 @@
 {
-  "node": {},
+  "node": {
+    "7f2a71cfa687e21f4264bac815c2e82ea210cfab30": {
+      "workers": {
+        "app/dashboard/page": {
+          "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f2a71cfa687e21f4264bac815c2e82ea210cfab30%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/api/auth/sign-out/route": {
+          "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f2a71cfa687e21f4264bac815c2e82ea210cfab30%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/auth/callback/route": {
+          "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f2a71cfa687e21f4264bac815c2e82ea210cfab30%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%2C%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fuser-management.ts%22%2C%5B%7B%22id%22%3A%2240d416d2dac66021ee50146e4674c799e7bf4fdf93%22%2C%22exportedName%22%3A%22ensureUserExists%22%7D%2C%7B%22id%22%3A%22609606b8f3fd0457622c23b5f2688a1d5805852845%22%2C%22exportedName%22%3A%22syncUserToDatabase%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/dashboard/page": "rsc",
+        "app/api/auth/sign-out/route": "rsc",
+        "app/auth/callback/route": "rsc"
+      }
+    },
+    "40d416d2dac66021ee50146e4674c799e7bf4fdf93": {
+      "workers": {
+        "app/auth/callback/route": {
+          "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f2a71cfa687e21f4264bac815c2e82ea210cfab30%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%2C%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fuser-management.ts%22%2C%5B%7B%22id%22%3A%2240d416d2dac66021ee50146e4674c799e7bf4fdf93%22%2C%22exportedName%22%3A%22ensureUserExists%22%7D%2C%7B%22id%22%3A%22609606b8f3fd0457622c23b5f2688a1d5805852845%22%2C%22exportedName%22%3A%22syncUserToDatabase%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/auth/callback/route": "rsc"
+      }
+    },
+    "609606b8f3fd0457622c23b5f2688a1d5805852845": {
+      "workers": {
+        "app/auth/callback/route": {
+          "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f2a71cfa687e21f4264bac815c2e82ea210cfab30%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%2C%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fuser-management.ts%22%2C%5B%7B%22id%22%3A%2240d416d2dac66021ee50146e4674c799e7bf4fdf93%22%2C%22exportedName%22%3A%22ensureUserExists%22%7D%2C%7B%22id%22%3A%22609606b8f3fd0457622c23b5f2688a1d5805852845%22%2C%22exportedName%22%3A%22syncUserToDatabase%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/auth/callback/route": "rsc"
+      }
+    },
+    "4064c036febc0bc0e840de6dafdd2fe8d69061a380": {
+      "workers": {
+        "app/proposals/new/application/page": {
+          "moduleId": "(action-browser)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fapp%2Fapi%2Fproposals%2Factions.ts%22%2C%5B%7B%22id%22%3A%224064c036febc0bc0e840de6dafdd2fe8d69061a380%22%2C%22exportedName%22%3A%22uploadProposalFile%22%7D%2C%7B%22id%22%3A%224098e6f7a0281174f1c0666899f732311c19db2a6e%22%2C%22exportedName%22%3A%22createProposal%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/proposals/new/application/page": "action-browser"
+      }
+    },
+    "4098e6f7a0281174f1c0666899f732311c19db2a6e": {
+      "workers": {
+        "app/proposals/new/application/page": {
+          "moduleId": "(action-browser)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fapp%2Fapi%2Fproposals%2Factions.ts%22%2C%5B%7B%22id%22%3A%224064c036febc0bc0e840de6dafdd2fe8d69061a380%22%2C%22exportedName%22%3A%22uploadProposalFile%22%7D%2C%7B%22id%22%3A%224098e6f7a0281174f1c0666899f732311c19db2a6e%22%2C%22exportedName%22%3A%22createProposal%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/proposals/new/application/page": "action-browser"
+      }
+    }
+  },
   "edge": {},
   "encryptionKey": "bJfeJdOiDDn8MHcewt8EbXEwWsIJGn2fQg3METa1/pY="
 }

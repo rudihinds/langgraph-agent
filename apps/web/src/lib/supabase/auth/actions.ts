@@ -1,14 +1,14 @@
 /**
  * Auth actions for Supabase authentication
  */
-import { createClient } from '../client';
-import { getRedirectURL } from './utils';
-import { SignInResult, SignOutResult } from '../types';
+import { createClient } from "../client";
+import { getRedirectURL } from "./utils";
+import { SignInResult, SignOutResult } from "../types";
 
 /**
  * Initiates the sign-in with Google OAuth flow
  * This redirects the user to Google's authentication page
- * 
+ *
  * @returns {Promise<SignInResult>} The result of the sign-in attempt
  */
 export async function signIn(): Promise<SignInResult> {
@@ -48,9 +48,12 @@ export async function signIn(): Promise<SignInResult> {
     return { data, error: null };
   } catch (error) {
     console.error("[Auth] Error in signIn:", error);
-    return { 
-      data: null, 
-      error: error instanceof Error ? error : new Error('Unknown error during sign-in') 
+    return {
+      data: null,
+      error:
+        error instanceof Error
+          ? error
+          : new Error("Unknown error during sign-in"),
     };
   }
 }
@@ -58,14 +61,16 @@ export async function signIn(): Promise<SignInResult> {
 /**
  * Signs out the current user on both client and server
  * Makes a server-side request to clear cookies and then signs out on the client
- * 
+ *
  * @param {string} redirectTo - Optional URL to redirect to after signout (defaults to /login)
  * @returns {Promise<SignOutResult>} Result of the sign-out operation
  */
-export async function signOut(redirectTo: string = "/login"): Promise<SignOutResult> {
+export async function signOut(
+  redirectTo: string = "/login"
+): Promise<SignOutResult> {
   try {
     // First call server-side sign-out endpoint to clear cookies
-    const response = await fetch("/api/auth/sign-out", { 
+    const response = await fetch("/api/auth/sign-out", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -90,7 +95,7 @@ export async function signOut(redirectTo: string = "/login"): Promise<SignOutRes
     if (typeof window !== "undefined") {
       window.location.href = redirectTo;
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error("[Auth] Error in signOut:", error);

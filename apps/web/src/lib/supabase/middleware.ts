@@ -3,15 +3,52 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { ENV } from "@/env";
 
+// Protected paths that require authentication
+const PROTECTED_PATHS = ["/dashboard", "/proposals", "/account", "/settings"];
+
+// Public paths that are always accessible
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/auth",
+  "/api/auth",
+  "/features",
+  "/pricing",
+  "/help",
+  "/_next",
+  "/public",
+];
+
+// Check if a path should be protected by authentication
+function isProtectedPath(path: string): boolean {
+  return PROTECTED_PATHS.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+}
+
+// Check if a path is public and doesn't need authentication
+function isPublicPath(path: string): boolean {
+  // Static assets are always public
+  if (path.match(/\.(ico|png|jpg|jpeg|svg|css|js)$/)) {
+    return true;
+  }
+
+  return PUBLIC_PATHS.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+}
+
 /**
  * Update the auth session for requests
  * This can be used in middleware to handle auth session refreshing
- * 
+ *
  * @param request - The incoming request object
  * @returns NextResponse with updated cookies
  */
 export async function updateSession(request: NextRequest) {
   try {
+    const path = request.nextUrl.pathname;
+
     // Create an unmodified response
     let response = NextResponse.next({
       request: {
@@ -46,50 +83,38 @@ export async function updateSession(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession();
 
-    // Check if the request is for a protected route
-    const path = request.nextUrl.pathname;
-    
-    // These paths are always allowed even without authentication
-    const isPublicPath = 
-      path.startsWith("/login") || 
-      path.startsWith("/auth/") || 
-      path.startsWith("/api/auth/") ||
-      path === "/" ||  // Landing page
-      path.startsWith("/_next/") || 
-      path.startsWith("/public/") ||
-      path.match(/\.(ico|png|jpg|jpeg|svg|css|js)$/);
+    // Check if the path requires authentication
+    const needsAuth = isProtectedPath(path);
+    const isPublic = isPublicPath(path);
 
-    // Protect routes that aren't public
-    if (!session && !isPublicPath) {
-      // Redirect to login if not authenticated
+    // Handle protected routes that require authentication
+    if (needsAuth && !session) {
+      console.log(
+        `[Middleware] Redirecting unauthenticated user from protected path: ${path}`
+      );
+
+      // Redirect to login
       const redirectUrl = new URL("/login", request.url);
-      
-      // Optionally store the original URL to redirect back after login
-      if (path !== "/login") {
-        redirectUrl.searchParams.set("redirect", encodeURIComponent(path));
-      }
 
-      // Perform the redirect
+      // Store the original URL to redirect back after login
+      redirectUrl.searchParams.set("redirect", encodeURIComponent(path));
+
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Log auth status but not sensitive details (helpful for debugging)
-    if (session) {
-      // If user is already logged in and trying to access login page, redirect to dashboard
-      if (path.startsWith("/login")) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-      
-      console.log("[Auth] Authenticated request:", path);
-    } else if (!isPublicPath) {
-      console.log("[Auth] Unauthenticated request to protected route:", path);
+    // Redirect authenticated users from login page to dashboard
+    if (session && path === "/login") {
+      console.log(
+        "[Middleware] Redirecting authenticated user from login to dashboard"
+      );
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     return response;
   } catch (e) {
     // If there's an error, log it but don't break the application
     console.error("[Middleware] Error in auth middleware:", e);
-    
+
     // Return unmodified response to avoid breaking the app
     return NextResponse.next({
       request: {
