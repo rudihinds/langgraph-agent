@@ -5,7 +5,7 @@
  * as part of Task #14 - Error Handling and Resilience System
  */
 
-import { StateGraph } from "@langchain/langgraph";
+import { StateGraph, CompiledStateGraph } from "@langchain/langgraph";
 import {
   HumanMessage,
   SystemMessage,
@@ -14,6 +14,15 @@ import {
 import { Runnable, RunnableConfig } from "@langchain/core/runnables";
 import { LLMChain } from "langchain/chains";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import {
+  ErrorCategory,
+  ErrorEvent,
+  createErrorEvent,
+  shouldRetry,
+  calculateBackoff,
+  createErrorResponseMessage,
+  addErrorToState,
+} from "./error-classification.js";
 
 /**
  * Wraps a StateGraph with error handling to gracefully handle schema extraction errors
@@ -22,10 +31,10 @@ import { BaseChatModel } from "@langchain/core/language_models/chat_models";
  * @param onError - Optional error handler callback
  * @returns A function that returns a compiled graph with error handling
  */
-export function withErrorHandling<T, S>(
+export function withErrorHandling(
   graph: StateGraph<any>,
   onError?: (err: Error) => void
-): () => Runnable<T, S> {
+): () => CompiledStateGraph<any, any, string, any, any, any> {
   return () => {
     try {
       return graph.compile();
@@ -91,15 +100,26 @@ export function createRetryingLLM(
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        if (attempt < maxRetries) {
+        // Create an error event for better classification
+        const errorEvent = createErrorEvent(lastError, "llm-invoke", attempt);
+
+        // Check if we should retry based on error type
+        if (
+          attempt < maxRetries &&
+          shouldRetry(errorEvent, attempt, maxRetries)
+        ) {
           console.warn(
             `LLM call failed (attempt ${attempt + 1}/${maxRetries + 1}): ${lastError.message}`
           );
+          console.warn(`Error category: ${errorEvent.category}`);
           console.warn(`Retrying in ${delay}ms...`);
 
           // Wait before retrying with exponential backoff
           await new Promise((resolve) => setTimeout(resolve, delay));
           delay *= backoffFactor;
+        } else {
+          // If we shouldn't retry, break out of the loop
+          break;
         }
       }
     }
@@ -120,7 +140,7 @@ export function createRetryingLLM(
  * @param fallbackBehavior - Optional fallback behavior when error occurs
  * @returns A wrapper function that handles errors for the node
  */
-export function createNodeErrorHandler<T, S>(
+export function createNodeErrorHandler<T extends Record<string, any>, S>(
   nodeName: string,
   fallbackBehavior?: (state: T, error: Error) => Promise<Partial<S>>
 ): (
@@ -132,6 +152,10 @@ export function createNodeErrorHandler<T, S>(
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       console.error(`Error in LangGraph node '${nodeName}':`, err);
+
+      // Create error event and classify
+      const errorEvent = createErrorEvent(err, nodeName);
+      console.error(`Error category: ${errorEvent.category}`);
 
       // Try to use fallback behavior if provided
       if (fallbackBehavior) {
@@ -146,8 +170,112 @@ export function createNodeErrorHandler<T, S>(
         }
       }
 
-      // If no fallback or fallback failed, rethrow or return minimal valid state
+      // Update state with error information
+      let updatedState = { ...state };
+      try {
+        // Add error to state if possible - don't crash if state can't accept it
+        const stateWithError = addErrorToState(state, err, nodeName);
+        updatedState = { ...state, ...stateWithError } as T;
+      } catch (stateError) {
+        console.warn(
+          `Could not update state with error information:`,
+          stateError
+        );
+      }
+
+      // For specific error categories, provide appropriate user-facing messages
+      if (errorEvent.category === ErrorCategory.CONTEXT_WINDOW_EXCEEDED) {
+        // Context window exceeded requires special handling
+        return {
+          ...updatedState,
+          messages: [
+            ...(updatedState.messages || []),
+            createErrorResponseMessage(errorEvent),
+          ],
+        } as unknown as Partial<S>;
+      }
+
+      // Rethrow the error
       throw err;
     }
   };
+}
+
+/**
+ * Creates a node wrapper that handles retries within the LangGraph
+ *
+ * @param nodeName - Name of the node for identification
+ * @param maxRetries - Maximum retry attempts
+ * @returns A wrapper function that adds retry capabilities
+ */
+export function createRetryingNode<T extends Record<string, any>, S>(
+  nodeName: string,
+  maxRetries: number = 3
+): (
+  fn: (state: T) => Promise<Partial<S>>
+) => (state: T) => Promise<Partial<S>> {
+  return (fn) => async (state: T) => {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn(state);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+
+        // Create error event
+        const errorEvent = createErrorEvent(err, nodeName, attempt);
+        console.error(
+          `Error in node '${nodeName}' (attempt ${attempt + 1}/${maxRetries + 1}):`,
+          err
+        );
+        console.error(`Error category: ${errorEvent.category}`);
+
+        // Store the error for potential later throw
+        lastError = err;
+
+        // Check if we should retry based on error characteristics
+        if (
+          attempt < maxRetries &&
+          shouldRetry(errorEvent, attempt, maxRetries)
+        ) {
+          // Calculate backoff time with jitter
+          const delay = calculateBackoff(attempt);
+          console.warn(`Retrying node '${nodeName}' in ${delay}ms...`);
+
+          // Implement backoff
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          // We shouldn't retry, break out of loop
+          break;
+        }
+      }
+    }
+
+    // If we get here, we've exhausted retries or determined we shouldn't retry
+    throw lastError || new Error(`Unknown error in node '${nodeName}'`);
+  };
+}
+
+/**
+ * Combines error handling and retry logic for nodes
+ *
+ * @param nodeName - Name of the node for identification
+ * @param maxRetries - Maximum retry attempts
+ * @param fallbackBehavior - Optional fallback if all retries fail
+ * @returns A wrapper function with both error handling and retry logic
+ */
+export function withNodeResilience<T extends Record<string, any>, S>(
+  nodeName: string,
+  maxRetries: number = 3,
+  fallbackBehavior?: (state: T, error: Error) => Promise<Partial<S>>
+): (
+  fn: (state: T) => Promise<Partial<S>>
+) => (state: T) => Promise<Partial<S>> {
+  // Compose the retry wrapper with the error handler
+  const retryWrapper = createRetryingNode<T, S>(nodeName, maxRetries);
+  const errorHandler = createNodeErrorHandler<T, S>(nodeName, fallbackBehavior);
+
+  // Apply both wrappers
+  return (fn) => errorHandler(retryWrapper(fn));
 }
