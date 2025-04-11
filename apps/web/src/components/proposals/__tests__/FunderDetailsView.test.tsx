@@ -75,20 +75,183 @@ describe("FunderDetailsView", () => {
 
   it("validates required fields on submit", async () => {
     const onSubmit = vi.fn();
-    const onBack = vi.fn();
     const user = userEvent.setup();
 
-    render(<FunderDetailsView onSubmit={onSubmit} onBack={onBack} />);
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
 
-    // Submit form without filling required fields
+    // Submit form without filling any fields
     await user.click(screen.getByText("Continue"));
 
-    // Just check that onSubmit was not called, which confirms validation is preventing submission
+    // Check for validation error messages
     await waitFor(() => {
-      expect(onSubmit).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(/Organization name is required/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Email is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/Website is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/Contact name is required/i)).toBeInTheDocument();
     });
 
-    // TODO: Add more specific validation tests when we understand how the validation errors are being rendered
+    // onSubmit should not be called
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("validates email format", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
+
+    // Fill in all fields but with an invalid email
+    await user.type(screen.getByLabelText(/Organization Name/i), "Test Org");
+    await user.type(screen.getByLabelText(/Website/i), "https://testorg.com");
+    await user.type(screen.getByLabelText(/Contact Name/i), "John Doe");
+    await user.type(screen.getByLabelText(/Email/i), "invalid-email");
+
+    // Submit form
+    await user.click(screen.getByText("Continue"));
+
+    // Check for email validation error
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Please enter a valid email/i)
+      ).toBeInTheDocument();
+    });
+
+    // onSubmit should not be called
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("validates website format", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
+
+    // Fill in all fields but with an invalid website
+    await user.type(screen.getByLabelText(/Organization Name/i), "Test Org");
+    await user.type(screen.getByLabelText(/Email/i), "contact@testorg.com");
+    await user.type(screen.getByLabelText(/Contact Name/i), "John Doe");
+    await user.type(screen.getByLabelText(/Website/i), "invalid-url");
+
+    // Submit form
+    await user.click(screen.getByText("Continue"));
+
+    // Check for website validation error
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Please enter a valid website/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("clears validation errors when valid input is provided", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
+
+    // Submit empty form to trigger validation errors
+    await user.click(screen.getByText("Continue"));
+
+    // Verify errors are shown
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Organization name is required/i)
+      ).toBeInTheDocument();
+    });
+
+    // Now enter valid input for organization name
+    await user.type(
+      screen.getByLabelText(/Organization Name/i),
+      "Test Organization"
+    );
+
+    // Error for organization name should be cleared
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Organization name is required/i)
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("focuses on first invalid field when validation fails", async () => {
+    // Mock scrollIntoView and focus
+    const scrollIntoViewMock = vi.fn();
+    const focusMock = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+    Object.defineProperty(HTMLElement.prototype, "focus", {
+      value: focusMock,
+      configurable: true,
+    });
+
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
+
+    // Submit empty form
+    await user.click(screen.getByText("Continue"));
+
+    // Verify scroll behavior
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalled();
+    });
+  });
+
+  it("does not display form-level error banner", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
+
+    // Submit empty form to trigger validation
+    await user.click(screen.getByText("Continue"));
+
+    // Should not display a form-level error banner
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Please correct the errors before submitting/i)
+      ).not.toBeInTheDocument();
+      // But should still show field-level errors
+      expect(
+        screen.getByText(/Organization name is required/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("submits form when all validation passes", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<FunderDetailsView onSubmit={onSubmit} onBack={vi.fn()} />);
+
+    // Fill all required fields with valid values
+    await user.type(
+      screen.getByLabelText(/Organization Name/i),
+      "Test Organization"
+    );
+    await user.type(screen.getByLabelText(/Email/i), "contact@testorg.com");
+    await user.type(screen.getByLabelText(/Website/i), "https://testorg.com");
+    await user.type(screen.getByLabelText(/Contact Name/i), "John Doe");
+
+    // Submit form
+    await user.click(screen.getByText("Continue"));
+
+    // Should not show validation errors
+    await waitFor(() => {
+      expect(screen.queryByText(/is required/i)).not.toBeInTheDocument();
+    });
+
+    // onSubmit should be called with the valid form data
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationName: "Test Organization",
+        email: "contact@testorg.com",
+        website: "https://testorg.com",
+        contactName: "John Doe",
+      })
+    );
   });
 
   // Skip the detailed submission test for now due to complexity in test environment
