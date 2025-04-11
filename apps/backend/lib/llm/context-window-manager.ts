@@ -11,6 +11,16 @@ import { EventEmitter } from "events";
 import { Logger } from "../../logger.js";
 import { LLMFactory } from "./llm-factory.js";
 import { LLMCompletionOptions } from "./types.js";
+import { BaseMessage } from "@langchain/core/messages";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { ErrorCategory, createErrorEvent } from "./error-classification.js";
+// Import functions from the message-truncation module
+import {
+  estimateTokenCount,
+  estimateMessageTokens,
+  truncateMessages,
+  TruncateMessagesOptions,
+} from "./message-truncation.js";
 
 /**
  * Interface for message objects
@@ -195,168 +205,211 @@ export class ContextWindowManager extends EventEmitter {
       .map((message) => `${message.role}: ${message.content}`)
       .join("\n\n");
 
-    // Get the LLM client for summarization
-    const llmFactory = LLMFactory.getInstance();
-    const client = llmFactory.getClientForModel(this.summarizationModel);
-
-    this.logDebug(`Summarizing conversation with ${this.summarizationModel}`);
-
-    const completionOptions: LLMCompletionOptions = {
-      model: this.summarizationModel,
-      messages: [
+    try {
+      const llmFactory = LLMFactory.getInstance();
+      const response = await llmFactory.getCompletion(
         {
-          role: "system" as const,
-          content:
-            "You are a conversation summarizer. Your task is to summarize the key points of the conversation. Focus on capturing important factual information, any specific tasks or requirements mentioned, and key questions that were asked. Keep your summary clear, concise, and informative.",
+          systemPrompt: `You are a highly efficient summarization assistant. 
+          Summarize the following conversation accurately, preserving all important details.
+          Make the summary clear, concise, and in the third person.
+          Focus on the key points, decisions, and information shared.`,
+          userPrompt: `Please summarize this conversation:\n\n${conversationText}`,
         },
-        {
-          role: "user" as const,
-          content: `Please summarize the following conversation. Focus on preserving context about specific tasks, data, or requirements mentioned:\n\n${conversationText}`,
-        },
-      ],
-    };
+        this.summarizationModel
+      );
 
-    // Generate the summary
-    const completion = await client.completion(completionOptions);
-
-    // Return the summary as a special message
-    return {
-      role: "assistant",
-      content: `Conversation summary: ${completion.content}`,
-      isSummary: true,
-    };
+      return {
+        role: "assistant",
+        content: response.trim(),
+        isSummary: true,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error summarizing conversation: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      // Fallback summary
+      return {
+        role: "assistant",
+        content: `Conversation summary: ${nonSystemMessages.length} messages exchanged.`,
+        isSummary: true,
+      };
+    }
   }
 
   /**
-   * Prepare messages to fit within the context window.
-   * May summarize or truncate messages as necessary.
+   * Prepare messages for a model by managing context window
+   * Will summarize or truncate messages if they exceed the token limit
    */
   public async prepareMessages(
     messages: Message[],
     modelId: string
   ): Promise<PreparedMessages> {
-    const llmFactory = LLMFactory.getInstance();
-    const model = llmFactory.getModelById(modelId);
-
-    if (!model) {
-      throw new Error(`Model ${modelId} not found`);
+    if (!messages.length) {
+      return { messages: [], wasSummarized: false, totalTokens: 0 };
     }
 
-    // Calculate available tokens (context window minus reserved tokens)
-    const availableTokens = model.contextWindow - this.reservedTokens;
-    this.logDebug(
-      `Model: ${modelId}, Context window: ${model.contextWindow}, Available tokens: ${availableTokens}`
-    );
+    try {
+      // Calculate tokens for the current message set
+      const totalTokens = await this.calculateTotalTokens(messages, modelId);
+      this.logDebug(`Current conversation is ${totalTokens} tokens`);
 
-    // Calculate total tokens in current messages
-    const totalTokens = await this.calculateTotalTokens(messages, modelId);
-    this.logDebug(
-      `Total tokens in ${messages.length} messages: ${totalTokens}`
-    );
-
-    // If messages fit within available tokens, return them as is
-    if (totalTokens <= availableTokens) {
-      this.logDebug("Messages fit within available tokens");
-      return {
-        messages,
-        wasSummarized: false,
-        totalTokens,
-      };
-    }
-
-    // If total tokens exceed summarization threshold, summarize older messages
-    if (totalTokens > this.maxTokensBeforeSummarization) {
-      this.logDebug(
-        `Total tokens (${totalTokens}) exceed summarization threshold (${this.maxTokensBeforeSummarization}). Summarizing.`
+      // Extract system messages (always preserved)
+      const systemMessages = messages.filter(
+        (message) => message.role === "system"
+      );
+      const nonSystemMessages = messages.filter(
+        (message) => message.role !== "system"
       );
 
-      // Calculate split point based on summarizationRatio
-      // e.g., with 10 messages and ratio 0.5, we summarize the oldest 5 messages
-      const splitIndex = Math.max(
-        1,
-        Math.floor(messages.length * this.summarizationRatio)
-      );
-
-      // Split messages into those to summarize and those to keep
-      const systemMessages = messages.filter((m) => m.role === "system");
-      const nonSystemMessages = messages.filter((m) => m.role !== "system");
-
-      const messagesToSummarize = nonSystemMessages.slice(0, splitIndex);
-      const messagesToKeep = nonSystemMessages.slice(splitIndex);
+      const llmFactory = LLMFactory.getInstance();
+      const modelInfo = llmFactory.getModelInfo(modelId);
+      const maxTokens = modelInfo.contextWindow - this.reservedTokens; // Leave room for response
 
       this.logDebug(
-        `Summarizing ${messagesToSummarize.length} messages out of ${nonSystemMessages.length} total`
+        `Model ${modelId} has ${maxTokens} usable tokens (${modelInfo.contextWindow} - ${this.reservedTokens} reserved)`
       );
 
-      // Create an array with: system message(s) + messages to summarize
-      const messagesForSummarization = [
-        ...systemMessages,
-        ...messagesToSummarize,
-      ];
-
-      // Generate summary
-      const summaryMessage = await this.summarizeConversation(
-        messagesForSummarization
-      );
-
-      // Create new array with: system message(s) + summary + messages to keep
-      const preparedMessages = [
-        ...systemMessages,
-        summaryMessage,
-        ...messagesToKeep,
-      ];
-
-      // Verify new total fits within context window
-      const newTotalTokens = await this.calculateTotalTokens(
-        preparedMessages,
-        modelId
-      );
-
-      // If still too large, truncate
-      if (newTotalTokens > availableTokens) {
+      // If we're under the limit, return as-is
+      if (totalTokens <= maxTokens) {
         this.logDebug(
-          `Summarized messages still exceed available tokens (${newTotalTokens} > ${availableTokens}). Truncating.`
+          `Conversation fits within context window (${totalTokens} <= ${maxTokens})`
         );
-        return {
-          messages: await this.truncateMessages(
-            preparedMessages,
-            modelId,
-            availableTokens
-          ),
-          wasSummarized: true,
-          totalTokens: newTotalTokens,
-        };
+        return { messages, wasSummarized: false, totalTokens };
       }
 
+      // We're over the limit. First, check if we should summarize
+      // Only summarize if conversation is over the summarization threshold
+      if (totalTokens >= this.maxTokensBeforeSummarization) {
+        this.logDebug(
+          `Conversation exceeds summarization threshold (${totalTokens} >= ${this.maxTokensBeforeSummarization})`
+        );
+
+        // Determine how many messages to summarize (based on summarizationRatio)
+        const messagesToSummarizeCount = Math.max(
+          1,
+          Math.floor(nonSystemMessages.length * this.summarizationRatio)
+        );
+        this.logDebug(
+          `Will summarize ${messagesToSummarizeCount} of ${nonSystemMessages.length} messages`
+        );
+
+        // Messages to be summarized (older messages)
+        const messagesToSummarize = nonSystemMessages.slice(
+          0,
+          messagesToSummarizeCount
+        );
+
+        // Messages to keep as-is (newer messages)
+        const messagesToKeep = nonSystemMessages.slice(
+          messagesToSummarizeCount
+        );
+
+        // Create summary
+        const summary = await this.summarizeConversation(messagesToSummarize);
+        this.logDebug(
+          `Created summary: ${summary.content.substring(0, 50)}...`
+        );
+
+        // Build the new message array
+        const summarizedMessages = [
+          ...systemMessages,
+          summary,
+          ...messagesToKeep,
+        ];
+
+        // Check if we're still over the limit
+        const summarizedTokens = await this.calculateTotalTokens(
+          summarizedMessages,
+          modelId
+        );
+        this.logDebug(
+          `After summarization: ${summarizedTokens} tokens (limit: ${maxTokens})`
+        );
+
+        // If still over limit, truncate
+        if (summarizedTokens > maxTokens) {
+          this.logDebug(
+            `Still exceeding token limit after summarization, will truncate`
+          );
+          const truncatedMessages = await this.truncateMessages(
+            summarizedMessages,
+            modelId,
+            maxTokens
+          );
+          const finalTokens = await this.calculateTotalTokens(
+            truncatedMessages,
+            modelId
+          );
+
+          return {
+            messages: truncatedMessages,
+            wasSummarized: true,
+            totalTokens: finalTokens,
+          };
+        }
+
+        return {
+          messages: summarizedMessages,
+          wasSummarized: true,
+          totalTokens: summarizedTokens,
+        };
+      } else {
+        // Over the limit but under summarization threshold, just truncate
+        this.logDebug(
+          `Conversation exceeds token limit but under summarization threshold, truncating directly`
+        );
+        const truncatedMessages = await this.truncateMessages(
+          messages,
+          modelId,
+          maxTokens
+        );
+        const truncatedTokens = await this.calculateTotalTokens(
+          truncatedMessages,
+          modelId
+        );
+
+        return {
+          messages: truncatedMessages,
+          wasSummarized: false,
+          totalTokens: truncatedTokens,
+        };
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error preparing messages: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      // If anything fails, truncate aggressively as a fallback
+      const systemMessages = messages.filter(
+        (message) => message.role === "system"
+      );
+      const lastMessage = messages[messages.length - 1];
+      const criticalMessages = [
+        ...systemMessages,
+        lastMessage, // Always include the last message
+      ];
+
       return {
-        messages: preparedMessages,
-        wasSummarized: true,
-        totalTokens: newTotalTokens,
+        messages: criticalMessages,
+        wasSummarized: false,
+        totalTokens: -1, // Mark as unknown
       };
     }
-
-    // If total tokens exceed available tokens but are below summarization threshold, truncate
-    this.logDebug(
-      `Total tokens (${totalTokens}) exceed available tokens (${availableTokens}) but below summarization threshold. Truncating.`
-    );
-
-    return {
-      messages: await this.truncateMessages(messages, modelId, availableTokens),
-      wasSummarized: false,
-      totalTokens,
-    };
   }
 
   /**
-   * Truncate messages to fit within available tokens.
-   * Always preserves system messages and most recent non-system messages.
+   * Truncate messages to fit within the available tokens
+   * Preserves system messages and the most recent messages
    */
   private async truncateMessages(
     messages: Message[],
     modelId: string,
     availableTokens: number
   ): Promise<Message[]> {
-    // Separate system and non-system messages
+    // Always keep system messages and the most recent message
     const systemMessages = messages.filter(
       (message) => message.role === "system"
     );
@@ -364,44 +417,79 @@ export class ContextWindowManager extends EventEmitter {
       (message) => message.role !== "system"
     );
 
-    // If no non-system messages, return just system messages
-    if (nonSystemMessages.length === 0) {
-      return systemMessages;
+    // If we only have system messages and zero or one non-system message,
+    // nothing to truncate (this is our minimum working set)
+    if (nonSystemMessages.length <= 1) {
+      return messages;
     }
 
-    // Calculate token count for system messages
+    // Calculate tokens for system messages
     const systemTokens = await this.calculateTotalTokens(
       systemMessages,
       modelId
     );
-    const remainingTokens = availableTokens - systemTokens;
+    this.logDebug(`System messages use ${systemTokens} tokens`);
 
+    // Ensure we always keep the most recent non-system message
+    const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
+    const lastMessageTokens = lastMessage.tokenCount || 0;
+
+    // Calculate how many tokens we have for the remaining messages
+    const remainingTokens = availableTokens - systemTokens - lastMessageTokens;
     this.logDebug(
-      `System messages use ${systemTokens} tokens. Remaining for non-system: ${remainingTokens}`
+      `Have ${remainingTokens} tokens available for middle messages`
     );
 
-    // Approach: Keep as many recent messages as possible
-    const result = [...systemMessages];
-    let currentTokens = systemTokens;
+    if (remainingTokens <= 0) {
+      // If we can't fit anything else, return just system messages and the last message
+      return [...systemMessages, lastMessage];
+    }
 
-    // Add messages from newest to oldest until we can't add more
-    for (let i = nonSystemMessages.length - 1; i >= 0; i--) {
+    // Keep as many recent messages as possible, working backwards from the second-most recent
+    const keptMessages = [...systemMessages];
+    let usedTokens = systemTokens;
+
+    // Start with the most recent message
+    keptMessages.push(lastMessage);
+    usedTokens += lastMessageTokens;
+
+    // Add as many earlier messages as will fit, working backwards
+    for (let i = nonSystemMessages.length - 2; i >= 0; i--) {
       const message = nonSystemMessages[i];
       const messageTokens = message.tokenCount || 0;
 
-      if (currentTokens + messageTokens <= availableTokens) {
-        result.unshift(message); // Add at beginning to maintain order
-        currentTokens += messageTokens;
+      if (usedTokens + messageTokens <= availableTokens) {
+        keptMessages.push(message);
+        usedTokens += messageTokens;
       } else {
-        // Can't fit this message
+        // Can't fit any more messages
         break;
       }
     }
 
-    this.logDebug(
-      `Truncated to ${result.length} messages using approximately ${currentTokens} tokens`
-    );
+    // Sort messages back into original order
+    keptMessages.sort((a, b) => {
+      // System messages always go first
+      if (a.role === "system" && b.role !== "system") return -1;
+      if (a.role !== "system" && b.role === "system") return 1;
 
-    return result;
+      // Then place messages in the order they appear in the original array
+      const aIndex = messages.indexOf(a);
+      const bIndex = messages.indexOf(b);
+      return aIndex - bIndex;
+    });
+
+    this.logDebug(
+      `Truncated messages from ${messages.length} to ${keptMessages.length}`
+    );
+    return keptMessages;
   }
 }
+
+// Re-export types and functions from message-truncation.ts
+export {
+  estimateTokenCount,
+  estimateMessageTokens,
+  truncateMessages,
+  TruncateMessagesOptions,
+} from "./message-truncation.js";
