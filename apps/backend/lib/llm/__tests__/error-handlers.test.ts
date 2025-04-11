@@ -1,398 +1,478 @@
 /**
- * Test suite for error handling and resilience wrappers
+ * Test suite for error handling utilities
+ *
+ * Part of Task #14.4: Implement Base Error Classification and Retry Mechanisms
  */
 
-import { StateGraph, Annotation } from "@langchain/langgraph";
+import { StateGraph, END } from "@langchain/langgraph";
 import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { z } from "zod";
+import { Runnable, RunnableConfig } from "@langchain/core/runnables";
 
 import {
   withErrorHandling,
   createRetryingLLM,
   createNodeErrorHandler,
   createRetryingNode,
-  withNodeResilience,
 } from "../error-handlers.js";
-import { ErrorCategory, createErrorEvent } from "../error-classification.js";
+import {
+  ErrorCategory,
+  ErrorEvent,
+  ErrorStateAnnotation,
+  createErrorEvent,
+} from "../error-classification.js";
+import {
+  LLMClient,
+  LLMCompletionOptions,
+  LLMCompletionResponse,
+} from "../types.js";
 
-// Mock BaseChatModel implementation for testing
-class MockChatModel extends BaseChatModel {
-  failCount: number;
-  failType: string;
-  callCount: number;
-
-  constructor(failCount: number = 0, failType: string = "generic") {
-    super({});
-    this.failCount = failCount;
-    this.failType = failType;
-    this.callCount = 0;
-  }
-
-  _llmType(): string {
-    return "mock-llm";
-  }
-
-  async _generate(_messages: BaseMessage[]): Promise<any> {
-    throw new Error("Not implemented");
-  }
-
-  async invoke(messages: BaseMessage[]): Promise<BaseMessage> {
-    this.callCount++;
-
-    if (this.callCount <= this.failCount) {
-      switch (this.failType) {
-        case "rate-limit":
-          throw new Error("Rate limit exceeded");
-        case "context-window":
-          throw new Error("Context length exceeded");
-        case "unavailable":
-          throw new Error("Service unavailable");
-        default:
-          throw new Error("Failed for testing");
-      }
-    }
-
-    return new AIMessage({ content: "Mock response" });
-  }
-}
+// Mock dependencies
+jest.mock("@langchain/langgraph", () => {
+  const originalModule = jest.requireActual("@langchain/langgraph");
+  return {
+    ...originalModule,
+    StateGraph: jest.fn().mockImplementation(() => ({
+      addNode: jest.fn().mockReturnThis(),
+      addEdge: jest.fn().mockReturnThis(),
+      setEntryPoint: jest.fn().mockReturnThis(),
+      setFinishPoint: jest.fn().mockReturnThis(),
+      getSchema: jest.fn().mockReturnValue({
+        rootType: { annotations: {} },
+      }),
+      compile: jest.fn().mockReturnValue({
+        invoke: jest.fn().mockImplementation(async (state) => {
+          return state;
+        }),
+      }),
+    })),
+    END: "END_STATE",
+  };
+});
 
 describe("Error Handling Utilities", () => {
   describe("withErrorHandling", () => {
-    test("should successfully compile valid graph", () => {
-      // Create a simple graph
-      const TestState = Annotation.Root({
-        count: Annotation<number>({ default: () => 0 }),
+    it("should add error handling to StateGraph", async () => {
+      // Create a basic graph with error annotation
+      const baseGraph = new StateGraph({
+        channels: {
+          errors: ErrorStateAnnotation,
+        },
       });
 
-      const graph = new StateGraph(TestState)
-        .addNode("increment", (state) => ({ count: state.count + 1 }))
-        .addEdge("__start__", "increment")
-        .addEdge("increment", "__end__");
+      // Mock graph behavior
+      const mockInvoke = jest.fn().mockResolvedValue({
+        result: "success",
+        errors: [],
+      });
 
-      // Wrap with error handling
-      const compileWithErrorHandling = withErrorHandling(graph);
+      const compiledGraph = {
+        invoke: mockInvoke,
+      };
+      (baseGraph.compile as jest.Mock).mockReturnValue(compiledGraph);
 
-      // Should compile without error
-      const compiled = compileWithErrorHandling();
-      expect(compiled).toBeDefined();
+      // Apply error handling
+      const graphWithErrorHandling = withErrorHandling(baseGraph);
+
+      // Invoke the graph
+      const initialState = { input: "test input", errors: [] };
+      await graphWithErrorHandling.invoke(initialState);
+
+      // Verify that the original graph was invoked
+      expect(mockInvoke).toHaveBeenCalledWith(initialState);
     });
 
-    test("should handle compilation errors", () => {
-      // Create a broken graph (missing edge from start)
-      const TestState = Annotation.Root({
-        value: Annotation<string>({ default: () => "" }),
+    it("should handle schema extraction errors gracefully", async () => {
+      // Create a graph that will throw an error during schema extraction
+      const baseGraph = new StateGraph({});
+      (baseGraph.getSchema as jest.Mock).mockImplementation(() => {
+        throw new Error("Schema extraction failed");
       });
 
-      const brokenGraph = new StateGraph(TestState).addNode(
-        "test",
-        (state) => ({ value: state.value + "!" })
-      );
+      // Apply error handling
+      const graphWithErrorHandling = withErrorHandling(baseGraph);
 
-      // Should throw a more helpful error
-      const compileWithErrorHandling = withErrorHandling(brokenGraph);
+      // Invoke the graph - should not throw
+      const initialState = { input: "test input" };
+      const result = await graphWithErrorHandling.invoke(initialState);
 
-      expect(() => compileWithErrorHandling()).toThrow(
-        /LangGraph compilation failed/
-      );
-    });
-
-    test("should call onError callback when provided", () => {
-      // Create a broken graph
-      const TestState = Annotation.Root({
-        value: Annotation<string>({ default: () => "" }),
-      });
-
-      const brokenGraph = new StateGraph(TestState).addNode(
-        "test",
-        (state) => ({ value: state.value + "!" })
-      );
-
-      // Create a spy for the error callback
-      const errorSpy = jest.fn();
-
-      // Should call the error callback
-      const compileWithErrorHandling = withErrorHandling(brokenGraph, errorSpy);
-
-      try {
-        compileWithErrorHandling();
-      } catch (error) {
-        // Expected to throw
-      }
-
-      expect(errorSpy).toHaveBeenCalled();
+      // Should add error information to the result
+      expect(result.errors).toBeDefined();
+      expect(result.errors.length).toBe(1);
+      expect(result.errors[0].message).toContain("Schema extraction failed");
     });
   });
 
   describe("createRetryingLLM", () => {
-    test("should retry on temporary failures", async () => {
-      // LLM that fails first 2 times, then succeeds
-      const llm = new MockChatModel(2, "unavailable");
-      const retryingLLM = createRetryingLLM(llm, 3);
+    // Mock LLM client
+    let mockLLMClient: jest.Mocked<LLMClient>;
+    let mockCompletion: jest.Mock;
 
-      const result = await retryingLLM.invoke([new HumanMessage("test")]);
-
-      expect(result.content).toBe("Mock response");
-      expect(llm.callCount).toBe(3); // Initial attempt + 2 retries
+    beforeEach(() => {
+      mockCompletion = jest.fn();
+      mockLLMClient = {
+        supportedModels: [],
+        completion: mockCompletion,
+        streamCompletion: jest.fn(),
+        estimateTokens: jest.fn(),
+      };
     });
 
-    test("should retry on rate limit errors", async () => {
-      // LLM that fails with rate limit error once, then succeeds
-      const llm = new MockChatModel(1, "rate-limit");
-      const retryingLLM = createRetryingLLM(llm, 3);
+    it("should return successful completion on first try", async () => {
+      // Mock successful completion
+      const successResponse: LLMCompletionResponse = {
+        content: "Successful response",
+        metadata: {
+          model: "test-model",
+          totalTokens: 10,
+          promptTokens: 5,
+          completionTokens: 5,
+          timeTakenMs: 100,
+          cost: 0.001,
+        },
+      };
+      mockCompletion.mockResolvedValueOnce(successResponse);
 
-      const result = await retryingLLM.invoke([new HumanMessage("test")]);
+      // Create retrying LLM
+      const retryingLLM = createRetryingLLM(mockLLMClient);
 
-      expect(result.content).toBe("Mock response");
-      expect(llm.callCount).toBe(2); // Initial attempt + 1 retry
+      // Call with options
+      const options: LLMCompletionOptions = {
+        model: "test-model",
+        messages: [{ role: "user", content: "test prompt" }],
+      };
+
+      const result = await retryingLLM(options);
+
+      // Should return successful response without retrying
+      expect(result).toBe(successResponse);
+      expect(mockCompletion).toHaveBeenCalledTimes(1);
     });
 
-    test("should throw error after max retries", async () => {
-      // LLM that always fails with unavailability
-      const llm = new MockChatModel(10, "unavailable");
-      const retryingLLM = createRetryingLLM(llm, 2);
+    it("should retry on retryable error and succeed", async () => {
+      // Mock failure then success
+      mockCompletion
+        .mockRejectedValueOnce(new Error("Service unavailable"))
+        .mockResolvedValueOnce({
+          content: "Successful after retry",
+          metadata: {
+            model: "test-model",
+            totalTokens: 10,
+            promptTokens: 5,
+            completionTokens: 5,
+            timeTakenMs: 100,
+            cost: 0.001,
+          },
+        });
 
-      await expect(
-        retryingLLM.invoke([new HumanMessage("test")])
-      ).rejects.toThrow(/Failed after 3 attempts/);
-      expect(llm.callCount).toBe(3); // Initial attempt + 2 retries
+      // Create retrying LLM with custom config
+      const retryingLLM = createRetryingLLM(mockLLMClient, {
+        maxRetries: 3,
+        initialBackoffMs: 10, // Small for faster tests
+      });
+
+      // Call with options
+      const options: LLMCompletionOptions = {
+        model: "test-model",
+        messages: [{ role: "user", content: "test prompt" }],
+      };
+
+      const result = await retryingLLM(options);
+
+      // Should retry and succeed
+      expect(result.content).toBe("Successful after retry");
+      expect(mockCompletion).toHaveBeenCalledTimes(2);
     });
 
-    test("should not retry on context window errors", async () => {
-      // LLM that fails with context window error
-      const llm = new MockChatModel(1, "context-window");
-      const retryingLLM = createRetryingLLM(llm, 3);
+    it("should not retry on non-retryable errors", async () => {
+      // Mock context window error (non-retryable)
+      mockCompletion.mockRejectedValueOnce(
+        new Error("Maximum context length exceeded")
+      );
 
-      await expect(
-        retryingLLM.invoke([new HumanMessage("test")])
-      ).rejects.toThrow();
-      expect(llm.callCount).toBe(1); // Only the initial attempt, no retries
+      // Create retrying LLM
+      const retryingLLM = createRetryingLLM(mockLLMClient);
+
+      // Call with options
+      const options: LLMCompletionOptions = {
+        model: "test-model",
+        messages: [{ role: "user", content: "test prompt" }],
+      };
+
+      // Should throw without retrying
+      await expect(retryingLLM(options)).rejects.toThrow(
+        "Maximum context length exceeded"
+      );
+      expect(mockCompletion).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stop retrying after max retries reached", async () => {
+      // Mock repeated failures
+      mockCompletion
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"))
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"))
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"));
+
+      // Create retrying LLM with low max retries
+      const retryingLLM = createRetryingLLM(mockLLMClient, {
+        maxRetries: 2,
+        initialBackoffMs: 10, // Small for faster tests
+      });
+
+      // Call with options
+      const options: LLMCompletionOptions = {
+        model: "test-model",
+        messages: [{ role: "user", content: "test prompt" }],
+      };
+
+      // Should throw after max retries
+      await expect(retryingLLM(options)).rejects.toThrow("Rate limit exceeded");
+      expect(mockCompletion).toHaveBeenCalledTimes(3); // Initial + 2 retries
+    });
+
+    it("should pass an onError callback when provided", async () => {
+      // Mock failure then success
+      mockCompletion
+        .mockRejectedValueOnce(new Error("Service unavailable"))
+        .mockResolvedValueOnce({
+          content: "Successful after retry",
+          metadata: {
+            model: "test-model",
+            totalTokens: 10,
+            promptTokens: 5,
+            completionTokens: 5,
+            timeTakenMs: 100,
+            cost: 0.001,
+          },
+        });
+
+      // Create error tracking callback
+      const onErrorMock = jest.fn();
+
+      // Create retrying LLM
+      const retryingLLM = createRetryingLLM(mockLLMClient, {
+        maxRetries: 3,
+        initialBackoffMs: 10,
+        onError: onErrorMock,
+      });
+
+      // Call with options
+      const options: LLMCompletionOptions = {
+        model: "test-model",
+        messages: [{ role: "user", content: "test prompt" }],
+      };
+
+      await retryingLLM(options);
+
+      // Should call onError callback
+      expect(onErrorMock).toHaveBeenCalledTimes(1);
+      expect(onErrorMock.mock.calls[0][0].category).toBe(
+        ErrorCategory.LLM_UNAVAILABLE
+      );
+      expect(onErrorMock.mock.calls[0][0].retryCount).toBe(0);
     });
   });
 
   describe("createNodeErrorHandler", () => {
-    test("should handle errors in node function", async () => {
-      // Create a node function that sometimes throws
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockImplementationOnce(() => {
-          throw new Error("Test error");
-        })
-        .mockResolvedValueOnce({ value: "success" });
+    it("should pass through function results when no errors occur", async () => {
+      // Test node function that succeeds
+      const nodeFunction = jest.fn().mockResolvedValue({ result: "success" });
 
       // Create error handler
-      const withErrorHandler = createNodeErrorHandler("test-node");
-      const safeNodeFunc = withErrorHandler(nodeFunc);
+      const handledFunction = createNodeErrorHandler(nodeFunction, "testNode");
 
-      // First call should not throw but pass the error info
-      await expect(safeNodeFunc({ count: 1 })).rejects.toThrow("Test error");
+      // Call function
+      const result = await handledFunction({ input: "test" });
 
-      // Second call should return normally
-      const result = await safeNodeFunc({ count: 2 });
-      expect(result.value).toBe("success");
+      // Should return original result
+      expect(result).toEqual({ result: "success" });
+      expect(nodeFunction).toHaveBeenCalledWith({ input: "test" });
     });
 
-    test("should use fallback behavior when provided", async () => {
-      // Create a node function that always throws
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockImplementation(() => {
-          throw new Error("Test error");
-        });
-
-      // Create fallback behavior
-      const fallback = jest
-        .fn<Promise<{ value: string }>, [{ count: number }, Error]>()
-        .mockResolvedValue({ value: "fallback" });
-
-      // Create error handler with fallback
-      const withErrorHandler = createNodeErrorHandler("test-node", fallback);
-      const safeNodeFunc = withErrorHandler(nodeFunc);
-
-      // Call should use fallback and not throw
-      const result = await safeNodeFunc({ count: 1 });
-
-      expect(result.value).toBe("fallback");
-      expect(fallback).toHaveBeenCalled();
-    });
-
-    test("should handle errors in the fallback", async () => {
-      // Create a node function that throws
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockImplementation(() => {
-          throw new Error("Primary error");
-        });
-
-      // Create fallback that also throws
-      const fallback = jest
-        .fn<Promise<{ value: string }>, [{ count: number }, Error]>()
-        .mockImplementation(() => {
-          throw new Error("Fallback error");
-        });
-
-      // Create error handler with fallback
-      const withErrorHandler = createNodeErrorHandler("test-node", fallback);
-      const safeNodeFunc = withErrorHandler(nodeFunc);
-
-      // Call should still throw the original error
-      await expect(safeNodeFunc({ count: 1 })).rejects.toThrow("Primary error");
-      expect(fallback).toHaveBeenCalled();
-    });
-
-    test("should handle context window exceeded error specially", async () => {
-      // Create a node function that throws a context window error
-      const nodeFunc = jest
-        .fn<
-          Promise<{ messages: BaseMessage[] }>,
-          [{ messages: BaseMessage[] }]
-        >()
-        .mockImplementation(() => {
-          const error = new Error("Context length exceeded");
-          throw error;
-        });
+    it("should add error information to state when error occurs", async () => {
+      // Test node function that fails
+      const nodeFunction = jest.fn().mockRejectedValue(new Error("Node error"));
 
       // Create error handler
-      const withErrorHandler = createNodeErrorHandler<
-        { messages: BaseMessage[] },
-        { messages: BaseMessage[] }
-      >("test-node");
-      const safeNodeFunc = withErrorHandler(nodeFunc);
+      const handledFunction = createNodeErrorHandler(nodeFunction, "testNode");
 
-      // Initial state with messages
-      const state = {
-        messages: [new HumanMessage("test")],
-      };
+      // Call function
+      const result = await handledFunction({ input: "test" });
 
-      try {
-        // Call should throw
-        await safeNodeFunc(state);
-        fail("Should have thrown");
-      } catch (error) {
-        // Expected to throw
-        expect((error as Error).message).toContain("Context length exceeded");
-      }
+      // Should add error information
+      expect(result.errors).toBeDefined();
+      expect(result.errors.length).toBe(1);
+      expect(result.errors[0].message).toBe("Node error");
+      expect(result.errors[0].node).toBe("testNode");
+      expect(result.lastError).toBeDefined();
+      expect(result.lastError.message).toBe("Node error");
+    });
+
+    it("should append new errors to existing errors array", async () => {
+      // Existing error
+      const existingError = createErrorEvent(
+        new Error("Existing error"),
+        "previousNode"
+      );
+
+      // Test node function that fails
+      const nodeFunction = jest.fn().mockRejectedValue(new Error("New error"));
+
+      // Create error handler
+      const handledFunction = createNodeErrorHandler(nodeFunction, "testNode");
+
+      // Call function with existing errors
+      const result = await handledFunction({
+        input: "test",
+        errors: [existingError],
+      });
+
+      // Should add new error while preserving existing
+      expect(result.errors.length).toBe(2);
+      expect(result.errors[0].message).toBe("Existing error");
+      expect(result.errors[1].message).toBe("New error");
+      expect(result.lastError.message).toBe("New error");
     });
   });
 
   describe("createRetryingNode", () => {
-    test("should retry on temporary failures", async () => {
-      // Create a node function that fails twice then succeeds
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
+    it("should not retry if node function succeeds", async () => {
+      // Successful node function
+      const nodeFunction = jest.fn().mockResolvedValue({ result: "success" });
+
+      // Create retrying node
+      const retryingNode = createRetryingNode(nodeFunction, "testNode");
+
+      // Call function
+      const result = await retryingNode({ input: "test" });
+
+      // Should return success without retrying
+      expect(result).toEqual({ result: "success" });
+      expect(nodeFunction).toHaveBeenCalledTimes(1);
+    });
+
+    it("should retry on retryable errors", async () => {
+      // Node function that fails with retryable error then succeeds
+      const nodeFunction = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("Service unavailable"))
+        .mockResolvedValueOnce({ result: "success after retry" });
+
+      // Create retrying node
+      const retryingNode = createRetryingNode(nodeFunction, "testNode", {
+        maxRetries: 2,
+        initialBackoffMs: 10, // Small for faster tests
+      });
+
+      // Call function
+      const result = await retryingNode({ input: "test" });
+
+      // Should retry and succeed
+      expect(result).toEqual({ result: "success after retry" });
+      expect(nodeFunction).toHaveBeenCalledTimes(2);
+    });
+
+    it("should not retry on non-retryable errors", async () => {
+      // Node function that fails with non-retryable error
+      const nodeFunction = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("Context window exceeded"));
+
+      // Create retrying node
+      const retryingNode = createRetryingNode(nodeFunction, "testNode");
+
+      // Call function
+      const result = await retryingNode({ input: "test" });
+
+      // Should not retry, but add error information to state
+      expect(nodeFunction).toHaveBeenCalledTimes(1);
+      expect(result.errors).toBeDefined();
+      expect(result.errors.length).toBe(1);
+      expect(result.errors[0].category).toBe(
+        ErrorCategory.CONTEXT_WINDOW_EXCEEDED
+      );
+    });
+
+    it("should stop retrying after max retries reached", async () => {
+      // Node function that repeatedly fails with retryable error
+      const nodeFunction = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"))
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"))
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"));
+
+      // Create retrying node with 2 max retries
+      const retryingNode = createRetryingNode(nodeFunction, "testNode", {
+        maxRetries: 2,
+        initialBackoffMs: 10, // Small for faster tests
+      });
+
+      // Call function
+      const result = await retryingNode({ input: "test" });
+
+      // Should retry max times then return error state
+      expect(nodeFunction).toHaveBeenCalledTimes(3); // Initial + 2 retries
+      expect(result.errors).toBeDefined();
+      expect(result.errors.length).toBe(1);
+      expect(result.errors[0].category).toBe(ErrorCategory.RATE_LIMIT_EXCEEDED);
+      expect(result.errors[0].retryCount).toBe(2);
+    });
+
+    it("should track retry count correctly", async () => {
+      // Node function that fails twice with retryable error then succeeds
+      const nodeFunction = jest
+        .fn()
         .mockRejectedValueOnce(new Error("Service unavailable"))
         .mockRejectedValueOnce(new Error("Service unavailable"))
-        .mockResolvedValueOnce({ value: "success" });
+        .mockResolvedValueOnce({ result: "success after retries" });
 
-      // Create retry wrapper
-      const withRetries = createRetryingNode("test-node", 3);
-      const retryingFunc = withRetries(nodeFunc);
+      // Create retrying node
+      const retryingNode = createRetryingNode(nodeFunction, "testNode", {
+        maxRetries: 3,
+        initialBackoffMs: 10, // Small for faster tests
+      });
 
-      // Call should succeed after retries
-      const result = await retryingFunc({ count: 1 });
+      // Call function
+      const result = await retryingNode({ input: "test" });
 
-      expect(result.value).toBe("success");
-      expect(nodeFunc).toHaveBeenCalledTimes(3);
+      // Should retry twice then succeed with recovery attempt count = 2
+      expect(result).toEqual({
+        result: "success after retries",
+        recoveryAttempts: 2,
+      });
+      expect(nodeFunction).toHaveBeenCalledTimes(3);
     });
 
-    test("should give up after max retries", async () => {
-      // Create a node function that always fails
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockRejectedValue(new Error("Service unavailable"));
-
-      // Create retry wrapper with 2 max retries
-      const withRetries = createRetryingNode("test-node", 2);
-      const retryingFunc = withRetries(nodeFunc);
-
-      // Call should fail after max retries
-      await expect(retryingFunc({ count: 1 })).rejects.toThrow(
-        "Service unavailable"
+    it("should maintain error history when retrying", async () => {
+      // Existing error
+      const existingError = createErrorEvent(
+        new Error("Previous error"),
+        "previousNode"
       );
-      expect(nodeFunc).toHaveBeenCalledTimes(3); // Initial + 2 retries
-    });
 
-    test("should not retry errors that should not be retried", async () => {
-      // Create a node function that fails with non-retriable error
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockRejectedValue(new Error("Context length exceeded"));
-
-      // Create retry wrapper
-      const withRetries = createRetryingNode("test-node", 3);
-      const retryingFunc = withRetries(nodeFunc);
-
-      // Call should fail immediately without retry
-      await expect(retryingFunc({ count: 1 })).rejects.toThrow(
-        "Context length exceeded"
-      );
-      expect(nodeFunc).toHaveBeenCalledTimes(1); // Only the initial attempt
-    });
-  });
-
-  describe("withNodeResilience", () => {
-    test("should combine retry and error handling", async () => {
-      // Create a node function that fails once then succeeds
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
+      // Node function that fails with retryable error then succeeds
+      const nodeFunction = jest
+        .fn()
         .mockRejectedValueOnce(new Error("Service unavailable"))
-        .mockResolvedValueOnce({ value: "success" });
+        .mockResolvedValueOnce({ result: "success after retry" });
 
-      // Create combined wrapper
-      const withResilience = withNodeResilience("test-node", 3);
-      const resilientFunc = withResilience(nodeFunc);
+      // Create retrying node
+      const retryingNode = createRetryingNode(nodeFunction, "testNode", {
+        maxRetries: 2,
+        initialBackoffMs: 10, // Small for faster tests
+      });
 
-      // Call should succeed after retry
-      const result = await resilientFunc({ count: 1 });
+      // Call function with existing error
+      const result = await retryingNode({
+        input: "test",
+        errors: [existingError],
+      });
 
-      expect(result.value).toBe("success");
-      expect(nodeFunc).toHaveBeenCalledTimes(2);
-    });
-
-    test("should use fallback after max retries", async () => {
-      // Create a node function that always fails
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockRejectedValue(new Error("Service unavailable"));
-
-      // Create fallback
-      const fallback = jest
-        .fn<Promise<{ value: string }>, [{ count: number }, Error]>()
-        .mockResolvedValue({ value: "fallback" });
-
-      // Create combined wrapper with fallback
-      const withResilience = withNodeResilience("test-node", 2, fallback);
-      const resilientFunc = withResilience(nodeFunc);
-
-      // Call should use fallback after max retries
-      const result = await resilientFunc({ count: 1 });
-
-      expect(result.value).toBe("fallback");
-      expect(nodeFunc).toHaveBeenCalledTimes(3); // Initial + 2 retries
-      expect(fallback).toHaveBeenCalled();
-    });
-
-    test("should handle errors in the fallback", async () => {
-      // Create a node function that always fails
-      const nodeFunc = jest
-        .fn<Promise<{ value: string }>, [{ count: number }]>()
-        .mockRejectedValue(new Error("Primary error"));
-
-      // Create fallback that also fails
-      const fallback = jest
-        .fn<Promise<{ value: string }>, [{ count: number }, Error]>()
-        .mockRejectedValue(new Error("Fallback error"));
-
-      // Create combined wrapper with failing fallback
-      const withResilience = withNodeResilience("test-node", 1, fallback);
-      const resilientFunc = withResilience(nodeFunc);
-
-      // Call should fail with original error
-      await expect(resilientFunc({ count: 1 })).rejects.toThrow(
-        "Primary error"
-      );
-      expect(nodeFunc).toHaveBeenCalledTimes(2); // Initial + 1 retry
-      expect(fallback).toHaveBeenCalled();
+      // Should return success with recovery count and maintain error history
+      expect(result.result).toBe("success after retry");
+      expect(result.recoveryAttempts).toBe(1);
+      expect(result.errors.length).toBe(2); // Previous error + temporary retry error
+      expect(result.errors[0].message).toBe("Previous error");
+      expect(result.errors[1].message).toBe("Service unavailable");
     });
   });
 });

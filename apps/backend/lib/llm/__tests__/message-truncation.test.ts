@@ -332,3 +332,76 @@ describe("Message Truncation Utilities", () => {
     });
   });
 });
+
+describe("Error Handling in Message Truncation", () => {
+  test("should handle invalid input gracefully", () => {
+    // Test with null input
+    const result = truncateMessages(null as any, { maxTokens: 100 });
+    expect(result).toEqual([]);
+
+    // Test with empty array
+    const emptyResult = truncateMessages([], { maxTokens: 100 });
+    expect(emptyResult).toEqual([]);
+  });
+
+  test("should handle very low token limits by keeping only essential messages", () => {
+    const messages = [
+      new SystemMessage("System message"),
+      new HumanMessage("First human message"),
+      new AIMessage({ content: "First AI response" }),
+      new HumanMessage("Second human message"),
+      new AIMessage({ content: "Second AI response" }),
+    ];
+
+    // Extremely low token limit
+    const result = truncateMessages(messages, {
+      maxTokens: 1,
+      strategy: "sliding-window",
+    });
+
+    // Should keep at minimum the system message and last message
+    expect(result.length).toBe(2);
+    expect(result[0]).toBe(messages[0]); // System message
+    expect(result[1]).toBe(messages[4]); // Last message
+  });
+
+  test("progressiveTruncation should fall back to extreme truncation when needed", () => {
+    const messages = [
+      new SystemMessage("System message"),
+      new HumanMessage("First human message"),
+      new AIMessage({ content: "First AI response" }),
+      new HumanMessage("Second human message"),
+      new AIMessage({ content: "Second AI response" }),
+    ];
+
+    // Set token limit impossibly low
+    const result = progressiveTruncation(messages, 1);
+
+    // Should have applied extreme truncation
+    expect(result.level).toBe(TruncationLevel.EXTREME);
+    expect(result.messages.length).toBe(2);
+    expect(result.messages[0]).toBe(messages[0]); // System message
+    expect(result.messages[1]).toBe(messages[4]); // Last message
+  });
+
+  test("createMinimalMessageSet should handle edge cases", () => {
+    // Empty array
+    expect(createMinimalMessageSet([])).toEqual([]);
+
+    // Single message
+    const singleMessage = [new SystemMessage("System message")];
+    expect(createMinimalMessageSet(singleMessage)).toBe(singleMessage);
+
+    // No system message
+    const noSystemMessages = [
+      new HumanMessage("Human message 1"),
+      new AIMessage({ content: "AI response" }),
+      new HumanMessage("Human message 2"),
+    ];
+
+    const minimalNoSystem = createMinimalMessageSet(noSystemMessages);
+    expect(minimalNoSystem.length).toBe(2);
+    expect(minimalNoSystem[0]).toBe(noSystemMessages[0]); // First message
+    expect(minimalNoSystem[1]).toBe(noSystemMessages[2]); // Last message
+  });
+});

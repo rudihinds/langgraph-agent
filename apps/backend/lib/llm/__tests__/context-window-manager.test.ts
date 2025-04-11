@@ -5,6 +5,7 @@ import {
 } from "../context-window-manager.js";
 import { LLMFactory } from "../llm-factory.js";
 import { LLMClient } from "../types.js";
+import { createErrorEvent, ErrorCategory } from "../error-classification.js";
 
 // Mock LLMFactory and LLMClient
 jest.mock("../llm-factory.js");
@@ -294,6 +295,372 @@ describe("ContextWindowManager", () => {
       expect(result.role).toBe("assistant");
       expect(result.content).toContain("No conversation to summarize");
       expect(result.isSummary).toBe(true);
+    });
+  });
+
+  describe("error handling", () => {
+    it("should emit error events when summarization fails", async () => {
+      // Mock completion to throw an error
+      mockCompletion.mockRejectedValue(new Error("Model unavailable"));
+
+      const messages = [
+        systemMessage,
+        userMessage1,
+        assistantMessage1,
+        userMessage2,
+      ];
+
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call method that should trigger error
+      const result = await manager.summarizeConversation(messages);
+
+      // Verify error handler was called
+      expect(errorSpy).toHaveBeenCalled();
+
+      // Verify fallback summary was returned
+      expect(result.role).toBe("assistant");
+      expect(result.content).toContain("Conversation summary");
+      expect(result.content).toContain("messages exchanged");
+      expect(result.isSummary).toBe(true);
+    });
+
+    it("should use minimal message set as fallback when prepareMessages fails", async () => {
+      // Setup token estimation to throw error after initial call
+      mockEstimateTokens
+        .mockResolvedValueOnce(100) // For initial calculation
+        .mockRejectedValue(new Error("Token estimation failed"));
+
+      // Mock model info retrieval
+      mockGetModelById.mockReturnValue({
+        id: modelId,
+        contextWindow: 8000,
+        inputCostPer1000Tokens: 1.0,
+        outputCostPer1000Tokens: 2.0,
+      });
+
+      const messages = [
+        systemMessage,
+        userMessage1,
+        assistantMessage1,
+        userMessage2,
+        assistantMessage2,
+      ];
+
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call method that should trigger error
+      const result = await manager.prepareMessages(messages, modelId);
+
+      // Verify error handler was called
+      expect(errorSpy).toHaveBeenCalled();
+
+      // Verify minimal message set was returned
+      expect(result.messages.length).toBe(2); // system message + last message
+      expect(result.messages[0]).toBe(systemMessage);
+      expect(result.messages[1]).toBe(assistantMessage2); // Last message
+      expect(result.wasSummarized).toBe(false);
+      expect(result.totalTokens).toBe(-1); // Unknown token count
+    });
+
+    it("should gracefully handle errors in token calculation", async () => {
+      // Setup token estimation to throw error
+      mockEstimateTokens.mockRejectedValue(new Error("Rate limit exceeded"));
+
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      try {
+        await manager.calculateTotalTokens([userMessage1], modelId);
+        fail("Should have thrown an error");
+      } catch (error) {
+        // Error should propagate from calculateTotalTokens
+        expect(error).toBeDefined();
+        expect(error.message).toContain("Rate limit exceeded");
+      }
+    });
+
+    it("should emit token calculation errors with proper categorization", async () => {
+      // Mock token estimation to throw specific error
+      mockEstimateTokens.mockRejectedValueOnce(
+        new Error("Failed to calculate tokens for message")
+      );
+
+      const messages = [systemMessage, userMessage1];
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call method that should trigger token calculation error
+      try {
+        await manager.calculateTotalTokens(messages, modelId);
+        fail("Should have thrown an error");
+      } catch (error) {
+        // Verify error categorization is correct
+        expect(errorSpy).toHaveBeenCalled();
+        const errorEvent = errorSpy.mock.calls[0][0];
+        expect(errorEvent.category).toBe(ErrorCategory.TOKEN_CALCULATION_ERROR);
+        expect(errorEvent.source).toBeDefined();
+        expect(errorEvent.modelId).toBe(modelId);
+      }
+    });
+
+    it("should handle model retrieval errors in prepareMessages", async () => {
+      // Mock getModelById to return null (model not found)
+      mockGetModelById.mockReturnValueOnce(null);
+
+      const messages = [systemMessage, userMessage1];
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call method that should trigger model retrieval error
+      try {
+        await manager.prepareMessages(messages, "invalid-model-id");
+        fail("Should have thrown an error");
+      } catch (error) {
+        expect(error.message).toContain("Model information not found");
+      }
+    });
+
+    it("should handle multiple error types in sequence", async () => {
+      // Create a sequence of errors: first token calculation fails, then summarization fails
+      mockEstimateTokens
+        .mockResolvedValueOnce(500) // First calculation succeeds
+        .mockResolvedValueOnce(10000) // Second calculation exceeds token limit
+        .mockRejectedValueOnce(new Error("Failed to calculate tokens")); // Third calculation fails
+
+      // Mock completion to fail when summarization is attempted
+      mockCompletion.mockRejectedValueOnce(
+        new Error("Failed to generate summary")
+      );
+
+      const messages = [
+        systemMessage,
+        userMessage1,
+        userMessage2,
+        assistantMessage1,
+        assistantMessage2,
+      ];
+
+      const manager = ContextWindowManager.getInstance({
+        maxTokensBeforeSummarization: 1000, // Low threshold to trigger summarization
+        debug: true,
+      });
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call prepareMessages which will encounter multiple errors
+      const result = await manager.prepareMessages(messages, modelId);
+
+      // Verify error handler was called multiple times
+      expect(errorSpy).toHaveBeenCalledTimes(2);
+
+      // First error should be summarization error
+      expect(errorSpy.mock.calls[0][0].category).toBe(
+        ErrorCategory.LLM_SUMMARIZATION_ERROR
+      );
+
+      // Second error should be token calculation error
+      expect(errorSpy.mock.calls[1][0].category).toBe(
+        ErrorCategory.TOKEN_CALCULATION_ERROR
+      );
+
+      // Should fall back to minimal message set
+      expect(result.messages.length).toBe(2);
+      expect(result.messages[0]).toBe(systemMessage);
+      expect(result.messages[1]).toBe(assistantMessage2); // Last message
+      expect(result.totalTokens).toBe(-1); // Token count unknown in fallback mode
+    });
+
+    it("should handle LLM client errors when summarizing conversation", async () => {
+      // Mock client retrieval to throw an error
+      mockGetClientForModel.mockImplementationOnce(() => {
+        throw new Error("Failed to get LLM client");
+      });
+
+      const messages = [userMessage1, assistantMessage1, userMessage2];
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call summarizeConversation which should fail to get the LLM client
+      const result = await manager.summarizeConversation(messages);
+
+      // Verify error handler was called
+      expect(errorSpy).toHaveBeenCalled();
+      const errorEvent = errorSpy.mock.calls[0][0];
+      expect(errorEvent.category).toBe(ErrorCategory.LLM_SUMMARIZATION_ERROR);
+      expect(errorEvent.message).toContain("Failed to get LLM client");
+
+      // Should return fallback summary
+      expect(result.role).toBe("assistant");
+      expect(result.content).toContain("Conversation summary");
+      expect(result.content).toContain("messages exchanged");
+      expect(result.isSummary).toBe(true);
+    });
+
+    it("should ensure proper error propagation happens in message preparation", async () => {
+      // Mock estimateTokens to throw error that will propagate through the chain
+      mockEstimateTokens.mockRejectedValueOnce(
+        new Error("Catastrophic token calculation failure")
+      );
+
+      const manager = ContextWindowManager.getInstance();
+      const messages = [systemMessage, userMessage1, assistantMessage1];
+
+      // Setup error event listener with detailed inspection
+      let capturedErrorEvent: any;
+      manager.on("error", (event) => {
+        capturedErrorEvent = event;
+      });
+
+      // Call prepareMessages which should handle the error and recover
+      const result = await manager.prepareMessages(messages, modelId);
+
+      // Verify error handling
+      expect(capturedErrorEvent).toBeDefined();
+      expect(capturedErrorEvent.category).toBe(
+        ErrorCategory.CONTEXT_WINDOW_ERROR
+      );
+      expect(capturedErrorEvent.source).toBe(
+        "ContextWindowManager.prepareMessages"
+      );
+      expect(capturedErrorEvent.modelId).toBe(modelId);
+      expect(capturedErrorEvent.timestamp).toBeDefined();
+      expect(typeof capturedErrorEvent.timestamp).toBe("string");
+
+      // Verify fallback response
+      expect(result.messages.length).toBe(2);
+      expect(result.messages[0]).toBe(systemMessage);
+      expect(result.messages[1]).toBe(assistantMessage1); // Last message
+      expect(result.wasSummarized).toBe(false);
+      expect(result.totalTokens).toBe(-1);
+    });
+
+    it("should handle nested errors during summarization and truncation", async () => {
+      // First, token estimation succeeds
+      mockEstimateTokens
+        .mockResolvedValueOnce(10000) // First calculation (exceeds summarization threshold)
+        .mockResolvedValueOnce(2000) // Second calculation (for messages to summarize)
+        .mockResolvedValueOnce(8000); // Third calculation (after summarization, still exceeds limit)
+
+      // Mock completion to succeed
+      mockCompletion.mockResolvedValueOnce({
+        content: "This is a summary of the conversation.",
+      });
+
+      // But progressive truncation will fail inside prepareMessages
+      jest.mock("../message-truncation.js", () => {
+        const actual = jest.requireActual("../message-truncation.js");
+        return {
+          ...actual,
+          progressiveTruncation: jest.fn().mockImplementation(() => {
+            throw new Error("Failed to truncate messages");
+          }),
+        };
+      });
+
+      const messages = [
+        systemMessage,
+        userMessage1,
+        assistantMessage1,
+        userMessage2,
+        assistantMessage2,
+      ];
+
+      const manager = ContextWindowManager.getInstance({
+        maxTokensBeforeSummarization: 5000, // Low threshold to trigger summarization
+        debug: true,
+      });
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call prepareMessages which will encounter multiple errors
+      const result = await manager.prepareMessages(messages, modelId);
+
+      // Function should recover with minimal message set
+      expect(result.messages.length).toBe(2);
+      expect(result.messages[0]).toBe(systemMessage);
+      expect(result.messages[1]).toBe(assistantMessage2); // Last message
+    });
+
+    it("should safely handle errors in token cache operations", async () => {
+      // Create a private method spy to track cache operations
+      const originalCalculateTotalTokens =
+        ContextWindowManager.prototype.calculateTotalTokens;
+
+      // Create a spy to track cache operations
+      const calculateTotalTokensSpy = jest.spyOn(
+        ContextWindowManager.prototype,
+        "calculateTotalTokens"
+      );
+
+      // Restore the original implementation after the test
+      afterEach(() => {
+        calculateTotalTokensSpy.mockRestore();
+      });
+
+      // Mock estimateTokens to alternate between success and failure
+      mockEstimateTokens
+        .mockResolvedValueOnce(100) // First message succeeds
+        .mockRejectedValueOnce(new Error("Cache error")) // Second message fails
+        .mockResolvedValueOnce(100); // Third try succeeds
+
+      const messages = [systemMessage, userMessage1, userMessage1]; // Duplicate message to test caching
+      const manager = ContextWindowManager.getInstance();
+
+      // Set up error event listener
+      const errorSpy = jest.fn();
+      manager.on("error", errorSpy);
+
+      // Call method that uses token caching
+      try {
+        await manager.calculateTotalTokens(messages, modelId);
+        fail("Should have thrown an error");
+      } catch (error) {
+        // Error should propagate up
+        expect(error.message).toContain("Cache error");
+
+        // Error event should be emitted
+        expect(errorSpy).toHaveBeenCalled();
+        expect(errorSpy.mock.calls[0][0].category).toBe(
+          ErrorCategory.TOKEN_CALCULATION_ERROR
+        );
+      }
+
+      // Should handle retry logic correctly
+      try {
+        const result = await manager.calculateTotalTokens(
+          [systemMessage, userMessage1],
+          modelId
+        );
+        // Should get the correct result on retry
+        expect(result).toBe(200); // 100 + 100
+      } catch (error) {
+        fail("Should not throw error on retry");
+      }
     });
   });
 });
