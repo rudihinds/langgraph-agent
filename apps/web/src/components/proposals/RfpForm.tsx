@@ -350,7 +350,7 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
 
   return (
     <FormErrorBoundary initialErrors={errors}>
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl mx-auto">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Form overlay for progress feedback */}
         {overlayVisible && (
           <FormOverlay

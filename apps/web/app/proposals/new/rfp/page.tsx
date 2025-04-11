@@ -2,9 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/client-auth";
-// Import the new RfpForm - leaving comment for now for reference
-// import { RfpForm } from "@/components/proposals/RfpForm";
-import { RfpForm } from "@/components/proposals/RfpFormNew";
+import { RfpForm } from "@/components/proposals/RfpForm";
 import { Loader2 } from "lucide-react";
 
 export default function NewRfpProposalPage() {
@@ -34,8 +32,10 @@ export default function NewRfpProposalPage() {
   }
 
   return (
-    <div className="container py-8">
-      <RfpForm userId={user.id} onSuccess={handleSuccess} />
+    <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
+      <div className="w-full max-w-2xl px-4">
+        <RfpForm userId={user.id} onSuccess={handleSuccess} />
+      </div>
     </div>
   );
 }
