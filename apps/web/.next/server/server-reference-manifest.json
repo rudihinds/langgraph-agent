@@ -70,10 +70,15 @@
         "app/proposals/new/rfp/page": {
           "moduleId": "(action-browser)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fproposal-actions%2Factions.ts%22%2C%5B%7B%22id%22%3A%22406c8080d8352ec85c909ae17833e11ee06cee6aa3%22%2C%22exportedName%22%3A%22uploadProposalFile%22%7D%5D%5D%5D&__client_imported__=true!",
           "async": false
+        },
+        "app/proposals/new/application/page": {
+          "moduleId": "(action-browser)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fapp%2Fapi%2Fproposals%2Factions.ts%22%2C%5B%7B%22id%22%3A%2240eb2ed1c2b12e08d0fe1c8d817497345d9b22807b%22%2C%22exportedName%22%3A%22createProposal%22%7D%2C%7B%22id%22%3A%2240fa107dec3c974770239b7c6a3e2fef3d8b924c7f%22%2C%22exportedName%22%3A%22uploadProposalFile%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
         }
       },
       "layer": {
-        "app/proposals/new/rfp/page": "action-browser"
+        "app/proposals/new/rfp/page": "action-browser",
+        "app/proposals/new/application/page": "action-browser"
       }
     }
   },

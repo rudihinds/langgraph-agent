@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/client-auth";
-import { RfpForm } from "@/components/proposals/RfpForm";
+// Import the new RfpForm - leaving comment for now for reference
+// import { RfpForm } from "@/components/proposals/RfpForm";
+import { RfpForm } from "@/components/proposals/RfpFormNew";
 import { Loader2 } from "lucide-react";
 
 export default function NewRfpProposalPage() {
