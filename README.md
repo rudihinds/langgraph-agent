@@ -115,6 +115,39 @@ npm run dev:agents
 - Human-in-the-loop feedback
 - Complete proposal export
 
+## Error Handling and Resilience System
+
+The application implements a comprehensive error handling and resilience system to ensure robustness:
+
+### Key Components
+
+- **Error Classification**: Automatically categorizes errors (rate limits, context windows, tool failures, etc.)
+- **Retry Mechanisms**: Implements exponential backoff for transient errors
+- **Context Window Management**: Prevents token limit errors through message truncation and summarization
+- **Graceful Degradation**: Provides alternative paths when primary functions fail
+- **Error Monitoring**: Tracks and logs errors for analysis and improvement
+
+### Integration Points
+
+The error handling system is integrated at multiple levels:
+
+- LLM interaction layer with wrapper functions
+- Node level with error catching and recovery
+- Graph level with conditional edges for different error scenarios
+- Tool execution with standardized error propagation
+
+### Development
+
+For developers extending the system:
+
+- All error handlers are in `apps/backend/lib/llm/error-handlers.ts`
+- Error classification logic is in `apps/backend/lib/llm/error-classification.ts`
+- Context window management is in `apps/backend/lib/llm/context-window-manager.ts`
+- Message truncation utilities are in `apps/backend/lib/llm/message-truncation.ts`
+- Monitoring tools are in `apps/backend/lib/llm/monitoring.ts`
+
+See `apps/backend/lib/llm/error-handling.md` for detailed implementation documentation.
+
 ## Testing
 
 Run the test suite:
