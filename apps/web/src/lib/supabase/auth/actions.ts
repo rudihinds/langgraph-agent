@@ -4,6 +4,9 @@
 import { createClient } from "../client";
 import { getRedirectURL } from "./utils";
 import { SignInResult, SignOutResult } from "../types";
+import { createAuthErrorResponse } from "./auth-errors";
+import { ApiResponse, ErrorCodes } from "@/lib/errors/types";
+import { logger } from "@/lib/logger";
 
 /**
  * Initiates the sign-in with Google OAuth flow
@@ -11,12 +14,12 @@ import { SignInResult, SignOutResult } from "../types";
  *
  * @returns {Promise<SignInResult>} The result of the sign-in attempt
  */
-export async function signIn(): Promise<SignInResult> {
+export async function signIn(): Promise<ApiResponse<SignInResult["data"]>> {
   try {
     const supabase = createClient();
     const redirectURL = getRedirectURL() + "/auth/callback";
 
-    console.log("[Auth] Starting sign-in with redirect URL:", redirectURL);
+    logger.info("[Auth] Starting sign-in with redirect URL:", { redirectURL });
 
     // Record auth start time for debugging
     if (typeof window !== "undefined") {
@@ -35,26 +38,20 @@ export async function signIn(): Promise<SignInResult> {
     });
 
     if (error) {
-      console.error("[Auth] Error during OAuth sign-in:", error);
-      throw error;
+      logger.error("[Auth] Error during OAuth sign-in:", {}, error);
+      return createAuthErrorResponse(error, "signIn");
     }
 
     // If we got this far without a redirect, manually navigate to the auth URL
     if (data?.url && typeof window !== "undefined") {
-      console.log("[Auth] Manually navigating to auth URL:", data.url);
+      logger.info("[Auth] Manually navigating to auth URL:", { url: data.url });
       window.location.href = data.url;
     }
 
-    return { data, error: null };
+    return { success: true, data };
   } catch (error) {
-    console.error("[Auth] Error in signIn:", error);
-    return {
-      data: null,
-      error:
-        error instanceof Error
-          ? error
-          : new Error("Unknown error during sign-in"),
-    };
+    logger.error("[Auth] Error in signIn:", {}, error);
+    return createAuthErrorResponse(error, "signIn");
   }
 }
 
@@ -67,8 +64,10 @@ export async function signIn(): Promise<SignInResult> {
  */
 export async function signOut(
   redirectTo: string = "/login"
-): Promise<SignOutResult> {
+): Promise<ApiResponse<{ success: boolean }>> {
   try {
+    logger.info("[Auth] Starting sign-out process");
+
     // First call server-side sign-out endpoint to clear cookies
     const response = await fetch("/api/auth/sign-out", {
       method: "POST",
@@ -79,7 +78,20 @@ export async function signOut(
 
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.message || "Failed to sign out");
+      logger.error(
+        "[Auth] Server-side sign-out failed:",
+        { status: response.status },
+        data
+      );
+
+      return {
+        success: false,
+        error: {
+          message: data.message || "Failed to sign out",
+          code: ErrorCodes.AUTHENTICATION,
+          details: { status: response.status },
+        },
+      };
     }
 
     // Then sign out on the client side
@@ -87,8 +99,8 @@ export async function signOut(
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error("[Auth] Error in signOut:", error);
-      throw error;
+      logger.error("[Auth] Error in signOut:", {}, error);
+      return createAuthErrorResponse(error, "signOut");
     }
 
     // Redirect to login page
@@ -96,12 +108,9 @@ export async function signOut(
       window.location.href = redirectTo;
     }
 
-    return { success: true };
+    return { success: true, data: { success: true } };
   } catch (error) {
-    console.error("[Auth] Error in signOut:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to sign out",
-    };
+    logger.error("[Auth] Error in signOut:", {}, error);
+    return createAuthErrorResponse(error, "signOut");
   }
 }
