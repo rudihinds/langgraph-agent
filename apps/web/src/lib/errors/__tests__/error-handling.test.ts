@@ -29,7 +29,7 @@ describe('Error Handling', () => {
       const details = { field: 'username', issue: 'too short' };
       const response = createErrorResponse('Validation error', 400, 'VALIDATION_ERROR', details);
       
-      const data = await response.json();
+      const data = await expectErrorResponse(response, 400, 'VALIDATION_ERROR');
       expect(data.error.details).toEqual(details);
     });
   });
@@ -101,8 +101,7 @@ describe('Error Handling', () => {
       const error = new ValidationError('Invalid input', { field: 'email' });
       const response = handleAppError(error);
       
-      await expectErrorResponse(response, 400, 'VALIDATION_ERROR');
-      const data = await response.json();
+      const data = await expectErrorResponse(response, 400, 'VALIDATION_ERROR');
       expect(data.error.details).toEqual({ field: 'email' });
     });
     

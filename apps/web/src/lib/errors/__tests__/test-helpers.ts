@@ -5,12 +5,14 @@ import { ApiErrorResponse, ApiSuccessResponse } from '../index';
 
 /**
  * Test helper to check if a Response is a valid error response
+ * 
+ * @returns The parsed error response data for further assertions
  */
 export async function expectErrorResponse(
   response: Response,
   expectedStatus: number,
   expectedCode?: string
-): Promise<void> {
+): Promise<ApiErrorResponse> {
   expect(response.status).toBe(expectedStatus);
   expect(response.headers.get('content-type')).toContain('application/json');
   
@@ -22,10 +24,14 @@ export async function expectErrorResponse(
   if (expectedCode) {
     expect(data.error).toHaveProperty('code', expectedCode);
   }
+  
+  return data;
 }
 
 /**
  * Test helper to check if a Response is a valid success response
+ * 
+ * @returns The parsed success response data for further assertions
  */
 export async function expectSuccessResponse<T>(
   response: Response,
