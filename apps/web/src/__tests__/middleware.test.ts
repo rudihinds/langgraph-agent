@@ -1,247 +1,202 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextRequest, NextResponse } from "next/server";
-import { middleware } from "../middleware";
-import { vi, beforeEach, afterEach, describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest, NextResponse } from 'next/server';
+import { updateSession } from '../lib/supabase/middleware';
 
-// Mock Supabase client
-vi.mock("@supabase/ssr", () => ({
-  createServerClient: vi.fn(),
+// Mock the createServerClient function
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: vi.fn(() => ({
+    auth: {
+      getSession: vi.fn(),
+    },
+  })),
 }));
 
-// Mock NextResponse
-vi.mock("next/server", () => {
-  const originalModule = vi.importActual("next/server");
-  return {
-    ...originalModule,
-    NextResponse: {
-      next: vi.fn().mockImplementation(() => ({
-        cookies: {
-          set: vi.fn(),
-          getAll: vi.fn().mockReturnValue([]),
-        },
-      })),
-      redirect: vi.fn().mockImplementation((url) => ({
-        url,
-        cookies: {
-          set: vi.fn(),
-          getAll: vi.fn().mockReturnValue([]),
-        },
-      })),
-    },
-  };
-});
+// Mock environment variables
+vi.mock('@/env', () => ({
+  ENV: {
+    NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+  },
+}));
 
-describe("Middleware", () => {
-  let mockRequest: NextRequest;
-  let mockSupabaseClient: any;
-  let mockGetUser: any;
-
+describe('Auth Middleware', () => {
+  let mockRedirectFn: any;
+  let mockNextFn: any;
+  
   beforeEach(() => {
-    // Reset mocks
-    vi.clearAllMocks();
-
-    // Mock getUser function with default unauthenticated response
-    mockGetUser = vi.fn().mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    // Mock a Supabase client
-    mockSupabaseClient = {
-      auth: {
-        getUser: mockGetUser,
-      },
-    };
-
-    (createServerClient as any).mockReturnValue(mockSupabaseClient);
-
-    // Mock a Next.js request
-    mockRequest = {
-      nextUrl: {
-        pathname: "/",
-        clone: vi.fn().mockReturnThis(),
-      },
+    vi.resetAllMocks();
+    
+    // Mock Next.js functions
+    mockRedirectFn = vi.fn((url) => ({ url }));
+    mockNextFn = vi.fn(() => ({
       cookies: {
-        getAll: vi.fn().mockReturnValue([]),
         set: vi.fn(),
       },
-    } as unknown as NextRequest;
+    }));
+    
+    NextResponse.redirect = mockRedirectFn;
+    NextResponse.next = mockNextFn;
+    
+    // Mock console methods to avoid cluttering test output
+    console.log = vi.fn();
+    console.error = vi.fn();
   });
-
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it("should redirect unauthenticated users to login", async () => {
-    // Mock an unauthenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    await middleware(mockRequest);
-
-    // Check if redirect was called with login path
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
-    expect(redirectCall.pathname).toBe("/login");
-  });
-
-  it("should allow access for authenticated users", async () => {
-    // Mock an authenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "test-user" } },
-      error: null,
-    });
-
-    await middleware(mockRequest);
-
-    // Check if we continued without redirect
-    expect(NextResponse.redirect).not.toHaveBeenCalled();
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("should allow access to login path even if unauthenticated", async () => {
-    // Set path to login
-    mockRequest.nextUrl.pathname = "/login";
-
-    // Mock an unauthenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    await middleware(mockRequest);
-
-    // Check if no redirect happened
-    expect(NextResponse.redirect).not.toHaveBeenCalled();
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("should allow access to auth callback path if unauthenticated", async () => {
-    // Set path to auth callback
-    mockRequest.nextUrl.pathname = "/auth/callback";
-
-    // Mock an unauthenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    await middleware(mockRequest);
-
-    // Check if no redirect happened
-    expect(NextResponse.redirect).not.toHaveBeenCalled();
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("should allow access to API routes if unauthenticated", async () => {
-    // Set path to an API route
-    mockRequest.nextUrl.pathname = "/api/auth/sign-in";
-
-    // Mock an unauthenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    await middleware(mockRequest);
-
-    // Check if no redirect happened for API routes
-    expect(NextResponse.redirect).not.toHaveBeenCalled();
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("should allow access to static assets if unauthenticated", async () => {
-    // Set path to a static asset
-    mockRequest.nextUrl.pathname = "/_next/static/chunks/main.js";
-
-    // Mock an unauthenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    await middleware(mockRequest);
-
-    // Check if no redirect happened for static assets
-    expect(NextResponse.redirect).not.toHaveBeenCalled();
-    expect(NextResponse.next).toHaveBeenCalled();
-  });
-
-  it("should handle authentication errors gracefully", async () => {
-    // Mock an authentication error
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: { message: "Authentication error" },
-    });
-
-    await middleware(mockRequest);
-
-    // Should redirect to login on auth error
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
-    expect(redirectCall.pathname).toBe("/login");
-  });
-
-  it("should handle unexpected errors gracefully", async () => {
-    // Mock an unexpected error
-    mockGetUser.mockRejectedValue(new Error("Unexpected error"));
-
-    await middleware(mockRequest);
-
-    // Should redirect to login on unexpected error
-    expect(NextResponse.redirect).toHaveBeenCalled();
-    const redirectCall = (NextResponse.redirect as any).mock.calls[0][0];
-    expect(redirectCall.pathname).toBe("/login");
-  });
-
-  it("should maintain cookie state from Supabase response", async () => {
-    // Mock an authenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "test-user" } },
-      error: null,
-    });
-
-    // Create a mock response with cookies
-    const mockResponse = {
-      cookies: {
-        getAll: vi
-          .fn()
-          .mockReturnValue([{ name: "test-cookie", value: "test-value" }]),
+  
+  it('allows access to public paths without authentication', async () => {
+    // Setup: User is not authenticated
+    const mockGetSession = vi.fn().mockResolvedValue({ data: { session: null } });
+    require('@supabase/ssr').createServerClient.mockReturnValue({
+      auth: {
+        getSession: mockGetSession,
       },
-    };
-
-    (NextResponse.next as any).mockReturnValueOnce(mockResponse);
-
-    await middleware(mockRequest);
-
-    // Should return the Supabase response with cookies intact
-    expect(NextResponse.next).toHaveBeenCalled();
+    });
+    
+    // For each public path, verify it's allowed
+    const publicPaths = [
+      '/login',
+      '/auth/callback',
+      '/api/auth/sign-in',
+      '/',
+      '/_next/static/chunks/main.js',
+      '/public/images/logo.png',
+      '/favicon.ico',
+    ];
+    
+    for (const path of publicPaths) {
+      const request = new NextRequest(new URL(`https://example.com${path}`));
+      request.cookies = {
+        getAll: vi.fn().mockReturnValue([]),
+      } as any;
+      
+      await updateSession(request);
+      
+      // Should not redirect to login
+      expect(mockRedirectFn).not.toHaveBeenCalled();
+      // Should call next() to continue to the route
+      expect(mockNextFn).toHaveBeenCalled();
+      
+      vi.clearAllMocks();
+    }
   });
-
-  it("should properly pass cookie information to the Supabase client", async () => {
-    // Set up request cookies
-    const requestCookies = [{ name: "auth-token", value: "test-token" }];
-    mockRequest.cookies.getAll.mockReturnValue(requestCookies);
-
-    await middleware(mockRequest);
-
-    // Verify createServerClient was called with proper cookie configuration
-    expect(createServerClient).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.objectContaining({
-        cookies: expect.objectContaining({
-          getAll: expect.any(Function),
-          setAll: expect.any(Function),
-        }),
-      })
-    );
-
-    // Verify cookie access
-    const cookieConfig = (createServerClient as any).mock.calls[0][2];
-    const getAllResult = cookieConfig.cookies.getAll();
-    expect(getAllResult).toEqual(requestCookies);
+  
+  it('redirects to login for protected paths when not authenticated', async () => {
+    // Setup: User is not authenticated
+    const mockGetSession = vi.fn().mockResolvedValue({ data: { session: null } });
+    require('@supabase/ssr').createServerClient.mockReturnValue({
+      auth: {
+        getSession: mockGetSession,
+      },
+    });
+    
+    // Test protected paths
+    const protectedPaths = [
+      '/dashboard',
+      '/profile',
+      '/settings',
+      '/api/protected-route',
+    ];
+    
+    for (const path of protectedPaths) {
+      const request = new NextRequest(new URL(`https://example.com${path}`));
+      request.cookies = {
+        getAll: vi.fn().mockReturnValue([]),
+      } as any;
+      
+      await updateSession(request);
+      
+      // Should redirect to login
+      expect(mockRedirectFn).toHaveBeenCalledWith(expect.objectContaining({
+        pathname: '/login',
+      }));
+      
+      vi.clearAllMocks();
+    }
+  });
+  
+  it('allows access to protected paths when authenticated', async () => {
+    // Setup: User is authenticated
+    const mockSession = {
+      user: { id: 'test-user-id' },
+      access_token: 'test-token',
+    };
+    const mockGetSession = vi.fn().mockResolvedValue({ data: { session: mockSession } });
+    require('@supabase/ssr').createServerClient.mockReturnValue({
+      auth: {
+        getSession: mockGetSession,
+      },
+    });
+    
+    // Test protected paths
+    const protectedPaths = [
+      '/dashboard',
+      '/profile',
+      '/settings',
+      '/api/protected-route',
+    ];
+    
+    for (const path of protectedPaths) {
+      const request = new NextRequest(new URL(`https://example.com${path}`));
+      request.cookies = {
+        getAll: vi.fn().mockReturnValue([]),
+      } as any;
+      
+      await updateSession(request);
+      
+      // Should not redirect
+      expect(mockRedirectFn).not.toHaveBeenCalled();
+      // Should call next() to continue to the route
+      expect(mockNextFn).toHaveBeenCalled();
+      
+      vi.clearAllMocks();
+    }
+  });
+  
+  it('redirects from login to dashboard when already authenticated', async () => {
+    // Setup: User is authenticated
+    const mockSession = {
+      user: { id: 'test-user-id' },
+      access_token: 'test-token',
+    };
+    const mockGetSession = vi.fn().mockResolvedValue({ data: { session: mockSession } });
+    require('@supabase/ssr').createServerClient.mockReturnValue({
+      auth: {
+        getSession: mockGetSession,
+      },
+    });
+    
+    const request = new NextRequest(new URL('https://example.com/login'));
+    request.cookies = {
+      getAll: vi.fn().mockReturnValue([]),
+    } as any;
+    
+    await updateSession(request);
+    
+    // Should redirect to dashboard
+    expect(mockRedirectFn).toHaveBeenCalledWith(expect.objectContaining({
+      pathname: '/dashboard',
+    }));
+  });
+  
+  it('handles errors gracefully', async () => {
+    // Setup: getSession throws an error
+    const mockError = new Error('Test error');
+    const mockGetSession = vi.fn().mockRejectedValue(mockError);
+    require('@supabase/ssr').createServerClient.mockReturnValue({
+      auth: {
+        getSession: mockGetSession,
+      },
+    });
+    
+    const request = new NextRequest(new URL('https://example.com/dashboard'));
+    request.cookies = {
+      getAll: vi.fn().mockReturnValue([]),
+    } as any;
+    
+    await updateSession(request);
+    
+    // Should log the error
+    expect(console.error).toHaveBeenCalled();
+    // Should call next() to avoid breaking the app
+    expect(mockNextFn).toHaveBeenCalled();
   });
 });

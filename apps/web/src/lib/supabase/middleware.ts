@@ -3,9 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { ENV } from "@/env";
 
+/**
+ * Update the auth session for requests
+ * This can be used in middleware to handle auth session refreshing
+ * 
+ * @param request - The incoming request object
+ * @returns NextResponse with updated cookies
+ */
 export async function updateSession(request: NextRequest) {
-  // This `try/catch` block is only here for the interactive tutorial.
-  // In most cases, you can remove it and just return the response.
   try {
     // Create an unmodified response
     let response = NextResponse.next({
@@ -20,24 +25,16 @@ export async function updateSession(request: NextRequest) {
       ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {
-          async getAll() {
-            try {
-              const allCookies = request.cookies.getAll();
-              return allCookies;
-            } catch (error) {
-              console.error("[Middleware] Error getting cookies:", error);
-              return [];
-            }
+          getAll() {
+            return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
-              request.cookies.set({ name, value, ...options });
-              response = NextResponse.next({
-                request: {
-                  headers: request.headers,
-                },
+              response.cookies.set({
+                name,
+                value,
+                ...options,
               });
-              response.cookies.set({ name, value, ...options });
             });
           },
         },
@@ -49,29 +46,51 @@ export async function updateSession(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession();
 
-    // Log auth status but not sensitive details
-    if (session) {
-      console.log("[Middleware] User authenticated:", session.user.id);
-    } else {
-      // Log non-auth paths that don't need protection
-      const path = request.nextUrl.pathname;
-      if (
-        !path.startsWith("/_next") &&
-        !path.startsWith("/api/") &&
-        !path.includes(".") &&
-        !path.startsWith("/auth")
-      ) {
-        console.log("[Middleware] Unauthenticated request:", path);
+    // Check if the request is for a protected route
+    const path = request.nextUrl.pathname;
+    
+    // These paths are always allowed even without authentication
+    const isPublicPath = 
+      path.startsWith("/login") || 
+      path.startsWith("/auth/") || 
+      path.startsWith("/api/auth/") ||
+      path === "/" ||  // Landing page
+      path.startsWith("/_next/") || 
+      path.startsWith("/public/") ||
+      path.match(/\.(ico|png|jpg|jpeg|svg|css|js)$/);
+
+    // Protect routes that aren't public
+    if (!session && !isPublicPath) {
+      // Redirect to login if not authenticated
+      const redirectUrl = new URL("/login", request.url);
+      
+      // Optionally store the original URL to redirect back after login
+      if (path !== "/login") {
+        redirectUrl.searchParams.set("redirect", encodeURIComponent(path));
       }
+
+      // Perform the redirect
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Log auth status but not sensitive details (helpful for debugging)
+    if (session) {
+      // If user is already logged in and trying to access login page, redirect to dashboard
+      if (path.startsWith("/login")) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      
+      console.log("[Auth] Authenticated request:", path);
+    } else if (!isPublicPath) {
+      console.log("[Auth] Unauthenticated request to protected route:", path);
     }
 
     return response;
   } catch (e) {
-    // If you are here, a Supabase client could not be created!
-    // This is likely because you have not set up environment variables.
-    // TODO: Feel free to remove this `try/catch` block once you have
-    // set up your environment variables.
-    console.error("[Middleware] Error refreshing session:", e);
+    // If there's an error, log it but don't break the application
+    console.error("[Middleware] Error in auth middleware:", e);
+    
+    // Return unmodified response to avoid breaking the app
     return NextResponse.next({
       request: {
         headers: request.headers,
