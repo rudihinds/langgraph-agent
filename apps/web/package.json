@@ -15,7 +15,13 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:errors": "vitest run \"src/lib/errors/__tests__/error-handling.test.ts\"",
+    "test:api": "vitest run \"src/lib/api/__tests__/route-handler.test.ts\"",
+    "test:supabase": "vitest run \"src/lib/supabase/__tests__/errors.test.ts\"",
+    "test:components": "vitest run \"src/components/__tests__/**/*.test.tsx\"",
+    "test:hooks": "vitest run \"src/hooks/__tests__/**/*.test.tsx\"",
+    "test:unit": "vitest run \"src/**/__tests__/**/*.test.{ts,tsx}\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

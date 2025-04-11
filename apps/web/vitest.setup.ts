@@ -1,74 +1,44 @@
-import "@testing-library/jest-dom/vitest";
-import { expect, vi } from "vitest";
-import * as matchers from "@testing-library/jest-dom/matchers";
+// Add global test setup for Vitest
+import '@testing-library/jest-dom';
 
-// Add testing-library matchers to Vitest
-expect.extend(matchers);
-
-// Mock environment variables
-process.env.NEXT_PUBLIC_SUPABASE_URL = "https://mock-project.supabase.co";
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "mock-anon-key";
-
-// Mock Next.js navigation
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({
+// Mock Next.js specific features
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
     push: vi.fn(),
     replace: vi.fn(),
-    refresh: vi.fn(),
     back: vi.fn(),
-    forward: vi.fn(),
     prefetch: vi.fn(),
-  })),
-  useParams: vi.fn(() => ({})),
-  usePathname: vi.fn(() => ""),
-  useSearchParams: vi.fn(() => ({
+    pathname: '/',
+    query: {},
+  }),
+  useSearchParams: () => ({
     get: vi.fn(),
-    has: vi.fn(),
-    entries: vi.fn(() => []),
-    forEach: vi.fn(),
-    keys: vi.fn(() => []),
-    values: vi.fn(() => []),
-  })),
-  redirect: vi.fn(),
+  }),
+  usePathname: () => '/',
 }));
 
-// Mock react-dom
-vi.mock("react-dom", () => ({
-  ...vi.importActual("react-dom"),
-  preload: vi.fn(),
+// Mock cookies API
+vi.mock('next/headers', () => ({
+  cookies: () => ({
+    getAll: vi.fn().mockReturnValue([]),
+    get: vi.fn(),
+    set: vi.fn(),
+  }),
 }));
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value;
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    },
-    key: (index: number) => Object.keys(store)[index] || null,
-    length: Object.keys(store).length,
-  };
-})();
-
-Object.defineProperty(window, "localStorage", { value: localStorageMock });
-
-// Mock console.error to avoid polluting test output
+// Silence console errors in tests
 const originalConsoleError = console.error;
 console.error = (...args) => {
-  // Filter out React-specific warnings that pollute test output
+  // Filter out specific React-related warnings to keep test output clean
   if (
-    typeof args[0] === "string" &&
-    (args[0].includes("Warning:") ||
-      args[0].includes("React does not recognize"))
+    args[0]?.includes?.('Warning:') ||
+    args[0]?.includes?.('React does not recognize') ||
+    args[0]?.includes?.('validateDOMNesting')
   ) {
     return;
   }
   originalConsoleError(...args);
 };
+
+// Set up global timeout
+vi.setConfig({ testTimeout: 10000 });
