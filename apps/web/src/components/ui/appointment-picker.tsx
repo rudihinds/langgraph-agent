@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -212,7 +212,10 @@ export function AppointmentPicker({
           </PopoverContent>
         </Popover>
         {error && (
-          <p className="text-sm font-medium text-destructive">{error}</p>
+          <p className="text-xs font-medium text-destructive mt-1.5 flex items-center">
+            <AlertCircle className="w-3 h-3 mr-1.5 flex-shrink-0" />
+            {error}
+          </p>
         )}
       </div>
     );
@@ -251,7 +254,12 @@ export function AppointmentPicker({
           />
         </PopoverContent>
       </Popover>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p className="text-xs font-medium text-destructive mt-1.5 flex items-center">
+          <AlertCircle className="w-3 h-3 mr-1.5 flex-shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }
