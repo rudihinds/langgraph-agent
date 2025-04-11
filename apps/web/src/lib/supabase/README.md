@@ -2,6 +2,78 @@
 
 This module provides server-side and client-side Supabase clients for authentication.
 
+## Directory Structure
+
+```
+/src/lib/supabase/
+├── client.ts            # Browser client creation
+├── server.ts            # Server client creation
+├── auth/
+│   ├── index.ts         # Main auth exports
+│   ├── hooks.ts         # React hooks for auth
+│   ├── actions.ts       # Auth actions (signIn, signOut)
+│   └── utils.ts         # Auth utilities
+├── middleware.ts        # Middleware for Next.js
+├── types/               # TypeScript types
+│   └── index.ts         # Type definitions
+├── compatibility.ts     # Legacy exports for backward compatibility
+└── README.md            # Documentation
+```
+
+## Usage Examples
+
+### Server-side Authentication
+
+```typescript
+// In a server component or API route
+import { createClient } from '@/lib/supabase/server';
+
+export async function GET() {
+  const supabase = createClient();
+  const { data } = await supabase.auth.getUser();
+  
+  // Handle authentication logic
+}
+```
+
+### Client-side Authentication
+
+```typescript
+// In a client component
+'use client';
+import { useCurrentUser } from '@/lib/supabase/auth/hooks';
+import { signIn, signOut } from '@/lib/supabase/auth';
+
+export default function AuthButtons() {
+  const { user, loading } = useCurrentUser();
+  
+  if (loading) return <div>Loading...</div>;
+  
+  return user ? (
+    <button onClick={() => signOut()}>Sign Out</button>
+  ) : (
+    <button onClick={() => signIn()}>Sign In with Google</button>
+  );
+}
+```
+
+### Route Protection
+
+```typescript
+// In a client component
+'use client';
+import { useRequireAuth } from '@/lib/supabase/auth/hooks';
+
+export default function ProtectedPage() {
+  const { user, loading } = useRequireAuth();
+  
+  if (loading) return <div>Loading...</div>;
+  if (!user) return null; // Will redirect to login
+  
+  return <div>Protected content for {user.email}</div>;
+}
+```
+
 ## Critical Implementation Details
 
 ### Server-side Client
@@ -32,6 +104,16 @@ The only valid cookie pattern for `@supabase/ssr` is:
 ```
 
 ❌ **DO NOT USE** the individual `get`/`set`/`remove` cookie methods as they are deprecated and will cause authentication failures.
+
+## Legacy Code Compatibility
+
+For backward compatibility, we maintain wrapper files that re-export from the new structure:
+
+- `/src/lib/supabase.ts` → Use `/src/lib/supabase/auth` or `/src/lib/supabase/client` instead
+- `/src/lib/client-auth.ts` → Use `/src/lib/supabase/auth/hooks` instead
+- `/src/lib/supabase-server.ts` → Use `/src/lib/supabase/server` instead
+
+These legacy files are marked as deprecated and will be removed in a future release.
 
 ## Testing
 
