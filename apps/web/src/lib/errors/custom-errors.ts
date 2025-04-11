@@ -1,7 +1,16 @@
 /**
  * Custom error classes for standardized error handling
  */
-import { createErrorResponse } from './index';
+import { createErrorResponse } from "./index";
+import {
+  AuthError as IAuthError,
+  ValidationError as IValidationError,
+  DatabaseError as IDatabaseError,
+  NotFoundError as INotFoundError,
+  ForbiddenError as IForbiddenError,
+  ServerError as IServerError,
+  ErrorCodes,
+} from "./types";
 
 /**
  * Base class for all application errors
@@ -11,7 +20,12 @@ export class AppError extends Error {
   status: number;
   details?: unknown;
 
-  constructor(message: string, code: string, status: number = 400, details?: unknown) {
+  constructor(
+    message: string,
+    code: string,
+    status: number = 400,
+    details?: unknown
+  ) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
@@ -23,45 +37,65 @@ export class AppError extends Error {
 /**
  * Error thrown when authentication fails
  */
-export class AuthenticationError extends AppError {
-  constructor(message: string = 'Authentication failed', details?: unknown) {
-    super(message, 'AUTH_ERROR', 401, details);
+export class AuthenticationError extends AppError implements IAuthError {
+  constructor(message: string = "Authentication failed", details?: unknown) {
+    super(message, ErrorCodes.AUTHENTICATION, 401, details);
   }
 }
 
 /**
  * Error thrown when validation fails
  */
-export class ValidationError extends AppError {
-  constructor(message: string = 'Validation failed', details?: unknown) {
-    super(message, 'VALIDATION_ERROR', 400, details);
+export class ValidationError extends AppError implements IValidationError {
+  constructor(
+    message: string = "Validation failed",
+    details?: Record<string, string>
+  ) {
+    super(message, ErrorCodes.VALIDATION, 400, details);
   }
 }
 
 /**
  * Error thrown when a database operation fails
  */
-export class DatabaseError extends AppError {
-  constructor(message: string = 'Database operation failed', details?: unknown) {
-    super(message, 'DATABASE_ERROR', 500, details);
+export class DatabaseError extends AppError implements IDatabaseError {
+  constructor(
+    message: string = "Database operation failed",
+    details?: unknown
+  ) {
+    super(message, ErrorCodes.DATABASE, 500, details);
   }
 }
 
 /**
  * Error thrown when a resource is not found
  */
-export class NotFoundError extends AppError {
-  constructor(message: string = 'Resource not found', details?: unknown) {
-    super(message, 'NOT_FOUND', 404, details);
+export class NotFoundError extends AppError implements INotFoundError {
+  constructor(
+    message: string = "Resource not found",
+    resourceType?: string,
+    resourceId?: string | number
+  ) {
+    const details = resourceType ? { resourceType, resourceId } : undefined;
+    super(message, ErrorCodes.NOT_FOUND, 404, details);
   }
 }
 
 /**
  * Error thrown when a user doesn't have permission to access a resource
  */
-export class ForbiddenError extends AppError {
-  constructor(message: string = 'Access forbidden', details?: unknown) {
-    super(message, 'FORBIDDEN', 403, details);
+export class ForbiddenError extends AppError implements IForbiddenError {
+  constructor(message: string = "Access forbidden", details?: unknown) {
+    super(message, ErrorCodes.FORBIDDEN, 403, details);
+  }
+}
+
+/**
+ * Error thrown when a server error occurs
+ */
+export class ServerError extends AppError implements IServerError {
+  constructor(message: string = "Server error occurred", details?: unknown) {
+    super(message, ErrorCodes.SERVER_ERROR, 500, details);
   }
 }
 
@@ -77,12 +111,12 @@ export function handleAppError(error: unknown): Response {
       error.details
     );
   }
-  
+
   // Default server error for unknown errors
-  console.error('Unhandled error:', error);
+  console.error("Unhandled error:", error);
   return createErrorResponse(
-    'An unexpected error occurred',
+    "An unexpected error occurred",
     500,
-    'SERVER_ERROR'
+    ErrorCodes.SERVER_ERROR
   );
 }

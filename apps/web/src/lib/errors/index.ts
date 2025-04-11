@@ -1,47 +1,33 @@
 /**
  * Standard error handling utilities for API responses
  */
-
-/**
- * Standard API error response structure
- */
-export interface ApiErrorResponse {
-  success: false;
-  error: {
-    message: string;
-    code?: string;
-    details?: unknown;
-  };
-}
-
-/**
- * Standard API success response structure
- */
-export interface ApiSuccessResponse<T = any> {
-  success: true;
-  data: T;
-}
-
-/**
- * Union type for all API responses
- */
-export type ApiResponse<T = any> = ApiSuccessResponse<T> | ApiErrorResponse;
+import {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+  ApiResponse,
+  ErrorCodes,
+  HttpStatusToErrorCode,
+} from "./types";
 
 /**
  * Creates a standardized error response for API routes
  */
 export function createErrorResponse(
-  message: string, 
-  status: number = 400, 
-  code?: string, 
+  message: string,
+  status: number = 400,
+  code?: string,
   details?: unknown
 ): Response {
+  // If no code was provided, try to determine from status code
+  const errorCode =
+    code || HttpStatusToErrorCode[status] || ErrorCodes.SERVER_ERROR;
+
   return new Response(
     JSON.stringify({
       success: false,
       error: {
         message,
-        ...(code && { code }),
+        ...(errorCode && { code: errorCode }),
         ...(details && { details }),
       },
     }),
@@ -57,7 +43,10 @@ export function createErrorResponse(
 /**
  * Creates a standardized success response for API routes
  */
-export function createSuccessResponse<T>(data: T, status: number = 200): Response {
+export function createSuccessResponse<T>(
+  data: T,
+  status: number = 200
+): Response {
   return new Response(
     JSON.stringify({
       success: true,
@@ -75,7 +64,9 @@ export function createSuccessResponse<T>(data: T, status: number = 200): Respons
 /**
  * Error handling for client-side fetch requests
  */
-export async function handleFetchResponse<T>(response: Response): Promise<ApiResponse<T>> {
+export async function handleFetchResponse<T>(
+  response: Response
+): Promise<ApiResponse<T>> {
   if (!response.ok) {
     let errorData: any = { message: `HTTP error ${response.status}` };
     try {
@@ -83,30 +74,29 @@ export async function handleFetchResponse<T>(response: Response): Promise<ApiRes
     } catch (e) {
       // If JSON parsing fails, use default error
     }
-    
+
     return {
       success: false,
       error: {
-        message: errorData.message || errorData.error || `HTTP error ${response.status}`,
+        message:
+          errorData.message ||
+          errorData.error ||
+          `HTTP error ${response.status}`,
         ...(errorData.code && { code: errorData.code }),
         ...(errorData.details && { details: errorData.details }),
       },
     };
   }
-  
+
   const data = await response.json();
   return { success: true, data };
 }
 
-/**
- * Common error codes
- */
-export const ErrorCodes = {
-  AUTHENTICATION: 'AUTH_ERROR',
-  VALIDATION: 'VALIDATION_ERROR',
-  DATABASE: 'DATABASE_ERROR',
-  NOT_FOUND: 'NOT_FOUND',
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  FORBIDDEN: 'FORBIDDEN',
-  SERVER_ERROR: 'SERVER_ERROR',
-};
+// Re-export the types and constants
+export {
+  ApiResponse,
+  ApiSuccessResponse,
+  ApiErrorResponse,
+  ErrorCodes,
+  HttpStatusToErrorCode,
+} from "./types";
