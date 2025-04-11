@@ -207,20 +207,24 @@ export class ContextWindowManager extends EventEmitter {
 
     try {
       const llmFactory = LLMFactory.getInstance();
-      const response = await llmFactory.getCompletion(
-        {
-          systemPrompt: `You are a highly efficient summarization assistant. 
+      const client = llmFactory.getClientForModel(this.summarizationModel);
+      const response = await client.completion({
+        model: this.summarizationModel,
+        systemMessage: `You are a highly efficient summarization assistant. 
           Summarize the following conversation accurately, preserving all important details.
           Make the summary clear, concise, and in the third person.
           Focus on the key points, decisions, and information shared.`,
-          userPrompt: `Please summarize this conversation:\n\n${conversationText}`,
-        },
-        this.summarizationModel
-      );
+        messages: [
+          {
+            role: "user",
+            content: `Please summarize this conversation:\n\n${conversationText}`,
+          },
+        ],
+      });
 
       return {
         role: "assistant",
-        content: response.trim(),
+        content: response.content.trim(),
         isSummary: true,
       };
     } catch (error) {
@@ -264,7 +268,12 @@ export class ContextWindowManager extends EventEmitter {
       );
 
       const llmFactory = LLMFactory.getInstance();
-      const modelInfo = llmFactory.getModelInfo(modelId);
+      const modelInfo = llmFactory.getModelById(modelId);
+
+      if (!modelInfo) {
+        throw new Error(`Model information not found for ${modelId}`);
+      }
+
       const maxTokens = modelInfo.contextWindow - this.reservedTokens; // Leave room for response
 
       this.logDebug(
