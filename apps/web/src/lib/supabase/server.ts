@@ -16,46 +16,46 @@ export const createClient = cache(
       | Promise<ReturnType<typeof cookies>>
   ) => {
     try {
+      // Check for required environment variables
       if (!ENV.NEXT_PUBLIC_SUPABASE_URL) {
         console.error(
           "[SupabaseClient] Missing NEXT_PUBLIC_SUPABASE_URL environment variable"
         );
-        return null;
+        throw new Error("Missing Supabase URL");
       }
 
       if (!ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
         console.error(
           "[SupabaseClient] Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable"
         );
-        return null;
+        throw new Error("Missing Supabase anonymous key");
       }
 
       // Use provided cookie store or get from next/headers
       let cookieJar;
       try {
-        cookieJar = cookieStore
-          ? cookieStore instanceof Promise
+        cookieJar =
+          cookieStore instanceof Promise
             ? await cookieStore
-            : cookieStore
-          : await cookies();
+            : cookieStore || cookies();
       } catch (cookieError) {
         console.error("[SupabaseClient] Error accessing cookies:", cookieError);
-        return null;
+        throw new Error("Cookie access error");
       }
 
+      console.log(
+        "[SupabaseClient] Creating server client with URL:",
+        ENV.NEXT_PUBLIC_SUPABASE_URL
+      );
+
+      // Use the simplified pattern for creating the client
       const client = createServerClient(
         ENV.NEXT_PUBLIC_SUPABASE_URL,
         ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         {
           cookies: {
-            async getAll() {
-              try {
-                const allCookies = await cookieJar.getAll();
-                return allCookies;
-              } catch (error) {
-                console.error("[SupabaseClient] Error getting cookies:", error);
-                return [];
-              }
+            getAll() {
+              return cookieJar.getAll();
             },
             setAll(cookiesToSet) {
               try {
@@ -71,10 +71,16 @@ export const createClient = cache(
         }
       );
 
+      // Verify the client has the auth object
+      if (!client || !client.auth) {
+        console.error("[SupabaseClient] Client created but auth is undefined");
+        throw new Error("Supabase client auth is undefined");
+      }
+
       return client;
     } catch (error) {
       console.error("[SupabaseClient] Failed to create client:", error);
-      return null;
+      throw error; // Re-throw so the calling code can handle it
     }
   }
 );

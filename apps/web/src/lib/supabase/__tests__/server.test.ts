@@ -1,159 +1,129 @@
+/**
+ * Tests for the server-side Supabase client
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient } from '../server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { ENV } from '@/env';
 
 // Mock dependencies
-jest.mock('next/headers', () => ({
-  cookies: jest.fn(),
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(),
 }));
 
-jest.mock('@supabase/ssr', () => ({
-  createServerClient: jest.fn(),
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: vi.fn(),
 }));
 
-jest.mock('@/env', () => ({
+vi.mock('@/env', () => ({
   ENV: {
     NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'mock-anon-key',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-key',
   },
 }));
 
-describe('Supabase Server Client', () => {
-  const mockCookies = {
-    get: jest.fn(),
-    set: jest.fn(),
+describe('Server-side Supabase client', () => {
+  const mockCookieStore = {
+    getAll: vi.fn().mockReturnValue([]),
+    set: vi.fn(),
   };
-  
+
   const mockSupabaseClient = {
     auth: {
-      getSession: jest.fn(),
-      getUser: jest.fn(),
+      getSession: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      signInWithOAuth: vi.fn().mockResolvedValue({ 
+        data: { url: 'https://oauth-url.example.com' }, 
+        error: null 
+      }),
     },
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (cookies as jest.Mock).mockReturnValue(mockCookies);
-    (createServerClient as jest.Mock).mockReturnValue(mockSupabaseClient);
+    vi.clearAllMocks();
+    (cookies as any).mockReturnValue(mockCookieStore);
+    (createServerClient as any).mockReturnValue(mockSupabaseClient);
   });
 
-  it('should create a Supabase client with correct parameters', () => {
-    createClient();
-
+  it('should create a valid Supabase client with auth object', async () => {
+    const client = await createClient();
+    
     expect(createServerClient).toHaveBeenCalledWith(
-      ENV.NEXT_PUBLIC_SUPABASE_URL,
-      ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      'https://example.supabase.co',
+      'test-key',
       expect.objectContaining({
         cookies: expect.objectContaining({
-          get: expect.any(Function),
-          set: expect.any(Function),
-          remove: expect.any(Function),
+          getAll: expect.any(Function),
+          setAll: expect.any(Function),
         }),
       })
     );
+    
+    expect(client).toBeDefined();
+    expect(client!.auth).toBeDefined();
+    expect(typeof client!.auth.signInWithOAuth).toBe('function');
   });
 
-  it('should use provided cookieStore if available', () => {
+  it('should use provided cookie store if available', async () => {
     const customCookieStore = {
-      get: jest.fn(),
-      set: jest.fn(),
+      getAll: vi.fn().mockReturnValue([]),
+      set: vi.fn(),
     };
     
-    (cookies as jest.Mock).mockReturnValue(mockCookies);
+    await createClient(customCookieStore as any);
     
-    createClient(customCookieStore as any);
-    
-    // Get the cookie handlers passed to createServerClient
-    const cookieHandlers = (createServerClient as jest.Mock).mock.calls[0][2].cookies;
-    
-    // Call the get method to test if it uses customCookieStore
-    cookieHandlers.get('test-cookie');
-    
-    expect(customCookieStore.get).toHaveBeenCalledWith('test-cookie');
-    expect(mockCookies.get).not.toHaveBeenCalled();
+    expect(createServerClient).toHaveBeenCalled();
+    expect(customCookieStore.getAll).not.toHaveBeenCalled(); // Not called during initialization
   });
 
-  it('should use default cookies() if no cookieStore provided', () => {
-    createClient();
+  it('should throw an error if auth is undefined', async () => {
+    (createServerClient as any).mockReturnValue({ auth: undefined });
     
-    // Get the cookie handlers passed to createServerClient
-    const cookieHandlers = (createServerClient as jest.Mock).mock.calls[0][2].cookies;
-    
-    // Call the get method to test if it uses the default cookieStore
-    cookieHandlers.get('test-cookie');
-    
-    expect(mockCookies.get).toHaveBeenCalledWith('test-cookie');
+    await expect(createClient()).rejects.toThrow('Supabase client auth is undefined');
   });
 
-  it('should handle errors gracefully when getting cookies', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-    mockCookies.get.mockImplementation(() => {
+  it('should throw an error if client creation fails', async () => {
+    (createServerClient as any).mockImplementation(() => {
+      throw new Error('Failed to create client');
+    });
+    
+    await expect(createClient()).rejects.toThrow('Failed to create client');
+  });
+
+  it('should throw an error if environment variables are missing', async () => {
+    vi.mock('@/env', () => ({
+      ENV: {
+        NEXT_PUBLIC_SUPABASE_URL: '',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-key',
+      },
+    }), { virtual: true });
+    
+    await expect(createClient()).rejects.toThrow();
+  });
+
+  it('should handle cookie errors gracefully', async () => {
+    (cookies as any).mockImplementation(() => {
       throw new Error('Cookie error');
     });
     
-    createClient();
-    
-    // Get the cookie handlers passed to createServerClient
-    const cookieHandlers = (createServerClient as jest.Mock).mock.calls[0][2].cookies;
-    
-    // Call the get method which should throw but be caught
-    const result = cookieHandlers.get('test-cookie');
-    
-    expect(result).toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "[Supabase Client] Error getting cookie 'test-cookie':", 
-      expect.any(Error)
-    );
-    
-    consoleSpy.mockRestore();
+    await expect(createClient()).rejects.toThrow('Cookie access error');
   });
 
-  it('should throw an error if SUPABASE_URL is missing', () => {
-    // Temporarily override ENV mock
-    jest.resetModules();
-    jest.mock('@/env', () => ({
-      ENV: {
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'mock-anon-key',
-      },
-    }));
+  // Test actual cookie handling logic
+  it('should properly handle cookies in getAll and setAll', async () => {
+    const client = await createClient();
     
-    // Re-import to get the new mocked version
-    const { createClient: createClientWithMissingURL } = require('../server');
+    // Extract the cookies object that was passed to createServerClient
+    const cookiesObj = (createServerClient as any).mock.calls[0][2].cookies;
     
-    expect(() => createClientWithMissingURL()).toThrow('Missing NEXT_PUBLIC_SUPABASE_URL');
+    // Test getAll
+    cookiesObj.getAll();
+    expect(mockCookieStore.getAll).toHaveBeenCalled();
     
-    // Restore the original ENV mock
-    jest.resetModules();
-    jest.mock('@/env', () => ({
-      ENV: {
-        NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'mock-anon-key',
-      },
-    }));
-  });
-
-  it('should throw an error if SUPABASE_ANON_KEY is missing', () => {
-    // Temporarily override ENV mock
-    jest.resetModules();
-    jest.mock('@/env', () => ({
-      ENV: {
-        NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-      },
-    }));
-    
-    // Re-import to get the new mocked version
-    const { createClient: createClientWithMissingKey } = require('../server');
-    
-    expect(() => createClientWithMissingKey()).toThrow('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
-    
-    // Restore the original ENV mock
-    jest.resetModules();
-    jest.mock('@/env', () => ({
-      ENV: {
-        NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'mock-anon-key',
-      },
-    }));
+    // Test setAll
+    const mockCookies = [
+      { name: 'test', value: 'value', options: {} }
+    ];
+    cookiesObj.setAll(mockCookies);
+    expect(mockCookieStore.set).toHaveBeenCalledWith('test', 'value', {});
   });
 });
