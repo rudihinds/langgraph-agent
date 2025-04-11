@@ -5,43 +5,35 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { 
   getRedirectURL,
   getSession,
-  getAccessToken, 
-  validateSession,
-  getCurrentUser,
-  checkAuthAndRedirect 
+  getAccessToken
 } from '../utils';
 
-// Mock the client
-vi.mock('../../client', () => ({
-  createClient: vi.fn(),
+// Mock createClient before importing
+const mockGetSession = vi.fn();
+const mockGetUser = vi.fn();
+const mockRefreshSession = vi.fn();
+
+const mockSupabaseClient = {
+  auth: {
+    getSession: mockGetSession,
+    getUser: mockGetUser,
+    refreshSession: mockRefreshSession,
+  },
+};
+
+// Mock the client module
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(() => mockSupabaseClient),
 }));
 
 // Mock window object
 const originalWindow = { ...window };
-const mockWindow = {
-  location: {
-    origin: 'https://example.com',
-    href: '',
-  },
-};
 
 describe('Auth Utils', () => {
-  let mockSupabaseClient: any;
-  
   beforeEach(() => {
     // Reset mocks and window
     vi.resetAllMocks();
     global.window = originalWindow as any;
-    
-    // Set up mock client
-    mockSupabaseClient = {
-      auth: {
-        getSession: vi.fn(),
-        getUser: vi.fn(),
-        refreshSession: vi.fn(),
-      },
-    };
-    require('../../client').createClient.mockReturnValue(mockSupabaseClient);
   });
 
   describe('getRedirectURL', () => {
@@ -82,23 +74,20 @@ describe('Auth Utils', () => {
       expect(result).toBe('http://localhost:3000');
     });
   });
-
-  // Add more test blocks for other utility functions
-  // These are skeleton tests that should be expanded with more scenarios
   
   describe('getSession', () => {
     it('should call supabase.auth.getSession', async () => {
-      mockSupabaseClient.auth.getSession.mockResolvedValue({ data: { session: { user: {} } } });
+      mockGetSession.mockResolvedValue({ data: { session: { user: {} } } });
       
       await getSession();
       
-      expect(mockSupabaseClient.auth.getSession).toHaveBeenCalled();
+      expect(mockGetSession).toHaveBeenCalled();
     });
   });
   
   describe('getAccessToken', () => {
     it('should return the access token when session exists', async () => {
-      mockSupabaseClient.auth.getSession.mockResolvedValue({ 
+      mockGetSession.mockResolvedValue({ 
         data: { session: { access_token: 'test-token' } } 
       });
       
@@ -108,7 +97,7 @@ describe('Auth Utils', () => {
     });
     
     it('should return null when no session exists', async () => {
-      mockSupabaseClient.auth.getSession.mockResolvedValue({ 
+      mockGetSession.mockResolvedValue({ 
         data: { session: null } 
       });
       
@@ -116,18 +105,5 @@ describe('Auth Utils', () => {
       
       expect(token).toBeNull();
     });
-  });
-  
-  // Additional test outlines - to be implemented
-  describe('validateSession', () => {
-    // Test cases for session validation
-  });
-  
-  describe('getCurrentUser', () => {
-    // Test cases for getting current user
-  });
-  
-  describe('checkAuthAndRedirect', () => {
-    // Test cases for auth checking with redirect
   });
 });

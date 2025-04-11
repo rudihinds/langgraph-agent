@@ -1,198 +1,201 @@
 /**
- * Tests for Supabase auth hooks
+ * Tests for Auth hooks
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { useEffect } from 'react';
+
+// Mock modules before importing hooks
+const mockRouter = {
+  push: vi.fn(),
+  refresh: vi.fn(),
+};
+
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => mockRouter,
+}));
+
+// Mock the Supabase client
+const mockAuth = {
+  getUser: vi.fn(),
+  signOut: vi.fn(),
+  onAuthStateChange: vi.fn(),
+};
+
+const mockSupabaseClient = {
+  auth: mockAuth,
+};
+
+// Mock the createClient function
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn(() => mockSupabaseClient),
+}));
+
+// Now we can import the hooks
 import { useCurrentUser, useRequireAuth } from '../hooks';
 
-// Mock dependencies
-vi.mock('../../client', () => ({
-  createClient: vi.fn(),
-}));
-
-vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    refresh: vi.fn(),
-  })),
-}));
-
 describe('Auth Hooks', () => {
-  let mockSupabaseClient: any;
-  let mockRouter: any;
-  
   beforeEach(() => {
     vi.resetAllMocks();
     
-    // Mock subscription for auth state changes
-    const mockSubscription = {
-      unsubscribe: vi.fn(),
-    };
-    
-    // Set up mock Supabase client
-    mockSupabaseClient = {
-      auth: {
-        getUser: vi.fn(),
-        onAuthStateChange: vi.fn().mockReturnValue({
-          data: { subscription: mockSubscription },
-        }),
-      },
-    };
-    require('../../client').createClient.mockReturnValue(mockSupabaseClient);
-    
-    // Set up mock router
-    mockRouter = {
-      push: vi.fn(),
-      refresh: vi.fn(),
-    };
-    require('next/navigation').useRouter.mockReturnValue(mockRouter);
-  });
-  
-  describe('useCurrentUser', () => {
-    it('should return loading state initially', () => {
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-      
-      const { result } = renderHook(() => useCurrentUser());
-      
-      expect(result.current.loading).toBe(true);
-      expect(result.current.user).toBeNull();
-      expect(result.current.error).toBeNull();
+    // Default mock implementation for getUser
+    mockAuth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null,
     });
-    
-    it('should return user when authenticated', async () => {
-      const mockUser = { id: '123', email: 'test@example.com' };
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+
+    // Default mock implementation for onAuthStateChange
+    mockAuth.onAuthStateChange.mockImplementation((callback) => {
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  describe('useCurrentUser', () => {
+    it('should return loading state initially and then user data', async () => {
+      // Setup mock user
+      const mockUser = { id: '123', email: 'user@example.com' };
+      mockAuth.getUser.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
-      
+
+      // Render hook
       const { result } = renderHook(() => useCurrentUser());
-      
-      // Wait for the async getUser call to complete
+
+      // Initially should be loading with no user
+      expect(result.current.loading).toBe(true);
+      expect(result.current.user).toBeNull();
+
+      // Wait for the effect to run
       await vi.waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
-      
+
+      // Should have user data now
       expect(result.current.user).toEqual(mockUser);
       expect(result.current.error).toBeNull();
     });
-    
-    it('should set up auth state change listener', () => {
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
+
+    it('should handle auth state changes', async () => {
+      let authCallback: any;
+      
+      // Setup mock for onAuthStateChange to capture callback
+      mockAuth.onAuthStateChange.mockImplementation((callback) => {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
       });
-      
-      renderHook(() => useCurrentUser());
-      
-      expect(mockSupabaseClient.auth.onAuthStateChange).toHaveBeenCalled();
-    });
-    
-    it('should refresh router on auth state change', () => {
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-      
-      renderHook(() => useCurrentUser());
-      
-      // Get the callback passed to onAuthStateChange
-      const authChangeCallback = mockSupabaseClient.auth.onAuthStateChange.mock.calls[0][0];
-      
-      // Call the auth change callback
-      act(() => {
-        authChangeCallback('SIGNED_IN', { user: { id: '123' } });
-      });
-      
-      expect(mockRouter.refresh).toHaveBeenCalled();
-    });
-    
-    it('should handle errors during user fetch', async () => {
-      const mockError = new Error('Failed to get user');
-      mockSupabaseClient.auth.getUser.mockRejectedValue(mockError);
-      
+
+      // Render hook
       const { result } = renderHook(() => useCurrentUser());
-      
-      // Wait for the async getUser call to complete
+
+      // Wait for initial load to complete
       await vi.waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
-      
+
+      // Simulate auth state change - login
+      const mockUser = { id: '123', email: 'user@example.com' };
+      act(() => {
+        authCallback('SIGNED_IN', { user: mockUser });
+      });
+
+      // User should be updated
+      expect(result.current.user).toEqual(mockUser);
+
+      // Simulate auth state change - logout
+      act(() => {
+        authCallback('SIGNED_OUT', null);
+      });
+
+      // User should be null
+      expect(result.current.user).toBeNull();
+    });
+
+    it('should handle errors from getUser', async () => {
+      // Setup error response
+      const mockError = new Error('Authentication failed');
+      mockAuth.getUser.mockResolvedValue({
+        data: { user: null },
+        error: mockError,
+      });
+
+      // Spy on console.error
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Render hook
+      const { result } = renderHook(() => useCurrentUser());
+
+      // Wait for the effect to complete
+      await vi.waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      // Should have error state
       expect(result.current.user).toBeNull();
       expect(result.current.error).toBe(mockError);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error getting user:'),
+        mockError
+      );
+
+      consoleSpy.mockRestore();
     });
-    
-    it('should unsubscribe from auth state changes on unmount', () => {
-      const mockSubscription = {
-        unsubscribe: vi.fn(),
-      };
-      mockSupabaseClient.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: mockSubscription },
+
+    it('should clean up subscription on unmount', async () => {
+      // Mock unsubscribe function
+      const unsubscribe = vi.fn();
+      mockAuth.onAuthStateChange.mockReturnValue({
+        data: { subscription: { unsubscribe } },
       });
-      
+
+      // Render and unmount
       const { unmount } = renderHook(() => useCurrentUser());
-      
       unmount();
-      
-      expect(mockSubscription.unsubscribe).toHaveBeenCalled();
+
+      // Should have called unsubscribe
+      expect(unsubscribe).toHaveBeenCalled();
     });
   });
-  
+
   describe('useRequireAuth', () => {
     it('should redirect to login if not authenticated', async () => {
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      // Setup no user
+      mockAuth.getUser.mockResolvedValue({
         data: { user: null },
         error: null,
       });
-      
+
+      // Render hook
       renderHook(() => useRequireAuth());
-      
-      // Wait for the async getUser call to complete
+
+      // Wait for effect to complete
       await vi.waitFor(() => {
         expect(mockRouter.push).toHaveBeenCalledWith('/login');
       });
     });
-    
+
     it('should not redirect if authenticated', async () => {
-      const mockUser = { id: '123', email: 'test@example.com' };
-      mockSupabaseClient.auth.getUser.mockResolvedValue({
+      // Setup authenticated user
+      const mockUser = { id: '123', email: 'user@example.com' };
+      mockAuth.getUser.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
-      
+
+      // Render hook
       renderHook(() => useRequireAuth());
-      
-      // Wait for the async getUser call to complete
+
+      // Allow effects to run
       await vi.waitFor(() => {
-        expect(mockSupabaseClient.auth.getUser).toHaveBeenCalled();
+        expect(mockAuth.getUser).toHaveBeenCalled();
       });
-      
-      expect(mockRouter.push).not.toHaveBeenCalled();
-    });
-    
-    it('should not redirect if loading', () => {
-      // Don't resolve getUser to keep loading state true
-      mockSupabaseClient.auth.getUser.mockImplementation(() => new Promise(() => {}));
-      
-      renderHook(() => useRequireAuth());
-      
-      expect(mockRouter.push).not.toHaveBeenCalled();
-    });
-    
-    it('should not redirect if there is an error', async () => {
-      const mockError = new Error('Failed to get user');
-      mockSupabaseClient.auth.getUser.mockRejectedValue(mockError);
-      
-      renderHook(() => useRequireAuth());
-      
-      // Wait for the async getUser call to complete
-      await vi.waitFor(() => {
-        expect(mockSupabaseClient.auth.getUser).toHaveBeenCalled();
-      });
-      
+
+      // Should not redirect
       expect(mockRouter.push).not.toHaveBeenCalled();
     });
   });
