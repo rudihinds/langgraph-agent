@@ -18,6 +18,8 @@
     "apps/**/*.ts",
     "apps/**/*.tsx",
     "packages/**/*.ts",
-    "packages/**/*.tsx"
+    "packages/**/*.tsx",
+    "ApplicationQuestionsViewV2.tsx",
+    "RFPResponseView.tsx"
   ]
 }

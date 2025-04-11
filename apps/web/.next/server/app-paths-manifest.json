@@ -1,6 +1,6 @@
 {
-  "/api/auth/sign-out/route": "app/api/auth/sign-out/route.js",
-  "/login/page": "app/login/page.js",
   "/page": "app/page.js",
+  "/proposals/new/rfp/page": "app/proposals/new/rfp/page.js",
+  "/proposals/new/application/page": "app/proposals/new/application/page.js",
   "/dashboard/page": "app/dashboard/page.js"
 }

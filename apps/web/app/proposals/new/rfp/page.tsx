@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/client-auth";
-import { EnhancedRfpForm } from "@/components/proposals/EnhancedRfpForm";
+import { RfpForm } from "@/components/proposals/RfpForm";
 import { Loader2 } from "lucide-react";
 
 export default function NewRfpProposalPage() {
@@ -33,7 +33,7 @@ export default function NewRfpProposalPage() {
 
   return (
     <div className="container py-8">
-      <EnhancedRfpForm userId={user.id} onSuccess={handleSuccess} />
+      <RfpForm userId={user.id} onSuccess={handleSuccess} />
     </div>
   );
 }

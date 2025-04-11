@@ -5,10 +5,18 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
-export function EnhancedFormBanner() {
+interface EnhancedFormBannerProps {
+  className?: string;
+}
+
+export function EnhancedFormBanner({ className }: EnhancedFormBannerProps) {
   return (
-    <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 dark:from-blue-950/30 dark:to-purple-950/30 dark:border-blue-800/50">
+    <Card className={cn(
+      "bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 dark:from-blue-950/30 dark:to-purple-950/30 dark:border-blue-800/50",
+      className
+    )}>
       <CardContent className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-full">

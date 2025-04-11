@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationQuestionsView from "./ApplicationQuestionsView";
-import RFPResponseView from "./RFPResponseView";
+import RFPResponseView from "../../../../../RFPResponseView";
 import FunderDetailsView from "./FunderDetailsView";
 import ReviewProposalView from "./ReviewProposalView";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ interface UseProposalCreationFlowModel {
   applicationQuestions: Question[];
   rfpDetails: any;
   isSubmitting: boolean;
+  formErrors: Record<string, string>;
   handleNext: (data: any) => void;
   handleBack: () => void;
   handleEdit: (step: number) => void;
@@ -49,6 +50,7 @@ function useProposalCreationFlow({
   );
   const [rfpDetails, setRfpDetails] = useState<any>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const { submitProposal, uploadFile, loading, error } = useProposalSubmission({
@@ -67,6 +69,10 @@ function useProposalCreationFlow({
         variant: "destructive",
       });
       setIsSubmitting(false);
+      // Set form-level error
+      setFormErrors({
+        submission: `Failed to create proposal: ${error.message}`,
+      });
     },
   });
 
@@ -108,7 +114,26 @@ function useProposalCreationFlow({
     console.log("ProposalCreationFlow: handleNext called", {
       currentStep,
       totalSteps,
+      data,
     });
+
+    // Reset previous errors
+    setFormErrors({});
+
+    // Check if data contains validation errors
+    if (data.errors && Object.keys(data.errors).length > 0) {
+      console.error(
+        "ProposalCreationFlow: Validation errors detected",
+        data.errors
+      );
+      setFormErrors(data.errors);
+      toast({
+        title: "Validation Error",
+        description: "Please correct the errors in the form before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Save the data from the current step
     if (currentStep === 1) {
@@ -119,6 +144,17 @@ function useProposalCreationFlow({
           "ProposalCreationFlow: Saving application questions",
           data.questions?.length
         );
+        if (!data.questions || data.questions.length === 0) {
+          setFormErrors({
+            questions: "At least one question is required",
+          });
+          toast({
+            title: "Validation Error",
+            description: "Please add at least one question before continuing.",
+            variant: "destructive",
+          });
+          return;
+        }
         setApplicationQuestions(data.questions || []);
       } else {
         setRfpDetails(data);
@@ -210,6 +246,7 @@ function useProposalCreationFlow({
     applicationQuestions,
     rfpDetails,
     isSubmitting,
+    formErrors,
     handleNext,
     handleBack,
     handleEdit,
@@ -225,6 +262,7 @@ interface ProposalCreationFlowViewProps extends ProposalCreationFlowProps {
   applicationQuestions: Question[];
   rfpDetails: any;
   isSubmitting: boolean;
+  formErrors: Record<string, string>;
   handleNext: (data: any) => void;
   handleBack: () => void;
   handleEdit: (step: number) => void;
@@ -239,6 +277,7 @@ export function ProposalCreationFlowView({
   applicationQuestions,
   rfpDetails,
   isSubmitting,
+  formErrors,
   handleNext,
   handleBack,
   handleEdit,
@@ -266,17 +305,26 @@ export function ProposalCreationFlowView({
       <div className={proposalType === "application" ? "pt-0" : "pt-8"}>
         <div className="mt-8">
           {currentStep === 1 && (
-            <FunderDetailsView onSubmit={handleNext} onBack={handleBack} />
+            <FunderDetailsView
+              onSubmit={handleNext}
+              onBack={handleBack}
+              formErrors={formErrors}
+            />
           )}
           {currentStep === 2 && proposalType === "application" && (
             <ApplicationQuestionsView
               onSubmit={handleNext}
               onBack={handleBack}
               isSubmitting={isSubmitting}
+              formErrors={formErrors}
             />
           )}
           {currentStep === 2 && proposalType === "rfp" && (
-            <RFPResponseView onSubmit={handleNext} onBack={handleBack} />
+            <RFPResponseView
+              onSubmit={handleNext}
+              onBack={handleBack}
+              formErrors={formErrors}
+            />
           )}
           {currentStep === 3 && (
             <ReviewProposalView
@@ -288,6 +336,7 @@ export function ProposalCreationFlowView({
               onSubmit={handleNext}
               onBack={handleBack}
               isSubmitting={isSubmitting}
+              formErrors={formErrors}
             />
           )}
         </div>

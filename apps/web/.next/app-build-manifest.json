@@ -31,15 +31,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
-    "/api/auth/sign-out/route": [
+    "/proposals/new/application/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/auth/sign-out/route.js"
+      "static/chunks/app/proposals/new/application/page.js"
     ],
-    "/login/page": [
+    "/proposals/new/rfp/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/login/page.js"
+      "static/chunks/app/proposals/new/rfp/page.js"
     ]
   }
 }

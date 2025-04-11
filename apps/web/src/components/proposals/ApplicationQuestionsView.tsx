@@ -56,6 +56,7 @@ import {
   Upload,
   FileText,
   File,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -73,7 +74,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  ApplicationQuestionsSchema,
   type Question as SharedQuestion,
   type ApplicationQuestions,
 } from "@shared/types/ProposalSchema";
@@ -84,7 +84,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -101,6 +100,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProgressCircle } from "@/components/ui/progress-circle";
 import { debounce } from "@/lib/utils";
 import { SubmitButton } from "./SubmitButton";
+import { FormErrorBoundary, FieldError } from "@/components/ui/form-error";
 
 // MODEL
 // Extend the shared Question type to include ID for internal management
@@ -113,9 +113,13 @@ export interface Question extends Omit<SharedQuestion, "id"> {
 }
 
 export interface ApplicationQuestionsViewProps {
-  onSubmit: (data: { questions: Question[] }) => void;
+  onSubmit: (data: {
+    questions: Question[];
+    errors?: Record<string, string>;
+  }) => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  formErrors?: Record<string, string>;
 }
 
 interface UseApplicationQuestionsModel {
@@ -168,10 +172,25 @@ const QUESTION_CATEGORIES = [
   "Other",
 ];
 
+// Define application questions schema locally
+const ApplicationQuestionsSchema = z.object({
+  questions: z
+    .array(
+      z.object({
+        text: z.string().min(1, "Question text is required"),
+        category: z.string().nullable(),
+        wordLimit: z.number().nullable(),
+        charLimit: z.number().nullable(),
+      })
+    )
+    .min(1, "At least one question is required"),
+});
+
 function useApplicationQuestions({
   onSubmit,
   onBack,
   isSubmitting,
+  formErrors,
 }: ApplicationQuestionsViewProps): UseApplicationQuestionsModel {
   const { toast } = useToast();
   const [questions, setQuestions] = useState<Question[]>([
@@ -194,6 +213,25 @@ function useApplicationQuestions({
   const [fileName, setFileName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Update local errors when external formErrors change
+  useEffect(() => {
+    if (formErrors && Object.keys(formErrors).length > 0) {
+      setErrors((prev) => ({
+        ...prev,
+        ...formErrors,
+      }));
+
+      // Display a toast for external errors
+      if (formErrors.submission) {
+        toast({
+          title: "Error",
+          description: formErrors.submission,
+          variant: "destructive",
+        });
+      }
+    }
+  }, [formErrors, toast]);
 
   // Load saved questions from localStorage on mount
   useEffect(() => {
@@ -324,52 +362,171 @@ function useApplicationQuestions({
   }, []);
 
   const validateForm = useCallback(() => {
-    const newErrors: Record<string, string> = {};
-    let isValid = true;
+    try {
+      // Validate the questions
+      const validationSchema = z.object({
+        questions: z
+          .array(
+            z.object({
+              id: z.string(),
+              text: z.string().min(1, "Question text is required"),
+              category: z.string().nullable(),
+              wordLimit: z.number().nullable(),
+              charLimit: z.number().nullable(),
+            })
+          )
+          .min(1, "At least one question is required"),
+      });
 
-    questions.forEach((q) => {
-      if (!q.text.trim()) {
-        newErrors[q.id] = "Question text is required";
-        isValid = false;
+      console.log("Validating form data:", questions);
+      validationSchema.parse({ questions });
+      console.log("Validation successful");
+
+      setErrors({});
+      return true;
+    } catch (error) {
+      console.error("Validation failed:", error);
+
+      if (error instanceof z.ZodError) {
+        console.log("ZodError details:", JSON.stringify(error.errors, null, 2));
+        const newErrors: Record<string, string> = {};
+
+        // Add field-level errors
+        error.errors.forEach((err) => {
+          console.log("Processing error:", err);
+          if (err.path[0] === "questions") {
+            if (err.path.length > 1) {
+              // This is a specific question error
+              const index = err.path[1] as number;
+              const field = err.path[2] as string;
+              const questionId = questions[index]?.id;
+
+              console.log("Field error:", { index, field, questionId });
+
+              if (questionId) {
+                const errorKey = `question_${questionId}_${field}`;
+                newErrors[errorKey] = err.message;
+                console.log(`Added error for ${errorKey}:`, err.message);
+
+                // Focus the question with error
+                setTimeout(() => {
+                  console.log("Attempting to focus question:", questionId);
+                  const questionEl = questionRefs.current[questionId];
+                  if (questionEl) {
+                    console.log("Question element found, scrolling into view");
+                    questionEl.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    });
+                    setActivePanel(questionId);
+                    console.log("Set active panel to:", questionId);
+                  } else {
+                    console.log("Question element not found in refs");
+                  }
+                }, 100);
+              }
+            } else {
+              // General questions array error - don't add _form error but keep for toast notification
+              console.log("General array error:", err.message);
+              // Store this message for the toast but not for _form
+              newErrors._toast_message = err.message;
+            }
+          }
+        });
+
+        // Remove adding generic _form error - field-level validation is sufficient
+        // with focus handling
+
+        console.log("Setting errors state with:", newErrors);
+        setErrors(newErrors);
+
+        // Show a toast to make the error more visible
+        console.log("Showing toast notification");
+        toast({
+          title: "Validation Error",
+          description:
+            newErrors._toast_message || "Please correct the form errors",
+          variant: "destructive",
+        });
       }
-    });
 
-    setErrors(newErrors);
-
-    // If there are errors, schedule scrolling to the first error
-    if (!isValid) {
-      // Use setTimeout to ensure the DOM has updated with the error messages
-      setTimeout(() => {
-        const firstErrorId = Object.keys(newErrors)[0];
-        if (firstErrorId && questionRefs.current[firstErrorId]) {
-          questionRefs.current[firstErrorId]?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      }, 100);
+      return false;
     }
-
-    return isValid;
-  }, [questions]);
+  }, [questions, toast, questionRefs, setActivePanel]);
 
   const handleSubmit = useCallback(() => {
-    if (validateForm()) {
-      console.log(
-        "ApplicationQuestionsView: Submitting questions data",
-        questions.length
-      );
-      onSubmit({
-        questions: questions.map((question) => ({
-          id: question.id,
-          text: question.text,
-          wordLimit: question.wordLimit,
-          charLimit: question.charLimit,
-          category: question.category,
-        })),
+    console.log("Submit button clicked, validating form...");
+
+    // Quick check for empty questions
+    const emptyQuestions = questions.filter((q) => !q.text.trim());
+
+    if (emptyQuestions.length > 0) {
+      console.log("Empty questions detected:", emptyQuestions.length);
+      const newErrors: Record<string, string> = {};
+
+      emptyQuestions.forEach((q) => {
+        newErrors[`question_${q.id}_text`] = "Question text is required";
+      });
+
+      // Set errors state (don't add _form error)
+      setErrors(newErrors);
+
+      // Focus the first empty question
+      if (emptyQuestions[0]) {
+        const firstQuestionId = emptyQuestions[0].id;
+        setTimeout(() => {
+          const questionEl = questionRefs.current[firstQuestionId];
+          if (questionEl) {
+            questionEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            setActivePanel(firstQuestionId);
+          }
+        }, 100);
+      }
+
+      // Show toast
+      toast({
+        title: "Missing Question Text",
+        description: "Please fill out all question fields before continuing.",
+        variant: "destructive",
+      });
+
+      return;
+    }
+
+    // Proceed with full validation if basic check passes
+    const isValid = validateForm();
+    console.log(
+      "Form validation result:",
+      isValid ? "Valid" : "Invalid",
+      isValid ? "" : "Errors:",
+      isValid ? "" : errors
+    );
+
+    if (isValid) {
+      console.log("Form is valid, submitting data:", questions);
+      onSubmit({ questions });
+    } else {
+      // Don't call onSubmit when validation fails
+      // Just display local validation errors and prevent progression
+      console.log("Validation failed - not submitting, errors:", errors);
+
+      // Show a toast to make the error more visible
+      toast({
+        title: "Validation Error",
+        description: "Please correct the errors in the form before continuing.",
+        variant: "destructive",
       });
     }
-  }, [questions, validateForm, onSubmit]);
+  }, [
+    questions,
+    validateForm,
+    onSubmit,
+    errors,
+    toast,
+    questionRefs,
+    setActivePanel,
+    setErrors,
+  ]);
 
   const handleBack = useCallback(() => {
     onBack();
@@ -560,421 +717,417 @@ function ApplicationQuestionsViewComponent({
   return (
     <TooltipProvider>
       <div className="container max-w-5xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-6 lg:flex-row">
-          <div className="lg:w-3/4">
-            <div className="mb-6">
-              <h1 className="mb-2 text-3xl font-bold tracking-tight">
-                Application Questions
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Enter the questions from your application to analyze and create
-                your proposal.
-              </p>
-            </div>
+        <FormErrorBoundary initialErrors={errors}>
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <div className="lg:w-3/4">
+              <div className="mb-6">
+                <h1 className="mb-2 text-3xl font-bold tracking-tight">
+                  Application Questions
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Enter the questions from your application to analyze and
+                  create your proposal.
+                </p>
+              </div>
 
-            <Card className="mb-6 border-0 shadow-md">
-              <CardHeader className="pb-3 border-b bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Questions</CardTitle>
-                  <div className="flex items-center gap-2">
-                    {isSaving ? (
-                      <span className="flex items-center text-xs text-muted-foreground">
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                        Saving...
-                      </span>
-                    ) : (
-                      lastSaved && (
+              <Card className="mb-6 border-0 shadow-md">
+                <CardHeader className="pb-3 border-b bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Questions</CardTitle>
+                    <div className="flex items-center gap-2">
+                      {isSaving ? (
                         <span className="flex items-center text-xs text-muted-foreground">
-                          <Check className="w-3 h-3 mr-1 text-green-500" />
-                          Saved {lastSaved.toLocaleTimeString()}
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Saving...
                         </span>
-                      )
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={openBulkImport}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background hover:bg-muted"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span className="hidden sm:inline">Import Questions</span>
-                    </Button>
-                  </div>
-                </div>
-                <CardDescription>
-                  Add all the questions from your grant or funding application
-                  here.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6 bg-white">
-                <AnimatePresence>
-                  {questions.map((question, index) => (
-                    <motion.div
-                      key={question.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={cn(
-                        "group border rounded-md p-5 relative mb-4 transition-all",
-                        errors[question.id]
-                          ? "border-destructive/50 bg-destructive/5"
-                          : "border-muted hover:border-muted-foreground/20 hover:shadow-sm"
+                      ) : (
+                        lastSaved && (
+                          <span className="flex items-center text-xs text-muted-foreground">
+                            <Check className="w-3 h-3 mr-1 text-green-500" />
+                            Saved {lastSaved.toLocaleTimeString()}
+                          </span>
+                        )
                       )}
-                      data-testid={`question-${index + 1}`}
-                      ref={(el: HTMLDivElement | null) => {
-                        questionRefs.current[question.id] = el;
-                      }}
-                    >
-                      <div className="absolute flex space-x-1 transition-opacity opacity-0 right-3 top-3 group-hover:opacity-100">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => moveQuestionUp(question.id)}
-                          disabled={index === 0}
-                          aria-label={`Move question ${index + 1} up`}
-                          className="w-8 h-8"
-                        >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => moveQuestionDown(question.id)}
-                          disabled={index === questions.length - 1}
-                          aria-label={`Move question ${index + 1} down`}
-                          className="w-8 h-8"
-                        >
-                          <ArrowDown className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeQuestion(question.id)}
-                          aria-label={`Remove question ${index + 1}`}
-                          className="w-8 h-8 hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={openBulkImport}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input bg-background hover:bg-muted"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span className="hidden sm:inline">
+                          Import Questions
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+                  <CardDescription>
+                    Add all the questions from your grant or funding application
+                    here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6 bg-white">
+                  {/* Required fields indicator */}
+                  <p className="text-xs text-muted-foreground mb-2">
+                    <span className="text-destructive">*</span> Required fields
+                  </p>
 
-                      <div className="mb-5">
-                        <div className="flex items-center mb-2">
-                          <Label
-                            htmlFor={`question-${question.id}`}
-                            className="flex items-center text-base font-medium"
-                          >
-                            <span className="inline-flex items-center justify-center w-6 h-6 mr-2 text-sm rounded-full bg-primary/10 text-primary">
-                              {index + 1}
-                            </span>
-                            Question Text
-                            <span className="ml-1 text-destructive">*</span>
-                          </Label>
-                          {question.category && (
-                            <span className="px-2 py-1 ml-auto text-xs rounded bg-primary/10 text-primary">
-                              {question.category}
-                            </span>
+                  {/* Preserve only submission errors, remove duplicated validation errors */}
+                  {errors.submission && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="w-4 h-4" />
+                      <AlertTitle>Submission Error</AlertTitle>
+                      <AlertDescription>{errors.submission}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <AnimatePresence>
+                    {questions.map((question, index) => (
+                      <motion.div
+                        key={question.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={cn(
+                          "group border rounded-md p-5 relative mb-4 transition-all",
+                          errors[`question_${question.id}_text`]
+                            ? "border-destructive/50"
+                            : "border-muted hover:border-muted-foreground/20 hover:shadow-sm"
+                        )}
+                        data-testid={`question-${index + 1}`}
+                        ref={(el: HTMLDivElement | null) => {
+                          questionRefs.current[question.id] = el;
+                        }}
+                      >
+                        <div className="flex justify-end mb-2">
+                          <div className="flex space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => moveQuestionUp(question.id)}
+                              disabled={index === 0}
+                              aria-label={`Move question ${index + 1} up`}
+                              className="w-8 h-8"
+                            >
+                              <ArrowUp className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => moveQuestionDown(question.id)}
+                              disabled={index === questions.length - 1}
+                              aria-label={`Move question ${index + 1} down`}
+                              className="w-8 h-8"
+                            >
+                              <ArrowDown className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeQuestion(question.id)}
+                              aria-label={`Remove question ${index + 1}`}
+                              className="w-8 h-8 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="mb-5">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <Label
+                                htmlFor={`question-${question.id}`}
+                                className="flex items-center text-base font-medium"
+                              >
+                                <span className="inline-flex items-center justify-center w-6 h-6 mr-2 text-sm rounded-full bg-primary/10 text-primary">
+                                  {index + 1}
+                                </span>
+                                Question Text
+                                <span className="ml-1 text-destructive">*</span>
+                              </Label>
+                            </div>
+                            {question.category && (
+                              <span className="px-2 py-1 text-xs rounded bg-primary/10 text-primary">
+                                {question.category}
+                              </span>
+                            )}
+                          </div>
+                          <Textarea
+                            id={`question-${question.id}`}
+                            value={question.text}
+                            onChange={(e) =>
+                              updateQuestion(question.id, {
+                                text: e.target.value,
+                              })
+                            }
+                            placeholder="Enter your question here..."
+                            className={cn(
+                              "min-h-24 transition-all",
+                              errors[`question_${question.id}_text`]
+                                ? "border-destructive/70 ring-0 focus-visible:ring-destructive/30"
+                                : "border-input"
+                            )}
+                            aria-invalid={
+                              !!errors[`question_${question.id}_text`]
+                            }
+                            aria-describedby={
+                              errors[`question_${question.id}_text`]
+                                ? `question-error-${question.id}`
+                                : undefined
+                            }
+                            onFocus={handleFocus}
+                            onBlur={handleBlur}
+                            required
+                            name={`question-${question.id}-text`}
+                          />
+                          {errors[`question_${question.id}_text`] && (
+                            <FieldError
+                              error={errors[`question_${question.id}_text`]}
+                              id={`question-error-${question.id}`}
+                            />
                           )}
                         </div>
-                        <Textarea
-                          id={`question-${question.id}`}
-                          value={question.text}
-                          onChange={(e) =>
-                            updateQuestion(question.id, {
-                              text: e.target.value,
-                            })
-                          }
-                          placeholder="Enter your question here..."
-                          className={cn(
-                            "min-h-24 transition-all",
-                            errors[question.id]
-                              ? "border-destructive"
-                              : "border-input"
-                          )}
-                          aria-invalid={!!errors[question.id]}
-                          aria-describedby={
-                            errors[question.id]
-                              ? `question-error-${question.id}`
-                              : undefined
-                          }
-                          onFocus={handleFocus}
-                          onBlur={handleBlur}
-                        />
-                        {errors[question.id] && (
-                          <p
-                            id={`question-error-${question.id}`}
-                            className="flex items-center mt-1 text-sm text-destructive"
-                          >
-                            <Info className="w-3 h-3 mr-1" />
-                            {errors[question.id]}
-                          </p>
-                        )}
-                      </div>
 
-                      <Collapsible
-                        key={question.id}
-                        open={activePanel === question.id}
-                        onOpenChange={() => togglePanel(question.id)}
-                      >
-                        <motion.div
-                          layout
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          ref={(el: HTMLDivElement | null) => {
-                            questionRefs.current[question.id] = el;
-                          }}
-                          className="mb-4 overflow-hidden bg-white border rounded-lg shadow-sm"
+                        <Collapsible
+                          key={question.id}
+                          open={activePanel === question.id}
+                          onOpenChange={() => togglePanel(question.id)}
                         >
-                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50 focus:outline-none focus-visible:ring focus-visible:ring-primary focus-visible:ring-opacity-75">
-                            <span>Question Options</span>
-                            {activePanel === question.id ? (
-                              <ChevronUp className="h-3.5 w-3.5" />
-                            ) : (
-                              <ChevronDown className="h-3.5 w-3.5" />
-                            )}
-                          </CollapsibleTrigger>
-                          <CollapsibleContent
-                            className={cn(
-                              "overflow-hidden transition-all",
-                              "data-[state=closed]:animate-collapsible-up",
-                              "data-[state=open]:animate-collapsible-down"
-                            )}
+                          <motion.div
+                            layout
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            ref={(el: HTMLDivElement | null) => {
+                              questionRefs.current[question.id] = el;
+                            }}
+                            className="mb-4 overflow-hidden bg-white border rounded-lg shadow-sm"
                           >
-                            <div className="pt-4 pb-1 mt-3 space-y-4">
-                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <div>
-                                  <Label
-                                    htmlFor={`word-limit-${question.id}`}
-                                    className="text-sm flex items-center gap-1 mb-1.5"
-                                  >
-                                    Word limit
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="top"
-                                        className="p-2 text-sm w-60"
-                                      >
-                                        <p>
-                                          Set a maximum word count for this
-                                          question's response.
-                                        </p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </Label>
-                                  <Input
-                                    id={`word-limit-${question.id}`}
-                                    type="number"
-                                    min="0"
-                                    placeholder="No limit"
-                                    value={
-                                      question.wordLimit !== null
-                                        ? question.wordLimit
-                                        : ""
-                                    }
-                                    onChange={(e) =>
-                                      updateQuestion(question.id, {
-                                        wordLimit: e.target.value
-                                          ? parseInt(e.target.value)
-                                          : null,
-                                      })
-                                    }
-                                    onFocus={handleFocus}
-                                    onBlur={handleBlur}
-                                  />
-                                </div>
-                                <div>
-                                  <Label
-                                    htmlFor={`char-limit-${question.id}`}
-                                    className="text-sm flex items-center gap-1 mb-1.5"
-                                  >
-                                    Character limit
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="top"
-                                        className="p-2 text-sm w-60"
-                                      >
-                                        <p>
-                                          Set a maximum character count for this
-                                          question's response.
-                                        </p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </Label>
-                                  <Input
-                                    id={`char-limit-${question.id}`}
-                                    type="number"
-                                    min="0"
-                                    placeholder="No limit"
-                                    value={
-                                      question.charLimit !== null
-                                        ? question.charLimit
-                                        : ""
-                                    }
-                                    onChange={(e) =>
-                                      updateQuestion(question.id, {
-                                        charLimit: e.target.value
-                                          ? parseInt(e.target.value)
-                                          : null,
-                                      })
-                                    }
-                                    onFocus={handleFocus}
-                                    onBlur={handleBlur}
-                                  />
-                                </div>
-                              </div>
-                              <div className="pt-1 pb-1">
-                                <Label
-                                  htmlFor={`category-${question.id}`}
-                                  className="flex items-center gap-1 mb-2 text-sm"
-                                >
-                                  Question category
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="top"
-                                      className="p-2 text-sm w-60"
+                            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50 focus:outline-none focus-visible:ring focus-visible:ring-primary focus-visible:ring-opacity-75">
+                              <span>Question Options</span>
+                              {activePanel === question.id ? (
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              ) : (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent
+                              className={cn(
+                                "overflow-hidden transition-all",
+                                "data-[state=closed]:animate-collapsible-up",
+                                "data-[state=open]:animate-collapsible-down"
+                              )}
+                            >
+                              <div className="px-6 pt-4 pb-5 space-y-6">
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                  <div>
+                                    <Label
+                                      htmlFor={`word-limit-${question.id}`}
+                                      className="text-sm flex items-center gap-1 mb-2"
                                     >
-                                      <p>
-                                        Categorizing questions helps organize
-                                        and improve AI-generated responses.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </Label>
-                                <div className="relative">
-                                  <Select
-                                    value={question.category || ""}
-                                    onValueChange={(value) =>
-                                      updateQuestion(question.id, {
-                                        category: value || null,
-                                      })
-                                    }
-                                  >
-                                    <SelectTrigger
-                                      id={`category-${question.id}`}
-                                      className="w-full focus:ring-offset-0"
-                                    >
-                                      <SelectValue placeholder="Select a category (optional)" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {QUESTION_CATEGORIES.map((category) => (
-                                        <SelectItem
-                                          key={category}
-                                          value={category}
+                                      Word limit
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="top"
+                                          className="p-2 text-sm w-60"
                                         >
-                                          {category}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                          <p>
+                                            Set a maximum word count for this
+                                            question's response.
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </Label>
+                                    <Input
+                                      id={`word-limit-${question.id}`}
+                                      type="number"
+                                      min="0"
+                                      placeholder="No limit"
+                                      value={
+                                        question.wordLimit !== null
+                                          ? question.wordLimit
+                                          : ""
+                                      }
+                                      onChange={(e) =>
+                                        updateQuestion(question.id, {
+                                          wordLimit: e.target.value
+                                            ? parseInt(e.target.value)
+                                            : null,
+                                        })
+                                      }
+                                      onFocus={handleFocus}
+                                      onBlur={handleBlur}
+                                      className="h-10"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label
+                                      htmlFor={`char-limit-${question.id}`}
+                                      className="text-sm flex items-center gap-1 mb-2"
+                                    >
+                                      Character limit
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="top"
+                                          className="p-2 text-sm w-60"
+                                        >
+                                          <p>
+                                            Set a maximum character count for
+                                            this question's response.
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </Label>
+                                    <Input
+                                      id={`char-limit-${question.id}`}
+                                      type="number"
+                                      min="0"
+                                      placeholder="No limit"
+                                      value={
+                                        question.charLimit !== null
+                                          ? question.charLimit
+                                          : ""
+                                      }
+                                      onChange={(e) =>
+                                        updateQuestion(question.id, {
+                                          charLimit: e.target.value
+                                            ? parseInt(e.target.value)
+                                            : null,
+                                        })
+                                      }
+                                      onFocus={handleFocus}
+                                      onBlur={handleBlur}
+                                      className="h-10"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label
+                                    htmlFor={`category-${question.id}`}
+                                    className="flex items-center gap-1 mb-2 text-sm"
+                                  >
+                                    Question category
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        side="top"
+                                        className="p-2 text-sm w-60"
+                                      >
+                                        <p>
+                                          Categorizing questions helps organize
+                                          and improve AI-generated responses.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </Label>
+                                  <div className="relative">
+                                    <Select
+                                      value={question.category || ""}
+                                      onValueChange={(value) =>
+                                        updateQuestion(question.id, {
+                                          category: value || null,
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger
+                                        id={`category-${question.id}`}
+                                        className="w-full h-10"
+                                      >
+                                        <SelectValue placeholder="Select a category (optional)" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {QUESTION_CATEGORIES.map((category) => (
+                                          <SelectItem
+                                            key={category}
+                                            value={category}
+                                          >
+                                            {category}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </CollapsibleContent>
-                        </motion.div>
-                      </Collapsible>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                            </CollapsibleContent>
+                          </motion.div>
+                        </Collapsible>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
 
-                <Button
-                  onClick={addQuestion}
-                  variant="outline"
-                  className="w-full mt-4 border-dashed"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Another Question
-                </Button>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-5 pb-6 bg-white border-t">
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  className="flex items-center gap-1.5"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-                </Button>
-                <SubmitButton
-                  onClick={handleSubmit}
-                  disabled={
-                    questions.length === 0 ||
-                    questions.some((q: Question) => !q.text.trim()) ||
-                    isSubmitting
-                  }
-                  state={isSubmitting ? "loading" : "idle"}
-                  className="flex items-center gap-1.5"
-                  disabledText="Add at least one question with text"
-                  loadingText="Processing..."
-                >
-                  Continue
-                  <ChevronRight className="w-4 h-4" />
-                </SubmitButton>
-              </CardFooter>
-            </Card>
-          </div>
-
-          <div className="lg:w-1/4">
-            <div className="sticky space-y-6 top-32">
-              <Card className="border-0 shadow-md">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Help & Tips</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  <ul className="space-y-2.5">
-                    <CheckItem>
-                      Add all questions from your original application
-                    </CheckItem>
-                    <CheckItem>
-                      Keep the exact wording from the application
-                    </CheckItem>
-                    <CheckItem>
-                      Use "Bulk Import" to paste multiple questions at once
-                    </CheckItem>
-                    <CheckItem>
-                      Add word limits if specified in the application
-                    </CheckItem>
-                  </ul>
+                  <Button
+                    onClick={addQuestion}
+                    variant="outline"
+                    className="w-full mt-4 border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Another Question
+                  </Button>
                 </CardContent>
               </Card>
+            </div>
 
-              <div className="flex flex-col space-y-3 pt-4">
-                <SubmitButton
-                  onClick={handleSubmit}
-                  disabled={
-                    questions.length === 0 ||
-                    questions.some((q: Question) => !q.text.trim()) ||
-                    isSubmitting
-                  }
-                  state={isSubmitting ? "loading" : "idle"}
-                  className="w-full"
-                  disabledText="Add at least one question with text"
-                  loadingText="Processing..."
-                >
-                  Continue
-                </SubmitButton>
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  size="lg"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  Back
-                </Button>
+            <div className="lg:w-1/4">
+              <div className="sticky space-y-6 top-32">
+                <Card className="border-0 shadow-md">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Help & Tips</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground">
+                    <ul className="space-y-2.5">
+                      <CheckItem>
+                        Add all questions from your original application
+                      </CheckItem>
+                      <CheckItem>
+                        Keep the exact wording from the application
+                      </CheckItem>
+                      <CheckItem>
+                        Use "Bulk Import" to paste multiple questions at once
+                      </CheckItem>
+                      <CheckItem>
+                        Add word limits if specified in the application
+                      </CheckItem>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <div className="flex flex-col pt-4 space-y-3">
+                  <Button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleSubmit();
+                    }}
+                    size="lg"
+                    className="w-full"
+                    type="button"
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    size="lg"
+                    className="w-full"
+                  >
+                    Back
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </FormErrorBoundary>
 
         {/* Bulk Import Dialog */}
         <Dialog open={bulkImportOpen} onOpenChange={closeBulkImport}>

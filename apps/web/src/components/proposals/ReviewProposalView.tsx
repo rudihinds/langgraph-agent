@@ -44,6 +44,7 @@ export interface ReviewProposalViewProps {
   proposalType: ProposalType;
   isSubmitting?: boolean;
   rfpDetails?: any;
+  formErrors?: Record<string, string>;
 }
 
 interface UseReviewProposalModel {

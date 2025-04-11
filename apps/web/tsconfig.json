@@ -31,7 +31,9 @@
     "src/hooks/use-threads",
     "src/app/thread/[threadId]",
     "app/**/*.ts",
-    "app/**/*.tsx"
+    "app/**/*.tsx",
+    "../../ApplicationQuestionsViewV2.tsx",
+    "../../RFPResponseView.tsx"
   ],
   "exclude": ["node_modules"]
 }
