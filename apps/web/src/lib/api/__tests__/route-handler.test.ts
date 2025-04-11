@@ -4,20 +4,21 @@
 import { NextRequest } from 'next/server';
 import { createRouteHandler } from '../route-handler';
 import { AppError, ValidationError, AuthenticationError } from '@/lib/errors/custom-errors';
+import { logger } from '@/lib/logger';
 
 // Mock the logger
-jest.mock('@/lib/logger', () => ({
+vi.mock('@/lib/logger', () => ({
   logger: {
-    error: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
 describe('Route Handler', () => {
   it('should handle successful requests', async () => {
     // Create a mock handler that returns a successful response
-    const mockHandler = jest.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), {
+    const mockHandler = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     }));
 
@@ -41,7 +42,7 @@ describe('Route Handler', () => {
 
   it('should handle AppError exceptions', async () => {
     // Create a mock handler that throws an AppError
-    const mockHandler = jest.fn().mockImplementation(() => {
+    const mockHandler = vi.fn().mockImplementation(() => {
       throw new ValidationError('Invalid input', { field: 'email' });
     });
 
@@ -65,7 +66,7 @@ describe('Route Handler', () => {
 
   it('should handle unexpected exceptions as server errors', async () => {
     // Create a mock handler that throws a generic error
-    const mockHandler = jest.fn().mockImplementation(() => {
+    const mockHandler = vi.fn().mockImplementation(() => {
       throw new Error('Unexpected error');
     });
 
@@ -87,11 +88,10 @@ describe('Route Handler', () => {
   });
 
   it('should include request details in error logs', async () => {
-    // Import logger directly to access the mock
-    const { logger } = require('@/lib/logger');
+    // The logger is already imported and mocked
 
     // Create a mock handler that throws an error
-    const mockHandler = jest.fn().mockImplementation(() => {
+    const mockHandler = vi.fn().mockImplementation(() => {
       throw new Error('Test error');
     });
 

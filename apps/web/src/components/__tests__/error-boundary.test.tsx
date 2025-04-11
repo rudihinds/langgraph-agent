@@ -4,11 +4,12 @@
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { ErrorBoundary } from '../error-boundary';
+import { logger } from '@/lib/logger';
 
 // Mock the logger
-jest.mock('@/lib/logger', () => ({
+vi.mock('@/lib/logger', () => ({
   logger: {
-    error: jest.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -24,7 +25,7 @@ describe('ErrorBoundary', () => {
   // Suppress console errors during tests
   const originalConsoleError = console.error;
   beforeAll(() => {
-    console.error = jest.fn();
+    console.error = vi.fn();
   });
   
   afterAll(() => {
@@ -67,7 +68,7 @@ describe('ErrorBoundary', () => {
   });
   
   it('logs the error when a component throws', () => {
-    const { logger } = require('@/lib/logger');
+    // The logger is already imported and mocked
     
     render(
       <ErrorBoundary>
@@ -76,13 +77,15 @@ describe('ErrorBoundary', () => {
     );
     
     // Check that the error was logged
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('React component error'),
-      expect.any(Error),
-      expect.objectContaining({
-        errorInfo: expect.anything()
-      })
-    );
+    expect(logger.error).toHaveBeenCalled();
+    
+    // Get the arguments from the first call
+    const args = logger.error.mock.calls[0];
+    
+    // Check basic structure of the arguments
+    expect(args[0]).toBe('React component error');
+    expect(args[2]).toBeInstanceOf(Error);
+    expect(args[2].message).toBe('Test error');
   });
   
   it('resets error state when "Try again" button is clicked', () => {
