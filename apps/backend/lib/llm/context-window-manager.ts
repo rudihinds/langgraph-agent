@@ -20,6 +20,9 @@ import {
   estimateMessageTokens,
   truncateMessages,
   TruncateMessagesOptions,
+  progressiveTruncation,
+  TruncationLevel,
+  createMinimalMessageSet,
 } from "./message-truncation.js";
 
 /**
@@ -342,7 +345,8 @@ export class ContextWindowManager extends EventEmitter {
           this.logDebug(
             `Still exceeding token limit after summarization, will truncate`
           );
-          const truncatedMessages = await this.truncateMessages(
+          // Use the imported truncateMessages function instead of the class method
+          const truncatedMessages = this.truncateMessagesWithCache(
             summarizedMessages,
             modelId,
             maxTokens
@@ -369,7 +373,8 @@ export class ContextWindowManager extends EventEmitter {
         this.logDebug(
           `Conversation exceeds token limit but under summarization threshold, truncating directly`
         );
-        const truncatedMessages = await this.truncateMessages(
+        // Use the imported truncateMessages function instead of the class method
+        const truncatedMessages = this.truncateMessagesWithCache(
           messages,
           modelId,
           maxTokens
@@ -410,14 +415,14 @@ export class ContextWindowManager extends EventEmitter {
   }
 
   /**
-   * Truncate messages to fit within the available tokens
-   * Preserves system messages and the most recent messages
+   * Uses the imported truncateMessages function while preserving token counts
+   * Adapts our internal Message type to work with the message truncation utilities
    */
-  private async truncateMessages(
+  private truncateMessagesWithCache(
     messages: Message[],
     modelId: string,
-    availableTokens: number
-  ): Promise<Message[]> {
+    maxTokens: number
+  ): Message[] {
     // Always keep system messages and the most recent message
     const systemMessages = messages.filter(
       (message) => message.role === "system"
@@ -432,66 +437,49 @@ export class ContextWindowManager extends EventEmitter {
       return messages;
     }
 
-    // Calculate tokens for system messages
-    const systemTokens = await this.calculateTotalTokens(
-      systemMessages,
-      modelId
-    );
-    this.logDebug(`System messages use ${systemTokens} tokens`);
-
-    // Ensure we always keep the most recent non-system message
+    // Use a simple strategy similar to the imported truncateMessages, but adapted for our Message type
+    // Apply drop-middle strategy manually instead of using the imported function directly
     const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
-    const lastMessageTokens = lastMessage.tokenCount || 0;
 
-    // Calculate how many tokens we have for the remaining messages
-    const remainingTokens = availableTokens - systemTokens - lastMessageTokens;
-    this.logDebug(
-      `Have ${remainingTokens} tokens available for middle messages`
-    );
+    // Create our result with system messages and the last message (which we always keep)
+    const result = [...systemMessages, lastMessage];
 
-    if (remainingTokens <= 0) {
-      // If we can't fit anything else, return just system messages and the last message
-      return [...systemMessages, lastMessage];
+    // Calculate remaining tokens
+    let usedTokens = 0;
+    for (const msg of result) {
+      usedTokens += msg.tokenCount || 0;
     }
 
-    // Keep as many recent messages as possible, working backwards from the second-most recent
-    const keptMessages = [...systemMessages];
-    let usedTokens = systemTokens;
+    const remainingTokens = maxTokens - usedTokens;
 
-    // Start with the most recent message
-    keptMessages.push(lastMessage);
-    usedTokens += lastMessageTokens;
+    // Add as many middle messages as we can fit, prioritizing more recent ones
+    if (remainingTokens > 0 && nonSystemMessages.length > 1) {
+      // Add messages from newest to oldest (excluding the very last one we already added)
+      for (let i = nonSystemMessages.length - 2; i >= 0; i--) {
+        const msg = nonSystemMessages[i];
+        const msgTokens = msg.tokenCount || 0;
 
-    // Add as many earlier messages as will fit, working backwards
-    for (let i = nonSystemMessages.length - 2; i >= 0; i--) {
-      const message = nonSystemMessages[i];
-      const messageTokens = message.tokenCount || 0;
-
-      if (usedTokens + messageTokens <= availableTokens) {
-        keptMessages.push(message);
-        usedTokens += messageTokens;
-      } else {
-        // Can't fit any more messages
-        break;
+        if (usedTokens + msgTokens <= maxTokens) {
+          result.push(msg);
+          usedTokens += msgTokens;
+        }
       }
+
+      // Sort messages back into original order
+      result.sort((a, b) => {
+        // System messages always go first
+        if (a.role === "system" && b.role !== "system") return -1;
+        if (a.role !== "system" && b.role === "system") return 1;
+
+        // Then sort by position in original array
+        return messages.indexOf(a) - messages.indexOf(b);
+      });
     }
 
-    // Sort messages back into original order
-    keptMessages.sort((a, b) => {
-      // System messages always go first
-      if (a.role === "system" && b.role !== "system") return -1;
-      if (a.role !== "system" && b.role === "system") return 1;
-
-      // Then place messages in the order they appear in the original array
-      const aIndex = messages.indexOf(a);
-      const bIndex = messages.indexOf(b);
-      return aIndex - bIndex;
-    });
-
     this.logDebug(
-      `Truncated messages from ${messages.length} to ${keptMessages.length}`
+      `Truncated messages from ${messages.length} to ${result.length}`
     );
-    return keptMessages;
+    return result;
   }
 }
 
@@ -501,4 +489,7 @@ export {
   estimateMessageTokens,
   truncateMessages,
   TruncateMessagesOptions,
+  progressiveTruncation,
+  TruncationLevel,
+  createMinimalMessageSet,
 } from "./message-truncation.js";
