@@ -1,11 +1,15 @@
 /**
  * Monitoring and logging utilities for LLM interactions
- * 
+ *
  * Part of Task #14.4: Implement Base Error Classification and Retry Mechanisms
  */
 
 import { EventEmitter } from "events";
-import { createErrorEvent, ErrorCategory, ErrorEvent } from "./error-classification.js";
+import {
+  createErrorEvent,
+  ErrorCategory,
+  ErrorEvent,
+} from "./error-classification.js";
 
 /**
  * Type of performance metric
@@ -160,10 +164,10 @@ export class LLMMonitor extends EventEmitter {
 
     return (outputTokens?: number, error?: Error) => {
       const duration = Date.now() - startTime;
-      
+
       // Log latency metric
       this.logMetric(MetricType.LLM_LATENCY, duration, modelId, operation);
-      
+
       // Log token counts if available
       if (inputTokens !== undefined) {
         this.logMetric(
@@ -174,7 +178,7 @@ export class LLMMonitor extends EventEmitter {
           { type: "input" }
         );
       }
-      
+
       if (outputTokens !== undefined) {
         this.logMetric(
           MetricType.TOKEN_COUNT,
@@ -184,7 +188,7 @@ export class LLMMonitor extends EventEmitter {
           { type: "output" }
         );
       }
-      
+
       // Log error if present
       if (error) {
         this.logError(error, operation, modelId);
@@ -204,9 +208,8 @@ export class LLMMonitor extends EventEmitter {
     return {
       totalRequests: this.totalRequests,
       totalErrors: this.totalErrors,
-      errorRate: this.totalRequests > 0 
-        ? this.totalErrors / this.totalRequests 
-        : 0,
+      errorRate:
+        this.totalRequests > 0 ? this.totalErrors / this.totalRequests : 0,
       errorsByCategory: { ...this.errorCounts },
     };
   }
@@ -230,11 +233,11 @@ export class LLMMonitor extends EventEmitter {
   public resetStats(): void {
     this.totalRequests = 0;
     this.totalErrors = 0;
-    
+
     for (const category in this.errorCounts) {
       this.errorCounts[category as ErrorCategory] = 0;
     }
-    
+
     for (const type in this.metricCounts) {
       this.metricCounts[type as MetricType] = 0;
     }
@@ -247,7 +250,7 @@ export class LLMMonitor extends EventEmitter {
     // Update error counts
     this.totalErrors++;
     this.errorCounts[errorEvent.category]++;
-    
+
     // Calculate and emit error rate metric
     this.logMetric(
       MetricType.ERROR_RATE,
@@ -255,7 +258,7 @@ export class LLMMonitor extends EventEmitter {
       errorEvent.modelId,
       errorEvent.source
     );
-    
+
     // Log to console if enabled
     if (this.options.logErrors) {
       console.error(
@@ -264,7 +267,7 @@ export class LLMMonitor extends EventEmitter {
         errorEvent.source ? `(Source: ${errorEvent.source})` : ""
       );
     }
-    
+
     // Call custom handler if provided
     this.options.onError(errorEvent);
   }
@@ -275,7 +278,7 @@ export class LLMMonitor extends EventEmitter {
   private handleMetric(metricEvent: MetricEvent): void {
     // Update metric counts
     this.metricCounts[metricEvent.type]++;
-    
+
     // Log to console if enabled
     if (this.options.logMetrics) {
       console.log(
@@ -284,7 +287,7 @@ export class LLMMonitor extends EventEmitter {
         metricEvent.operation ? `(Operation: ${metricEvent.operation})` : ""
       );
     }
-    
+
     // Call custom handler if provided
     this.options.onMetric(metricEvent);
   }
@@ -292,28 +295,29 @@ export class LLMMonitor extends EventEmitter {
 
 /**
  * Create a performance tracking wrapper for an async function
- * 
+ *
  * @param fn The function to wrap
  * @param operation Name of the operation
  * @param modelId ID of the model being used
  * @returns Wrapped function that logs performance metrics
  */
-export function withPerformanceTracking<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
-  operation: string,
-  modelId: string
-): T {
+export function withPerformanceTracking<
+  T extends (...args: any[]) => Promise<any>,
+>(fn: T, operation: string, modelId: string): T {
   const monitor = LLMMonitor.getInstance();
-  
+
   return (async (...args: Parameters<T>) => {
     const endTracking = monitor.trackOperation(operation, modelId);
-    
+
     try {
       const result = await fn(...args);
       endTracking(undefined, undefined); // No error, tokens unknown
       return result;
     } catch (error) {
-      endTracking(undefined, error instanceof Error ? error : new Error(String(error)));
+      endTracking(
+        undefined,
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }) as T;
@@ -321,7 +325,7 @@ export function withPerformanceTracking<T extends (...args: any[]) => Promise<an
 
 /**
  * Decorator for class methods to track performance
- * 
+ *
  * @param operation Name of the operation (defaults to method name)
  * @param getModelId Function to extract model ID from args (defaults to undefined)
  */
@@ -336,22 +340,165 @@ export function trackPerformance(
   ) {
     const originalMethod = descriptor.value;
     const methodName = operation || propertyKey;
-    
+
     descriptor.value = async function (...args: any[]) {
       const modelId = getModelId ? getModelId(...args) : undefined;
       const monitor = LLMMonitor.getInstance();
-      const endTracking = monitor.trackOperation(methodName, modelId || "unknown");
-      
+      const endTracking = monitor.trackOperation(
+        methodName,
+        modelId || "unknown"
+      );
+
       try {
         const result = await originalMethod.apply(this, args);
         endTracking();
         return result;
       } catch (error) {
-        endTracking(undefined, error instanceof Error ? error : new Error(String(error)));
+        endTracking(
+          undefined,
+          error instanceof Error ? error : new Error(String(error))
+        );
         throw error;
       }
     };
-    
+
     return descriptor;
   };
 }
+
+/**
+ * Interface for tracking node execution
+ */
+export interface NodeExecutionTrackingData {
+  /** Name of the node */
+  nodeName: string;
+  /** Duration in milliseconds */
+  durationMs: number;
+  /** Whether the execution was successful */
+  success: boolean;
+  /** Additional metadata */
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Interface for tracking errors
+ */
+export interface ErrorTrackingData {
+  /** Type of error that occurred */
+  errorType: string;
+  /** Component where error occurred */
+  component: string;
+  /** Error message */
+  message: string;
+  /** Duration in milliseconds, if available */
+  durationMs?: number;
+  /** Additional metadata */
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Simplified service for monitoring LLM and node operations
+ */
+export const MonitoringService = {
+  /**
+   * Track an LLM call with performance metrics
+   *
+   * @param data Tracking data for the LLM call
+   */
+  trackLLMCall: (data: {
+    model: string;
+    startTime: number;
+    endTime: number;
+    tokensUsed?: number;
+    success: boolean;
+    operation?: string;
+  }) => {
+    const monitor = LLMMonitor.getInstance();
+    const duration = data.endTime - data.startTime;
+
+    // Log latency
+    monitor.logMetric(
+      MetricType.LLM_LATENCY,
+      duration,
+      data.model,
+      data.operation || "llm_call"
+    );
+
+    // Log token count if available
+    if (data.tokensUsed !== undefined) {
+      monitor.logMetric(
+        MetricType.TOKEN_COUNT,
+        data.tokensUsed,
+        data.model,
+        data.operation || "llm_call"
+      );
+    }
+
+    // If failed, log an error
+    if (!data.success) {
+      monitor.logError(
+        new Error(`LLM call failed for model ${data.model}`),
+        data.operation || "llm_call",
+        data.model
+      );
+    }
+  },
+
+  /**
+   * Track a node execution
+   *
+   * @param data Tracking data for the node execution
+   */
+  trackNodeExecution: (data: NodeExecutionTrackingData) => {
+    const monitor = LLMMonitor.getInstance();
+
+    monitor.logMetric(
+      MetricType.LLM_LATENCY,
+      data.durationMs,
+      undefined,
+      `node:${data.nodeName}`,
+      { success: data.success, ...data.metadata }
+    );
+  },
+
+  /**
+   * Track an error
+   *
+   * @param data Error tracking data
+   */
+  trackError: (data: ErrorTrackingData) => {
+    const monitor = LLMMonitor.getInstance();
+    const error = new Error(data.message);
+
+    monitor.logError(error, data.component);
+
+    // Also log as a metric if duration is provided
+    if (data.durationMs) {
+      monitor.logMetric(MetricType.ERROR_RATE, 1, undefined, data.component, {
+        errorType: data.errorType,
+        ...data.metadata,
+      });
+    }
+  },
+
+  /**
+   * Get current error statistics
+   */
+  getErrorStats: () => {
+    return LLMMonitor.getInstance().getErrorStats();
+  },
+
+  /**
+   * Get current metric statistics
+   */
+  getMetricStats: () => {
+    return LLMMonitor.getInstance().getMetricStats();
+  },
+
+  /**
+   * Reset monitoring statistics
+   */
+  resetStats: () => {
+    LLMMonitor.getInstance().resetStats();
+  },
+};

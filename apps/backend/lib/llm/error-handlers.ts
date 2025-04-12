@@ -22,7 +22,35 @@ import {
   calculateBackoff,
   createErrorResponseMessage,
   addErrorToState,
+  classifyError,
 } from "./error-classification.js";
+
+// Import MonitoringService properly
+let MonitoringService = {
+  trackError: (data: any) => {
+    console.log("Error tracked:", data);
+  },
+  trackNodeExecution: (data: any) => {
+    console.log("Node execution tracked:", data);
+  },
+};
+
+try {
+  // Attempt to dynamically import MonitoringService
+  import("./monitoring.js")
+    .then((module) => {
+      if (module.MonitoringService) {
+        MonitoringService = module.MonitoringService;
+      }
+    })
+    .catch((err) => {
+      console.warn(
+        "Monitoring service not available, using stub implementation"
+      );
+    });
+} catch (e) {
+  console.warn("Monitoring service not available, using stub implementation");
+}
 
 /**
  * Wraps a StateGraph with error handling to gracefully handle schema extraction errors
@@ -134,53 +162,157 @@ export function createRetryingLLM(
 }
 
 /**
+ * Options for node error handler
+ */
+export interface NodeErrorHandlerOptions<T extends Record<string, any>, S> {
+  /**
+   * Fallback behavior when error occurs
+   */
+  fallbackBehavior?: (state: T, error: Error) => Promise<Partial<S>>;
+
+  /**
+   * Custom error classifier function
+   */
+  errorClassifier?: (error: Error) => ErrorCategory;
+
+  /**
+   * Whether to propagate errors up to the graph
+   * When true, errors will bubble up after fallback behavior
+   * When false (default), errors are handled completely at the node level
+   */
+  bubbleErrors?: boolean;
+
+  /**
+   * Whether to add error information to state
+   */
+  addErrorToState?: boolean;
+
+  /**
+   * Whether to track error metrics
+   */
+  trackMetrics?: boolean;
+
+  /**
+   * Custom retry filter - determines if a specific error should be retried
+   */
+  shouldRetry?: (
+    error: ErrorEvent,
+    attempt: number,
+    maxRetries: number
+  ) => boolean;
+}
+
+/**
  * Creates a function to handle node-level errors in LangGraph
  *
  * @param nodeName - Name of the node for identification in logs
- * @param fallbackBehavior - Optional fallback behavior when error occurs
+ * @param options - Options for error handling behavior
  * @returns A wrapper function that handles errors for the node
  */
 export function createNodeErrorHandler<T extends Record<string, any>, S>(
   nodeName: string,
-  fallbackBehavior?: (state: T, error: Error) => Promise<Partial<S>>
+  options: NodeErrorHandlerOptions<T, S> = {}
 ): (
   fn: (state: T) => Promise<Partial<S>>
 ) => (state: T) => Promise<Partial<S>> {
+  // Extract options with defaults
+  const {
+    fallbackBehavior,
+    errorClassifier = classifyError,
+    bubbleErrors = false,
+    addErrorToState: shouldAddErrorToState = true,
+    trackMetrics = true,
+    shouldRetry: customShouldRetry,
+  } = options;
+
   return (fn) => async (state: T) => {
+    const startTime = performance.now();
+
     try {
-      return await fn(state);
+      // Execute the original node function
+      const result = await fn(state);
+
+      // Track successful execution if metrics are enabled
+      if (trackMetrics) {
+        MonitoringService.trackNodeExecution({
+          nodeName,
+          durationMs: performance.now() - startTime,
+          success: true,
+        });
+      }
+
+      return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       console.error(`Error in LangGraph node '${nodeName}':`, err);
 
-      // Create error event and classify
-      const errorEvent = createErrorEvent(err, nodeName);
+      // Create error event and classify (using custom classifier if provided)
+      const errorEvent = createErrorEvent({
+        error: err,
+        nodeName,
+        category: errorClassifier(err),
+      });
+
       console.error(`Error category: ${errorEvent.category}`);
+
+      // Track error metrics if enabled
+      if (trackMetrics) {
+        MonitoringService.trackError({
+          errorType: errorEvent.category,
+          component: nodeName,
+          message: err.message,
+          durationMs: performance.now() - startTime,
+        });
+      }
+
+      // Update state with error information if requested
+      let updatedState = { ...state };
+      if (shouldAddErrorToState) {
+        try {
+          const stateWithError = addErrorToState(state, err, nodeName);
+          updatedState = { ...state, ...stateWithError } as T;
+        } catch (stateError) {
+          console.warn(
+            `Could not update state with error information:`,
+            stateError
+          );
+        }
+      }
 
       // Try to use fallback behavior if provided
       if (fallbackBehavior) {
         console.warn(`Attempting fallback behavior for node '${nodeName}'`);
         try {
-          return await fallbackBehavior(state, err);
+          const fallbackResult = await fallbackBehavior(updatedState, err);
+
+          // Track fallback success
+          if (trackMetrics) {
+            MonitoringService.trackNodeExecution({
+              nodeName: `${nodeName}:fallback`,
+              durationMs: performance.now() - startTime,
+              success: true,
+            });
+          }
+
+          return fallbackResult;
         } catch (fallbackError) {
           console.error(
             `Fallback for node '${nodeName}' also failed:`,
             fallbackError
           );
-        }
-      }
 
-      // Update state with error information
-      let updatedState = { ...state };
-      try {
-        // Add error to state if possible - don't crash if state can't accept it
-        const stateWithError = addErrorToState(state, err, nodeName);
-        updatedState = { ...state, ...stateWithError } as T;
-      } catch (stateError) {
-        console.warn(
-          `Could not update state with error information:`,
-          stateError
-        );
+          // Track fallback failure
+          if (trackMetrics) {
+            MonitoringService.trackError({
+              errorType: "fallback_failure",
+              component: `${nodeName}:fallback`,
+              message:
+                fallbackError instanceof Error
+                  ? fallbackError.message
+                  : String(fallbackError),
+            });
+          }
+        }
       }
 
       // For specific error categories, provide appropriate user-facing messages
@@ -195,26 +327,93 @@ export function createNodeErrorHandler<T extends Record<string, any>, S>(
         } as unknown as Partial<S>;
       }
 
-      // Rethrow the error
-      throw err;
+      // For LLM availability errors, add a user-facing message
+      if (errorEvent.category === ErrorCategory.LLM_UNAVAILABLE) {
+        return {
+          ...updatedState,
+          messages: [
+            ...(updatedState.messages || []),
+            createErrorResponseMessage(errorEvent),
+          ],
+        } as unknown as Partial<S>;
+      }
+
+      // Propagate errors up to the graph level if requested
+      if (bubbleErrors) {
+        // Add extra properties to the error for graph-level handling
+        const enhancedError = new Error(
+          `Error in node '${nodeName}': ${err.message}`
+        );
+        (enhancedError as any).errorEvent = errorEvent;
+        (enhancedError as any).nodeName = nodeName;
+        (enhancedError as any).isNodeError = true;
+
+        throw enhancedError;
+      }
+
+      // If no special handling applied and not bubbling errors,
+      // return a generic error message response
+      return {
+        ...updatedState,
+        messages: [
+          ...(updatedState.messages || []),
+          createErrorResponseMessage(errorEvent),
+        ],
+      } as unknown as Partial<S>;
     }
   };
 }
 
 /**
+ * Options for node retry wrapper
+ */
+export interface RetryNodeOptions {
+  /**
+   * Maximum number of retry attempts
+   */
+  maxRetries?: number;
+
+  /**
+   * Base delay between retries in milliseconds
+   */
+  baseDelayMs?: number;
+
+  /**
+   * Maximum delay between retries in milliseconds
+   */
+  maxDelayMs?: number;
+
+  /**
+   * Custom function to determine if retry should be attempted
+   */
+  shouldRetry?: (
+    error: ErrorEvent,
+    attempt: number,
+    maxRetries: number
+  ) => boolean;
+}
+
+/**
  * Creates a node wrapper that handles retries within the LangGraph
  *
+ * @param fn - Original node function to wrap
  * @param nodeName - Name of the node for identification
- * @param maxRetries - Maximum retry attempts
+ * @param options - Retry options
  * @returns A wrapper function that adds retry capabilities
  */
 export function createRetryingNode<T extends Record<string, any>, S>(
+  fn: (state: T) => Promise<Partial<S>>,
   nodeName: string,
-  maxRetries: number = 3
-): (
-  fn: (state: T) => Promise<Partial<S>>
-) => (state: T) => Promise<Partial<S>> {
-  return (fn) => async (state: T) => {
+  options: RetryNodeOptions = {}
+): (state: T) => Promise<Partial<S>> {
+  const {
+    maxRetries = 3,
+    baseDelayMs = 1000,
+    maxDelayMs = 30000,
+    shouldRetry: customShouldRetry,
+  } = options;
+
+  return async (state: T) => {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -235,12 +434,13 @@ export function createRetryingNode<T extends Record<string, any>, S>(
         lastError = err;
 
         // Check if we should retry based on error characteristics
-        if (
-          attempt < maxRetries &&
-          shouldRetry(errorEvent, attempt, maxRetries)
-        ) {
+        const shouldRetryThis = customShouldRetry
+          ? customShouldRetry(errorEvent, attempt, maxRetries)
+          : shouldRetry(errorEvent, attempt, maxRetries);
+
+        if (attempt < maxRetries && shouldRetryThis) {
           // Calculate backoff time with jitter
-          const delay = calculateBackoff(attempt);
+          const delay = calculateBackoff(attempt, baseDelayMs, maxDelayMs);
           console.warn(`Retrying node '${nodeName}' in ${delay}ms...`);
 
           // Implement backoff
@@ -261,21 +461,41 @@ export function createRetryingNode<T extends Record<string, any>, S>(
  * Combines error handling and retry logic for nodes
  *
  * @param nodeName - Name of the node for identification
- * @param maxRetries - Maximum retry attempts
- * @param fallbackBehavior - Optional fallback if all retries fail
+ * @param options - Configuration options for both retry and error handling
  * @returns A wrapper function with both error handling and retry logic
  */
 export function withNodeResilience<T extends Record<string, any>, S>(
   nodeName: string,
-  maxRetries: number = 3,
-  fallbackBehavior?: (state: T, error: Error) => Promise<Partial<S>>
+  options: RetryNodeOptions & NodeErrorHandlerOptions<T, S> = {}
 ): (
   fn: (state: T) => Promise<Partial<S>>
 ) => (state: T) => Promise<Partial<S>> {
-  // Compose the retry wrapper with the error handler
-  const retryWrapper = createRetryingNode<T, S>(nodeName, maxRetries);
-  const errorHandler = createNodeErrorHandler<T, S>(nodeName, fallbackBehavior);
+  // Extract options
+  const {
+    maxRetries = 3,
+    baseDelayMs,
+    maxDelayMs,
+    shouldRetry: customShouldRetry,
+    ...errorHandlerOptions
+  } = options;
 
-  // Apply both wrappers
-  return (fn) => errorHandler(retryWrapper(fn));
+  // Apply both wrappers - retrying first, then error handling
+  return (fn) => {
+    // Create retry wrapper with specific options
+    const retryOptions: RetryNodeOptions = {
+      maxRetries,
+      baseDelayMs,
+      maxDelayMs,
+      shouldRetry: customShouldRetry,
+    };
+
+    const withRetry = createRetryingNode(fn, nodeName, retryOptions);
+    const withErrorHandler = createNodeErrorHandler(
+      nodeName,
+      errorHandlerOptions
+    );
+
+    // Apply error handler to retry wrapper
+    return withErrorHandler(withRetry);
+  };
 }
