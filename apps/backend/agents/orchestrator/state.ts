@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { StateFingerprint } from "../../lib/llm/loop-prevention-utils.js";
 
 /**
  * Status of a workflow step
@@ -88,6 +89,19 @@ export interface OrchestratorState {
   lastAgentResponse?: any;
   lastUserQuery?: string;
   context: Record<string, any>;
+  stateHistory?: StateFingerprint[]; // Track state history for loop detection
+  metadata?: {
+    updatedAt?: string;
+    initialized?: boolean;
+    lastNodeVisited?: string;
+    [key: string]: any;
+  };
+  config?: {
+    maxRetries?: number;
+    retryDelay?: number;
+    timeoutSeconds?: number;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -144,6 +158,30 @@ export const orchestratorStateSchema = z.object({
   lastAgentResponse: z.any().optional(),
   lastUserQuery: z.string().optional(),
   context: z.record(z.any()),
+  stateHistory: z
+    .array(
+      z.object({
+        hash: z.string(),
+        originalState: z.any(),
+        timestamp: z.number(),
+        sourceNode: z.string().optional(),
+      })
+    )
+    .optional(),
+  metadata: z
+    .object({
+      updatedAt: z.string().optional(),
+      initialized: z.boolean().optional(),
+      lastNodeVisited: z.string().optional(),
+    })
+    .optional(),
+  config: z
+    .object({
+      maxRetries: z.number().optional(),
+      retryDelay: z.number().optional(),
+      timeoutSeconds: z.number().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -161,6 +199,10 @@ export function getInitialOrchestratorState(
     messages: [],
     errors: [],
     context: {},
+    stateHistory: [],
+    metadata: {
+      updatedAt: new Date().toISOString(),
+    },
   };
 }
 
