@@ -21,7 +21,9 @@ import { StateGraph } from "@langchain/langgraph";
 import { configureLoopPrevention } from "./lib/llm/loop-prevention";
 
 // Create your graph
-const graph = new StateGraph({ /* your config */ });
+const graph = new StateGraph({
+  /* your config */
+});
 
 // Add loop prevention (just one line!)
 configureLoopPrevention(graph);
@@ -51,6 +53,7 @@ Detailed documentation is available in the `/docs` directory:
 ### Testing
 
 The system includes comprehensive tests covering both basic functionality and edge cases:
+
 - Unit tests for individual components
 - Integration tests for combined functionality
 - Edge case handling and error recovery
@@ -59,6 +62,83 @@ Run tests with:
 
 ```bash
 npm test -- apps/backend/lib/llm/__tests__/loop-prevention.test.ts
+```
+
+## Timeout and Cancellation System
+
+The Timeout and Cancellation System provides safeguards against long-running workflows and nodes, with special handling for research-heavy operations that require generous time limits.
+
+### Core Components
+
+- **timeout-manager.ts**: Main timeout configuration and management module
+
+### Getting Started
+
+To use the timeout system in your LangGraph workflow:
+
+```typescript
+import { StateGraph } from "@langchain/langgraph";
+import { configureTimeouts } from "./lib/llm/timeout-manager";
+
+// Create your graph
+const graph = new StateGraph({
+  /* your config */
+});
+
+// Configure timeouts with research nodes that get longer timeouts
+const { graph: timeoutGraph, timeoutManager } = configureTimeouts(graph, {
+  workflowTimeout: 5 * 60 * 1000, // 5 minutes for the entire workflow
+  researchNodes: ["research_node", "knowledge_retrieval"],
+  defaultTimeouts: {
+    research: 3 * 60 * 1000, // 3 minutes for research nodes
+    default: 30 * 1000, // 30 seconds for regular nodes
+  },
+});
+
+// Start the timeout manager when you run the workflow
+timeoutManager.startWorkflow();
+
+// Compile and use the graph as usual
+const app = timeoutGraph.compile();
+const result = await app.invoke({
+  /* initial state */
+});
+
+// Clean up resources when done
+timeoutManager.cleanup();
+```
+
+### Features
+
+- **Workflow Timeouts**: Set overall workflow time limits
+- **Node-Specific Timeouts**: Configure different timeouts for different node types
+- **Research Node Support**: Special handling for research-heavy nodes that need more time
+- **Graceful Cancellation**: Clean and safe workflow termination
+- **Resource Cleanup**: Automatic cleanup of timers and resources
+- **Event Hooks**: Callback support for timeout and cancellation events
+- **Customizable Limits**: Set generous or strict limits based on workflow needs
+
+### Integration with Loop Prevention
+
+The Timeout and Cancellation system works seamlessly with the Loop Prevention system:
+
+```typescript
+import { StateGraph } from "@langchain/langgraph";
+import { configureLoopPrevention } from "./lib/llm/loop-prevention";
+import { configureTimeouts } from "./lib/llm/timeout-manager";
+
+const graph = new StateGraph({
+  /* your config */
+});
+
+// First add loop prevention
+configureLoopPrevention(graph);
+
+// Then add timeout support
+const { graph: configuredGraph, timeoutManager } = configureTimeouts(graph);
+
+// Use the fully configured graph
+const app = configuredGraph.compile();
 ```
 
 ## Other Utilities
