@@ -8,6 +8,9 @@
 import { BaseMessage } from "@langchain/core/messages";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
+// Add a constant to make sure this module is properly loaded with named exports
+export const MESSAGE_TRUNCATION_VERSION = "1.0";
+
 /**
  * Rough token count estimation
  * This is a simple approximation - actual token counts vary by model
@@ -64,7 +67,7 @@ export function estimateMessageTokens(messages: BaseMessage[]): number {
 /**
  * Options for truncating message history
  */
-export interface TruncateMessagesOptions {
+export type TruncateMessagesOptions = {
   /**
    * Maximum token count to target
    */
@@ -84,7 +87,7 @@ export interface TruncateMessagesOptions {
    * Number of initial messages to always keep (e.g., system prompt)
    */
   preserveInitialCount?: number;
-}
+};
 
 /**
  * Truncates message history to fit within token limits

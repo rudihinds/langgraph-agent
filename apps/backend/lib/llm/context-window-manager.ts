@@ -8,11 +8,12 @@
  */
 
 import { EventEmitter } from "events";
+// Import the Logger using dynamic import instead
 import { Logger } from "../../logger.js";
 import { LLMFactory } from "./llm-factory.js";
 import { BaseMessage } from "@langchain/core/messages";
 import { ErrorCategory, createErrorEvent } from "./error-classification.js";
-// Import functions from the message-truncation module that are used directly
+// Import only the functions we directly use
 import {
   progressiveTruncation,
   TruncationLevel,
@@ -498,14 +499,3 @@ export class ContextWindowManager extends EventEmitter {
     }
   }
 }
-
-// Re-export types and functions from message-truncation.ts
-export {
-  estimateTokenCount,
-  estimateMessageTokens,
-  truncateMessages,
-  TruncateMessagesOptions,
-  progressiveTruncation,
-  TruncationLevel,
-  createMinimalMessageSet,
-} from "./message-truncation.js";
