@@ -5,6 +5,13 @@
  * 1. Ensuring messages fit within a model's context window
  * 2. Summarizing conversations that exceed a token threshold
  * 3. Preserving important messages (like system messages)
+ *
+ * !!! IMPORTANT DEVELOPMENT NOTE !!!
+ * This file contains the message truncation functionality for the application.
+ * There is NO separate message-truncation.ts utility file.
+ * All message truncation logic is implemented as methods of this class.
+ * The message-truncation.test.ts file was removed as it was redundant with tests here.
+ * !!! END IMPORTANT NOTE !!!
  */
 
 import { EventEmitter } from "events";

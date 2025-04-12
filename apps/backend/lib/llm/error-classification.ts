@@ -1,275 +1,241 @@
 /**
- * Error classification system for LangGraph agents
- *
- * Part of Task #14.4: Implement Base Error Classification and Retry Mechanisms
+ * Error classification for LangGraph
+ * 
+ * This module provides utilities for classifying errors that occur during LLM
+ * interactions, state management, and tool execution. It allows for standardized
+ * error handling, appropriate retry strategies, and consistent error reporting.
  */
 
-import { Annotation } from "@langchain/langgraph";
-import {
-  BaseMessage,
-  AIMessage,
-  FunctionMessage,
-} from "@langchain/core/messages";
+import { z } from 'zod';
 
 /**
- * Error categories for agent operations
+ * Enumeration of error categories for LLM operations
  */
 export enum ErrorCategory {
-  LLM_UNAVAILABLE = "llm_unavailable",
-  CONTEXT_WINDOW_EXCEEDED = "context_window_exceeded",
-  RATE_LIMIT_EXCEEDED = "rate_limit_exceeded",
-  TOOL_EXECUTION_ERROR = "tool_execution_error",
-  INVALID_RESPONSE_FORMAT = "invalid_response_format",
-  CHECKPOINT_ERROR = "checkpoint_error",
-  UNKNOWN = "unknown",
+  RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
+  CONTEXT_WINDOW_ERROR = 'CONTEXT_WINDOW_ERROR',
+  LLM_UNAVAILABLE_ERROR = 'LLM_UNAVAILABLE_ERROR',
+  TOOL_EXECUTION_ERROR = 'TOOL_EXECUTION_ERROR',
+  INVALID_RESPONSE_FORMAT = 'INVALID_RESPONSE_FORMAT',
+  CHECKPOINT_ERROR = 'CHECKPOINT_ERROR',
+  LLM_SUMMARIZATION_ERROR = 'LLM_SUMMARIZATION_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
 /**
- * Error event for tracking agent errors
+ * Error event schema for consistent error reporting
  */
-export interface ErrorEvent {
-  timestamp: string;
-  category: ErrorCategory;
-  message: string;
-  node?: string;
-  retryCount?: number;
-  fatal?: boolean;
-}
-
-/**
- * Defines error entry in state
- */
-export interface ErrorState {
-  errors: ErrorEvent[];
-  lastError?: ErrorEvent;
-  recoveryAttempts: number;
-}
-
-/**
- * State annotation for error tracking
- */
-export const ErrorStateAnnotation = Annotation.Root({
-  errors: Annotation<ErrorEvent[]>({
-    // Append new errors to existing array
-    reducer: (curr: ErrorEvent[] = [], value: ErrorEvent[] = []) => [
-      ...curr,
-      ...value,
-    ],
-    default: () => [],
-  }),
-  lastError: Annotation<ErrorEvent | undefined>({
-    // Always use the newest error
-    reducer: (_, value) => value,
-    default: () => undefined,
-  }),
-  recoveryAttempts: Annotation<number>({
-    // Increment counter or use provided value
-    reducer: (curr = 0, value) =>
-      typeof value === "number" ? value : curr + 1,
-    default: () => 0,
-  }),
+export const ErrorEventSchema = z.object({
+  category: z.nativeEnum(ErrorCategory),
+  message: z.string(),
+  error: z.any().optional(),
+  timestamp: z.date().optional(),
+  nodeId: z.string().optional(),
+  retry: z.object({
+    count: z.number(),
+    maxRetries: z.number(),
+    shouldRetry: z.boolean(),
+    backoffMs: z.number().optional(),
+  }).optional(),
 });
 
+export type ErrorEvent = z.infer<typeof ErrorEventSchema>;
+
 /**
- * Classifies an error into a specific category
- *
- * @param error - The error to classify
- * @returns Classified error category
+ * Detect rate limit errors in error messages
  */
-export function classifyError(error: Error): ErrorCategory {
-  const message = error.message.toLowerCase();
+export function isRateLimitError(error: Error | string): boolean {
+  const message = typeof error === 'string' ? error : error.message;
+  return (
+    message.includes('rate limit') ||
+    message.includes('ratelimit') ||
+    message.includes('too many requests') ||
+    message.includes('429') ||
+    message.includes('quota exceeded')
+  );
+}
 
-  // LLM provider errors
-  if (message.includes("rate limit") || message.includes("ratelimit")) {
-    return ErrorCategory.RATE_LIMIT_EXCEEDED;
+/**
+ * Detect context window exceeded errors in error messages
+ */
+export function isContextWindowError(error: Error | string): boolean {
+  const message = typeof error === 'string' ? error : error.message;
+  return (
+    message.includes('context window') ||
+    message.includes('token limit') ||
+    message.includes('maximum context length') ||
+    message.includes('maximum token length') ||
+    message.includes('maximum tokens') ||
+    message.includes('too many tokens')
+  );
+}
+
+/**
+ * Detect LLM unavailable errors in error messages
+ */
+export function isLLMUnavailableError(error: Error | string): boolean {
+  const message = typeof error === 'string' ? error : error.message;
+  return (
+    message.includes('service unavailable') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('server error') ||
+    message.includes('500') ||
+    message.includes('503') ||
+    message.includes('connection error') ||
+    message.includes('timeout')
+  );
+}
+
+/**
+ * Detect tool execution errors in error messages
+ */
+export function isToolExecutionError(error: Error | string): boolean {
+  const message = typeof error === 'string' ? error : error.message;
+  return (
+    message.includes('tool execution failed') ||
+    message.includes('tool error') ||
+    message.includes('failed to execute tool')
+  );
+}
+
+/**
+ * Detect invalid response format errors in error messages
+ */
+export function isInvalidResponseFormatError(error: Error | string): boolean {
+  const message = typeof error === 'string' ? error : error.message;
+  return (
+    message.includes('invalid format') ||
+    message.includes('parsing error') ||
+    message.includes('malformed response') ||
+    message.includes('failed to parse') ||
+    message.includes('invalid JSON')
+  );
+}
+
+/**
+ * Detect checkpoint errors in error messages
+ */
+export function isCheckpointError(error: Error | string): boolean {
+  const message = typeof error === 'string' ? error : error.message;
+  return (
+    message.includes('checkpoint error') ||
+    message.includes('failed to save checkpoint') ||
+    message.includes('failed to load checkpoint') ||
+    message.includes('checkpoint corrupted')
+  );
+}
+
+/**
+ * Classify an error by examining its message
+ */
+export function classifyError(error: Error | string): ErrorCategory {
+  if (isRateLimitError(error)) {
+    return ErrorCategory.RATE_LIMIT_ERROR;
   }
-
-  if (
-    message.includes("context length") ||
-    message.includes("maximum context") ||
-    message.includes("token limit") ||
-    message.includes("too long")
-  ) {
-    return ErrorCategory.CONTEXT_WINDOW_EXCEEDED;
+  
+  if (isContextWindowError(error)) {
+    return ErrorCategory.CONTEXT_WINDOW_ERROR;
   }
-
-  if (
-    message.includes("service unavailable") ||
-    message.includes("server error") ||
-    message.includes("timeout") ||
-    message.includes("connection")
-  ) {
-    return ErrorCategory.LLM_UNAVAILABLE;
+  
+  if (isLLMUnavailableError(error)) {
+    return ErrorCategory.LLM_UNAVAILABLE_ERROR;
   }
-
-  // Tool-specific errors
-  if (
-    message.includes("tool") &&
-    (message.includes("execution") || message.includes("failed"))
-  ) {
+  
+  if (isToolExecutionError(error)) {
     return ErrorCategory.TOOL_EXECUTION_ERROR;
   }
-
-  // Response formatting errors
-  if (
-    message.includes("invalid") ||
-    message.includes("format") ||
-    message.includes("parse")
-  ) {
+  
+  if (isInvalidResponseFormatError(error)) {
     return ErrorCategory.INVALID_RESPONSE_FORMAT;
   }
-
-  // Checkpoint errors
-  if (message.includes("checkpoint") || message.includes("state")) {
+  
+  if (isCheckpointError(error)) {
     return ErrorCategory.CHECKPOINT_ERROR;
   }
-
-  return ErrorCategory.UNKNOWN;
+  
+  return ErrorCategory.UNKNOWN_ERROR;
 }
 
 /**
- * Creates an error event from an error
- *
- * @param error - The error to convert
- * @param nodeName - Optional node name where error occurred
- * @param retryCount - Optional retry count for this error
- * @param fatal - Whether the error is fatal (default: false)
- * @returns Structured error event
+ * Create a structured error event from an error
  */
 export function createErrorEvent(
-  error: Error,
-  nodeName?: string,
-  retryCount?: number,
-  fatal: boolean = false
+  error: Error | string,
+  nodeId?: string,
+  retry?: { count: number; maxRetries: number; shouldRetry: boolean; backoffMs?: number }
 ): ErrorEvent {
+  const category = classifyError(error);
+  const message = typeof error === 'string' ? error : error.message;
+  
   return {
-    timestamp: new Date().toISOString(),
-    category: classifyError(error),
-    message: error.message,
-    node: nodeName,
-    retryCount,
-    fatal,
+    category,
+    message,
+    error: typeof error !== 'string' ? error : undefined,
+    timestamp: new Date(),
+    nodeId,
+    retry,
   };
 }
 
 /**
- * Creates a response message indicating an error occurred
- *
- * @param error - The error event
- * @returns An AI message explaining the error
+ * Add an error to the state object
  */
-export function createErrorResponseMessage(error: ErrorEvent): AIMessage {
-  let content = "I encountered an error while processing your request. ";
-
-  switch (error.category) {
-    case ErrorCategory.LLM_UNAVAILABLE:
-      content +=
-        "The AI service is temporarily unavailable. Please try again in a few moments.";
-      break;
-    case ErrorCategory.CONTEXT_WINDOW_EXCEEDED:
-      content +=
-        "The conversation has become too long for me to process. Let's start a new conversation or focus on smaller pieces of information.";
-      break;
-    case ErrorCategory.RATE_LIMIT_EXCEEDED:
-      content +=
-        "We've reached the usage limit. Please try again in a few moments.";
-      break;
-    case ErrorCategory.TOOL_EXECUTION_ERROR:
-      content +=
-        "I had trouble executing a tool or accessing external data. Please check the information provided and try again.";
-      break;
-    case ErrorCategory.INVALID_RESPONSE_FORMAT:
-      content +=
-        "I encountered a problem formatting my response. Let's approach this differently.";
-      break;
-    default:
-      content +=
-        "Something unexpected happened. Let's try a different approach.";
-  }
-
-  return new AIMessage({ content });
-}
-
-/**
- * Updates state with error information
- *
- * @param state - Current state object
- * @param error - Error that occurred
- * @param nodeName - Optional node name where error occurred
- * @returns Object with error information to merge into state
- */
-export function addErrorToState<T extends Record<string, any>>(
+export function addErrorToState<T extends { errors?: ErrorEvent[] }>(
   state: T,
-  error: Error,
-  nodeName?: string
-): { errors: ErrorEvent[]; lastError: ErrorEvent } {
-  const errorEvent = createErrorEvent(error, nodeName);
-
+  error: ErrorEvent
+): T {
+  const errors = state.errors || [];
   return {
-    errors: [...(state.errors || []), errorEvent],
-    lastError: errorEvent,
+    ...state,
+    errors: [...errors, error],
   };
 }
 
 /**
- * Determines if a retry should be attempted based on error category
- *
- * @param error - Error event to analyze
- * @param currentRetries - Current retry attempt count
- * @param maxRetries - Maximum retry attempts (default: 3)
- * @returns Whether to retry
+ * Determine if an error should be retried based on its category
  */
 export function shouldRetry(
-  error: ErrorEvent,
-  currentRetries: number,
+  category: ErrorCategory, 
+  retryCount: number,
   maxRetries: number = 3
 ): boolean {
-  // Don't retry if we've hit the maximum
-  if (currentRetries >= maxRetries || error.fatal) {
+  if (retryCount >= maxRetries) {
     return false;
   }
-
-  // Always retry these types of errors
-  if (
-    error.category === ErrorCategory.LLM_UNAVAILABLE ||
-    error.category === ErrorCategory.RATE_LIMIT_EXCEEDED
-  ) {
-    return true;
+  
+  switch (category) {
+    case ErrorCategory.RATE_LIMIT_ERROR:
+    case ErrorCategory.LLM_UNAVAILABLE_ERROR:
+    case ErrorCategory.TOOL_EXECUTION_ERROR:
+      return true;
+    case ErrorCategory.CONTEXT_WINDOW_ERROR:
+    case ErrorCategory.INVALID_RESPONSE_FORMAT:
+    case ErrorCategory.CHECKPOINT_ERROR:
+    case ErrorCategory.LLM_SUMMARIZATION_ERROR:
+    case ErrorCategory.UNKNOWN_ERROR:
+      return false;
   }
-
-  // Don't retry context window errors unless explicitly configured
-  if (error.category === ErrorCategory.CONTEXT_WINDOW_EXCEEDED) {
-    return false;
-  }
-
-  // Optionally retry tool errors once
-  if (error.category === ErrorCategory.TOOL_EXECUTION_ERROR) {
-    return currentRetries < 1;
-  }
-
-  // For unknown errors, retry once
-  return currentRetries < 1;
 }
 
 /**
- * Calculates exponential backoff time
- *
- * @param retryCount - Current retry attempt (0-based)
- * @param baseDelayMs - Base delay in milliseconds (default: 1000)
- * @param maxDelayMs - Maximum delay in milliseconds (default: 30000)
- * @returns Delay time in milliseconds
+ * Calculate exponential backoff time in milliseconds
  */
 export function calculateBackoff(
   retryCount: number,
   baseDelayMs: number = 1000,
-  maxDelayMs: number = 30000
+  maxDelayMs: number = 60000,
+  jitter: boolean = true
 ): number {
-  // Exponential backoff: baseDelay * 2^retryCount with jitter
-  const delay = baseDelayMs * Math.pow(2, retryCount);
-
-  // Add jitter (±20%)
-  const jitter = delay * 0.2 * (Math.random() * 2 - 1);
-
-  // Cap at max delay
-  return Math.min(delay + jitter, maxDelayMs);
+  // Exponential backoff: 2^retryCount * baseDelay
+  let delay = Math.min(
+    maxDelayMs,
+    Math.pow(2, retryCount) * baseDelayMs
+  );
+  
+  // Add jitter if requested (random value between 0 and 0.5 * delay)
+  if (jitter) {
+    delay += Math.random() * 0.5 * delay;
+  }
+  
+  return delay;
 }
