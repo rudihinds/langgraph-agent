@@ -10,19 +10,12 @@
 import { EventEmitter } from "events";
 import { Logger } from "../../logger.js";
 import { LLMFactory } from "./llm-factory.js";
-import { LLMCompletionOptions } from "./types.js";
 import { BaseMessage } from "@langchain/core/messages";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ErrorCategory, createErrorEvent } from "./error-classification.js";
-// Import functions from the message-truncation module
+// Import functions from the message-truncation module that are used directly
 import {
-  estimateTokenCount,
-  estimateMessageTokens,
-  truncateMessages,
-  TruncateMessagesOptions,
   progressiveTruncation,
   TruncationLevel,
-  createMinimalMessageSet,
 } from "./message-truncation.js";
 
 /**
@@ -236,6 +229,17 @@ export class ContextWindowManager extends EventEmitter {
           error instanceof Error ? error.message : String(error)
         }`
       );
+      // Emit error event
+      this.emit(
+        "error",
+        createErrorEvent({
+          category: ErrorCategory.LLM_SUMMARIZATION_ERROR,
+          error: error instanceof Error ? error : new Error(String(error)),
+          source: "ContextWindowManager.summarizeConversation",
+          modelId: this.summarizationModel,
+        })
+      );
+
       // Fallback summary
       return {
         role: "assistant",
@@ -340,17 +344,51 @@ export class ContextWindowManager extends EventEmitter {
           `After summarization: ${summarizedTokens} tokens (limit: ${maxTokens})`
         );
 
-        // If still over limit, truncate
+        // If still over limit, use progressive truncation
         if (summarizedTokens > maxTokens) {
           this.logDebug(
             `Still exceeding token limit after summarization, will truncate`
           );
-          // Use the imported truncateMessages function instead of the class method
-          const truncatedMessages = this.truncateMessagesWithCache(
-            summarizedMessages,
-            modelId,
-            maxTokens
+
+          // Convert our Message format to BaseMessage format for truncation
+          const baseMessages = summarizedMessages.map((msg) => {
+            // Create a simplified version that matches what we need
+            const baseMsg = {
+              content: msg.content,
+              _getType: function () {
+                return msg.role === "system"
+                  ? "system"
+                  : msg.role === "user"
+                    ? "human"
+                    : "ai";
+              },
+              additional_kwargs: {
+                isSummary: msg.isSummary || false,
+              },
+            } as unknown as BaseMessage;
+
+            return baseMsg;
+          });
+
+          // Use progressive truncation strategy
+          const { messages: truncatedBaseMessages } = progressiveTruncation(
+            baseMessages,
+            maxTokens,
+            TruncationLevel.MODERATE
           );
+
+          // Convert back to our Message format
+          const truncatedMessages = truncatedBaseMessages.map((msg) => ({
+            role:
+              msg._getType() === "system"
+                ? "system"
+                : msg._getType() === "human"
+                  ? "user"
+                  : "assistant",
+            content: String(msg.content),
+            isSummary: msg.additional_kwargs?.isSummary === true,
+          }));
+
           const finalTokens = await this.calculateTotalTokens(
             truncatedMessages,
             modelId
@@ -369,16 +407,50 @@ export class ContextWindowManager extends EventEmitter {
           totalTokens: summarizedTokens,
         };
       } else {
-        // Over the limit but under summarization threshold, just truncate
+        // Over the limit but under summarization threshold, use progressive truncation
         this.logDebug(
           `Conversation exceeds token limit but under summarization threshold, truncating directly`
         );
-        // Use the imported truncateMessages function instead of the class method
-        const truncatedMessages = this.truncateMessagesWithCache(
-          messages,
-          modelId,
-          maxTokens
+
+        // Convert our Message format to BaseMessage format for truncation
+        const baseMessages = messages.map((msg) => {
+          // Create a simplified version that matches what we need
+          const baseMsg = {
+            content: msg.content,
+            _getType: function () {
+              return msg.role === "system"
+                ? "system"
+                : msg.role === "user"
+                  ? "human"
+                  : "ai";
+            },
+            additional_kwargs: {
+              isSummary: msg.isSummary || false,
+            },
+          } as unknown as BaseMessage;
+
+          return baseMsg;
+        });
+
+        // Use progressive truncation strategy
+        const { messages: truncatedBaseMessages } = progressiveTruncation(
+          baseMessages,
+          maxTokens,
+          TruncationLevel.LIGHT
         );
+
+        // Convert back to our Message format
+        const truncatedMessages = truncatedBaseMessages.map((msg) => ({
+          role:
+            msg._getType() === "system"
+              ? "system"
+              : msg._getType() === "human"
+                ? "user"
+                : "assistant",
+          content: String(msg.content),
+          isSummary: msg.additional_kwargs?.isSummary === true,
+        }));
+
         const truncatedTokens = await this.calculateTotalTokens(
           truncatedMessages,
           modelId
@@ -396,7 +468,19 @@ export class ContextWindowManager extends EventEmitter {
           error instanceof Error ? error.message : String(error)
         }`
       );
-      // If anything fails, truncate aggressively as a fallback
+
+      // Emit error event
+      this.emit(
+        "error",
+        createErrorEvent({
+          category: ErrorCategory.CONTEXT_WINDOW_ERROR,
+          error: error instanceof Error ? error : new Error(String(error)),
+          source: "ContextWindowManager.prepareMessages",
+          modelId,
+        })
+      );
+
+      // If anything fails, use minimal message set as a fallback
       const systemMessages = messages.filter(
         (message) => message.role === "system"
       );
@@ -412,74 +496,6 @@ export class ContextWindowManager extends EventEmitter {
         totalTokens: -1, // Mark as unknown
       };
     }
-  }
-
-  /**
-   * Uses the imported truncateMessages function while preserving token counts
-   * Adapts our internal Message type to work with the message truncation utilities
-   */
-  private truncateMessagesWithCache(
-    messages: Message[],
-    modelId: string,
-    maxTokens: number
-  ): Message[] {
-    // Always keep system messages and the most recent message
-    const systemMessages = messages.filter(
-      (message) => message.role === "system"
-    );
-    const nonSystemMessages = messages.filter(
-      (message) => message.role !== "system"
-    );
-
-    // If we only have system messages and zero or one non-system message,
-    // nothing to truncate (this is our minimum working set)
-    if (nonSystemMessages.length <= 1) {
-      return messages;
-    }
-
-    // Use a simple strategy similar to the imported truncateMessages, but adapted for our Message type
-    // Apply drop-middle strategy manually instead of using the imported function directly
-    const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
-
-    // Create our result with system messages and the last message (which we always keep)
-    const result = [...systemMessages, lastMessage];
-
-    // Calculate remaining tokens
-    let usedTokens = 0;
-    for (const msg of result) {
-      usedTokens += msg.tokenCount || 0;
-    }
-
-    const remainingTokens = maxTokens - usedTokens;
-
-    // Add as many middle messages as we can fit, prioritizing more recent ones
-    if (remainingTokens > 0 && nonSystemMessages.length > 1) {
-      // Add messages from newest to oldest (excluding the very last one we already added)
-      for (let i = nonSystemMessages.length - 2; i >= 0; i--) {
-        const msg = nonSystemMessages[i];
-        const msgTokens = msg.tokenCount || 0;
-
-        if (usedTokens + msgTokens <= maxTokens) {
-          result.push(msg);
-          usedTokens += msgTokens;
-        }
-      }
-
-      // Sort messages back into original order
-      result.sort((a, b) => {
-        // System messages always go first
-        if (a.role === "system" && b.role !== "system") return -1;
-        if (a.role !== "system" && b.role === "system") return 1;
-
-        // Then sort by position in original array
-        return messages.indexOf(a) - messages.indexOf(b);
-      });
-    }
-
-    this.logDebug(
-      `Truncated messages from ${messages.length} to ${result.length}`
-    );
-    return result;
   }
 }
 
