@@ -48,38 +48,40 @@ export interface DeepResearchResults {
 }
 
 /**
- * Solution profile identified in analysis
+ * Evidence for an approach with source information
  */
-export interface SolutionProfile {
-  idealApproach: string;
-  keyFunctions: string[];
-  successMetrics: string[];
+export interface ApproachEvidence {
+  approach: string;
+  evidence: string;
+  page: string;
 }
 
 /**
- * Technical requirements for the solution
+ * Unwanted approach with evidence
  */
-export interface TechnicalRequirements {
-  mustHave: string[];
-  niceToHave: string[];
-  constraints: string[];
+export interface UnwantedApproach {
+  approach: string;
+  evidence: string;
+  page: string;
 }
 
 /**
- * Competitive advantage elements
+ * Solution approach details
  */
-export interface CompetitiveAdvantage {
-  differentiators: string[];
-  winningStrategies: string[];
+export interface SolutionApproach {
+  primary_approaches: string[];
+  secondary_approaches: string[];
+  evidence: ApproachEvidence[];
 }
 
 /**
  * Solution sought analysis results
  */
 export interface SolutionSoughtResults {
-  solutionProfile: SolutionProfile;
-  technicalRequirements: TechnicalRequirements;
-  competitiveAdvantage: CompetitiveAdvantage;
+  solution_sought: string;
+  solution_approach: SolutionApproach;
+  explicitly_unwanted: UnwantedApproach[];
+  turn_off_approaches: string[];
 }
 
 /**
@@ -92,39 +94,42 @@ export const ResearchStateAnnotation = Annotation.Root({
     text: string;
     metadata: Record<string, any>;
   }>(),
-  
+
   // Research findings
   deepResearchResults: Annotation<DeepResearchResults | null>({
-    default: null,
+    value: (existing, newValue) => newValue ?? existing,
+    default: () => null,
   }),
-  
+
   // Solution sought analysis
   solutionSoughtResults: Annotation<SolutionSoughtResults | null>({
-    default: null,
+    value: (existing, newValue) => newValue ?? existing,
+    default: () => null,
   }),
-  
+
   // Standard message state for conversation history
   messages: Annotation<BaseMessage[]>({
     reducer: messagesStateReducer,
   }),
-  
+
   // Error tracking
   errors: Annotation<string[]>({
-    default: [],
-    reducer: (curr, update) => [...(curr || []), ...update],
+    value: (curr, update) => [...(curr || []), ...update],
+    default: () => [],
   }),
-  
+
   // Status tracking
   status: Annotation<{
     documentLoaded: boolean;
     researchComplete: boolean;
     solutionAnalysisComplete: boolean;
   }>({
-    default: {
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
+    default: () => ({
       documentLoaded: false,
       researchComplete: false,
       solutionAnalysisComplete: false,
-    },
+    }),
   }),
 });
 
@@ -142,43 +147,53 @@ export const ResearchStateSchema = z.object({
     text: z.string(),
     metadata: z.record(z.any()),
   }),
-  deepResearchResults: z.object({
-    organization: z.object({
-      name: z.string(),
-      background: z.string(),
-      priorities: z.array(z.string()),
-    }),
-    project: z.object({
-      objectives: z.array(z.string()),
-      requirements: z.array(z.string()),
-      timeline: z.string(),
-      budget: z.string(),
-    }),
-    evaluation: z.object({
-      criteria: z.array(z.string()),
-      process: z.string(),
-    }),
-    insights: z.object({
-      keyFindings: z.array(z.string()),
-      uniqueOpportunities: z.array(z.string()),
-    }),
-  }).nullable(),
-  solutionSoughtResults: z.object({
-    solutionProfile: z.object({
-      idealApproach: z.string(),
-      keyFunctions: z.array(z.string()),
-      successMetrics: z.array(z.string()),
-    }),
-    technicalRequirements: z.object({
-      mustHave: z.array(z.string()),
-      niceToHave: z.array(z.string()),
-      constraints: z.array(z.string()),
-    }),
-    competitiveAdvantage: z.object({
-      differentiators: z.array(z.string()),
-      winningStrategies: z.array(z.string()),
-    }),
-  }).nullable(),
+  deepResearchResults: z
+    .object({
+      organization: z.object({
+        name: z.string(),
+        background: z.string(),
+        priorities: z.array(z.string()),
+      }),
+      project: z.object({
+        objectives: z.array(z.string()),
+        requirements: z.array(z.string()),
+        timeline: z.string(),
+        budget: z.string(),
+      }),
+      evaluation: z.object({
+        criteria: z.array(z.string()),
+        process: z.string(),
+      }),
+      insights: z.object({
+        keyFindings: z.array(z.string()),
+        uniqueOpportunities: z.array(z.string()),
+      }),
+    })
+    .nullable(),
+  solutionSoughtResults: z
+    .object({
+      solution_sought: z.string(),
+      solution_approach: z.object({
+        primary_approaches: z.array(z.string()),
+        secondary_approaches: z.array(z.string()),
+        evidence: z.array(
+          z.object({
+            approach: z.string(),
+            evidence: z.string(),
+            page: z.string(),
+          })
+        ),
+      }),
+      explicitly_unwanted: z.array(
+        z.object({
+          approach: z.string(),
+          evidence: z.string(),
+          page: z.string(),
+        })
+      ),
+      turn_off_approaches: z.array(z.string()),
+    })
+    .nullable(),
   messages: z.array(z.any()),
   errors: z.array(z.string()),
   status: z.object({
