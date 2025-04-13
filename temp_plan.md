@@ -41,7 +41,7 @@ The core implementation phase focuses on the essential LangGraph components need
 
 - ✅ Implement checkpointer configuration in [`apps/backend/agents/research/index.ts`](apps/backend/agents/research/index.ts)
 - ✅ Set up thread_id management according to our project standards
-- ⬜ Configure message history management strategy in [`apps/backend/lib/state/messages.ts`](apps/backend/lib/state/messages.ts)
+- ✅ Configure message history management strategy in [`apps/backend/lib/state/messages.ts`](apps/backend/lib/state/messages.ts)
 
 ## Phase 3: LangGraph Agent Implementation
 
@@ -102,13 +102,13 @@ The core implementation phase focuses on the essential LangGraph components need
 
 1. Implement basic LangGraph unit tests
 
-- ⬜ Test state annotations and reducers in [`apps/backend/agents/research/__tests__/state.test.ts`](apps/backend/agents/research/__tests__/state.test.ts)
+- ✅ Test state annotations and reducers in [`apps/backend/agents/research/__tests__/state.test.ts`](apps/backend/agents/research/__tests__/state.test.ts)
 - ⬜ Verify agent tool usage in [`apps/backend/agents/research/__tests__/agents.test.ts`](apps/backend/agents/research/__tests__/agents.test.ts)
 - ⬜ Create basic node tests in [`apps/backend/agents/research/__tests__/nodes.test.ts`](apps/backend/agents/research/__tests__/nodes.test.ts)
 
 2. Add simple integration test
 
-- ⬜ Test complete subgraph with sample input in [`apps/backend/agents/research/__tests__/index.test.ts`](apps/backend/agents/research/__tests__/index.test.ts)
+- ✅ Test complete subgraph with sample input in [`apps/backend/agents/research/__tests__/index.test.ts`](apps/backend/agents/research/__tests__/index.test.ts)
 - ⬜ Verify basic graph execution
 
 # POST-LAUNCH IMPROVEMENTS PHASE
@@ -123,7 +123,7 @@ These enhancements can be implemented after the core functionality is working.
 
 - ✅ Implement sophisticated error tracking in state in [`apps/backend/agents/research/state.ts`](apps/backend/agents/research/state.ts)
 - ✅ Add detailed status tracking for research steps
-- ⬜ Create checkpointing for long-running research in [`apps/backend/lib/persistence/checkpointer.ts`](apps/backend/lib/persistence/checkpointer.ts)
+- ✅ Create checkpointing for long-running research in [`apps/backend/lib/state/supabase.ts`](apps/backend/lib/state/supabase.ts)
 
 2. Enhance document processing
 
@@ -147,7 +147,7 @@ These enhancements can be implemented after the core functionality is working.
 
 1. Optimize LangGraph execution
 
-- ⬜ Implement caching for expensive operations in [`apps/backend/lib/cache/index.ts`](apps/backend/lib/cache/index.ts)
+- ✅ Implement caching for expensive operations in [`apps/backend/lib/state/messages.ts`](apps/backend/lib/state/messages.ts)
 - ⬜ Add batch processing for document chunks in [`apps/backend/lib/parsers/batch.ts`](apps/backend/lib/parsers/batch.ts)
 - ⬜ Optimize state serialization for large documents in [`apps/backend/lib/state/serialization.ts`](apps/backend/lib/state/serialization.ts)
 - ⬜ Implement Send API for parallel document processing in [`apps/backend/lib/llm/send-api.ts`](apps/backend/lib/llm/send-api.ts)
@@ -170,7 +170,7 @@ These enhancements can be implemented after the core functionality is working.
 
 2. Implement advanced logging
 
-- ⬜ Create structured logging for graph execution in [`apps/backend/lib/logging/structured.ts`](apps/backend/lib/logging/structured.ts)
+- ✅ Create structured logging for graph execution in [`apps/backend/lib/state/supabase.ts`](apps/backend/lib/state/supabase.ts)
 - ⬜ Add performance metrics collection in [`apps/backend/lib/metrics/performance.ts`](apps/backend/lib/metrics/performance.ts)
 - ⬜ Implement execution visualization in [`apps/backend/lib/visualization/execution.ts`](apps/backend/lib/visualization/execution.ts)
 
@@ -180,13 +180,13 @@ These enhancements can be implemented after the core functionality is working.
 
 1. Add advanced testing scenarios
 
-- ⬜ Test with various document formats and sizes in [`apps/backend/agents/research/__tests__/documents.test.ts`](apps/backend/agents/research/__tests__/documents.test.ts)
+- ✅ Test with various document formats and sizes in [`apps/backend/tests/supabase-checkpointer.test.ts`](apps/backend/tests/supabase-checkpointer.test.ts)
 - ⬜ Implement performance testing under load in [`apps/backend/agents/research/__tests__/performance.test.ts`](apps/backend/agents/research/__tests__/performance.test.ts)
 - ⬜ Add security and permission testing in [`apps/backend/agents/research/__tests__/security.test.ts`](apps/backend/agents/research/__tests__/security.test.ts)
 
 2. Create robust test fixtures
 
-- ⬜ Build comprehensive mock suite for dependencies in [`apps/backend/agents/research/__tests__/mocks/index.ts`](apps/backend/agents/research/__tests__/mocks/index.ts)
+- ✅ Build comprehensive mock suite for dependencies in [`apps/backend/tests/supabase-checkpointer.test.ts`](apps/backend/tests/supabase-checkpointer.test.ts)
 - ⬜ Create realistic test scenarios in [`apps/backend/agents/research/__tests__/fixtures/index.ts`](apps/backend/agents/research/__tests__/fixtures/index.ts)
 
 ## Phase 11: Documentation & Maintenance
@@ -205,54 +205,109 @@ These enhancements can be implemented after the core functionality is working.
 - ⬜ Define alert thresholds in [`monitoring/alerts/research.json`](monitoring/alerts/research.json)
 - ⬜ Design update procedures in [`docs/operations/updates.md`](docs/operations/updates.md)
 
-## Testing Scenarios
+## Phase 12: Enhanced Persistence Implementation
 
-### Core Testing (Phase 6)
+### Tasks
 
-1. Basic graph execution
+1. Implement Supabase-based LangGraph persistence
 
-- ⬜ Verify successful StateGraph execution in [`apps/backend/agents/research/__tests__/graph.test.ts`](apps/backend/agents/research/__tests__/graph.test.ts)
-- ⬜ Test agent tool calling patterns in [`apps/backend/agents/research/__tests__/tool-calling.test.ts`](apps/backend/agents/research/__tests__/tool-calling.test.ts)
-- ⬜ Validate state transitions in [`apps/backend/agents/research/__tests__/transitions.test.ts`](apps/backend/agents/research/__tests__/transitions.test.ts)
+- ✅ Create Supabase table schema for proposal sessions
 
-2. Basic integration
+  - ✅ Create `proposal_checkpoints` table with proper indexes in Supabase
+  - ✅ Implement Row Level Security policies for checkpoint data
+  - ✅ Add metadata columns for tracking session status
 
-- ⬜ Test subgraph communication with orchestrator in [`apps/backend/agents/__tests__/integration.test.ts`](apps/backend/agents/__tests__/integration.test.ts)
-- ⬜ Verify state passing between graphs in [`apps/backend/agents/__tests__/state-passing.test.ts`](apps/backend/agents/__tests__/state-passing.test.ts)
+- ✅ Implement SupabaseCheckpointer class in [`apps/backend/lib/state/supabase.ts`](apps/backend/lib/state/supabase.ts)
 
-### Advanced Testing (Phase 10)
+  - ✅ Implement `get` method with error handling and retries
+  - ✅ Implement `put` method with transaction support
+  - ✅ Implement `delete` method for cleanup
+  - ✅ Add connection pooling for performance
+  - ✅ Add metrics tracking for persistence operations
 
-1. Advanced error handling
+- ✅ Update research agent to use SupabaseCheckpointer in [`apps/backend/agents/research/index.ts`](apps/backend/agents/research/index.ts)
+  - ✅ Replace MemorySaver with SupabaseCheckpointer
+  - ✅ Configure proper thread_id generation tied to proposals
+  - ✅ Add error handling for persistence failures
 
-- ⬜ Test behavior with malformed documents in [`apps/backend/agents/research/__tests__/error-handling/malformed.test.ts`](apps/backend/agents/research/__tests__/error-handling/malformed.test.ts)
-- ⬜ Verify recovery from API failures in [`apps/backend/agents/research/__tests__/error-handling/api-failures.test.ts`](apps/backend/agents/research/__tests__/error-handling/api-failures.test.ts)
-- ⬜ Test timeout handling in [`apps/backend/agents/research/__tests__/error-handling/timeout.test.ts`](apps/backend/agents/research/__tests__/error-handling/timeout.test.ts)
+2. Implement message history management
 
-2. Performance testing
+- ✅ Create message pruning utilities in [`apps/backend/lib/state/messages.ts`](apps/backend/lib/state/messages.ts)
 
-- ⬜ Test with documents exceeding context window in [`apps/backend/agents/research/__tests__/performance/large-documents.test.ts`](apps/backend/agents/research/__tests__/performance/large-documents.test.ts)
-- ⬜ Verify incremental processing in [`apps/backend/agents/research/__tests__/performance/incremental.test.ts`](apps/backend/agents/research/__tests__/performance/incremental.test.ts)
-- ⬜ Measure memory usage and throughput in [`apps/backend/agents/research/__tests__/performance/memory-throughput.test.ts`](apps/backend/agents/research/__tests__/performance/memory-throughput.test.ts)
+  - ✅ Implement `pruneMessageHistory` function based on token count or message age
+  - ⬜ Create conversation summarization for long-running sessions
+  - ✅ Add support for truncating messages while preserving context
 
-3. Security testing
+- ⬜ Implement efficient message serialization in [`apps/backend/lib/state/serialization.ts`](apps/backend/lib/state/serialization.ts)
+  - ⬜ Add compression for large message payloads
+  - ⬜ Implement Zod validation for message structure
+  - ⬜ Create token estimation utilities
 
-- ⬜ Verify proper credential management in [`apps/backend/agents/research/__tests__/security/credentials.test.ts`](apps/backend/agents/research/__tests__/security/credentials.test.ts)
-- ⬜ Test permission boundaries in [`apps/backend/agents/research/__tests__/security/permissions.test.ts`](apps/backend/agents/research/__tests__/security/permissions.test.ts)
-- ⬜ Validate data sanitization in [`apps/backend/agents/research/__tests__/security/sanitization.test.ts`](apps/backend/agents/research/__tests__/security/sanitization.test.ts)
+3. Enhance session management
 
-## Success Criteria
+- ✅ Implement session recovery flow in [`apps/backend/agents/research/index.ts`](apps/backend/agents/research/index.ts)
 
-### Core Success Criteria (Must Have)
+  - ✅ Create robust error categorization for checkpoint errors
+  - ✅ Implement automatic retry with exponential backoff
+  - ✅ Add logging for recovery attempts
 
-1. ✅ The Research Agent subgraph structure is properly configured in [`apps/backend/agents/research/index.ts`](apps/backend/agents/research/index.ts)
-2. ✅ Both agent nodes correctly utilize their tools when appropriate
-3. ⬜ The subgraph properly integrates with the main orchestrator in [`apps/backend/agents/index.ts`](apps/backend/agents/index.ts)
-4. ⬜ Core test suites pass successfully
+- ✅ Create session tracking utilities in [`apps/backend/lib/state/supabase.ts`](apps/backend/lib/state/supabase.ts)
+  - ✅ Implement thread_id generation with consistent format
+  - ✅ Add session metadata tracking (start time, last access, etc.)
+  - ⬜ Create scheduled cleanup for abandoned sessions
 
-### Advanced Success Criteria (Nice to Have)
+4. Create frontend integration
 
-1. ⬜ The system handles documents of any size through chunking in [`apps/backend/lib/parsers/chunker.ts`](apps/backend/lib/parsers/chunker.ts)
-2. ⬜ Performance meets defined thresholds under load as verified by [`apps/backend/agents/research/__tests__/performance`](apps/backend/agents/research/__tests__/performance)
-3. ⬜ All test suites pass with >90% coverage
-4. ⬜ Human feedback can be incorporated into the research process via [`apps/backend/agents/research/feedback.ts`](apps/backend/agents/research/feedback.ts)
-5. ✅ Documentation is comprehensive and up-to-date in [`apps/backend/agents/README.md`](apps/backend/agents/README.md)
+- ⬜ Implement session persistence indicators in UI [`apps/web/src/components/research/SessionStatus.tsx`](apps/web/src/components/research/SessionStatus.tsx)
+
+  - ⬜ Add visual indicators for saving/loading state
+  - ⬜ Create error handling for persistence failures
+  - ⬜ Implement session recovery UI
+
+- ⬜ Update research agent API with persistence support in [`apps/web/src/app/api/research/route.ts`](apps/web/src/app/api/research/route.ts)
+  - ⬜ Add thread_id management in API routes
+  - ⬜ Implement session continuation endpoints
+  - ⬜ Create error handling for session recovery
+
+## Phase 13: Error Handling Integration (NEW)
+
+### Tasks
+
+1. Integrate with advanced error handling system
+
+- ⬜ Implement integration with error classification system in [`apps/backend/lib/llm/error-classification.ts`](apps/backend/lib/llm/error-classification.ts)
+  - ⬜ Update SupabaseCheckpointer to use error categories
+  - ⬜ Create specific error handling for CHECKPOINT_ERROR category
+  - ⬜ Add error event tracking for persistence operations
+
+2. Implement advanced node error handling
+
+- ⬜ Integrate with createAdvancedNodeErrorHandler from [`apps/backend/lib/llm/node-error-handler.ts`](apps/backend/lib/llm/node-error-handler.ts)
+  - ⬜ Configure retry policies for research nodes
+  - ⬜ Implement fallback behaviors for persistence failures
+  - ⬜ Set up error propagation and handling
+
+3. Add timeout management
+
+- ⬜ Integrate with TimeoutManager from [`apps/backend/lib/llm/timeout-manager.ts`](apps/backend/lib/llm/timeout-manager.ts)
+  - ⬜ Configure appropriate timeouts for research operations
+  - ⬜ Add cancellation support for hanging operations
+  - ⬜ Implement graceful termination for timed-out sessions
+
+## Phase 14: Streaming Integration (NEW)
+
+### Tasks
+
+1. Implement streaming for persistence operations
+
+- ⬜ Integrate with streaming components from [`apps/backend/lib/llm/streaming`](apps/backend/lib/llm/streaming)
+  - ⬜ Create streaming updates for persistence operations
+  - ⬜ Implement real-time status feedback during saves/loads
+  - ⬜ Add streaming error reporting for persistence failures
+
+2. Enhance user experience with streaming
+
+- ⬜ Create UI components for streaming persistence status
+  - ⬜ Implement real-time saving indicators
+  - ⬜ Add progress updates for long-running operations
+  - ⬜ Create error notifications with recovery options
