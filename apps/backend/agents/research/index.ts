@@ -1,78 +1,117 @@
 import { StateGraph } from "@langchain/langgraph";
-import { MemorySaver } from "@langchain/langgraph";
 import { ResearchStateAnnotation, ResearchState } from "./state";
-import { documentLoaderNode, deepResearchNode, solutionSoughtNode } from "./nodes";
+import {
+  documentLoader,
+  deepResearch,
+  solutionSought,
+} from "./nodes";
+import { SupabaseCheckpointer } from "../../lib/state/supabase";
+import { pruneMessageHistory } from "../../lib/state/messages";
+import { logger } from "../logger";
 
 /**
  * Creates the research agent graph
- * 
+ *
  * This function constructs the LangGraph workflow for the research agent,
  * defining the nodes and edges that control the flow of execution
  */
 export const createResearchGraph = () => {
   // Create the research state graph
-  const researchGraph = new StateGraph(ResearchStateAnnotation)
-    .addNode("documentLoader", documentLoaderNode)
-    .addNode("deepResearch", deepResearchNode)
-    .addNode("solutionSought", solutionSoughtNode)
-    
+  const researchGraph = new StateGraph<ResearchState>({
+    channels: ResearchStateAnnotation,
+  })
+    .addNode("documentLoader", documentLoader)
+    .addNode("deepResearch", deepResearch)
+    .addNode("solutionSought", solutionSought)
+
     // Define workflow sequence
     .addEdge("__start__", "documentLoader")
-    .addConditionalEdges(
-      "documentLoader",
-      (state: ResearchState) => state.status.documentLoaded ? "deepResearch" : "__end__"
-    )
-    .addConditionalEdges(
-      "deepResearch",
-      (state: ResearchState) => state.status.researchComplete ? "solutionSought" : "__end__"
-    )
+    .addConditionalEdges("documentLoader", (state: ResearchState) => {
+      return state.status === "RESEARCH_NEEDED" ? "deepResearch" : "__end__";
+    })
+    .addConditionalEdges("deepResearch", (state: ResearchState) => {
+      return state.status === "SOLUTION_NEEDED" ? "solutionSought" : "__end__";
+    })
     .addEdge("solutionSought", "__end__");
 
-  // Initialize memory saver for persistence
-  const checkpointer = new MemorySaver();
-  
-  // Compile the graph
-  const compiledGraph = researchGraph.compile({ checkpointer });
-  
-  return compiledGraph;
+  return researchGraph;
 };
+
+export interface ResearchAgentInput {
+  documentId: string;
+  threadId?: string;
+}
 
 /**
  * Research agent interface
- * 
+ *
  * Provides a simplified API for interacting with the research agent
  * from other parts of the application
  */
 export const researchAgent = {
   /**
-   * Invoke the research agent on an RFP document
+   * Invoke the research agent to analyze an RFP document
    * 
-   * @param rfpDocumentId - The ID of the RFP document to analyze
-   * @param threadId - Optional thread ID for persistence
+   * @param input - Contains document ID and optional thread ID for persistence
    * @returns The final state of the research agent
    */
-  invoke: async (rfpDocumentId: string, threadId?: string) => {
-    const graph = createResearchGraph();
-    
-    // Initial state with document ID
-    const initialState = {
-      rfpDocument: {
-        id: rfpDocumentId,
-        text: "",
-        metadata: {}
-      }
-    };
-    
-    // Invoke the graph with thread_id for persistence if provided
-    const config = threadId ? { configurable: { thread_id: threadId } } : undefined;
-    const finalState = await graph.invoke(initialState, config);
-    
-    return finalState;
-  }
+  invoke: async (input: ResearchAgentInput): Promise<ResearchState> => {
+    try {
+      // Create the graph
+      const graph = createResearchGraph();
+      
+      // Initialize SupabaseCheckpointer for persistence
+      const checkpointer = new SupabaseCheckpointer<ResearchState>();
+      
+      // Compile the graph with the checkpointer for persistence
+      const compiledGraph = graph.compile({
+        checkpointer,
+      });
+      
+      // Initial state
+      const initialState: Partial<ResearchState> = {
+        document: {
+          id: input.documentId,
+          content: "",
+          title: "",
+        },
+        status: "DOCUMENT_LOADING",
+        threadId: input.threadId,
+      };
+      
+      // Create config with thread_id if provided
+      const config = input.threadId
+        ? {
+            configurable: {
+              thread_id: input.threadId,
+            },
+          }
+        : {};
+      
+      // Invoke the graph
+      logger.info(`Invoking research agent`, { documentId: input.documentId, threadId: input.threadId });
+      const finalState = await compiledGraph.invoke(initialState, config);
+      
+      return finalState;
+    } catch (error) {
+      logger.error(`Error in research agent`, { 
+        error: error instanceof Error ? error.message : String(error),
+        documentId: input.documentId,
+        threadId: input.threadId
+      });
+      
+      throw error;
+    }
+  },
 };
 
-// Export all components
-export * from "./state";
-export * from "./nodes";
-export * from "./tools";
-export * from "./agents";
+// Create message history pruning utility for the research agent
+export const pruneResearchMessages = (messages: any[]) => {
+  return pruneMessageHistory(messages, {
+    maxTokens: 6000,
+    keepSystemMessages: true,
+  });
+};
+
+// Export public API
+export { ResearchState, ResearchStateAnnotation };
