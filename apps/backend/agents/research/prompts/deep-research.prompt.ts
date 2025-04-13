@@ -1,1 +1,0 @@
-export const DEEP_RESEARCH_PROMPT = ``;

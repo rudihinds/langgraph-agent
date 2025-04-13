@@ -1,1 +1,0 @@
-export const SOLUTION_SOUGHT_PROMPT = ``;
