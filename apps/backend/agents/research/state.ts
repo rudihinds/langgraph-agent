@@ -3,41 +3,6 @@ import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import { z } from "zod";
 
 /**
- * Organization information extracted from research
- */
-export interface Organization {
-  name: string;
-  background: string;
-  priorities: string[];
-}
-
-/**
- * Project details extracted from RFP
- */
-export interface Project {
-  objectives: string[];
-  requirements: string[];
-  timeline: string;
-  budget: string;
-}
-
-/**
- * Evaluation criteria and process
- */
-export interface Evaluation {
-  criteria: string[];
-  process: string;
-}
-
-/**
- * Key insights and opportunities
- */
-export interface Insights {
-  keyFindings: string[];
-  uniqueOpportunities: string[];
-}
-
-/**
  * Structure for a subcategory analysis within a main research category
  * Each key is a subcategory name, and the value is the analysis text
  */
@@ -66,40 +31,30 @@ export interface DeepResearchResults {
 }
 
 /**
- * Evidence for an approach with source information
- */
-export interface ApproachEvidence {
-  approach: string;
-  evidence: string;
-  page: string;
-}
-
-/**
- * Unwanted approach with evidence
- */
-export interface UnwantedApproach {
-  approach: string;
-  evidence: string;
-  page: string;
-}
-
-/**
- * Solution approach details
- */
-export interface SolutionApproach {
-  primary_approaches: string[];
-  secondary_approaches: string[];
-  evidence: ApproachEvidence[];
-}
-
-/**
- * Solution sought analysis results
+ * Solution sought analysis results with a flexible structure
+ * Captures core expected fields while allowing for additional data
  */
 export interface SolutionSoughtResults {
+  // Core fields aligned with the solution sought prompt
   solution_sought: string;
-  solution_approach: SolutionApproach;
-  explicitly_unwanted: UnwantedApproach[];
+  solution_approach: {
+    primary_approaches: string[];
+    secondary_approaches: string[];
+    evidence: Array<{
+      approach: string;
+      evidence: string;
+      page: string;
+    }>;
+  };
+  explicitly_unwanted: Array<{
+    approach: string;
+    evidence: string;
+    page: string;
+  }>;
   turn_off_approaches: string[];
+
+  // Allow for any additional fields the agent might include
+  [key: string]: any;
 }
 
 /**
@@ -159,8 +114,9 @@ export type ResearchState = typeof ResearchStateAnnotation.State;
 /**
  * Zod schema for state validation
  *
- * Using a more flexible approach to match the DeepResearchResults structure while
- * still providing validation for expected fields
+ * Using a flexible approach to match the deepResearchResults and
+ * solutionSoughtResults structures while still providing validation
+ * for expected fields
  */
 export const ResearchStateSchema = z.object({
   rfpDocument: z.object({
@@ -208,6 +164,7 @@ export const ResearchStateSchema = z.object({
       ),
       turn_off_approaches: z.array(z.string()),
     })
+    .catchall(z.any())
     .nullable(),
   messages: z.array(z.any()),
   errors: z.array(z.string()),
