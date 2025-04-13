@@ -18,9 +18,9 @@ The core implementation phase focuses on the essential LangGraph components need
 
 2. Implement prompt templates as LangGraph system messages
 
-- ✅ Create [`apps/backend/agents/research/prompts/deep-research.prompt.ts`](apps/backend/agents/research/prompts/deep-research.prompt.ts) for agent system messages
-- ✅ Create [`apps/backend/agents/research/prompts/solution-sought.prompt.ts`](apps/backend/agents/research/prompts/solution-sought.prompt.ts) for agent system messages
-- ✅ Consolidate prompts in [`apps/backend/agents/research/prompts/index.ts`](apps/backend/agents/research/prompts/index.ts)
+- ✅ Create [`apps/backend/agents/research/prompts/index.ts`](apps/backend/agents/research/prompts/index.ts) with all prompt templates
+- ✅ Implement deepResearchPrompt for deep analysis of RFP documents
+- ✅ Implement solutionSoughtPrompt for identifying the funder's desired solution approach
 
 ## Phase 2: LangGraph State Definition
 
