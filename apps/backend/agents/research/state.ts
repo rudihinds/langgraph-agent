@@ -38,13 +38,31 @@ export interface Insights {
 }
 
 /**
- * Deep research results structure
+ * Structure for a subcategory analysis within a main research category
+ * Each key is a subcategory name, and the value is the analysis text
+ */
+export type CategoryAnalysis = Record<string, string>;
+
+/**
+ * Deep research results structure that matches the 12-category output
+ * from the deep research prompt. This more flexible approach allows
+ * the agent to classify observations as it sees fit within the defined
+ * top-level categories.
  */
 export interface DeepResearchResults {
-  organization: Organization;
-  project: Project;
-  evaluation: Evaluation;
-  insights: Insights;
+  "Structural & Contextual Analysis": CategoryAnalysis;
+  "Author/Organization Deep Dive": CategoryAnalysis;
+  "Hidden Needs & Constraints": CategoryAnalysis;
+  "Competitive Intelligence": CategoryAnalysis;
+  "Psychological Triggers": CategoryAnalysis;
+  "Temporal & Trend Alignment": CategoryAnalysis;
+  "Narrative Engineering": CategoryAnalysis;
+  "Compliance Sleuthing": CategoryAnalysis;
+  "Cultural & Linguistic Nuances": CategoryAnalysis;
+  "Risk Mitigation Signaling": CategoryAnalysis;
+  "Emotional Subtext": CategoryAnalysis;
+  "Unfair Advantage Tactics": CategoryAnalysis;
+  [key: string]: CategoryAnalysis; // Allow for additional categories if needed
 }
 
 /**
@@ -140,6 +158,9 @@ export type ResearchState = typeof ResearchStateAnnotation.State;
 
 /**
  * Zod schema for state validation
+ *
+ * Using a more flexible approach to match the DeepResearchResults structure while
+ * still providing validation for expected fields
  */
 export const ResearchStateSchema = z.object({
   rfpDocument: z.object({
@@ -149,26 +170,20 @@ export const ResearchStateSchema = z.object({
   }),
   deepResearchResults: z
     .object({
-      organization: z.object({
-        name: z.string(),
-        background: z.string(),
-        priorities: z.array(z.string()),
-      }),
-      project: z.object({
-        objectives: z.array(z.string()),
-        requirements: z.array(z.string()),
-        timeline: z.string(),
-        budget: z.string(),
-      }),
-      evaluation: z.object({
-        criteria: z.array(z.string()),
-        process: z.string(),
-      }),
-      insights: z.object({
-        keyFindings: z.array(z.string()),
-        uniqueOpportunities: z.array(z.string()),
-      }),
+      "Structural & Contextual Analysis": z.record(z.string()),
+      "Author/Organization Deep Dive": z.record(z.string()),
+      "Hidden Needs & Constraints": z.record(z.string()),
+      "Competitive Intelligence": z.record(z.string()),
+      "Psychological Triggers": z.record(z.string()),
+      "Temporal & Trend Alignment": z.record(z.string()),
+      "Narrative Engineering": z.record(z.string()),
+      "Compliance Sleuthing": z.record(z.string()),
+      "Cultural & Linguistic Nuances": z.record(z.string()),
+      "Risk Mitigation Signaling": z.record(z.string()),
+      "Emotional Subtext": z.record(z.string()),
+      "Unfair Advantage Tactics": z.record(z.string()),
     })
+    .catchall(z.record(z.string()))
     .nullable(),
   solutionSoughtResults: z
     .object({
