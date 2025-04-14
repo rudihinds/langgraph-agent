@@ -1,86 +1,191 @@
-# Research Agent Implementation
+# Research Agent
 
-This directory contains the implementation of the Research Agent, a specialized agent built with LangGraph.js that analyzes RFP documents and extracts key information.
+The Research Agent is a specialized LangGraph.js component that analyzes RFP (Request for Proposal) documents to extract critical insights for proposal development. This agent serves as the foundation for the proposal generation system, providing deep analysis that informs downstream proposal writing agents.
 
 ## File Structure
 
-The agent follows the standardized directory structure for LangGraph agents:
-
 ```
 research/
-├── README.md           # This file
-├── index.ts            # Main exports and graph creation
-├── state.ts            # State definitions with annotations
-├── nodes.ts            # Node implementations
-├── agents.ts           # Agent definitions
-├── tools.ts            # Tool implementations
-└── prompts/            # Prompt templates
-    └── index.ts        # Consolidated prompt templates
+├── index.ts         # Main entry point and graph definition
+├── state.ts         # State definition and annotations
+├── nodes.ts         # Node function implementations
+├── agents.ts        # Specialized agent definitions
+├── tools.ts         # Tool implementations
+├── prompts/         # Prompt templates
+│   └── index.ts     # All prompt templates
+└── __tests__/       # Unit and integration tests
 ```
 
 ## State Structure
 
-The Research Agent maintains the following state:
+The Research Agent maintains a comprehensive state object with the following key components:
 
-- `rfpDocument`: The original RFP document text and metadata
-- `deepResearchResults`: Structured results from the deep research process
-- `solutionSoughtResults`: Analysis of what solution the funder is seeking
-- `messages`: Conversation history
-- `errors`: Error tracking
-- `status`: Status tracking for different phases of research
+```typescript
+interface ResearchState {
+  // Original document
+  rfpDocument: {
+    id: string;
+    text: string;
+    metadata: Record<string, any>;
+  };
+
+  // Research findings
+  deepResearchResults: DeepResearchResults | null;
+
+  // Solution sought analysis
+  solutionSoughtResults: SolutionSoughtResults | null;
+
+  // Standard message state for conversation history
+  messages: BaseMessage[];
+
+  // Error tracking
+  errors: string[];
+
+  // Status tracking
+  status: {
+    documentLoaded: boolean;
+    researchComplete: boolean;
+    solutionAnalysisComplete: boolean;
+  };
+}
+```
+
+The state includes specialized structures for research results:
+
+- `DeepResearchResults`: A structured analysis across 12 categories including "Structural & Contextual Analysis", "Hidden Needs & Constraints", "Competitive Intelligence", etc.
+- `SolutionSoughtResults`: Analysis of what solution the funder is seeking, including primary/secondary approaches and explicitly unwanted approaches.
+
+## State Validation
+
+The Research Agent uses Zod schemas to validate state structure:
+
+```typescript
+export const ResearchStateSchema = z.object({
+  rfpDocument: z.object({
+    id: z.string(),
+    text: z.string(),
+    metadata: z.record(z.any()),
+  }),
+  deepResearchResults: z
+    .object({
+      "Structural & Contextual Analysis": z.record(z.string()),
+      "Author/Organization Deep Dive": z.record(z.string()),
+      "Hidden Needs & Constraints": z.record(z.string()),
+      // Additional categories omitted for brevity
+    })
+    .catchall(z.record(z.string()))
+    .nullable(),
+  solutionSoughtResults: z
+    .object({
+      solution_sought: z.string(),
+      solution_approach: z.object({
+        primary_approaches: z.array(z.string()),
+        secondary_approaches: z.array(z.string()),
+        evidence: z.array(
+          z.object({
+            approach: z.string(),
+            evidence: z.string(),
+            page: z.string(),
+          })
+        ),
+      }),
+      // Additional fields omitted for brevity
+    })
+    .catchall(z.any())
+    .nullable(),
+  messages: z.array(z.any()),
+  errors: z.array(z.string()),
+  status: z.object({
+    documentLoaded: z.boolean(),
+    researchComplete: z.boolean(),
+    solutionAnalysisComplete: z.boolean(),
+  }),
+});
+```
+
+This schema is used by the SupabaseCheckpointer to validate state during persistence operations.
 
 ## Node Functions
 
-The agent is composed of the following node functions:
+The Research Agent implements three primary node functions:
 
-1. `documentLoaderNode`: Loads and processes RFP documents
-2. `deepResearchNode`: Analyzes RFP documents and extracts key information
-3. `solutionSoughtNode`: Identifies what solution the funder is seeking
+1. **`documentLoaderNode`**: Loads RFP document content from a document service and attaches it to the agent state.
+
+2. **`deepResearchNode`**: Invokes the deep research agent to analyze RFP documents and extract structured information across 12 key research categories.
+
+3. **`solutionSoughtNode`**: Invokes the solution sought agent to identify what the funder is seeking based on research results.
+
+Each node function properly handles errors and updates the state with appropriate status flags.
 
 ## Agent Components
 
-The agent uses the following specialized components:
+The Research Agent uses two specialized agent components:
 
-1. `deepResearchAgent`: A ReAct agent that performs deep analysis of RFP documents
-2. `solutionSoughtAgent`: A ReAct agent that analyzes research results to identify solutions
+1. **`deepResearchAgent`**: Analyzes RFP documents to extract structured information using GPT-3.5 Turbo with access to web search capability.
+
+2. **`solutionSoughtAgent`**: Identifies what funders are looking for by analyzing research data and has access to a specialized research tool.
 
 ## Tools
 
 The agent provides the following tools:
 
-1. `webSearchTool`: Allows research agent to search for additional context
-2. `deepResearchTool`: Specialized tool for in-depth research on specific topics
+1. **`webSearchTool`**: Allows agents to search the web for real-time information that may not be present in the context or training data.
+
+2. **`deepResearchTool`**: Provides specialized research capabilities using a dedicated LLM for deeper analysis of specific topics related to the RFP.
 
 ## Graph Structure
 
-The research workflow follows a linear process:
+The Research Agent implements a linear workflow:
 
-1. Document loading and processing
-2. Deep research on the document
-3. Solution sought analysis
+1. Load the document → Document loader node
+2. Analyze the document → Deep research node
+3. Determine solution sought → Solution sought node
 
-Each step includes conditional edges that verify successful completion before proceeding to the next step.
+Conditional logic ensures that each step only proceeds if the previous step was successful.
 
 ## Usage Example
 
 ```typescript
-import { researchAgent } from "./apps/backend/agents/research";
+import { createResearchGraph } from "./index.js";
 
-async function analyzeDocument(documentId: string) {
-  const result = await researchAgent.invoke(documentId);
-  
-  console.log("Research complete!");
-  console.log("Deep research results:", result.deepResearchResults);
-  console.log("Solution sought:", result.solutionSoughtResults);
-}
+// Create a research agent instance
+const researchAgent = createResearchGraph();
 
-analyzeDocument("doc123").catch(console.error);
+// Run the agent with a document ID
+const result = await researchAgent.invoke({
+  rfpDocument: { id: "doc-123" },
+});
+
+// Access the research results
+const deepResearch = result.deepResearchResults;
+const solutionSought = result.solutionSoughtResults;
 ```
 
-## Design Decisions
+## Import Patterns
 
-1. **Structured JSON Output**: All agent outputs are formatted as structured JSON for easier integration with other components
-2. **Error Tracking**: Comprehensive error tracking in state
-3. **Status Management**: Clear status flags for tracking progress
-4. **Tool Integration**: ReAct agents for autonomous tool use
-5. **Modular Structure**: Clean separation of concerns
+This module follows ES Module standards. When importing or exporting:
+
+- Always include `.js` file extensions for relative imports
+- Do not include extensions for package imports
+
+Example correct imports:
+
+```typescript
+// Correct relative imports with .js extension
+import { ResearchState } from "./state.js";
+import { documentLoaderNode } from "./nodes.js";
+
+// Correct package imports without extensions
+import { StateGraph } from "@langchain/langgraph";
+import { z } from "zod";
+```
+
+## Prompt Templates
+
+The agent uses two main prompt templates:
+
+1. **`deepResearchPrompt`**: Guides the deep research agent to analyze RFP documents across 12 key areas.
+
+2. **`solutionSoughtPrompt`**: Instructs the solution sought agent to identify the specific solution the funder is seeking.
+
+Prompt templates are stored in `prompts/index.ts` and are referenced by the agent functions.

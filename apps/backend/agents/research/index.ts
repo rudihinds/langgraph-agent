@@ -1,13 +1,16 @@
 import { StateGraph } from "@langchain/langgraph";
-import { ResearchStateAnnotation, ResearchState } from "./state";
+import { ResearchStateAnnotation, ResearchState } from "./state.js";
 import {
-  documentLoader,
-  deepResearch,
-  solutionSought,
-} from "./nodes";
-import { SupabaseCheckpointer } from "../../lib/state/supabase";
-import { pruneMessageHistory } from "../../lib/state/messages";
-import { logger } from "../logger";
+  documentLoaderNode,
+  deepResearchNode,
+  solutionSoughtNode,
+} from "./nodes.js";
+import { SupabaseCheckpointer } from "../../lib/state/supabase.js";
+import { pruneMessageHistory } from "../../lib/state/messages.js";
+import { Logger } from "../../logger.js";
+
+// Initialize logger
+const logger = Logger.getInstance();
 
 /**
  * Creates the research agent graph
@@ -20,26 +23,32 @@ export const createResearchGraph = () => {
   const researchGraph = new StateGraph<ResearchState>({
     channels: ResearchStateAnnotation,
   })
-    .addNode("documentLoader", documentLoader)
-    .addNode("deepResearch", deepResearch)
-    .addNode("solutionSought", solutionSought)
+    .addNode("documentLoader", documentLoaderNode)
+    .addNode("deepResearch", deepResearchNode)
+    .addNode("solutionSought", solutionSoughtNode)
 
     // Define workflow sequence
     .addEdge("__start__", "documentLoader")
     .addConditionalEdges("documentLoader", (state: ResearchState) => {
-      return state.status === "RESEARCH_NEEDED" ? "deepResearch" : "__end__";
+      return state.status.documentLoaded ? "deepResearch" : "__end__";
     })
     .addConditionalEdges("deepResearch", (state: ResearchState) => {
-      return state.status === "SOLUTION_NEEDED" ? "solutionSought" : "__end__";
+      return state.status.researchComplete ? "solutionSought" : "__end__";
     })
     .addEdge("solutionSought", "__end__");
+
+  // Configure state persistence
+  researchGraph.addCheckpointer(
+    new SupabaseCheckpointer("research-agent", {
+      default: pruneMessageHistory,
+    })
+  );
 
   return researchGraph;
 };
 
 export interface ResearchAgentInput {
   documentId: string;
-  threadId?: string;
 }
 
 /**
@@ -51,7 +60,7 @@ export interface ResearchAgentInput {
 export const researchAgent = {
   /**
    * Invoke the research agent to analyze an RFP document
-   * 
+   *
    * @param input - Contains document ID and optional thread ID for persistence
    * @returns The final state of the research agent
    */
@@ -59,26 +68,29 @@ export const researchAgent = {
     try {
       // Create the graph
       const graph = createResearchGraph();
-      
+
       // Initialize SupabaseCheckpointer for persistence
       const checkpointer = new SupabaseCheckpointer<ResearchState>();
-      
+
       // Compile the graph with the checkpointer for persistence
       const compiledGraph = graph.compile({
         checkpointer,
       });
-      
+
       // Initial state
       const initialState: Partial<ResearchState> = {
-        document: {
+        rfpDocument: {
           id: input.documentId,
-          content: "",
-          title: "",
+          text: "",
+          metadata: {},
         },
-        status: "DOCUMENT_LOADING",
-        threadId: input.threadId,
+        status: {
+          documentLoaded: false,
+          researchComplete: false,
+          solutionAnalysisComplete: false,
+        },
       };
-      
+
       // Create config with thread_id if provided
       const config = input.threadId
         ? {
@@ -87,19 +99,22 @@ export const researchAgent = {
             },
           }
         : {};
-      
+
       // Invoke the graph
-      logger.info(`Invoking research agent`, { documentId: input.documentId, threadId: input.threadId });
+      logger.info(`Invoking research agent`, {
+        documentId: input.documentId,
+        threadId: input.threadId,
+      });
       const finalState = await compiledGraph.invoke(initialState, config);
-      
+
       return finalState;
     } catch (error) {
-      logger.error(`Error in research agent`, { 
+      logger.error(`Error in research agent`, {
         error: error instanceof Error ? error.message : String(error),
         documentId: input.documentId,
-        threadId: input.threadId
+        threadId: input.threadId,
       });
-      
+
       throw error;
     }
   },
@@ -114,4 +129,6 @@ export const pruneResearchMessages = (messages: any[]) => {
 };
 
 // Export public API
-export { ResearchState, ResearchStateAnnotation };
+export { ResearchStateAnnotation };
+// Type exports
+export type { ResearchState };

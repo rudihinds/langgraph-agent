@@ -8,7 +8,7 @@ const LogLevel = {
   WARN: 1,
   INFO: 2,
   DEBUG: 3,
-  TRACE: 4
+  TRACE: 4,
 };
 
 class Logger {
@@ -26,10 +26,11 @@ class Logger {
     if (!Logger.instance) {
       // Use environment variable for log level if available
       const envLogLevel = process.env.LOG_LEVEL?.toUpperCase();
-      const logLevel = envLogLevel && LogLevel[envLogLevel] !== undefined 
-        ? LogLevel[envLogLevel] 
-        : LogLevel.INFO;
-      
+      const logLevel =
+        envLogLevel && LogLevel[envLogLevel] !== undefined
+          ? LogLevel[envLogLevel]
+          : LogLevel.INFO;
+
       Logger.instance = new Logger(logLevel);
     }
     return Logger.instance;
@@ -89,5 +90,4 @@ class Logger {
 }
 
 // Export the Logger class and LogLevel enum
-exports.Logger = Logger;
-exports.LogLevel = LogLevel;
+export { Logger, LogLevel };

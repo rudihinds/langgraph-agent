@@ -9,6 +9,7 @@ This directory contains the implementation of the persistence layer for LangGrap
 Use the SQL in `migrations/create_persistence_tables.sql` to create the necessary tables, indexes, and security policies in your Supabase project.
 
 You can either:
+
 - Copy and paste the SQL into the Supabase SQL Editor
 - Use the Supabase CLI to apply the migration
 
@@ -50,7 +51,10 @@ const graph = new StateGraph(MyStateAnnotation)
 Use the static method to generate consistent thread IDs:
 
 ```typescript
-const threadId = SupabaseCheckpointer.generateThreadId(proposalId, "componentName");
+const threadId = SupabaseCheckpointer.generateThreadId(
+  proposalId,
+  "componentName"
+);
 ```
 
 ### 5. Handling Message History
@@ -75,35 +79,55 @@ const MyStateAnnotation = Annotation.Root({
 
 Stores the LangGraph checkpoint data for serialized graph states.
 
-| Column           | Type           | Description                              |
-|------------------|----------------|------------------------------------------|
-| id               | BIGSERIAL      | Primary key                              |
-| thread_id        | TEXT           | Thread identifier                        |
-| user_id          | UUID           | References auth.users(id)                |
-| proposal_id      | UUID           | References proposals(id)                 |
-| checkpoint_data  | JSONB          | Serialized LangGraph state               |
-| metadata         | JSONB          | Additional metadata                      |
-| created_at       | TIMESTAMPTZ    | Creation timestamp                       |
-| updated_at       | TIMESTAMPTZ    | Last update timestamp                    |
+| Column          | Type        | Description                |
+| --------------- | ----------- | -------------------------- |
+| id              | BIGSERIAL   | Primary key                |
+| thread_id       | TEXT        | Thread identifier          |
+| user_id         | UUID        | References auth.users(id)  |
+| proposal_id     | UUID        | References proposals(id)   |
+| checkpoint_data | JSONB       | Serialized LangGraph state |
+| metadata        | JSONB       | Additional metadata        |
+| created_at      | TIMESTAMPTZ | Creation timestamp         |
+| updated_at      | TIMESTAMPTZ | Last update timestamp      |
 
 ### proposal_sessions
 
 Tracks session metadata for active agent sessions.
 
-| Column           | Type           | Description                              |
-|------------------|----------------|------------------------------------------|
-| id               | BIGSERIAL      | Primary key                              |
-| thread_id        | TEXT           | Thread identifier                        |
-| user_id          | UUID           | References auth.users(id)                |
-| proposal_id      | UUID           | References proposals(id)                 |
-| status           | TEXT           | Session status (active, completed, etc.) |
-| component        | TEXT           | Agent component name                     |
-| start_time       | TIMESTAMPTZ    | Session start timestamp                  |
-| last_activity    | TIMESTAMPTZ    | Last activity timestamp                  |
-| metadata         | JSONB          | Additional metadata                      |
+| Column        | Type        | Description                              |
+| ------------- | ----------- | ---------------------------------------- |
+| id            | BIGSERIAL   | Primary key                              |
+| thread_id     | TEXT        | Thread identifier                        |
+| user_id       | UUID        | References auth.users(id)                |
+| proposal_id   | UUID        | References proposals(id)                 |
+| status        | TEXT        | Session status (active, completed, etc.) |
+| component     | TEXT        | Agent component name                     |
+| start_time    | TIMESTAMPTZ | Session start timestamp                  |
+| last_activity | TIMESTAMPTZ | Last activity timestamp                  |
+| metadata      | JSONB       | Additional metadata                      |
 
 ## Security Considerations
 
 - All tables have Row Level Security (RLS) policies activated
 - Users can only access their own sessions and checkpoints
 - Direct database access requires using the service role key
+
+## Overview
+
+We utilize Supabase (PostgreSQL) as the backend for storing agent checkpoints and state. This allows for resuming agent runs and managing long-running processes.
+
+## Core Components
+
+- **`supabase-checkpointer.ts`**: Implements LangGraph's `Checkpointer` interface using Supabase. Handles saving and loading full checkpoint data.
+- **`supabase-store.ts`**: Implements a key-value store interface using Supabase, suitable for storing simpler state or configuration.
+- **`/migrations`**: Contains database migration scripts (if needed) related to the persistence tables.
+
+## Supabase Utilities
+
+Core Supabase client configuration and storage interaction utilities are located in the `apps/backend/lib/supabase` directory:
+
+- **`lib/supabase/client.ts`**: Provides functions to create authenticated Supabase clients for server-side use.
+- **`lib/supabase/storage.ts`**: Contains the `SupabaseStorage` class for interacting with Supabase Storage (e.g., downloading/uploading documents).
+- **`lib/supabase/index.ts`**: Exports the main Supabase client instance.
+
+Refer to the `lib/supabase` directory for detailed Supabase client and storage setup.

@@ -1,114 +1,187 @@
-# LangGraph Agent Development Standards
+# Agent Directory
 
-This document defines the standards and best practices for developing LangGraph agents in our system.
+This directory contains agent implementations for our proposal generation system built with LangGraph.js. These agents collaborate to analyze RFP documents, conduct research, and generate high-quality proposals.
 
 ## Directory Structure
 
-All agents should follow this standardized directory structure:
-
 ```
-<agent-name>/
-├── README.md           # Documentation for the agent
-├── index.ts            # Main exports
-├── state.ts            # State definitions with annotations
-├── nodes.ts            # Node implementations
-├── graph.ts            # Graph definition (if separate from index.ts)
-├── tools.ts            # Agent-specific tools (if needed)
-├── agents.ts           # Agent implementations (if using React agents)
-├── prompts/            # Agent-specific prompts
-│   └── index.ts        # Consolidated prompt templates
-└── __tests__/          # Tests for the agent
+agents/
+├── research/            # Research agent for RFP analysis
+├── proposal-agent/      # Proposal generation agent
+├── orchestrator/        # Coordination agent for workflow management
+├── examples/            # Example agent implementations
+├── __tests__/           # Test directory for all agents
+└── README.md            # This file
 ```
 
-## File Naming and Conventions
+## Agent Architecture
 
-1. Use `.ts` files for all TypeScript code
-2. Use kebab-case for file names with multiple words (e.g., `graph-streaming.ts`)
-3. Group related functionality in the same file (e.g., all prompts in `prompts/index.ts`)
-4. Prefer named exports over default exports
+Each agent in our system follows a standardized structure:
+
+- **`index.ts`**: Main entry point that exports the agent graph
+- **`state.ts`**: State definition and annotations
+- **`nodes.ts`**: Node function implementations
+- **`tools.ts`**: Specialized tools for this agent
+- **`agents.ts`**: Agent configuration and specialized agent definitions
+- **`prompts/`**: Directory containing prompt templates
+
+Agents are implemented as LangGraph.js state machines with clearly defined nodes, edges, and state transitions.
+
+## Import Patterns
+
+In this codebase, we use ES Modules (ESM) with TypeScript. Follow these import patterns:
+
+- Include `.js` file extensions for all relative imports:
+
+  ```typescript
+  // Correct
+  import { documentLoaderNode } from "./nodes.js";
+  import { ResearchState } from "./state.js";
+
+  // Incorrect
+  import { documentLoaderNode } from "./nodes";
+  import { ResearchState } from "./state";
+  ```
+
+- Don't include extensions for package imports:
+  ```typescript
+  // Correct
+  import { StateGraph } from "@langchain/langgraph";
+  import { z } from "zod";
+  ```
 
 ## State Management
 
-1. Define state using `Annotation.Root` from LangGraph
-2. Export a type alias for the state object (e.g., `export type MyAgentState = typeof MyAgentStateAnnotation.State;`)
-3. Use custom reducers for complex state updates
-4. Include comprehensive Zod schemas for validation
+Agents define their state using LangGraph's annotation system:
 
-## Prompt Management
+```typescript
+export const ResearchStateAnnotation = Annotation.Root({
+  // State fields with appropriate reducers
+  rfpDocument: Annotation<DocumentType>(),
+  results: Annotation<Results>({
+    default: () => ({}),
+    value: (existing, update) => ({ ...existing, ...update }),
+  }),
+  messages: Annotation<BaseMessage[]>({
+    reducer: messagesStateReducer,
+  }),
+  // Error handling and status tracking
+  errors: Annotation<string[]>({
+    value: (curr, update) => [...(curr || []), ...update],
+    default: () => [],
+  }),
+});
 
-1. Store all prompts in a dedicated `prompts/index.ts` file
-2. Use template literals with descriptive names
-3. Document expected input variables in comments
-4. Standardize output format instructions
+export type ResearchState = typeof ResearchStateAnnotation.State;
+```
 
-## Tool Integration
+## Graph Construction
 
-1. Define tools in a dedicated `tools.ts` file
-2. Use the `tool` function from LangGraph/LangChain
-3. Implement proper error handling within tools
-4. Use Zod schemas to define input parameters
+Each agent exports a function to create its graph:
 
-## Graph Structure
+```typescript
+export function createAgentGraph() {
+  // Create the state graph
+  const graph = new StateGraph({
+    channels: {
+      state: StateAnnotation,
+    },
+  });
 
-1. Define the graph structure in a clear, modular way
-2. Use descriptive names for nodes that follow the `verbNoun` pattern
-3. Implement proper conditional edges for branching
-4. Use a checkpointer for persistence
+  // Add nodes
+  graph.addNode("nodeA", nodeAFunction);
+  graph.addNode("nodeB", nodeBFunction);
 
-## Agent Implementations
+  // Define edges with conditions
+  graph.addEdge("nodeA", "nodeB", (state) => state.status.aComplete);
 
-1. If using ReAct agents, define them in a dedicated `agents.ts` file
-2. Properly bind tools to agents
-3. Use appropriate system messages for agent directives
-4. Export factory functions that create the agents
+  // Add error handling
+  graph.addConditionalEdges("nodeA", (state) =>
+    state.status.aComplete ? "nodeB" : "error"
+  );
 
-## Documentation
+  // Set entry point
+  graph.setEntryPoint("nodeA");
 
-1. Include a README.md in each agent directory
-2. Document state structure, node functions, and usage examples
-3. Include diagrams when helpful
-4. Explain design decisions and trade-offs
+  // Compile the graph
+  return graph.compile();
+}
+```
 
-## Testing
+## Persistence
 
-1. Implement comprehensive tests for all components
-2. Test the full graph execution
-3. Test individual nodes
-4. Use mocks for external dependencies
+We use `SupabaseCheckpointer` for state persistence:
+
+```typescript
+agentGraph.addCheckpointer(
+  new SupabaseCheckpointer("agent-name", {
+    default: pruneMessageHistory,
+  })
+);
+```
 
 ## Error Handling
 
-1. Implement robust error handling in all nodes
-2. Track errors in state
-3. Use conditional edges to handle error cases
-4. Provide meaningful error messages
-
-## Export Pattern
-
-Follow this pattern in `index.ts`:
+Node functions should implement error handling:
 
 ```typescript
-export * from "./state";
-export * from "./nodes";
-export * from "./tools";
-// etc.
+export async function exampleNode(state) {
+  try {
+    // Node logic here
+    return {
+      result: processedData,
+      status: { ...state.status, stepComplete: true },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to process data: ${errorMessage}`);
 
-// Re-export the main graph creation function
-export { createSomeAgentGraph } from "./graph";
-
-// Export a simplified API if appropriate
-export const someAgent = {
-  invoke: async (inputs) => {
-    // Implementation
+    return {
+      errors: [`Failed to process data: ${errorMessage}`],
+      status: { ...state.status, stepComplete: false },
+    };
   }
-};
+}
 ```
 
-## Example Implementations
+## Development Guidelines
 
-For reference implementations that follow these standards, see:
+When developing agents:
 
-- [Research Agent](./research/README.md) - A specialized agent for RFP analysis
-- [Proposal Agent](./proposal-agent/README.md) - A comprehensive agent for proposal writing
+1. Document all state definitions and node functions with JSDoc comments
+2. Use standardized patterns for error handling and state updates
+3. Follow the import patterns described above (include `.js` extensions for relative imports)
+4. Keep prompt templates in dedicated files and reference them in node functions
+5. Implement comprehensive tests for all nodes and workflows
+6. Use descriptive node names with the pattern `verbNoun` (e.g., `loadDocument`, `analyzeContent`)
+7. Use immutable patterns for state updates
+8. Validate inputs and outputs with Zod schemas where appropriate
 
-By following these standards, we ensure consistent, maintainable, and robust agent implementations across our system.
+## Agent Communication Pattern
+
+Agents communicate through structured state objects. For example, the research agent produces analysis that can be consumed by the proposal agent:
+
+```typescript
+// Research agent output
+{
+  "deepResearchResults": { /* structured research analysis */ },
+  "solutionSoughtResults": { /* solution analysis */ }
+}
+
+// Proposal agent can access this data in its state
+function proposalNode(state) {
+  const researchData = state.researchResults;
+  // Use research data to inform proposal
+}
+```
+
+## Testing Agents
+
+Test files in the `__tests__` directory should cover:
+
+1. Individual node functions
+2. Complete workflows through the agent graph
+3. Error handling and recovery paths
+4. Edge cases and boundary conditions
+
+Use mocked LLM responses and configuration overrides for deterministic tests.

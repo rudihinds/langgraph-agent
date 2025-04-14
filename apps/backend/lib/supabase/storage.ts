@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { serverSupabase } from "./supabase-client.js";
+import { serverSupabase } from "./client.js";
+import { exponentialBackoff } from "../utils/backoff.js";
 
 /**
  * Configuration options for SupabaseStorage

@@ -7,11 +7,7 @@ import {
   Thread,
 } from "@langchain/langgraph";
 import { v4 as uuidv4 } from "uuid";
-import {
-  createServerClient,
-  generateThreadId,
-  withErrorHandling,
-} from "./supabase-client.js";
+import { serverSupabase, SupabaseConfig } from "@/lib/supabase/client.js";
 import type { Database } from "./database.types.js";
 
 /**
@@ -37,7 +33,7 @@ export class PostgresCheckpointer implements Checkpointer {
    * @param options - Configuration options
    */
   constructor(options: PostgresCheckpointerOptions = {}) {
-    this.client = options.client || createServerClient();
+    this.client = options.client || serverSupabase();
     this.debug = options.debug || false;
 
     if (this.debug) {
