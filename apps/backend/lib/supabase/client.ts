@@ -1,3 +1,11 @@
+/**
+ * Supabase client configuration and initialization.
+ *
+ * This module provides a centralized way to create and configure
+ * Supabase clients for various purposes, particularly for accessing
+ * storage buckets and other Supabase features.
+ */
+
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // Environment variables with fallbacks
@@ -19,58 +27,47 @@ if (!SUPABASE_ANON_KEY) {
 }
 
 /**
- * Options for creating a Supabase client
+ * Configuration options for creating a Supabase client
  */
-export interface CreateClientOptions {
+export interface SupabaseConfig {
   /**
-   * Custom Supabase URL (overrides environment variable)
+   * Supabase project URL (e.g., https://your-project.supabase.co)
    */
-  customUrl?: string;
+  supabaseUrl: string;
 
   /**
-   * Custom Supabase key (overrides environment variable)
+   * Supabase API key (anon key or service role key)
    */
-  customKey?: string;
-
-  /**
-   * Whether to use the service role key (server-side only)
-   */
-  useServiceRole?: boolean;
+  supabaseKey: string;
 }
 
 /**
- * Creates a Supabase client with the given options
- * @param options Client configuration options
- * @returns Supabase client instance
+ * Creates a Supabase client with the provided configuration or environment variables.
+ *
+ * @param config - Optional configuration overrides
+ * @returns Configured Supabase client
+ * @throws Error if required configuration is missing
  */
-export function createSupabaseClient(
-  options: CreateClientOptions = {}
-): SupabaseClient {
-  const { customUrl, customKey, useServiceRole = false } = options;
+export function createSupabaseClient(config?: Partial<SupabaseConfig>) {
+  const supabaseUrl = config?.supabaseUrl || process.env.SUPABASE_URL;
+  const supabaseKey =
+    config?.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const url = customUrl || SUPABASE_URL;
-  const key =
-    customKey ||
-    (useServiceRole ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY);
-
-  if (!url || !key) {
+  // Validate required configuration
+  if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      "Supabase URL or key is missing. Please set the environment variables."
+      "Missing Supabase configuration. Please ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are set."
     );
   }
 
-  return createClient(url, key, {
-    auth: {
-      persistSession: false,
-    },
-  });
+  return createClient(supabaseUrl, supabaseKey);
 }
 
 /**
- * Singleton instance of Supabase client for server-side operations
- * Uses the service role key for admin privileges
+ * Pre-configured Supabase client using server-side credentials.
+ * Use this for backend operations that require service role privileges.
  */
-export const serverSupabase = createSupabaseClient({ useServiceRole: true });
+export const serverSupabase = createSupabaseClient();
 
 /**
  * Parse cookies from a cookie header string

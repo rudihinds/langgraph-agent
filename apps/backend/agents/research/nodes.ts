@@ -1,4 +1,4 @@
-import { HumanMessage } from "@langchain/core/messages";
+import { HumanMessage, BaseMessage } from "@langchain/core/messages";
 import { ResearchState } from "./state.js";
 import {
   createDeepResearchAgent,
@@ -6,10 +6,10 @@ import {
 } from "./agents.js";
 import { DocumentService } from "../../lib/db/documents.js";
 import { parseRfpFromBuffer } from "../../lib/parsers/rfp.js";
-import { Logger } from "../../logger.js";
-import { serverSupabase } from "@/lib/supabase/client.js";
-import { exponentialBackoff } from "@/lib/utils/backoff.js";
-import { BaseMessage } from "@langchain/core/messages";
+import { Logger } from "@/lib/logger.js";
+import { serverSupabase } from "../../lib/supabase/client.js";
+import { exponentialBackoff } from "../../lib/utils/backoff.js";
+import { getFileExtension } from "../../lib/utils/files.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -46,11 +46,66 @@ export async function documentLoaderNode(
 
   logger.info("Starting document load", { documentId });
 
-  // Confirmed path strategy (can be refactored if needed)
   const documentPath = `documents/${documentId}.pdf`;
   logger.debug(`Constructed document path: ${documentPath}`);
 
   try {
+    // --- Step 1b: Get File Metadata (Using list) ---
+    let fileMetadata = null;
+    try {
+      const listResult = await exponentialBackoff(
+        async () => {
+          logger.debug("Attempting to list file for metadata", {
+            bucket: DOCUMENTS_BUCKET,
+            pathPrefix: documentPath,
+          });
+          // Use list() with the full path as prefix to get info for a single file
+          const { data, error } = await serverSupabase.storage
+            .from(DOCUMENTS_BUCKET)
+            .list(`documents/`, {
+              // List directory containing the file
+              limit: 1, // Only need one result
+              offset: 0,
+              search: `${documentId}.pdf`, // Search for the specific file name
+            });
+
+          if (error) {
+            logger.warn("Failed to list file for metadata", {
+              documentId,
+              error: error.message,
+            });
+            return null; // Allow proceeding, rely on extension
+          }
+          // Check if the specific file was found in the list
+          if (data && data.length > 0 && data[0].name === `${documentId}.pdf`) {
+            return data[0]; // Return the metadata of the found file
+          }
+          return null; // File not found in list
+        },
+        { maxRetries: 2, baseDelayMs: 200 }
+      );
+
+      fileMetadata = listResult;
+    } catch (listError: any) {
+      logger.warn("Listing file for metadata failed after retries", {
+        documentId,
+        error: listError.message,
+      });
+      fileMetadata = null;
+    }
+
+    // Determine file type (Metadata MIME type > Extension > Default 'txt')
+    // Supabase list() returns metadata object with mimetype
+    const mimeType = fileMetadata?.metadata?.mimetype;
+    const extension = getFileExtension(documentPath);
+    const fileType = mimeType || extension || "txt";
+    logger.debug("Determined file type", {
+      documentId,
+      mimeType,
+      extension,
+      finalType: fileType,
+    });
+
     // --- Step 2 & 4: Implement Download with Retry Logic ---
     const downloadResult = await exponentialBackoff(
       async () => {
@@ -102,7 +157,7 @@ export async function documentLoaderNode(
 
     // --- Step 3: Error Handling (Handled by try/catch and shouldRetry) ---
     // If we get here, download (with retries) was successful
-    const documentBuffer = await downloadResult.arrayBuffer(); // Convert Blob to ArrayBuffer
+    const documentBuffer = await downloadResult.arrayBuffer();
     logger.info("Document downloaded successfully", {
       documentId,
       size: documentBuffer.byteLength,
@@ -111,14 +166,12 @@ export async function documentLoaderNode(
     // --- Step 5: Integrate with Document Parser ---
     let parsedData;
     try {
-      // TODO: Implement or confirm existence of parseRfpFromBuffer
-      // parsedData = await parseRfpFromBuffer(Buffer.from(documentBuffer));
-      // Placeholder implementation until parser is ready:
-      parsedData = {
-        text: `[Placeholder Parsed Content for ${documentId}]`,
-        metadata: { parsed: true, size: documentBuffer.byteLength },
-      };
-      logger.info("Document parsed successfully (placeholder)", { documentId });
+      parsedData = await parseRfpFromBuffer(
+        documentBuffer,
+        fileType,
+        documentPath
+      );
+      logger.info("Document parsed successfully", { documentId });
     } catch (parseError: any) {
       logger.error("Failed to parse document", {
         documentId,
@@ -135,13 +188,19 @@ export async function documentLoaderNode(
       rfpDocument: {
         ...state.rfpDocument,
         text: parsedData.text,
-        metadata: { ...state.rfpDocument.metadata, ...parsedData.metadata }, // Merge metadata
+        metadata: {
+          ...(state.rfpDocument.metadata || {}),
+          ...(fileMetadata?.metadata || {}), // Metadata from Supabase list()
+          ...(parsedData.metadata || {}), // Metadata from parser
+          // Add size from buffer as a fallback/override
+          size: documentBuffer.byteLength,
+        },
       },
       status: {
         ...state.status,
         documentLoaded: true,
       },
-      errors: initialErrors, // Keep existing errors, but don't add new ones on success
+      errors: initialErrors,
     };
   } catch (error: any) {
     // Catch errors from download (after retries) or other unexpected issues

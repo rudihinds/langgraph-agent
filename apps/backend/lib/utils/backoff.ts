@@ -3,69 +3,87 @@ import { Logger } from "../logger.js";
 const logger = Logger.getInstance();
 
 /**
- * Options for exponential backoff
+ * Utilities for implementing exponential backoff and retry logic.
+ */
+
+/**
+ * Options for configuring exponential backoff behavior
  */
 export interface BackoffOptions {
-  maxRetries?: number;
-  baseDelayMs?: number;
+  /**
+   * Maximum number of retry attempts before giving up
+   */
+  maxRetries: number;
+
+  /**
+   * Base delay in milliseconds between retries
+   */
+  baseDelayMs: number;
+
+  /**
+   * Maximum delay in milliseconds (caps exponential growth)
+   */
   maxDelayMs?: number;
-  factor?: number;
+
+  /**
+   * Optional function to determine if a particular error should trigger a retry
+   */
   shouldRetry?: (error: any) => boolean;
+
+  /**
+   * Optional callback to log retry attempts
+   */
+  onRetry?: (attempt: number, error: any, delayMs: number) => void;
 }
 
 /**
- * Execute a function with exponential backoff retry logic
+ * Implements exponential backoff retry logic for async functions.
  *
- * @param fn - Function to execute with retries
- * @param options - Backoff configuration
- * @returns Result of the function
+ * @param fn - The asynchronous function to retry
+ * @param options - Backoff configuration options
+ * @returns The result of the function if successful
+ * @throws The last error encountered if all retries fail
  */
 export async function exponentialBackoff<T>(
   fn: () => Promise<T>,
-  options: BackoffOptions = {}
+  options: BackoffOptions
 ): Promise<T> {
   const {
-    maxRetries = 3,
-    baseDelayMs = 100,
-    maxDelayMs = 10000,
-    factor = 2,
-    // Default retry condition: retry on any error except specific non-retriable HTTP status codes
-    shouldRetry = (error: any) => {
-      // Check if error has a status property (common in HTTP errors)
-      const status = error?.status || error?.code || error?.name;
-      if (status) {
-        // Do not retry client errors (4xx) except for potential rate limits (429)
-        if (status >= 400 && status < 500 && status !== 429) {
-          return false;
-        }
-      }
-      // Retry all other errors (including network errors, 5xx server errors, rate limits)
-      return true;
-    },
+    maxRetries,
+    baseDelayMs,
+    maxDelayMs = 30000, // Default 30 second cap
+    shouldRetry = () => true, // Default to retry all errors
+    onRetry = () => {}, // Default no-op
   } = options;
 
-  let retries = 0;
-  let delay = baseDelayMs;
+  let lastError: any;
 
-  while (true) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
-      logger.warn("Operation failed, evaluating retry", { retry: retries + 1, maxRetries, error: error?.message || error });
-      if (retries >= maxRetries || !shouldRetry(error)) {
-        logger.error("Max retries reached or error not retriable, throwing error", { error: error?.message || error });
-        throw error;
+      lastError = error;
+
+      // Don't retry on the last attempt or if shouldRetry returns false
+      if (attempt >= maxRetries || !shouldRetry(error)) {
+        break;
       }
 
-      // Calculate next delay with jitter
-      const jitter = Math.random() * 0.2 - 0.1; // \u00b110% jitter
-      delay = Math.min(delay * factor * (1 + jitter), maxDelayMs);
+      // Calculate delay with exponential backoff: base * 2^attempt + some jitter
+      const jitter = Math.random() * 100;
+      const delay = Math.min(
+        baseDelayMs * Math.pow(2, attempt) + jitter,
+        maxDelayMs
+      );
 
-      logger.info(`Retrying operation in ${delay.toFixed(0)}ms`, { retry: retries + 1 });
-      // Wait before next retry
+      // Call the onRetry callback if provided
+      onRetry(attempt + 1, error, delay);
+
+      // Wait before the next attempt
       await new Promise((resolve) => setTimeout(resolve, delay));
-
-      retries++;
     }
   }
+
+  // If we get here, all retries failed
+  throw lastError;
 }

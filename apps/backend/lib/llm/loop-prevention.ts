@@ -5,7 +5,7 @@
  * in StateGraph executions through state tracking and iteration control.
  */
 
-import { StateGraph } from "@langchain/langgraph";
+import { StateGraph, END } from "@langchain/langgraph";
 import {
   createStateFingerprint,
   detectCycles,
@@ -61,6 +61,26 @@ export interface LoopPreventionOptions {
    * Custom function to normalize state before fingerprinting.
    */
   normalizeFn?: (state: any) => Record<string, any>;
+
+  /**
+   * Node name to direct flow to when a loop is detected.
+   */
+  breakLoopNodeName?: string;
+
+  /**
+   * Whether to terminate on no progress detection.
+   */
+  terminateOnNoProgress?: boolean;
+
+  /**
+   * Callback when a loop is detected.
+   */
+  onLoopDetected?: (state: Record<string, any>) => Record<string, any>;
+
+  /**
+   * Whether to automatically wrap all nodes with loop detection logic (default: false).
+   */
+  autoAddTerminationNodes?: boolean;
 }
 
 /**
@@ -135,6 +155,35 @@ export function configureLoopPrevention<T extends Record<string, any>>(
   options: LoopPreventionOptions = {}
 ): StateGraph<T> {
   const mergedOptions = { ...DEFAULT_LOOP_PREVENTION_OPTIONS, ...options };
+
+  // Set recursion limit on the graph if specified
+  if (mergedOptions.maxIterations) {
+    graph.setRecursionLimit(mergedOptions.maxIterations);
+  }
+
+  // Automatically wrap nodes with loop prevention if requested
+  if (mergedOptions.autoAddTerminationNodes) {
+    // Get all node names except END
+    const nodeNames: string[] = Object.keys(
+      // @ts-ignore - accessing private property for test compatibility
+      graph.nodes || {}
+    ).filter((name) => name !== "END");
+
+    // Wrap each node with loop detection
+    for (const nodeName of nodeNames) {
+      const originalNode = graph.getNode(nodeName);
+      if (originalNode) {
+        // Wrap the node with terminateOnLoop
+        const wrappedNode = terminateOnLoop(originalNode, {
+          ...mergedOptions,
+          breakLoopNodeName: mergedOptions.breakLoopNodeName || "END",
+        });
+
+        // Replace the original node with the wrapped version
+        graph.addNode(nodeName, wrappedNode);
+      }
+    }
+  }
 
   // Add beforeCall hook to initialize and update loop detection state
   graph.addBeforeCallHook((state) => {
@@ -414,5 +463,213 @@ export function createProgressTrackingNode(progressField: string) {
           : loopDetection.iterationsWithoutProgress + 1,
       },
     };
+  };
+}
+
+/**
+ * Wraps a node function with loop detection and termination logic.
+ *
+ * @param nodeFn - The original node function to wrap
+ * @param options - Options for loop detection and handling
+ * @returns A wrapped node function with loop detection
+ */
+export function terminateOnLoop<T extends Record<string, any>>(
+  nodeFn: (params: {
+    state: T;
+    name: string;
+    config: any;
+    metadata: any;
+  }) => Promise<T>,
+  options: LoopPreventionOptions = {}
+): (params: {
+  state: T;
+  name: string;
+  config: any;
+  metadata: any;
+}) => Promise<T> {
+  return async (params) => {
+    const { state, name, config, metadata } = params;
+
+    // Initialize state tracking if not present
+    if (!state.stateHistory) {
+      state.stateHistory = [];
+    }
+
+    // Create fingerprint of current state for tracking
+    const currentFingerprint = createStateFingerprint(
+      state,
+      options.fingerprintOptions || {},
+      name
+    );
+
+    // Add to history
+    state.stateHistory = [...state.stateHistory, currentFingerprint];
+
+    // Detect cycles in the state history
+    const { cycleDetected } = detectCycles(
+      state.stateHistory,
+      options.fingerprintOptions
+    );
+
+    // If a cycle is detected and we need to take action
+    if (cycleDetected) {
+      // Record detection in state
+      const loopDetection = {
+        cycleDetected,
+        nodeName: name,
+      };
+
+      // Apply custom handler if provided
+      if (options.onLoopDetected) {
+        return options.onLoopDetected({
+          ...state,
+          loopDetection,
+        });
+      }
+
+      // Redirect to specified node or END if terminateOnNoProgress is true
+      if (options.breakLoopNodeName) {
+        return {
+          ...state,
+          loopDetection,
+          next: options.breakLoopNodeName,
+        };
+      } else if (options.terminateOnNoProgress) {
+        return {
+          ...state,
+          loopDetection,
+          next: "END",
+        };
+      }
+    }
+
+    // If no cycle or no action needed, call the original node function
+    return nodeFn(params);
+  };
+}
+
+/**
+ * Creates a node that checks for progress in a specific field.
+ * This is one of the utility nodes that can be used with loop prevention.
+ *
+ * @param progressField - The field to monitor for progress
+ * @param options - Options for progress detection
+ * @returns A node function that tracks progress
+ */
+export function createProgressDetectionNode<T extends Record<string, any>>(
+  progressField: keyof T,
+  options: { breakLoopNodeName?: string } = {}
+) {
+  return async function progressDetectionNode(params: {
+    state: T;
+    name: string;
+    config: any;
+    metadata: any;
+  }): Promise<T & { next?: string }> {
+    const { state } = params;
+
+    // Check if we have history to compare against
+    if (!state.stateHistory || state.stateHistory.length === 0) {
+      return state;
+    }
+
+    // Get the previous state from history
+    const previousState = state.stateHistory[state.stateHistory.length - 1];
+    const previousValue = previousState.originalState?.[progressField];
+    const currentValue = state[progressField];
+
+    // Compare the values to detect progress
+    let progressDetected = false;
+
+    if (previousValue === undefined) {
+      progressDetected = true;
+    } else if (typeof currentValue === "object" && currentValue !== null) {
+      progressDetected =
+        JSON.stringify(currentValue) !== JSON.stringify(previousValue);
+    } else {
+      progressDetected = currentValue !== previousValue;
+    }
+
+    // If no progress, direct to either the specified node or END
+    if (!progressDetected) {
+      return {
+        ...state,
+        next: options.breakLoopNodeName || "END",
+      };
+    }
+
+    return state;
+  };
+}
+
+/**
+ * Creates a node that enforces iteration limits.
+ *
+ * @param maxIterations - Maximum number of iterations allowed
+ * @param options - Additional options
+ * @returns A node function that checks iteration limits
+ */
+export function createIterationLimitNode<T extends Record<string, any>>(
+  maxIterations: number,
+  options: { iterationCounterField?: string } = {}
+) {
+  const counterField = options.iterationCounterField || "_iterationCount";
+
+  return async function iterationLimitNode(params: {
+    state: T;
+    name: string;
+    config: any;
+    metadata: any;
+  }): Promise<T & { next?: string }> {
+    const { state } = params;
+
+    // Initialize or increment iteration counter
+    const currentCount = (state[counterField] as number) || 0;
+    const newCount = currentCount + 1;
+
+    // Update state with new count
+    const updatedState = {
+      ...state,
+      [counterField]: newCount,
+    };
+
+    // Check if limit is reached
+    if (newCount >= maxIterations) {
+      return {
+        ...updatedState,
+        next: "END",
+      };
+    }
+
+    return updatedState;
+  };
+}
+
+/**
+ * Creates a node that checks if the workflow is complete.
+ *
+ * @param isComplete - Function to determine if the workflow is complete
+ * @returns A node function that checks completion status
+ */
+export function createCompletionCheckNode<T extends Record<string, any>>(
+  isComplete: (state: T) => boolean
+) {
+  return async function completionCheckNode(params: {
+    state: T;
+    name: string;
+    config: any;
+    metadata: any;
+  }): Promise<T & { next?: string }> {
+    const { state } = params;
+
+    // Check if the workflow is complete according to the provided function
+    if (isComplete(state)) {
+      return {
+        ...state,
+        next: "END",
+      };
+    }
+
+    return state;
   };
 }
