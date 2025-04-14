@@ -117,7 +117,9 @@ The core implementation phase focuses on the essential LangGraph components need
 
 - ✅ Test state annotations and reducers in [`apps/backend/agents/research/__tests__/state.test.ts`](apps/backend/agents/research/__tests__/state.test.ts)
 - ⬜ Verify agent tool usage in [`apps/backend/agents/research/__tests__/agents.test.ts`](apps/backend/agents/research/__tests__/agents.test.ts)
-- ⬜ Create basic node tests in [`apps/backend/agents/research/__tests__/nodes.test.ts`](apps/backend/agents/research/__tests__/nodes.test.ts)
+- ✅ Create basic node tests in [`apps/backend/agents/research/__tests__/nodes.test.ts`](apps/backend/agents/research/__tests__/nodes.test.ts)
+  - ✅ Document loader node tests completed
+  - ⬜ Agent node tests still needed
 
 2. Add simple integration test
 
