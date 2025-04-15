@@ -1,3 +1,18 @@
+/**
+ * @deprecated This implementation is being deprecated in favor of the new SupabaseCheckpointer
+ * in `/apps/backend/lib/persistence/supabase-checkpointer.ts`.
+ * Please update your imports to use the new implementation.
+ *
+ * Example:
+ * ```typescript
+ * // Old usage
+ * import { SupabaseCheckpointer } from "@/lib/state/supabase";
+ *
+ * // New usage
+ * import { SupabaseCheckpointer } from "@/lib/persistence/supabase-checkpointer";
+ * ```
+ */
+
 import { BaseCheckpointSaver } from "@langchain/langgraph/checkpoints";
 import { createClient } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from "uuid";
@@ -7,6 +22,9 @@ import { logger } from "../../agents/logger";
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 500;
 
+/**
+ * @deprecated Use SupabaseCheckpointerConfig from "@/lib/persistence/supabase-checkpointer" instead.
+ */
 interface SupabaseCheckpointerOptions<T> {
   supabaseUrl?: string;
   supabaseKey?: string;
@@ -15,6 +33,9 @@ interface SupabaseCheckpointerOptions<T> {
   validator?: z.ZodType<T>;
 }
 
+/**
+ * @deprecated Use SupabaseCheckpointer from "@/lib/persistence/supabase-checkpointer" instead.
+ */
 export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
   private supabase;
   private tableName: string;
@@ -29,6 +50,10 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
     this.tableName = options.tableName || "proposal_checkpoints";
     this.sessionTableName = options.sessionTableName || "proposal_sessions";
     this.validator = options.validator;
+
+    console.warn(
+      "[DEPRECATED] This SupabaseCheckpointer implementation is deprecated. Please use SupabaseCheckpointer from '@/lib/persistence/supabase-checkpointer' instead."
+    );
   }
 
   /**
@@ -43,11 +68,11 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
    */
   async get(threadId: string): Promise<T | null> {
     let attempts = 0;
-    
+
     while (attempts < RETRY_ATTEMPTS) {
       try {
         logger.debug(`Fetching checkpoint for thread: ${threadId}`);
-        
+
         const { data, error } = await this.supabase
           .from(this.tableName)
           .select("checkpoint_data")
@@ -66,12 +91,12 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
 
         try {
           const parsedData = JSON.parse(data.checkpoint_data);
-          
+
           // Validate parsed data if validator is provided
           if (this.validator) {
             return this.validator.parse(parsedData);
           }
-          
+
           return parsedData as T;
         } catch (parseError) {
           logger.error(`Error parsing checkpoint data: ${parseError}`);
@@ -79,17 +104,23 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
         }
       } catch (error) {
         attempts++;
-        
+
         if (attempts >= RETRY_ATTEMPTS) {
-          logger.error(`Max retry attempts reached for get operation`, { threadId });
+          logger.error(`Max retry attempts reached for get operation`, {
+            threadId,
+          });
           throw error;
         }
-        
-        logger.debug(`Retrying get operation (${attempts}/${RETRY_ATTEMPTS})`, { threadId });
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+
+        logger.debug(`Retrying get operation (${attempts}/${RETRY_ATTEMPTS})`, {
+          threadId,
+        });
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAY_MS * attempts)
+        );
       }
     }
-    
+
     return null;
   }
 
@@ -98,16 +129,16 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
    */
   async put(threadId: string, checkpoint: T): Promise<void> {
     let attempts = 0;
-    
+
     while (attempts < RETRY_ATTEMPTS) {
       try {
         logger.debug(`Storing checkpoint for thread: ${threadId}`);
-        
+
         const checkpointData = JSON.stringify(checkpoint);
-        
+
         // Get status from checkpoint if available
         const status = (checkpoint as any)?.status || "ACTIVE";
-        
+
         // Store checkpoint data
         const { error: checkpointError } = await this.supabase
           .from(this.tableName)
@@ -119,7 +150,9 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
 
         if (checkpointError) {
           logger.error(`Error storing checkpoint: ${checkpointError.message}`);
-          throw new Error(`Failed to save checkpoint: ${checkpointError.message}`);
+          throw new Error(
+            `Failed to save checkpoint: ${checkpointError.message}`
+          );
         }
 
         // Update session activity
@@ -140,14 +173,20 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
         return;
       } catch (error) {
         attempts++;
-        
+
         if (attempts >= RETRY_ATTEMPTS) {
-          logger.error(`Max retry attempts reached for put operation`, { threadId });
+          logger.error(`Max retry attempts reached for put operation`, {
+            threadId,
+          });
           throw error;
         }
-        
-        logger.debug(`Retrying put operation (${attempts}/${RETRY_ATTEMPTS})`, { threadId });
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+
+        logger.debug(`Retrying put operation (${attempts}/${RETRY_ATTEMPTS})`, {
+          threadId,
+        });
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAY_MS * attempts)
+        );
       }
     }
   }
@@ -157,11 +196,11 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
    */
   async delete(threadId: string): Promise<void> {
     let attempts = 0;
-    
+
     while (attempts < RETRY_ATTEMPTS) {
       try {
         logger.debug(`Deleting checkpoint for thread: ${threadId}`);
-        
+
         const { error } = await this.supabase
           .from(this.tableName)
           .delete()
@@ -179,14 +218,21 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
         return;
       } catch (error) {
         attempts++;
-        
+
         if (attempts >= RETRY_ATTEMPTS) {
-          logger.error(`Max retry attempts reached for delete operation`, { threadId });
+          logger.error(`Max retry attempts reached for delete operation`, {
+            threadId,
+          });
           throw error;
         }
-        
-        logger.debug(`Retrying delete operation (${attempts}/${RETRY_ATTEMPTS})`, { threadId });
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+
+        logger.debug(
+          `Retrying delete operation (${attempts}/${RETRY_ATTEMPTS})`,
+          { threadId }
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAY_MS * attempts)
+        );
       }
     }
   }
@@ -201,18 +247,16 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
     metadata?: Record<string, any>;
   }): Promise<string> {
     const threadId = props.threadId || this.generateThreadId();
-    
-    const { error } = await this.supabase
-      .from(this.sessionTableName)
-      .insert({
-        thread_id: threadId,
-        proposal_id: props.proposalId,
-        user_id: props.userId,
-        created_at: new Date().toISOString(),
-        last_active: new Date().toISOString(),
-        status: "CREATED",
-        metadata: props.metadata || {},
-      });
+
+    const { error } = await this.supabase.from(this.sessionTableName).insert({
+      thread_id: threadId,
+      proposal_id: props.proposalId,
+      user_id: props.userId,
+      created_at: new Date().toISOString(),
+      last_active: new Date().toISOString(),
+      status: "CREATED",
+      metadata: props.metadata || {},
+    });
 
     if (error) {
       logger.error(`Error creating session: ${error.message}`);
@@ -283,7 +327,7 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
 
 /**
  * SQL to create the necessary tables in Supabase
- * 
+ *
  * -- Create proposal_checkpoints table for storing LangGraph checkpoints
  * create table proposal_checkpoints (
  *   id bigint primary key generated always as identity,
@@ -292,7 +336,7 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
  *   created_at timestamp with time zone default now() not null,
  *   updated_at timestamp with time zone default now() not null
  * );
- * 
+ *
  * -- Create proposal_sessions table for tracking session metadata
  * create table proposal_sessions (
  *   id bigint primary key generated always as identity,
@@ -304,18 +348,18 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
  *   status text not null,
  *   metadata jsonb default '{}'::jsonb not null
  * );
- * 
+ *
  * -- Create indexes for performance
  * create index proposal_checkpoints_thread_id_idx on proposal_checkpoints(thread_id);
  * create index proposal_sessions_user_id_idx on proposal_sessions(user_id);
  * create index proposal_sessions_proposal_id_idx on proposal_sessions(proposal_id);
  * create index proposal_sessions_status_idx on proposal_sessions(status);
  * create index proposal_sessions_last_active_idx on proposal_sessions(last_active);
- * 
+ *
  * -- Set up Row Level Security
  * alter table proposal_checkpoints enable row level security;
  * alter table proposal_sessions enable row level security;
- * 
+ *
  * -- Create policies for proposal_checkpoints
  * create policy "Users can view their own checkpoints"
  * on proposal_checkpoints for select
@@ -325,7 +369,7 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
  *     where proposal_sessions.thread_id = proposal_checkpoints.thread_id
  *   )
  * );
- * 
+ *
  * create policy "Users can create their own checkpoints"
  * on proposal_checkpoints for insert
  * with check (
@@ -334,7 +378,7 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
  *     where proposal_sessions.thread_id = proposal_checkpoints.thread_id
  *   )
  * );
- * 
+ *
  * create policy "Users can update their own checkpoints"
  * on proposal_checkpoints for update
  * using (
@@ -343,7 +387,7 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
  *     where proposal_sessions.thread_id = proposal_checkpoints.thread_id
  *   )
  * );
- * 
+ *
  * create policy "Users can delete their own checkpoints"
  * on proposal_checkpoints for delete
  * using (
@@ -352,20 +396,20 @@ export class SupabaseCheckpointer<T> implements BaseCheckpointSaver<T> {
  *     where proposal_sessions.thread_id = proposal_checkpoints.thread_id
  *   )
  * );
- * 
+ *
  * -- Create policies for proposal_sessions
  * create policy "Users can view their own sessions"
  * on proposal_sessions for select
  * using (auth.uid() = user_id);
- * 
+ *
  * create policy "Users can create their own sessions"
  * on proposal_sessions for insert
  * with check (auth.uid() = user_id);
- * 
+ *
  * create policy "Users can update their own sessions"
  * on proposal_sessions for update
  * using (auth.uid() = user_id);
- * 
+ *
  * create policy "Users can delete their own sessions"
  * on proposal_sessions for delete
  * using (auth.uid() = user_id);

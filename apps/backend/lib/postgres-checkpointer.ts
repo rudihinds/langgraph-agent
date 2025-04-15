@@ -1,3 +1,18 @@
+/**
+ * @deprecated This implementation is being deprecated in favor of the new SupabaseCheckpointer
+ * in `/apps/backend/lib/persistence/supabase-checkpointer.ts`.
+ * Please update your imports to use the new implementation.
+ *
+ * Example:
+ * ```typescript
+ * // Old usage
+ * import { PostgresCheckpointer } from "@/lib/postgres-checkpointer";
+ *
+ * // New usage
+ * import { SupabaseCheckpointer } from "@/lib/persistence/supabase-checkpointer";
+ * ```
+ */
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   Checkpointer,
@@ -23,6 +38,8 @@ export interface PostgresCheckpointerOptions {
 /**
  * PostgresCheckpointer implements LangGraph's Checkpointer interface
  * using Supabase PostgreSQL as the storage backend.
+ *
+ * @deprecated Use SupabaseCheckpointer from "@/lib/persistence/supabase-checkpointer" instead.
  */
 export class PostgresCheckpointer implements Checkpointer {
   private client: SupabaseClient<Database>;
@@ -39,6 +56,10 @@ export class PostgresCheckpointer implements Checkpointer {
     if (this.debug) {
       console.log("[PostgresCheckpointer] Initialized");
     }
+
+    console.warn(
+      "[DEPRECATED] PostgresCheckpointer is deprecated. Please use SupabaseCheckpointer from '@/lib/persistence/supabase-checkpointer' instead."
+    );
   }
 
   /**

@@ -1,133 +1,107 @@
-# LangGraph Persistence Layer
+# Supabase Persistence Layer for LangGraph
 
-This directory contains the implementation of the persistence layer for LangGraph agents, using Supabase for storage.
+This module provides a robust persistence layer for LangGraph using Supabase as the backing store. It implements the `BaseCheckpointSaver` interface to enable state persistence, checkpoint management, and resumable workflows.
+
+## Components
+
+### SupabaseCheckpointer
+
+The `SupabaseCheckpointer` class implements LangGraph's `BaseCheckpointSaver` interface, providing:
+
+- **Persistence**: Store and retrieve checkpoints using Supabase PostgreSQL
+- **Retry Logic**: Built-in exponential backoff for network resilience
+- **Security**: User and proposal association for Row Level Security (RLS)
+- **Session Tracking**: Monitoring of active graph sessions
+- **Error Handling**: Comprehensive error handling with logging
+
+```typescript
+import { SupabaseCheckpointer } from './supabase-checkpointer.js';
+
+// Initialize checkpointer
+const checkpointer = new SupabaseCheckpointer({
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  userIdGetter: async () => userId,
+  proposalIdGetter: async (threadId) => proposalId,
+});
+
+// Use with LangGraph
+const graph = new StateGraph({...})
+  .addNode(...)
+  .addEdge(...);
+
+const compiledGraph = graph.compile({
+  checkpointer,
+});
+```
+
+### Database Schema
+
+The required Supabase tables are defined in `db-schema.sql`. This includes:
+
+1. `proposal_checkpoints`: Stores the checkpoint data with RLS policies
+2. `proposal_sessions`: Tracks active sessions and metadata
+
+Each table includes:
+
+- Appropriate indexes for efficient querying
+- Row Level Security policies to ensure data isolation
+- Optimized schema for LangGraph state storage
 
 ## Setup Instructions
 
-### 1. Create Supabase Tables
+1. Create the tables in your Supabase project:
 
-Use the SQL in `migrations/create_persistence_tables.sql` to create the necessary tables, indexes, and security policies in your Supabase project.
+   ```bash
+   # Option 1: Using the Supabase dashboard
+   # Copy the contents of db-schema.sql and execute in the SQL Editor
 
-You can either:
+   # Option 2: Using the CLI
+   psql -h your-project.supabase.co -U postgres -d postgres -f db-schema.sql
+   ```
 
-- Copy and paste the SQL into the Supabase SQL Editor
-- Use the Supabase CLI to apply the migration
+2. Set environment variables:
 
-### 2. Set Required Environment Variables
+   ```
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   ```
 
-Add the following environment variables to your project:
+3. Import and use the `SupabaseCheckpointer` in your LangGraph implementation
 
-```
-SUPABASE_URL=your-supabase-url
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-```
+## Migration Guide
 
-The service role key is required to bypass RLS policies for server-side operations.
+If you're using an older checkpointer implementation (either `PostgresCheckpointer` from `/lib/postgres-checkpointer.ts` or the older `SupabaseCheckpointer` from `/lib/state/supabase.ts`), please see our [Migration Guide](./MIGRATION_GUIDE.md) for instructions on updating to this enhanced implementation.
 
-### 3. Using the SupabaseCheckpointer
+## Implementation Notes
 
-The `SupabaseCheckpointer` class provides a persistent storage implementation for LangGraph's checkpointer interface.
+### Security
 
-```typescript
-import { SupabaseCheckpointer } from "../../lib/persistence/supabase-checkpointer";
+- Row Level Security (RLS) policies ensure users can only access their own data
+- Service role key required for backend usage (never expose in client-side code)
+- User ID and proposal ID are associated with each checkpoint for proper authorization
 
-// Initialize the checkpointer with the user and proposal context
-const checkpointer = new SupabaseCheckpointer({
-  supabaseUrl: process.env.SUPABASE_URL!,
-  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  userIdGetter: async () => userId,
-  proposalIdGetter: async () => proposalId,
-});
+### Performance
 
-// Use in your LangGraph initialization
-const graph = new StateGraph(MyStateAnnotation)
-  .addNode("myNode", myNodeFunction)
-  // ... add other nodes and edges
-  .compile({ checkpointer });
-```
+- Indexes are created on `thread_id`, `user_id`, and `proposal_id` for faster queries
+- Retry logic with exponential backoff for handling transient failures
+- Optimized database schema to minimize storage requirements
 
-### 4. Thread ID Management
+### Extensibility
 
-Use the static method to generate consistent thread IDs:
+- The session tracking table provides a foundation for monitoring active chains
+- Additional metadata can be stored alongside checkpoints for richer context
 
-```typescript
-const threadId = SupabaseCheckpointer.generateThreadId(
-  proposalId,
-  "componentName"
-);
+## Testing
+
+Run tests with:
+
+```bash
+./run-tests.sh
 ```
 
-### 5. Handling Message History
+Or individually:
 
-The message history utilities help prevent context overflow:
-
-```typescript
-import { pruningMessagesStateReducer } from "../../lib/state/messages";
-
-// Use in your state definition
-const MyStateAnnotation = Annotation.Root({
-  messages: Annotation<BaseMessage[]>({
-    reducer: pruningMessagesStateReducer,
-  }),
-  // ... other state fields
-});
+```bash
+npm test -- "apps/backend/lib/persistence/__tests__/supabase-checkpointer.test.ts"
 ```
-
-## Tables Schema
-
-### proposal_checkpoints
-
-Stores the LangGraph checkpoint data for serialized graph states.
-
-| Column          | Type        | Description                |
-| --------------- | ----------- | -------------------------- |
-| id              | BIGSERIAL   | Primary key                |
-| thread_id       | TEXT        | Thread identifier          |
-| user_id         | UUID        | References auth.users(id)  |
-| proposal_id     | UUID        | References proposals(id)   |
-| checkpoint_data | JSONB       | Serialized LangGraph state |
-| metadata        | JSONB       | Additional metadata        |
-| created_at      | TIMESTAMPTZ | Creation timestamp         |
-| updated_at      | TIMESTAMPTZ | Last update timestamp      |
-
-### proposal_sessions
-
-Tracks session metadata for active agent sessions.
-
-| Column        | Type        | Description                              |
-| ------------- | ----------- | ---------------------------------------- |
-| id            | BIGSERIAL   | Primary key                              |
-| thread_id     | TEXT        | Thread identifier                        |
-| user_id       | UUID        | References auth.users(id)                |
-| proposal_id   | UUID        | References proposals(id)                 |
-| status        | TEXT        | Session status (active, completed, etc.) |
-| component     | TEXT        | Agent component name                     |
-| start_time    | TIMESTAMPTZ | Session start timestamp                  |
-| last_activity | TIMESTAMPTZ | Last activity timestamp                  |
-| metadata      | JSONB       | Additional metadata                      |
-
-## Security Considerations
-
-- All tables have Row Level Security (RLS) policies activated
-- Users can only access their own sessions and checkpoints
-- Direct database access requires using the service role key
-
-## Overview
-
-We utilize Supabase (PostgreSQL) as the backend for storing agent checkpoints and state. This allows for resuming agent runs and managing long-running processes.
-
-## Core Components
-
-- **`supabase-checkpointer.ts`**: Implements LangGraph's `Checkpointer` interface using Supabase. Handles saving and loading full checkpoint data.
-- **`supabase-store.ts`**: Implements a key-value store interface using Supabase, suitable for storing simpler state or configuration.
-- **`/migrations`**: Contains database migration scripts (if needed) related to the persistence tables.
-
-## Supabase Utilities
-
-Core Supabase client configuration and storage interaction utilities are located in the `apps/backend/lib/supabase` directory:
-
-- **`lib/supabase/client.ts`**: Provides functions to create authenticated Supabase clients for server-side use.
-- **`lib/supabase/storage.ts`**: Contains the `SupabaseStorage` class for interacting with Supabase Storage (e.g., downloading/uploading documents).
-- **`lib/supabase/index.ts`**: Exports the main Supabase client instance.
-
-Refer to the `lib/supabase` directory for detailed Supabase client and storage setup.
