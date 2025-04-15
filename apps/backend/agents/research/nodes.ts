@@ -10,6 +10,10 @@ import { Logger } from "@/lib/logger.js";
 import { serverSupabase } from "../../lib/supabase/client.js";
 import { exponentialBackoff } from "../../lib/utils/backoff.js";
 import { getFileExtension } from "../../lib/utils/files.js";
+// Node's Buffer for conversion
+import { Buffer } from "buffer";
+// Import the prompt strings
+import { deepResearchPrompt, solutionSoughtPrompt } from "./prompts/index.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -166,8 +170,10 @@ export async function documentLoaderNode(
     // --- Step 5: Integrate with Document Parser ---
     let parsedData;
     try {
+      // Convert ArrayBuffer to Node.js Buffer before parsing
+      const nodeBuffer = Buffer.from(documentBuffer);
       parsedData = await parseRfpFromBuffer(
-        documentBuffer,
+        nodeBuffer, // Pass the Node.js Buffer
         fileType,
         documentPath
       );
@@ -239,29 +245,55 @@ export async function documentLoaderNode(
  * and extract structured information
  */
 export async function deepResearchNode(state: ResearchState) {
+  if (!state.rfpDocument?.text) {
+    const errorMsg = "RFP document text is missing in state for deep research.";
+    logger.error(errorMsg);
+    return {
+      errors: [...(state.errors || []), errorMsg],
+      status: { ...state.status, researchComplete: false },
+    };
+  }
+
   try {
-    // Create and invoke the deep research agent
+    // Interpolate the RFP text into the prompt string
+    const formattedPrompt = deepResearchPrompt.replace(
+      "${state.rfpDocument.text}", // Ensure this exact placeholder matches the one in prompts/index.ts
+      state.rfpDocument.text
+    );
+
+    // Create and invoke the deep research agent with the formatted prompt
     const agent = createDeepResearchAgent();
     const result = await agent.invoke({
-      messages: [new HumanMessage(state.rfpDocument.text)],
+      messages: [new HumanMessage(formattedPrompt)], // Pass the complete prompt
     });
 
     // Parse the JSON response from the agent
     const lastMessage = result.messages[result.messages.length - 1];
-    const jsonContent = JSON.parse(lastMessage.content as string);
+    // Basic check for JSON content
+    let jsonContent;
+    try {
+      jsonContent = JSON.parse(lastMessage.content as string);
+    } catch (parseError) {
+      logger.error("Failed to parse JSON response from deep research agent", {
+        content: lastMessage.content,
+        error: parseError,
+      });
+      throw new Error("Deep research agent did not return valid JSON.");
+    }
 
     return {
       deepResearchResults: jsonContent,
       status: { ...state.status, researchComplete: true },
-      messages: [...state.messages, ...result.messages],
+      messages: [...state.messages, ...result.messages], // Append new messages
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-
     logger.error(`Failed to perform deep research: ${errorMessage}`);
-
     return {
-      errors: [`Failed to perform deep research: ${errorMessage}`],
+      errors: [
+        ...(state.errors || []),
+        `Failed to perform deep research: ${errorMessage}`,
+      ],
       status: { ...state.status, researchComplete: false },
     };
   }
@@ -274,32 +306,61 @@ export async function deepResearchNode(state: ResearchState) {
  * the funder is seeking based on research results
  */
 export async function solutionSoughtNode(state: ResearchState) {
+  if (!state.rfpDocument?.text || !state.deepResearchResults) {
+    const errorMsg =
+      "Missing RFP text or deep research results for solution sought analysis.";
+    logger.error(errorMsg);
+    return {
+      errors: [...(state.errors || []), errorMsg],
+      status: { ...state.status, solutionAnalysisComplete: false },
+    };
+  }
+
   try {
-    // Create a message combining document text and research results
-    const message = `RFP Text: ${state.rfpDocument.text}\n\nResearch Results: ${JSON.stringify(state.deepResearchResults)}`;
+    // Interpolate both RFP text and research results into the prompt string
+    const formattedPrompt = solutionSoughtPrompt
+      .replace(
+        "${state.rfpDocument.text}", // Match placeholder
+        state.rfpDocument.text
+      )
+      .replace(
+        "${JSON.stringify(state.deepResearchResults)}", // Match placeholder
+        JSON.stringify(state.deepResearchResults, null, 2) // Stringify the results
+      );
 
     // Create and invoke the solution sought agent
     const agent = createSolutionSoughtAgent();
     const result = await agent.invoke({
-      messages: [new HumanMessage(message)],
+      messages: [new HumanMessage(formattedPrompt)], // Pass the complete prompt
     });
 
     // Parse the JSON response from the agent
     const lastMessage = result.messages[result.messages.length - 1];
-    const jsonContent = JSON.parse(lastMessage.content as string);
+    // Basic check for JSON content
+    let jsonContent;
+    try {
+      jsonContent = JSON.parse(lastMessage.content as string);
+    } catch (parseError) {
+      logger.error("Failed to parse JSON response from solution sought agent", {
+        content: lastMessage.content,
+        error: parseError,
+      });
+      throw new Error("Solution sought agent did not return valid JSON.");
+    }
 
     return {
       solutionSoughtResults: jsonContent,
       status: { ...state.status, solutionAnalysisComplete: true },
-      messages: [...state.messages, ...result.messages],
+      messages: [...state.messages, ...result.messages], // Append new messages
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-
     logger.error(`Failed to analyze solution sought: ${errorMessage}`);
-
     return {
-      errors: [`Failed to analyze solution sought: ${errorMessage}`],
+      errors: [
+        ...(state.errors || []),
+        `Failed to analyze solution sought: ${errorMessage}`,
+      ],
       status: { ...state.status, solutionAnalysisComplete: false },
     };
   }
