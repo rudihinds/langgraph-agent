@@ -4,14 +4,47 @@
  */
 import { BaseMessage } from "@langchain/core/messages";
 import { z } from "zod";
-import { Annotation, messagesStateReducer } from "@langchain/langgraph";
+import {
+  Annotation,
+  messagesStateReducer,
+  StateDefinition,
+} from "@langchain/langgraph";
 
 /**
  * Status definitions for different components of the proposal state
  */
-export type LoadingStatus = 'not_started' | 'loading' | 'loaded' | 'error';
-export type ProcessingStatus = 'queued' | 'running' | 'awaiting_review' | 'approved' | 'edited' | 'stale' | 'complete' | 'error';
-export type SectionProcessingStatus = 'queued' | 'generating' | 'awaiting_review' | 'approved' | 'edited' | 'stale' | 'error';
+export type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
+export type ProcessingStatus =
+  | "queued"
+  | "running"
+  | "awaiting_review"
+  | "approved"
+  | "edited"
+  | "stale"
+  | "complete"
+  | "error"
+  | "needs_revision";
+export type SectionProcessingStatus =
+  | "queued"
+  | "generating"
+  | "awaiting_review"
+  | "approved"
+  | "edited"
+  | "stale"
+  | "error"
+  | "not_started"
+  | "needs_revision";
+
+/**
+ * Section types enumeration for typed section references
+ */
+export enum SectionType {
+  PROBLEM_STATEMENT = "problem_statement",
+  METHODOLOGY = "methodology",
+  BUDGET = "budget",
+  TIMELINE = "timeline",
+  CONCLUSION = "conclusion",
+}
 
 /**
  * Evaluation result structure for quality checks
@@ -42,8 +75,9 @@ export interface SectionData {
 
 /**
  * Main state interface for the proposal generation system
+ * Extends StateDefinition to satisfy LangGraph requirements
  */
-export interface OverallProposalState {
+export interface ProposalState extends StateDefinition {
   // Document handling
   rfpDocument: {
     id: string;
@@ -59,32 +93,38 @@ export interface OverallProposalState {
   researchEvaluation?: EvaluationResult | null;
 
   // Solution sought phase
-  solutionSoughtResults?: Record<string, any>;
-  solutionSoughtStatus: ProcessingStatus;
-  solutionSoughtEvaluation?: EvaluationResult | null;
+  solutionResults?: Record<string, any>;
+  solutionStatus: ProcessingStatus;
+  solutionEvaluation?: EvaluationResult | null;
 
   // Connection pairs phase
-  connectionPairs?: any[];
-  connectionPairsStatus: ProcessingStatus;
-  connectionPairsEvaluation?: EvaluationResult | null;
+  connections?: any[];
+  connectionsStatus: ProcessingStatus;
+  connectionsEvaluation?: EvaluationResult | null;
 
   // Proposal sections
-  sections: { [sectionId: string]: SectionData | undefined };
-  requiredSections: string[];
-  
+  sections: Map<SectionType, SectionData>;
+  requiredSections: SectionType[];
+
   // Workflow tracking
   currentStep: string | null;
   activeThreadId: string;
-  
+
   // Communication and errors
   messages: BaseMessage[];
   errors: string[];
-  
+
   // Metadata
   projectName?: string;
   userId?: string;
   createdAt: string;
   lastUpdatedAt: string;
+
+  // Status for the overall proposal generation process
+  status: ProcessingStatus;
+
+  // Index signature for StateDefinition compatibility
+  [key: string]: any;
 }
 
 /**
@@ -92,40 +132,44 @@ export interface OverallProposalState {
  * Handles merging of section data with proper immutability
  */
 export function sectionsReducer(
-  currentValue: { [sectionId: string]: SectionData | undefined } | undefined,
-  newValue: { [sectionId: string]: SectionData | undefined } | Partial<SectionData>
-): { [sectionId: string]: SectionData | undefined } {
-  // Initialize with current value or empty object
-  const current = currentValue || {};
-  
+  currentValue: Map<SectionType, SectionData> | undefined,
+  newValue:
+    | Map<SectionType, SectionData>
+    | ({ id: SectionType } & Partial<SectionData>)
+): Map<SectionType, SectionData> {
+  // Initialize with current value or empty map
+  const current = currentValue || new Map<SectionType, SectionData>();
+  const result = new Map(current);
+
   // If newValue is a Partial<SectionData> with an id, it's a single section update
-  if ('id' in newValue) {
-    const update = newValue as Partial<SectionData>;
+  if ("id" in newValue && typeof newValue.id === "string") {
+    const update = newValue as { id: SectionType } & Partial<SectionData>;
     const sectionId = update.id;
-    const existingSection = current[sectionId];
-    
+    const existingSection = current.get(sectionId);
+
     // Create a new merged section
-    const updatedSection = existingSection 
+    const updatedSection: SectionData = existingSection
       ? { ...existingSection, ...update, lastUpdated: new Date().toISOString() }
-      : { 
+      : {
           id: sectionId,
-          content: update.content || '',
-          status: update.status || 'queued',
+          content: update.content || "",
+          status: update.status || "queued",
           lastUpdated: update.lastUpdated || new Date().toISOString(),
         };
-    
-    // Return new state with updated section
-    return {
-      ...current,
-      [sectionId]: updatedSection,
-    };
+
+    // Update the map with the new section
+    result.set(sectionId, updatedSection);
+    return result;
   }
-  
-  // Otherwise, it's a map of sections to merge/replace
-  return {
-    ...current,
-    ...newValue,
-  };
+
+  // Otherwise, it's a map to merge with
+  if (newValue instanceof Map) {
+    newValue.forEach((value, key) => {
+      result.set(key, value);
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -137,83 +181,285 @@ export function errorsReducer(
   newValue: string | string[]
 ): string[] {
   const current = currentValue || [];
-  
-  if (typeof newValue === 'string') {
+
+  if (typeof newValue === "string") {
     return [...current, newValue];
   }
-  
+
   return [...current, ...newValue];
 }
 
+// Generic "last value wins" reducer
+function lastValueReducer<T>(
+  _currentValue: T | undefined,
+  newValue: T | undefined
+): T | undefined {
+  return newValue;
+}
+
+// Reducer for createdAt - only takes the first value
+function createdAtReducer(
+  currentValue: string | undefined,
+  newValue: string | undefined
+): string | undefined {
+  return currentValue ?? newValue; // If currentValue exists, keep it; otherwise, use newValue
+}
+
+// Reducer for lastUpdatedAt - always takes the new value or current time
+function lastUpdatedAtReducer(
+  _currentValue: string | undefined,
+  newValue: string | undefined
+): string {
+  return newValue ?? new Date().toISOString(); // Use newValue if provided, otherwise current time
+}
+
 /**
- * Zod schema for validation of overall proposal state
+ * LangGraph State Annotation Definition
+ * Maps the ProposalState interface fields to LangGraph annotations
+ * and specifies custom reducers where necessary.
  */
-export const OverallProposalStateSchema = z.object({
+export const ProposalStateAnnotation = Annotation.Root<ProposalState>({
+  // Document handling: Use custom reducer, default to not_started
+  rfpDocument: Annotation<ProposalState["rfpDocument"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => ({ id: "", status: "not_started" as LoadingStatus }),
+  }),
+
+  // Research phase: Use custom reducer, default undefined/queued
+  researchResults: Annotation<ProposalState["researchResults"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+  researchStatus: Annotation<ProposalState["researchStatus"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => "queued" as ProcessingStatus,
+  }),
+  researchEvaluation: Annotation<ProposalState["researchEvaluation"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+
+  // Solution sought phase: Use custom reducer, default undefined/queued
+  solutionResults: Annotation<ProposalState["solutionResults"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+  solutionStatus: Annotation<ProposalState["solutionStatus"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => "queued" as ProcessingStatus,
+  }),
+  solutionEvaluation: Annotation<ProposalState["solutionEvaluation"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+
+  // Connection pairs phase: Use custom reducer, default undefined/queued
+  connections: Annotation<ProposalState["connections"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+  connectionsStatus: Annotation<ProposalState["connectionsStatus"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => "queued" as ProcessingStatus,
+  }),
+  connectionsEvaluation: Annotation<ProposalState["connectionsEvaluation"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+
+  // Proposal sections: Use specific reducer, default empty map
+  sections: Annotation<ProposalState["sections"]>({
+    reducer: sectionsReducer, // Already defined
+    default: () => new Map<SectionType, SectionData>(),
+  }),
+  // Required sections: Use custom reducer, default empty array
+  requiredSections: Annotation<ProposalState["requiredSections"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => [] as SectionType[],
+  }),
+
+  // Workflow tracking: Use custom reducer, default null/empty
+  currentStep: Annotation<ProposalState["currentStep"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => null,
+  }),
+  activeThreadId: Annotation<ProposalState["activeThreadId"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => "",
+  }),
+
+  // Communication and errors: Use specific reducers, default empty arrays
+  messages: Annotation<BaseMessage[]>({
+    reducer: messagesStateReducer, // Built-in
+    default: () => [] as BaseMessage[],
+  }),
+  errors: Annotation<ProposalState["errors"]>({
+    reducer: errorsReducer, // Already defined
+    default: () => [] as string[],
+  }),
+
+  // Metadata: Use custom reducers, default undefined/timestamps
+  projectName: Annotation<ProposalState["projectName"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+  userId: Annotation<ProposalState["userId"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => undefined,
+  }),
+  createdAt: Annotation<ProposalState["createdAt"]>({
+    reducer: createdAtReducer as any, // Use specific reducer
+    default: () => new Date().toISOString(),
+  }),
+  lastUpdatedAt: Annotation<ProposalState["lastUpdatedAt"]>({
+    reducer: lastUpdatedAtReducer as any, // Use specific reducer
+    default: () => new Date().toISOString(),
+  }),
+
+  // Overall status: Use custom reducer, default queued
+  status: Annotation<ProposalState["status"]>({
+    reducer: lastValueReducer as any, // Use generic reducer
+    default: () => "queued" as ProcessingStatus,
+  }),
+});
+
+/**
+ * Zod schema for validation of proposal state
+ */
+export const ProposalStateSchema = z.object({
   rfpDocument: z.object({
     id: z.string(),
     fileName: z.string().optional(),
     text: z.string().optional(),
     metadata: z.record(z.any()).optional(),
-    status: z.enum(['not_started', 'loading', 'loaded', 'error']),
+    status: z.enum(["not_started", "loading", "loaded", "error"]),
   }),
   researchResults: z.record(z.any()).optional(),
   researchStatus: z.enum([
-    'queued', 'running', 'awaiting_review', 'approved', 'edited', 'stale', 'complete', 'error'
+    "queued",
+    "running",
+    "awaiting_review",
+    "approved",
+    "edited",
+    "stale",
+    "complete",
+    "error",
+    "needs_revision",
   ]),
-  researchEvaluation: z.object({
-    score: z.number(),
-    passed: z.boolean(),
-    feedback: z.string(),
-    categories: z.record(z.object({
-      score: z.number(),
-      feedback: z.string(),
-    })).optional(),
-  }).nullable().optional(),
-  solutionSoughtResults: z.record(z.any()).optional(),
-  solutionSoughtStatus: z.enum([
-    'queued', 'running', 'awaiting_review', 'approved', 'edited', 'stale', 'complete', 'error'
-  ]),
-  solutionSoughtEvaluation: z.object({
-    score: z.number(),
-    passed: z.boolean(),
-    feedback: z.string(),
-    categories: z.record(z.object({
-      score: z.number(),
-      feedback: z.string(),
-    })).optional(),
-  }).nullable().optional(),
-  connectionPairs: z.array(z.any()).optional(),
-  connectionPairsStatus: z.enum([
-    'queued', 'running', 'awaiting_review', 'approved', 'edited', 'stale', 'complete', 'error'
-  ]),
-  connectionPairsEvaluation: z.object({
-    score: z.number(),
-    passed: z.boolean(),
-    feedback: z.string(),
-    categories: z.record(z.object({
-      score: z.number(),
-      feedback: z.string(),
-    })).optional(),
-  }).nullable().optional(),
-  sections: z.record(z.object({
-    id: z.string(),
-    title: z.string().optional(),
-    content: z.string(),
-    status: z.enum([
-      'queued', 'generating', 'awaiting_review', 'approved', 'edited', 'stale', 'error'
-    ]),
-    evaluation: z.object({
+  researchEvaluation: z
+    .object({
       score: z.number(),
       passed: z.boolean(),
       feedback: z.string(),
-      categories: z.record(z.object({
-        score: z.number(),
-        feedback: z.string(),
-      })).optional(),
-    }).nullable().optional(),
-    lastUpdated: z.string(),
-  }).optional()),
-  requiredSections: z.array(z.string()),
+      categories: z
+        .record(
+          z.object({
+            score: z.number(),
+            feedback: z.string(),
+          })
+        )
+        .optional(),
+    })
+    .nullable()
+    .optional(),
+  solutionResults: z.record(z.any()).optional(),
+  solutionStatus: z.enum([
+    "queued",
+    "running",
+    "awaiting_review",
+    "approved",
+    "edited",
+    "stale",
+    "complete",
+    "error",
+    "needs_revision",
+  ]),
+  solutionEvaluation: z
+    .object({
+      score: z.number(),
+      passed: z.boolean(),
+      feedback: z.string(),
+      categories: z
+        .record(
+          z.object({
+            score: z.number(),
+            feedback: z.string(),
+          })
+        )
+        .optional(),
+    })
+    .nullable()
+    .optional(),
+  connections: z.array(z.any()).optional(),
+  connectionsStatus: z.enum([
+    "queued",
+    "running",
+    "awaiting_review",
+    "approved",
+    "edited",
+    "stale",
+    "complete",
+    "error",
+    "needs_revision",
+  ]),
+  connectionsEvaluation: z
+    .object({
+      score: z.number(),
+      passed: z.boolean(),
+      feedback: z.string(),
+      categories: z
+        .record(
+          z.object({
+            score: z.number(),
+            feedback: z.string(),
+          })
+        )
+        .optional(),
+    })
+    .nullable()
+    .optional(),
+  // We use a custom validation for the Map type since Zod doesn't have direct Map support
+  sections: z
+    .custom<Map<SectionType, SectionData>>(
+      (val) => val instanceof Map,
+      "Sections must be a Map object."
+    )
+    .refine(
+      (map) => {
+        // Validate each entry in the map
+        for (const [key, value] of map.entries()) {
+          // 1. Validate Key: Check if the key is a valid SectionType enum value
+          if (!Object.values(SectionType).includes(key as SectionType)) {
+            return false; // Invalid key
+          }
+
+          // 2. Validate Value: Check if the value conforms to SectionData structure
+          //    (We can do basic checks or use a nested Zod schema for SectionData if needed)
+          if (
+            !value ||
+            typeof value.id !== "string" ||
+            value.id !== key || // Ensure section id matches the map key
+            typeof value.content !== "string" ||
+            typeof value.status !== "string" || // Basic check for status string
+            !Object.values(SectionProcessingStatus).includes(
+              value.status as SectionProcessingStatus
+            ) || // Check if status is valid enum value
+            typeof value.lastUpdated !== "string" ||
+            (value.evaluation !== undefined &&
+              value.evaluation !== null &&
+              typeof value.evaluation.score !== "number") // Basic check for evaluation
+          ) {
+            return false; // Invalid value structure
+          }
+        }
+        return true; // All entries are valid
+      },
+      {
+        message:
+          "Sections Map contains invalid keys (must be SectionType) or values (must conform to SectionData).",
+      }
+    ),
+  requiredSections: z.array(z.nativeEnum(SectionType)),
   currentStep: z.string().nullable(),
   activeThreadId: z.string(),
   messages: z.array(z.any()), // BaseMessage is complex to validate with Zod
@@ -222,46 +468,17 @@ export const OverallProposalStateSchema = z.object({
   userId: z.string().optional(),
   createdAt: z.string(),
   lastUpdatedAt: z.string(),
-});
-
-/**
- * LangGraph State Annotation Definition for OverallProposalState
- * Defines how state should be updated by nodes in the graph
- */
-export const ProposalStateAnnotation = Annotation.Root<OverallProposalState>({
-  // Messages use the built-in messages reducer
-  messages: Annotation<BaseMessage[]>({
-    reducer: messagesStateReducer,
-  }),
-  
-  // Sections need custom handling for immutable updates
-  sections: Annotation<{ [sectionId: string]: SectionData | undefined }>({
-    reducer: sectionsReducer,
-  }),
-  
-  // Errors should be accumulated
-  errors: Annotation<string[]>({
-    reducer: errorsReducer,
-  }),
-  
-  // Simple value replacement for other fields
-  rfpDocument: Annotation(),
-  researchResults: Annotation(),
-  researchStatus: Annotation(),
-  researchEvaluation: Annotation(),
-  solutionSoughtResults: Annotation(),
-  solutionSoughtStatus: Annotation(),
-  solutionSoughtEvaluation: Annotation(),
-  connectionPairs: Annotation(),
-  connectionPairsStatus: Annotation(),
-  connectionPairsEvaluation: Annotation(),
-  requiredSections: Annotation(),
-  currentStep: Annotation(),
-  activeThreadId: Annotation(),
-  projectName: Annotation(),
-  userId: Annotation(),
-  createdAt: Annotation(),
-  lastUpdatedAt: Annotation(),
+  status: z.enum([
+    "queued",
+    "running",
+    "awaiting_review",
+    "approved",
+    "edited",
+    "stale",
+    "complete",
+    "error",
+    "needs_revision",
+  ]),
 });
 
 /**
@@ -271,18 +488,18 @@ export function createInitialProposalState(
   threadId: string,
   userId?: string,
   projectName?: string
-): OverallProposalState {
+): ProposalState {
   const timestamp = new Date().toISOString();
-  
+
   return {
     rfpDocument: {
-      id: '',
-      status: 'not_started',
+      id: "",
+      status: "not_started",
     },
-    researchStatus: 'queued',
-    solutionSoughtStatus: 'queued',
-    connectionPairsStatus: 'queued',
-    sections: {},
+    researchStatus: "queued",
+    solutionStatus: "queued",
+    connectionsStatus: "queued",
+    sections: new Map(),
     requiredSections: [],
     currentStep: null,
     activeThreadId: threadId,
@@ -292,6 +509,7 @@ export function createInitialProposalState(
     projectName,
     createdAt: timestamp,
     lastUpdatedAt: timestamp,
+    status: "queued",
   };
 }
 
@@ -299,6 +517,6 @@ export function createInitialProposalState(
  * Validate state against schema
  * @returns The validated state or throws error if invalid
  */
-export function validateProposalState(state: OverallProposalState): OverallProposalState {
-  return OverallProposalStateSchema.parse(state);
+export function validateProposalState(state: ProposalState): ProposalState {
+  return ProposalStateSchema.parse(state);
 }
