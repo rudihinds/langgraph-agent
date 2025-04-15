@@ -20,6 +20,7 @@ We use two Supabase tables:
 2. **`proposal_sessions`** - Tracks metadata about active sessions
 
 This system works like a "save game" feature in video games:
+
 - The state is automatically saved after each step
 - Users can continue from their last saved point
 - Each user only sees their own sessions
@@ -40,7 +41,7 @@ const threadId = researchAgent.generateThreadId(proposalId);
 const result = await researchAgent.invoke(documentId, {
   userId: currentUser.id,
   proposalId: proposal.id,
-  threadId
+  threadId,
 });
 
 // ***** this needs looking at *****
@@ -61,7 +62,7 @@ const threadId = yourApp.getStoredThreadId();
 // Continue the session
 const result = await researchAgent.continue(threadId, {
   userId: currentUser.id,
-  proposalId: proposal.id
+  proposalId: proposal.id,
 });
 ```
 
@@ -75,13 +76,13 @@ const result = await researchAgent.invoke(documentId, options);
 if (result.success) {
   // Use the agent state
   const researchFindings = result.state.deepResearchResults;
-  
+
   // Display in UI
   renderFindings(researchFindings);
 } else {
   // Handle errors
   displayError(result.error);
-  
+
   // Optional: attempt recovery
   offerSessionRecovery();
 }
@@ -92,14 +93,17 @@ if (result.success) {
 Here's what happens behind the scenes:
 
 1. **Thread ID Generation**:
+
    - Each session gets a unique ID combining `componentName_hash_timestamp`
    - Example: `research_a1b2c3d4e5_1634567890123`
 
 2. **State Serialization**:
+
    - LangGraph state is converted to JSON and stored in Supabase
    - Includes conversation history, research results, and status
 
 3. **Message Pruning**:
+
    - Long conversations are automatically pruned to prevent context overflow
    - System messages and recent interactions are preserved
    - This happens transparently using `pruningMessagesStateReducer`
@@ -130,12 +134,12 @@ export async function POST(req: Request) {
 
   try {
     let result;
-    
+
     if (threadId) {
       // Continue existing session
       result = await researchAgent.continue(threadId, {
         userId: user.id,
-        proposalId
+        proposalId,
       });
     } else {
       // Start new session
@@ -143,27 +147,30 @@ export async function POST(req: Request) {
       result = await researchAgent.invoke(documentId, {
         userId: user.id,
         proposalId,
-        threadId: newThreadId
+        threadId: newThreadId,
       });
-      
+
       // Include the thread ID in the response
       if (result.success) {
         result.threadId = newThreadId;
       }
     }
-    
+
     return new Response(JSON.stringify(result), {
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Research API error:", error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: "Server error" 
-    }), { 
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Server error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 ```
@@ -173,10 +180,12 @@ export async function POST(req: Request) {
 ### Common Issues
 
 1. **Session Not Found**:
+
    - Ensure the thread ID exists and belongs to the current user
    - Check if the session was cleaned up due to inactivity
 
 2. **Permission Errors**:
+
    - Verify the Supabase service role key is set correctly
    - Ensure RLS policies are correctly configured
 
@@ -202,14 +211,14 @@ const checkpointer = new SupabaseCheckpointer({
   // Required
   supabaseUrl: process.env.SUPABASE_URL!,
   supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  
+
   // Optional
-  tableName: "proposal_checkpoints",  // Default
-  sessionTableName: "proposal_sessions",  // Default
-  maxRetries: 3,  // Default
-  retryDelay: 500,  // Default in ms
-  logger: console,  // Default
-  
+  tableName: "proposal_checkpoints", // Default
+  sessionTableName: "proposal_sessions", // Default
+  maxRetries: 3, // Default
+  retryDelay: 500, // Default in ms
+  logger: console, // Default
+
   // Functions to get user and proposal IDs
   userIdGetter: async () => userId,
   proposalIdGetter: async () => proposalId,
@@ -225,3 +234,10 @@ With Supabase persistence:
 - The system scales naturally with your Supabase database
 
 This implementation follows best practices for both LangGraph and Supabase, providing a robust foundation for persistent agent conversations.
+
+## Further Reading
+
+For a complete understanding of the database schema and relationships:
+
+- [Database Schema and Relationships](./database-schema-relationships.md) - Detailed documentation of all tables, relationships, and security policies
+- [Process Handling Architecture](./process-handling-architecture.md) - How persistence integrates with the overall system architecture

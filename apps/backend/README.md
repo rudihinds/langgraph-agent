@@ -155,6 +155,15 @@ npm run test:integration # Run integration tests only
 4. Test both success and error paths
 5. Verify state transitions and error recovery
 
+## Database Schema
+
+The system relies on several interconnected database tables for managing proposals, documents, and agent sessions. For a detailed explanation of the database schema and relationships:
+
+- See [docs/database-schema-relationships.md](../../docs/database-schema-relationships.md) for complete documentation
+- Table definitions can be found in `lib/schema.sql` and `lib/state/schema.sql`
+- Foreign key relationships ensure data integrity across user sessions
+- Row Level Security (RLS) policies protect user data
+
 ## API Routes
 
 The backend exposes the following API routes when running:

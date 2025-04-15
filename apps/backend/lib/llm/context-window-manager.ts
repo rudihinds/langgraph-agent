@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from "events";
-import { Logger } from "../../logger.js";
+import { Logger } from "../logger.js";
 import { LLMFactory } from "./llm-factory.js";
 import { LLMCompletionOptions } from "./types.js";
 

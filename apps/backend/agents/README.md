@@ -108,17 +108,61 @@ export function createAgentGraph() {
 }
 ```
 
-## Persistence
+## Persistence / Checkpointing
 
-We use `SupabaseCheckpointer` for state persistence:
+To ensure agents can resume their work and maintain state across multiple interactions or server restarts, we use the official LangGraph checkpointer for Postgres, compatible with Supabase.
 
-```typescript
-agentGraph.addCheckpointer(
-  new SupabaseCheckpointer("agent-name", {
-    default: pruneMessageHistory,
-  })
-);
-```
+**Package:** `@langchain/langgraph-checkpoint-postgres`
+
+**Class:** `PostgresSaver` (Note: Use `PostgresSaver`, not `AsyncPostgresSaver` for the JavaScript implementation as identified during development)
+
+**Implementation Steps:**
+
+1.  **Install:** Add the package to your backend dependencies:
+    ```bash
+    npm install @langchain/langgraph-checkpoint-postgres
+    # or yarn add / pnpm add
+    ```
+2.  **Environment Variable:** Ensure your Supabase database connection string is available as an environment variable (e.g., `DATABASE_URL`). Format: `postgresql://[user]:[password]@[host]:[port]/[database]`
+3.  **Import:** Import the saver in your agent's main file (e.g., `index.ts`):
+    ```typescript
+    import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+    ```
+4.  **Instantiate:** Create an instance using the static `fromConnString` method:
+    ```typescript
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      throw new Error("DATABASE_URL environment variable is not set.");
+    }
+    const checkpointer = PostgresSaver.fromConnString(dbUrl);
+    ```
+5.  **Setup Tables (First Run):** Before compiling the graph, ensure the necessary database tables for the checkpointer exist. Call the `setup` method:
+    ```typescript
+    // Place this after instantiation, before graph.compile()
+    await checkpointer.setup();
+    ```
+    _Note: This typically only needs to create tables on the very first run, but calling it each time is safe._
+6.  **Compile Graph:** Pass the checkpointer instance to the `compile` method:
+    ```typescript
+    const compiledGraph = graph.compile({
+      checkpointer,
+      // other compile options...
+    });
+    ```
+7.  **Invoke with `thread_id`:** When invoking the compiled graph, provide a `thread_id` in the configuration object to save or resume a specific session:
+    ```typescript
+    const config = {
+      configurable: {
+        thread_id: "some-unique-session-id",
+      },
+    };
+    const finalState = await compiledGraph.invoke(initialState, config);
+    ```
+    _If no `thread_id` is provided when a checkpointer is configured, LangGraph will automatically generate one for the new thread._
+
+**Reference:** [LangGraph JS Docs - Postgres Persistence](https://langchain-ai.github.io/langgraphjs/how-tos/persistence-postgres/)
+
+This approach ensures state is reliably saved to your Supabase database, following the recommended patterns from the LangGraph documentation.
 
 ## Error Handling
 

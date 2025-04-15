@@ -1,11 +1,13 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { StateGraph, END } from "@langchain/langgraph";
+import { StateGraph, END, StateGraphArgs } from "@langchain/langgraph";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { v4 as uuidv4 } from "uuid";
+import { HumanMessage } from "@langchain/core/messages";
 
 import {
   OrchestratorState,
   getInitialOrchestratorState,
-  orchestratorStateSchema,
+  OrchestratorStateAnnotation,
 } from "./state.js";
 import {
   analyzeUserQuery,
@@ -24,6 +26,10 @@ import {
   getAgentInstance,
   RegisterAgentOptions,
 } from "./agent-integration.js";
+import { Logger } from "@/lib/logger.js";
+
+// Initialize logger
+const logger = Logger.getInstance();
 
 /**
  * Options for creating a WorkflowOrchestrator
@@ -50,14 +56,14 @@ export interface WorkflowOrchestratorOptions {
   agents?: RegisterAgentOptions[];
 
   /**
-   * Whether to persist state between steps
-   */
-  persistState?: boolean;
-
-  /**
    * Initial context for the orchestrator
    */
   initialContext?: Record<string, any>;
+
+  /**
+   * Thread ID for this orchestrator instance
+   */
+  threadId?: string;
 }
 
 /**
@@ -90,14 +96,21 @@ export class WorkflowOrchestrator {
   private initialState: OrchestratorState;
 
   /**
-   * Thread ID for this orchestrator instance
+   * Checkpointer instance for persistence
+   */
+  private readonly checkpointer: PostgresSaver;
+
+  /**
+   * Thread ID for this orchestrator instance (used for persistence)
    */
   private threadId: string;
 
   /**
    * Compiler instance for the state graph
    */
-  private compiler: any;
+  private compiler: ReturnType<
+    StateGraph<OrchestratorState>["compile"]
+  > | null = null;
 
   /**
    * Creates a new WorkflowOrchestrator
@@ -108,15 +121,23 @@ export class WorkflowOrchestrator {
     this.userId = options.userId;
     this.projectId = options.projectId;
     this.config = mergeConfig(options.config);
-    this.threadId = uuidv4();
+    this.threadId = options.threadId || uuidv4();
+
+    // --- Persistence Setup ---
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      logger.error(
+        "DATABASE_URL environment variable is not set for Orchestrator."
+      );
+      throw new Error("Database connection URL is missing.");
+    }
+    this.checkpointer = PostgresSaver.fromConnString(dbUrl);
 
     // Create initial state
     this.initialState = getInitialOrchestratorState(
       this.userId,
       this.projectId
     );
-
-    // Add initial context if provided
     if (options.initialContext) {
       this.initialState.context = {
         ...this.initialState.context,
@@ -124,57 +145,61 @@ export class WorkflowOrchestrator {
       };
     }
 
-    // Create the state graph
-    this.graph = new StateGraph({
-      channels: { state: orchestratorStateSchema },
-    });
+    // Create the state graph using the Annotation, inferring the state type
+    this.graph = new StateGraph(OrchestratorStateAnnotation);
 
     // Add nodes to the graph
-    this.graph.addNode("analyzeUserQuery", {
-      action: analyzeUserQuery,
-      retry: this.config.maxRetries,
-    });
-    this.graph.addNode("determineWorkflow", {
-      action: determineWorkflow,
-      retry: this.config.maxRetries,
-    });
-    this.graph.addNode("startWorkflow", {
-      action: startWorkflow,
-    });
-    this.graph.addNode("executeNextStep", {
-      action: executeNextStep,
-      retry: this.config.maxRetries,
-    });
-    this.graph.addNode("completeWorkflow", {
-      action: completeWorkflow,
-    });
-    this.graph.addNode("handleError", {
-      action: handleError,
-    });
+    this.graph
+      .addNode("analyzeUserQuery", analyzeUserQuery)
+      .addNode("determineWorkflow", determineWorkflow)
+      .addNode("startWorkflow", startWorkflow)
+      .addNode("executeNextStep", executeNextStep)
+      .addNode("completeWorkflow", completeWorkflow)
+      .addNode("handleError", handleError);
 
-    // Add conditional edge
-    this.graph.addConditionalEdges("executeNextStep", routeWorkflow, {
-      continue: "executeNextStep",
-      complete: "completeWorkflow",
-      error: "handleError",
-    });
-
-    // Connect the nodes
+    // Add edges and conditional logic
     this.graph.addEdge("analyzeUserQuery", "determineWorkflow");
     this.graph.addEdge("determineWorkflow", "startWorkflow");
     this.graph.addEdge("startWorkflow", "executeNextStep");
     this.graph.addEdge("completeWorkflow", END);
     this.graph.addEdge("handleError", END);
 
+    // Conditional routing after executing a step
+    this.graph.addConditionalEdges("executeNextStep", routeWorkflow, {
+      continue: "executeNextStep",
+      complete: "completeWorkflow",
+      error: "handleError",
+    });
+
     // Set the entry point
     this.graph.setEntryPoint("analyzeUserQuery");
 
-    // Compile the graph
-    this.compiler = this.graph.compile();
-
     // Register pre-defined agents if provided
     if (options.agents && options.agents.length > 0) {
+      // Consider making agent registration async or part of an init step
+      // if it needs to modify state used *during* graph compilation/setup
       this.registerAgents(options.agents);
+    }
+  }
+
+  /**
+   * Initializes persistence and compiles the graph if not already done.
+   */
+  async initializePersistence() {
+    if (!this.compiler) {
+      try {
+        logger.info("Setting up orchestrator persistence tables...");
+        await this.checkpointer.setup();
+        logger.info("Persistence tables setup complete. Compiling graph...");
+        this.compiler = this.graph.compile({ checkpointer: this.checkpointer });
+        logger.info("Orchestrator graph compiled with persistence.");
+      } catch (error) {
+        logger.error("Failed to initialize persistence or compile graph", {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw error; // Re-throw critical initialization error
+      }
     }
   }
 
@@ -198,17 +223,21 @@ export class WorkflowOrchestrator {
    */
   public async registerAgent(options: RegisterAgentOptions): Promise<string> {
     try {
-      // Generate agent ID if not provided
       const agentId = options.id || uuidv4();
       options.id = agentId;
-
-      // Update the initial state with the new agent
       this.initialState = await registerAgent(this.initialState, options);
-
+      logger.info("Registered agent", {
+        agentId: options.id,
+        name: options.name,
+      });
       return agentId;
-    } catch (error) {
-      console.error("Error registering agent:", error);
-      throw new Error(`Failed to register agent: ${error.message}`);
+    } catch (error: unknown) {
+      let message = "An unknown error occurred during agent registration.";
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      logger.error("Error registering agent", { error: message });
+      throw new Error(`Failed to register agent: ${message}`);
     }
   }
 
@@ -218,7 +247,9 @@ export class WorkflowOrchestrator {
    * @param agentId ID of the agent to unregister
    */
   public unregisterAgent(agentId: string): void {
+    // Similar caution applies here regarding direct initialState modification
     this.initialState = unregisterAgent(this.initialState, agentId);
+    logger.info("Unregistered agent", { agentId });
   }
 
   /**
@@ -242,51 +273,59 @@ export class WorkflowOrchestrator {
    *
    * @param query The user's query to process
    * @param context Optional additional context for this query
+   * @param threadId Optional thread ID to resume an existing session
    * @returns Result of the workflow execution
    */
   public async processQuery(
     query: string,
-    context?: Record<string, any>
+    context?: Record<string, any>,
+    threadId?: string
   ): Promise<OrchestratorState> {
+    await this.initializePersistence(); // Ensure compiled with persistence
+    if (!this.compiler) {
+      // Check compilation success
+      throw new Error("Orchestrator graph failed to compile.");
+    }
+
+    const currentThreadId = threadId || this.threadId;
+
+    // Initial input for the graph for this run.
+    // If resuming, the checkpointer loads the actual state.
+    // We only provide the *new* information (message, context).
+    const invocationState = {
+      messages: [new HumanMessage(query)],
+      context: { ...this.initialState.context, ...context }, // Merge context
+    };
+
+    const config = {
+      configurable: {
+        thread_id: currentThreadId,
+      },
+    };
+
+    logger.info(`Processing query in orchestrator`, {
+      threadId: currentThreadId,
+    });
+
     try {
-      // Create the input state
-      const inputState: OrchestratorState = {
-        ...this.initialState,
-        lastUserQuery: query,
-        context: {
-          ...this.initialState.context,
-          ...context,
-        },
-      };
-
-      // Create event stream config
-      const config = {
-        configurable: {
-          // Add any dynamic configuration here
-        },
-      };
-
-      // Run the graph
-      const result = await this.compiler.invoke(
-        {
-          state: inputState,
-        },
-        config
-      );
-
-      return result.state;
-    } catch (error) {
-      console.error("Error processing query:", error);
-
-      // Return error state
-      return {
-        ...this.initialState,
-        lastUserQuery: query,
-        errors: [
-          ...this.initialState.errors,
-          `Error processing query: ${error.message}`,
-        ],
-      };
+      const result = await this.compiler.invoke(invocationState, config);
+      logger.info(`Orchestrator query processing complete`, {
+        threadId: currentThreadId,
+      });
+      return result;
+    } catch (error: unknown) {
+      let message = "An unknown error occurred during query processing.";
+      let stack: string | undefined;
+      if (error instanceof Error) {
+        message = error.message;
+        stack = error.stack;
+      }
+      logger.error(`Error processing orchestrator query`, {
+        threadId: currentThreadId,
+        error: message,
+        stack,
+      });
+      throw error; // Re-throw original error after logging
     }
   }
 
@@ -298,45 +337,54 @@ export class WorkflowOrchestrator {
    * @returns Result of the workflow execution
    */
   public async executeWorkflow(
-    workflowTemplate: any,
-    context?: Record<string, any>
+    workflowTemplate: any, // Consider defining a type for WorkflowTemplate
+    context?: Record<string, any>,
+    threadId?: string
   ): Promise<OrchestratorState> {
+    await this.initializePersistence();
+    if (!this.compiler) {
+      throw new Error("Orchestrator graph failed to compile.");
+    }
+    const currentThreadId = threadId || uuidv4(); // Generate new thread ID if not provided
+
+    logger.info("Executing workflow directly", {
+      workflowId: workflowTemplate.id,
+      threadId: currentThreadId,
+    });
+
     try {
-      // Create input state with the workflow already determined
-      const inputState: OrchestratorState = {
-        ...this.initialState,
+      const inputState: Partial<OrchestratorState> = {
+        // Minimal state needed to start this specific workflow
         workflows: [workflowTemplate],
         currentWorkflowId: workflowTemplate.id,
-        context: {
-          ...this.initialState.context,
-          ...context,
-        },
+        context: { ...this.initialState.context, ...context },
+        userId: this.userId, // Pass necessary identifiers
+        projectId: this.projectId,
       };
 
-      // Run the graph starting from the startWorkflow node
-      const result = await this.compiler.invoke(
-        {
-          state: inputState,
-        },
-        {
-          startNode: "startWorkflow",
-        }
-      );
-
-      return result.state;
-    } catch (error) {
-      console.error("Error executing workflow:", error);
-
-      // Return error state
-      return {
-        ...this.initialState,
-        workflows: [workflowTemplate],
-        currentWorkflowId: workflowTemplate.id,
-        errors: [
-          ...this.initialState.errors,
-          `Error executing workflow: ${error.message}`,
-        ],
+      const config = {
+        configurable: { thread_id: currentThreadId },
       };
+
+      // Invoke, potentially starting at a specific node if applicable
+      const result = await this.compiler.invoke(inputState, config);
+
+      logger.info("Direct workflow execution complete", {
+        threadId: currentThreadId,
+      });
+      return result;
+    } catch (error: unknown) {
+      let message =
+        "An unknown error occurred during direct workflow execution.";
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      logger.error("Error executing workflow", {
+        workflowId: workflowTemplate.id,
+        threadId: currentThreadId,
+        error: message,
+      });
+      throw error; // Re-throw original error after logging
     }
   }
 
@@ -344,6 +392,7 @@ export class WorkflowOrchestrator {
    * Gets the current orchestrator state
    */
   public getState(): OrchestratorState {
+    // Caution: might not reflect persisted state if invoked separately
     return this.initialState;
   }
 
@@ -362,7 +411,7 @@ export class WorkflowOrchestrator {
  * @returns A new WorkflowOrchestrator instance
  */
 export function createWorkflowOrchestrator(
-  options: WorkflowOrchestratorOptions
+  options: WorkflowOrchestratorOptions & { threadId?: string }
 ): WorkflowOrchestrator {
   return new WorkflowOrchestrator(options);
 }

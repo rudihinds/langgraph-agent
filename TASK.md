@@ -41,6 +41,8 @@
 - [x] Implement test harness for LangGraph components
 - [x] Configure API keys for LLM services
 - [x] Fix ESM compatibility issues in agent files
+  - [x] Update relative imports in agent files to use `.js` extension (2024-07-22)
+  - [x] Remove redundant `.js`/`.d.ts` files from `proposal-agent` directory (2024-07-22)
 
 ### Persistence Layer
 

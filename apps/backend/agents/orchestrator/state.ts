@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  Annotation,
+  BaseMessage,
+  messagesStateReducer,
+} from "@langchain/langgraph";
 import { StateFingerprint } from "../../lib/llm/loop-prevention-utils.js";
 
 /**
@@ -182,6 +187,45 @@ export const orchestratorStateSchema = z.object({
       timeoutSeconds: z.number().optional(),
     })
     .optional(),
+});
+
+// --- Define the LangGraph Annotation ---
+// This maps the interface to the structure LangGraph expects
+export const OrchestratorStateAnnotation = Annotation.Root({
+  // Map standard fields directly
+  userId: Annotation<string>(),
+  projectId: Annotation<string>(),
+  agents: Annotation<AgentMetadata[]>(),
+  workflows: Annotation<Workflow[]>(),
+  currentWorkflowId: Annotation<string | undefined>(),
+  errors: Annotation<string[]>(),
+  lastAgentResponse: Annotation<any | undefined>(),
+  lastUserQuery: Annotation<string | undefined>(),
+  context: Annotation<Record<string, any>>(),
+  stateHistory: Annotation<StateFingerprint[] | undefined>(),
+  metadata: Annotation<
+    | {
+        updatedAt?: string;
+        initialized?: boolean;
+        lastNodeVisited?: string;
+        [key: string]: any;
+      }
+    | undefined
+  >(),
+  config: Annotation<
+    | {
+        maxRetries?: number;
+        retryDelay?: number;
+        timeoutSeconds?: number;
+        [key: string]: any;
+      }
+    | undefined
+  >(),
+
+  // Use the built-in reducer for messages
+  messages: Annotation<BaseMessage[]>({
+    reducer: messagesStateReducer, // Handles appending/merging messages correctly
+  }),
 });
 
 /**

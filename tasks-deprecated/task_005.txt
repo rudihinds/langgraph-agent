@@ -1,0 +1,224 @@
+# Task ID: 5
+# Title: Implement Research Agent Subgraph
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Create the research capabilities for analyzing RFP documents and funder information
+# Details:
+Implement the Research Agent subgraph to analyze RFP documents, extract key requirements, and gather funder information. Create nodes for document processing, research planning, and research aggregation. Integrate with vector store for knowledge retrieval. Utilize LangGraph features for context window management when processing large RFP documents. Implement streaming patterns to efficiently return research results back to the orchestrator. Add fallback strategies for handling API failures during research operations.
+
+# Test Strategy:
+Test with sample RFP documents to verify extraction of key requirements. Verify proper handling of research gathering and aggregation. Test integration with vector store for information retrieval. Validate context window management with large documents. Test streaming of research results. Verify fallback strategies during simulated API failures.
+
+# Subtasks:
+## 1. Define Research Agent State and Interface [pending]
+### Dependencies: None
+### Description: Create the state model and interface for the Research Agent using LangGraph.js state annotations
+### Details:
+1. Define a clear state model using Annotation.Root with:
+   - document: Object (original RFP document and metadata)
+   - chunks: Array (document split into manageable pieces)
+   - extractedRequirements: Array (structured requirements extracted from RFP)
+   - funderInfo: Object (information about the funding organization)
+   - researchResults: Object (final aggregated research findings)
+   - status: Object (tracking processing status and errors)
+
+2. Create a well-defined interface for orchestrator integration:
+   - Define input contract (what the research agent expects)
+   - Define output contract (what it returns to the orchestrator)
+   - Specify state transition patterns
+
+3. Implement state validation utilities to ensure type safety
+
+4. Create helper functions for immutable state updates
+
+5. Document the state model with comprehensive JSDoc comments
+
+## 2. Implement Document Chunking and Extraction Node [pending]
+### Dependencies: None
+### Description: Create a node for splitting RFP documents into manageable chunks and extracting structured requirements
+### Details:
+1. Implement a document chunking strategy with:
+   - Configuration for chunk size and overlap
+   - Metadata preservation for each chunk
+   - Special handling for tables, lists, and structured content
+
+2. Create extraction node with:
+   - Clear input/output contract
+   - Progressive extraction pattern that handles large documents
+   - Structured output format for requirements with categories
+   - Error handling for malformed or incomplete documents
+
+3. Add validation for extracted data to ensure consistency
+
+4. Implement testing with sample RFP documents to verify extraction quality
+
+5. Add detailed logging for debugging extraction issues
+
+## 3. Create Funder Information Extraction Tools [pending]
+### Dependencies: None
+### Description: Implement tool nodes for gathering information about funding organizations and extracting eligibility criteria
+### Details:
+1. Create structured tool nodes for funding organization research:
+   - Web search tool for finding funder information
+   - Database lookup tool for known funding organizations
+   - Taxonomy classifier for categorizing funder types
+   - Eligibility criteria extraction tool
+
+2. Implement standard LangGraph tool pattern with:
+   - Clear input/output schema definitions
+   - Error handling and retry mechanisms
+   - Performance monitoring and logging
+   - Fallback strategies for API failures
+
+3. Create helper utilities for tool results processing:
+   - Result validation and normalization
+   - Confidence scoring for extracted information
+   - Entity resolution for disambiguating organizations
+
+4. Add caching layer for performance optimization:
+   - LRU cache for frequent funder lookups
+   - Persistent cache for repeated queries
+   - Cache invalidation strategy
+
+## 4. Implement Research Planning and Workflow Node [pending]
+### Dependencies: 5.2
+### Description: Create a node that plans and coordinates the research workflow based on document analysis
+### Details:
+1. Implement a research planning node that:
+   - Analyzes document context to determine research needs
+   - Creates structured research plans with prioritized steps
+   - Dynamically adjusts plans based on emerging information
+   - Handles document type-specific research strategies
+
+2. Design conditional edges for workflow control:
+   - Route to appropriate research tools based on context
+   - Implement decision points for research depth
+   - Create retry paths for failed research steps
+   - Define termination conditions
+
+3. Integrate with state tracking:
+   - Track research progress and completion status
+   - Maintain context between research steps
+   - Implement checkpointing for long-running research
+   - Store intermediate results
+
+4. Add comprehensive error handling:
+   - Detect and recover from API failures
+   - Implement graceful degradation for missing information
+   - Create fallback strategies for each research step
+   - Provide meaningful error messages
+
+## 5. Create Vector Store Integration [pending]
+### Dependencies: 5.2
+### Description: Implement integration with vector database for efficient document storage and retrieval
+### Details:
+1. Set up vector store integration:
+   - Configure document embedding generation
+   - Implement efficient chunking strategy for vectorization
+   - Create indexing utilities for document management
+   - Add metadata preservation for context retention
+
+2. Implement semantic search capabilities:
+   - Create similarity search functions with configurable parameters
+   - Add hybrid search options combining keyword and vector search
+   - Implement filtering by metadata (date, source, type)
+   - Create relevance scoring mechanism
+
+3. Design efficient document retrieval patterns:
+   - Implement progressive loading for large document sets
+   - Create context-aware retrieval strategies
+   - Add result reranking for improved relevance
+   - Implement pagination and batching for performance
+
+4. Add performance optimizations:
+   - Implement caching layer for frequent queries
+   - Create index update mechanisms for document changes
+   - Add background processing for large indexing operations
+   - Implement query optimization techniques
+
+## 6. Implement Research Aggregation and Results Formatting [pending]
+### Dependencies: 5.4, 5.5
+### Description: Create a node to compile, synthesize, and format research findings for consumption by other components
+### Details:
+1. Implement research aggregation node:
+   - Collect and merge results from various research sources
+   - Resolve conflicts and contradictions in gathered information
+   - Prioritize findings based on relevance and confidence scores
+   - Create structured summary of key insights
+
+2. Design results formatting utilities:
+   - Implement standardized output schema for consistent consumption
+   - Create formatters for different downstream components
+   - Add metadata enrichment for traceability
+   - Implement progressive result streaming
+
+3. Add quality assurance checks:
+   - Validate completeness of research findings
+   - Verify factual consistency across sources
+   - Identify information gaps requiring further research
+   - Implement confidence scoring for aggregated results
+
+4. Create integration with orchestrator:
+   - Implement clean interfaces for result consumption
+   - Add event emission for research completion
+   - Create progress tracking for long-running research
+   - Implement graceful termination and resumption
+
+## 7. Create Human-in-the-Loop Verification Node [pending]
+### Dependencies: None
+### Description: Implement human verification capability for critical research findings and decisions
+### Details:
+1. Design human-in-the-loop verification node:
+   - Create interruption points for human verification
+   - Implement approval/rejection workflow
+   - Add feedback incorporation mechanisms
+   - Create UI integration points for human interaction
+
+2. Implement verification state management:
+   - Track verification status and decisions
+   - Handle paused workflows during verification
+   - Create state persistence during human review
+   - Implement resumption after human input
+
+3. Add selective verification logic:
+   - Create criteria for determining verification needs
+   - Implement confidence thresholds for automatic vs. manual verification
+   - Add urgency/priority indicators for verification requests
+   - Create batching logic for efficient human review
+
+4. Implement feedback integration:
+   - Design schema for structured human feedback
+   - Create mechanisms to incorporate feedback into research
+   - Implement learning from feedback for future research
+   - Add documentation of human interventions
+
+## 8. Create Comprehensive Testing Suite [pending]
+### Dependencies: 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+### Description: Implement unit, integration, and end-to-end tests for the Research Agent subgraph
+### Details:
+1. Create unit tests for individual components:
+   - Test state management and reducers
+   - Verify document processing and chunking functionality
+   - Test funder information extraction tools
+   - Validate vector store integration
+   - Test research aggregation logic
+
+2. Implement integration tests for node combinations:
+   - Test workflow transitions between nodes
+   - Verify proper state passing between components
+   - Test error handling and recovery across nodes
+   - Validate end-to-end research pipelines
+
+3. Set up test fixtures and mocks:
+   - Create sample RFP documents of various types
+   - Mock vector store responses for consistent testing
+   - Create simulated API responses for external tools
+   - Set up database mocks for funder information
+
+4. Add performance and load testing:
+   - Test with varying document sizes and complexities
+   - Measure memory usage during long-running research
+   - Test concurrent research operations
+   - Measure and optimize API call frequency
+

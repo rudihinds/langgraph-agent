@@ -170,6 +170,14 @@ For detailed information about our authentication implementation and testing:
 - See [SUPABASE_IMPLEMENTATION.md](./SUPABASE_IMPLEMENTATION.md) for implementation details
 - See [AUTHENTICATION_TESTING.md](./AUTHENTICATION_TESTING.md) for testing approach
 
+## Documentation
+
+For detailed information about our implementation:
+
+- See [SUPABASE_IMPLEMENTATION.md](./SUPABASE_IMPLEMENTATION.md) for authentication implementation details
+- See [AUTHENTICATION_TESTING.md](./AUTHENTICATION_TESTING.md) for authentication testing approach
+- See [docs/database-schema-relationships.md](./docs/database-schema-relationships.md) for database schema and relationships
+
 ## License
 
 MIT

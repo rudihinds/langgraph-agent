@@ -1,6 +1,10 @@
 import { StateGraph } from "@langchain/langgraph";
 import { HumanMessage } from "@langchain/core/messages";
-import { OrchestratorStateAnnotation, OrchestratorState, WorkflowStatus } from "./state.js";
+import {
+  OrchestratorStateAnnotation,
+  OrchestratorState,
+  WorkflowStatus,
+} from "./state.js";
 import { OrchestratorConfig, createDefaultConfig } from "./configuration.js";
 import { OrchestratorNode, createOrchestratorNode } from "./nodes.js";
 
@@ -13,7 +17,7 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
   // Create config and node instance
   const orchestratorConfig = createDefaultConfig(config);
   const orchestratorNode = createOrchestratorNode(orchestratorConfig);
-  
+
   // Create the state graph with our annotation
   const graph = new StateGraph(OrchestratorStateAnnotation);
 
@@ -35,13 +39,13 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
         recoverable: false,
       });
     }
-    
+
     // Get the latest user message to route
     const lastUserMessage = state.messages
       .slice()
       .reverse()
-      .find(m => m instanceof HumanMessage) as HumanMessage | undefined;
-      
+      .find((m) => m instanceof HumanMessage) as HumanMessage | undefined;
+
     if (!lastUserMessage) {
       return await orchestratorNode.handleError(state, {
         source: "route_to_agent",
@@ -54,13 +58,16 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
     await orchestratorNode.logOperation(state, {
       type: "route_message",
       agentType: state.currentAgent,
-      details: { messageContent: lastUserMessage.content.toString().substring(0, 100) + "..." },
+      details: {
+        messageContent:
+          lastUserMessage.content.toString().substring(0, 100) + "...",
+      },
     });
 
     // Route the message to the selected agent
     return await orchestratorNode.routeToAgent(
-      state, 
-      state.currentAgent, 
+      state,
+      state.currentAgent,
       lastUserMessage
     );
   });
@@ -69,7 +76,7 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
     // This node handles any errors that might have occurred
     if (state.errors && state.errors.length > 0) {
       const latestError = state.errors[state.errors.length - 1];
-      
+
       // Log error and determine if we can retry
       await orchestratorNode.logOperation(state, {
         type: "handle_error",
@@ -77,32 +84,34 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
       });
 
       // If recoverable and under max retries, attempt to retry
-      if (latestError.recoverable && 
-          (latestError.retryCount || 0) < (state.config.maxRetries || 3)) {
+      if (
+        latestError.recoverable &&
+        (latestError.retryCount || 0) < (state.config.maxRetries || 3)
+      ) {
         // Wait before retry
-        await new Promise(resolve => 
+        await new Promise((resolve) =>
           setTimeout(resolve, state.config.retryDelay || 1000)
         );
-        
+
         // Return to appropriate node based on error source
         return {
           status: "in_progress",
         };
       }
-      
+
       // Otherwise mark as unrecoverable error
       return {
         status: "error",
       };
     }
-    
+
     return {}; // No errors to handle
   });
 
   // Define the workflow with conditional edges
   graph.addEdge("__start__", "initialize");
   graph.addEdge("initialize", "analyze_input");
-  
+
   // Define conditional routing based on the current status
   graph.addConditionalEdges(
     "analyze_input",
@@ -117,7 +126,7 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
       route_to_agent: "route_to_agent",
     }
   );
-  
+
   // Add conditional routing from route_to_agent
   graph.addConditionalEdges(
     "route_to_agent",
@@ -132,7 +141,7 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
       __end__: "__end__",
     }
   );
-  
+
   // Connect error handling back to workflow or end
   graph.addConditionalEdges(
     "handle_error",
@@ -157,7 +166,7 @@ export function createOrchestratorGraph(config?: Partial<OrchestratorConfig>) {
       __end__: "__end__",
     }
   );
-  
+
   // Compile the graph
   return graph.compile();
 }
@@ -173,18 +182,17 @@ export async function runOrchestrator(
   config?: Partial<OrchestratorConfig>
 ) {
   const graph = createOrchestratorGraph(config);
-  
+
   // Create initial state with message
-  const initialMessage = typeof message === "string" 
-    ? new HumanMessage(message) 
-    : message;
-    
+  const initialMessage =
+    typeof message === "string" ? new HumanMessage(message) : message;
+
   const initialState = {
     messages: [initialMessage],
   };
-  
+
   // Execute the graph
   const result = await graph.invoke(initialState);
-  
+
   return result;
 }

@@ -9,16 +9,6 @@ import {
   AgentType,
   WorkflowStatus,
   ErrorInfo,
-} from "./state.js";
-import { OrchestratorConfig, createDefaultConfig } from "./configuration.js";
-import { z } from "zod";
-import { AgentExecutor } from "@langchain/core/agents";
-import { StateGraph, END } from "@langchain/langgraph";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { ChatOpenAI } from "@langchain/openai";
-import { v4 as uuidv4 } from "uuid";
-
-import {
   StepStatus,
   AgentRole,
   WorkflowStep,
@@ -27,6 +17,13 @@ import {
   isWorkflowCompleted,
   hasWorkflowFailed,
 } from "./state.js";
+import { OrchestratorConfig, createDefaultConfig } from "./configuration.js";
+import { z } from "zod";
+import { AgentExecutor } from "@langchain/core/agents";
+import { StateGraph, END } from "@langchain/langgraph";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
+import { v4 as uuidv4 } from "uuid";
 
 import { ANALYZE_USER_QUERY_PROMPT } from "./prompt-templates.js";
 
@@ -356,7 +353,7 @@ export function createOrchestratorNode(
  */
 export async function analyzeUserQuery(
   state: OrchestratorState
-): Promise<OrchestratorState> {
+): Promise<Partial<OrchestratorState>> {
   if (!state.lastUserQuery) {
     return {
       ...state,
@@ -443,7 +440,7 @@ Capabilities: ${agent.capabilities.join(", ")}`;
  */
 export async function determineWorkflow(
   state: OrchestratorState
-): Promise<OrchestratorState> {
+): Promise<Partial<OrchestratorState>> {
   const analysis = state.context.analysis;
 
   if (!analysis) {
@@ -548,7 +545,7 @@ export async function determineWorkflow(
  */
 export async function startWorkflow(
   state: OrchestratorState
-): Promise<OrchestratorState> {
+): Promise<Partial<OrchestratorState>> {
   if (!state.currentWorkflowId) {
     return {
       ...state,
@@ -604,7 +601,7 @@ export async function startWorkflow(
  */
 export async function executeNextStep(
   state: OrchestratorState
-): Promise<OrchestratorState> {
+): Promise<Partial<OrchestratorState>> {
   if (!state.currentWorkflowId) {
     return {
       ...state,
@@ -737,7 +734,7 @@ export function routeWorkflow(
  */
 export async function completeWorkflow(
   state: OrchestratorState
-): Promise<OrchestratorState> {
+): Promise<Partial<OrchestratorState>> {
   if (!state.currentWorkflowId) {
     return state;
   }
@@ -793,7 +790,7 @@ export async function completeWorkflow(
  */
 export async function handleError(
   state: OrchestratorState
-): Promise<OrchestratorState> {
+): Promise<Partial<OrchestratorState>> {
   const latestError = state.errors[state.errors.length - 1];
 
   // Log the error

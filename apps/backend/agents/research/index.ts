@@ -1,13 +1,14 @@
 import { StateGraph } from "@langchain/langgraph";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import { BaseMessage } from "@langchain/core/messages";
 import { ResearchStateAnnotation, ResearchState } from "./state.js";
 import {
   documentLoaderNode,
   deepResearchNode,
   solutionSoughtNode,
 } from "./nodes.js";
-import { SupabaseCheckpointer } from "../../lib/state/supabase.js";
 import { pruneMessageHistory } from "../../lib/state/messages.js";
-import { Logger } from "../../logger.js";
+import { Logger } from "@/lib/logger.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -19,36 +20,64 @@ const logger = Logger.getInstance();
  * defining the nodes and edges that control the flow of execution
  */
 export const createResearchGraph = () => {
-  // Create the research state graph
-  const researchGraph = new StateGraph<ResearchState>({
-    channels: ResearchStateAnnotation,
-  })
+  // Create the research state graph using the annotation
+  const researchGraph = new StateGraph(ResearchStateAnnotation)
     .addNode("documentLoader", documentLoaderNode)
     .addNode("deepResearch", deepResearchNode)
     .addNode("solutionSought", solutionSoughtNode)
 
     // Define workflow sequence
     .addEdge("__start__", "documentLoader")
-    .addConditionalEdges("documentLoader", (state: ResearchState) => {
-      return state.status.documentLoaded ? "deepResearch" : "__end__";
-    })
-    .addConditionalEdges("deepResearch", (state: ResearchState) => {
-      return state.status.researchComplete ? "solutionSought" : "__end__";
-    })
+    // Ensure conditional logic signature matches expected RunnableLike<State, BranchPathReturnValue>
+    .addConditionalEdges(
+      "documentLoader",
+      async (state: ResearchState) => {
+        // Example: Check if document text exists and is not empty
+        if (
+          state.rfpDocument?.text &&
+          state.rfpDocument.text.trim().length > 0
+        ) {
+          logger.debug("Document loaded, proceeding to deep research");
+          return "deepResearch";
+        } else {
+          logger.warn("Document loading failed or text is empty, ending graph");
+          return "__end__";
+        }
+      },
+      {
+        // Optional mapping for conditional edges if needed, check docs
+        deepResearch: "deepResearch",
+        __end__: "__end__",
+      }
+    )
+    .addConditionalEdges(
+      "deepResearch",
+      async (state: ResearchState) => {
+        if (state.status?.researchComplete) {
+          // Check the specific status field
+          logger.debug("Deep research complete, proceeding to solution sought");
+          return "solutionSought";
+        } else {
+          logger.warn("Deep research not complete, ending graph");
+          return "__end__";
+        }
+      },
+      {
+        // Optional mapping
+        solutionSought: "solutionSought",
+        __end__: "__end__",
+      }
+    )
     .addEdge("solutionSought", "__end__");
 
-  // Configure state persistence
-  researchGraph.addCheckpointer(
-    new SupabaseCheckpointer("research-agent", {
-      default: pruneMessageHistory,
-    })
-  );
+  // Persistence is configured during compilation, no addCheckpointer needed here
 
   return researchGraph;
 };
 
 export interface ResearchAgentInput {
   documentId: string;
+  threadId?: string; // Optional threadId for resuming
 }
 
 /**
@@ -65,68 +94,93 @@ export const researchAgent = {
    * @returns The final state of the research agent
    */
   invoke: async (input: ResearchAgentInput): Promise<ResearchState> => {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      logger.error("DATABASE_URL environment variable is not set.");
+      throw new Error("Database connection URL is missing.");
+    }
+
+    // Use the official PostgresSaver, instantiated via the static method
+    // const checkpointer = new PostgresSaver({
+    //     connectionString: dbUrl,
+    // });
+    const checkpointer = PostgresSaver.fromConnString(dbUrl);
+
+    // Ensure the necessary tables are set up before compiling/invoking
+    await checkpointer.setup();
+
     try {
-      // Create the graph
       const graph = createResearchGraph();
 
-      // Initialize SupabaseCheckpointer for persistence
-      const checkpointer = new SupabaseCheckpointer<ResearchState>();
-
-      // Compile the graph with the checkpointer for persistence
+      // Compile the graph with the checkpointer instance
       const compiledGraph = graph.compile({
         checkpointer,
       });
 
-      // Initial state
+      // Initial state setup
       const initialState: Partial<ResearchState> = {
         rfpDocument: {
           id: input.documentId,
-          text: "",
+          text: "", // Text will be populated by documentLoaderNode
           metadata: {},
         },
         status: {
+          // Ensure initial status is set
           documentLoaded: false,
           researchComplete: false,
           solutionAnalysisComplete: false,
         },
+        messages: [], // Initialize messages array
+        errors: [], // Initialize errors array
       };
 
-      // Create config with thread_id if provided
+      // Configure the invocation with thread_id for persistence/resumption
       const config = input.threadId
         ? {
             configurable: {
               thread_id: input.threadId,
             },
           }
-        : {};
+        : {}; // For a new thread, LangGraph assigns one if checkpointer is present
 
-      // Invoke the graph
       logger.info(`Invoking research agent`, {
         documentId: input.documentId,
-        threadId: input.threadId,
+        threadId: input.threadId ?? "New Thread",
       });
-      const finalState = await compiledGraph.invoke(initialState, config);
 
+      // Invoke the graph with initial state and config
+      // Ensure the invoke signature matches the compiled graph expectations
+      // The first argument is the initial state or input, the second is the config
+      const finalState = await compiledGraph.invoke(
+        initialState as ResearchState,
+        config
+      );
+
+      logger.info("Research agent invocation complete", {
+        threadId: config.configurable?.thread_id,
+      });
       return finalState;
     } catch (error) {
-      logger.error(`Error in research agent`, {
+      logger.error(`Error in research agent invocation`, {
         error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         documentId: input.documentId,
         threadId: input.threadId,
       });
-
+      // Re-throw or handle appropriately
       throw error;
     }
   },
 };
 
 // Create message history pruning utility for the research agent
-export const pruneResearchMessages = (messages: any[]) => {
-  return pruneMessageHistory(messages, {
-    maxTokens: 6000,
-    keepSystemMessages: true,
-  });
-};
+// This might be integrated directly into the state definition or checkpointer serde
+// export const pruneResearchMessages = (messages: BaseMessage[]) => {
+//   return pruneMessageHistory(messages, {
+//     maxTokens: 6000,
+//     keepSystemMessages: true,
+//   });
+// };
 
 // Export public API
 export { ResearchStateAnnotation };

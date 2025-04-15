@@ -7,13 +7,13 @@
  */
 
 import { EventEmitter } from "events";
-import { Logger } from "../../../logger.js";
+import { Logger } from "../../logger.js";
 import { LLMFactory } from "../llm-factory.js";
-import { 
-  LLMCompletionOptions, 
-  LLMStreamCallback, 
-  LLMStreamEvent, 
-  LLMStreamEventType 
+import {
+  LLMCompletionOptions,
+  LLMStreamCallback,
+  LLMStreamEvent,
+  LLMStreamEventType,
 } from "../types.js";
 
 /**
@@ -24,27 +24,27 @@ export interface StreamManagerOptions {
    * Default model to use if none is specified
    */
   defaultModel?: string;
-  
+
   /**
    * Enable automatic fallback to backup models on failure
    */
   enableFallbacks?: boolean;
-  
+
   /**
    * Array of fallback models in order of preference
    */
   fallbackModels?: string[];
-  
+
   /**
    * Number of retry attempts before falling back to another model
    */
   maxRetryAttempts?: number;
-  
+
   /**
    * Delay between retry attempts in milliseconds
    */
   retryDelayMs?: number;
-  
+
   /**
    * Whether to enable debug logging
    */
@@ -89,7 +89,7 @@ export class StreamManager extends EventEmitter {
     this.fallbackModels = options.fallbackModels || [
       "gpt-4o-mini",
       "gpt-3.5-turbo",
-      "mistral-medium"
+      "mistral-medium",
     ];
     this.maxRetryAttempts = options.maxRetryAttempts || 3;
     this.retryDelayMs = options.retryDelayMs || 1000;
@@ -153,7 +153,7 @@ export class StreamManager extends EventEmitter {
 
   /**
    * Stream completion with automatic retries and fallbacks
-   * 
+   *
    * @param options Completion options
    * @param callback Callback for streaming events
    * @returns Promise that resolves when streaming is complete
@@ -173,15 +173,15 @@ export class StreamManager extends EventEmitter {
     const tryStream = async (): Promise<void> => {
       currentAttempt++;
       this.logDebug(`Attempt ${currentAttempt} with model ${currentModel}`);
-      
+
       try {
         const client = this.getClientForModel(currentModel);
-        
+
         // Create a wrapper callback to handle events
         const wrappedCallback: LLMStreamCallback = (event: LLMStreamEvent) => {
           // Forward all events to the original callback
           callback(event);
-          
+
           // Also emit events on the StreamManager
           switch (event.type) {
             case LLMStreamEventType.Content:
@@ -215,36 +215,35 @@ export class StreamManager extends EventEmitter {
               break;
           }
         };
-        
+
         // Ensure we're streaming
         const streamOptions = {
           ...options,
           model: currentModel,
           stream: true,
         };
-        
+
         // Emit the started event
         this.emit(StreamManagerEvents.Started, {
           model: currentModel,
           attempt: currentAttempt,
         });
-        
+
         // Perform the streaming completion
         await client.streamCompletion(streamOptions, wrappedCallback);
-        
+
         // If we get here, streaming completed successfully
         return;
-        
       } catch (error) {
         this.logDebug(`Error streaming with ${currentModel}: ${error}`);
-        
+
         // Emit the error event
         this.emit(StreamManagerEvents.Error, {
           model: currentModel,
           attempt: currentAttempt,
           error,
         });
-        
+
         // Check if we should retry with the same model
         if (currentAttempt < this.maxRetryAttempts) {
           this.logDebug(`Retrying with the same model (${currentModel})`);
@@ -254,51 +253,53 @@ export class StreamManager extends EventEmitter {
             nextAttempt: currentAttempt + 1,
             error,
           });
-          
+
           // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, this.retryDelayMs));
+          await new Promise((resolve) =>
+            setTimeout(resolve, this.retryDelayMs)
+          );
           return tryStream();
         }
-        
+
         // If we shouldn't retry or have exhausted retries, check for fallback
         if (this.enableFallbacks && this.fallbackModels.length > 0) {
           // Move to the next fallback model
           currentModelIndex++;
-          
+
           // Check if we have another fallback model
           if (currentModelIndex < this.fallbackModels.length) {
             currentModel = this.fallbackModels[currentModelIndex];
             currentAttempt = 0; // Reset attempt counter for the new model
-            
+
             this.logDebug(`Falling back to model: ${currentModel}`);
             this.emit(StreamManagerEvents.Fallback, {
               previousModel: options.model,
               fallbackModel: currentModel,
               error,
             });
-            
+
             // Try with the fallback model
             return tryStream();
           }
         }
-        
+
         // If we get here, we've exhausted all retries and fallbacks
         this.logDebug("Exhausted all retry attempts and fallback models");
-        
+
         // Forward the final error to the callback
         callback({
           type: LLMStreamEventType.Error,
           error: new Error(
             `Failed to stream completion after ${currentAttempt} attempts` +
-            ` with model ${currentModel}: ${(error as Error).message}`
+              ` with model ${currentModel}: ${(error as Error).message}`
           ),
         });
-        
+
         // Re-throw to signal completion failure
         throw error;
       }
     };
-    
+
     // Start the streaming process
     await tryStream();
   }
@@ -317,7 +318,7 @@ export class StreamManager extends EventEmitter {
       model: modelId,
       stream: true,
     };
-    
+
     return this.streamCompletion(completionOptions, callback);
   }
 }

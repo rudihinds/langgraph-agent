@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseRfpFromBuffer } from "../../lib/parsers/rfp.js";
-import { logger } from "../../logger.js";
+import { logger } from "../../lib/logger.js";
 import { z } from "zod";
 
 /**

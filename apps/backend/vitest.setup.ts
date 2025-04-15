@@ -4,36 +4,50 @@
  */
 
 // Set up global vi object for mocking
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
-// Make vi available globally for all tests
-// This allows us to use vi without importing it in every test file
+// Make vi available globally
+// @ts-ignore
 global.vi = vi;
 
-// Set global test timeout to avoid tests hanging
+// Set global test timeout (15 seconds is a good balance)
 vi.setConfig({ testTimeout: 15000 });
 
-// Silence console.error messages we expect during tests
+// Silence expected console errors during testing
 const originalConsoleError = console.error;
 console.error = (...args) => {
-  // Filter out specific messages that are expected during testing
-  if (
-    args[0]?.includes?.('Warning:') ||
-    args[0]?.includes?.('Not implemented') ||
-    args[0]?.includes?.('Loop detected')
-  ) {
+  // Allow errors that are expected during testing
+  const errorMsg = args[0]?.toString() || "";
+  if (errorMsg.includes("unimplemented") || errorMsg.includes("Warning:")) {
     return;
   }
   originalConsoleError(...args);
 };
 
-// Provide mock implementations for any globals we need
-Object.defineProperty(global, 'process', {
-  value: {
-    ...global.process,
-    env: {
-      ...global.process.env,
-      NODE_ENV: 'test'
-    }
-  }
-});
+// Mock environment variables for testing
+process.env.SUPABASE_URL = "https://mock-supabase-url.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "mock-service-role-key";
+process.env.SUPABASE_ANON_KEY = "mock-anon-key";
+process.env.NODE_ENV = "test";
+
+// Mock implementations for global variables
+vi.mock("@/lib/supabase/client.js", () => ({
+  serverSupabase: {
+    storage: {
+      from: () => ({
+        list: vi
+          .fn()
+          .mockResolvedValue({
+            data: [{ metadata: { mimetype: "application/pdf" } }],
+            error: null,
+          }),
+        download: vi.fn().mockResolvedValue({
+          data: {
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(10)),
+          },
+          error: null,
+        }),
+      }),
+    },
+  },
+}));

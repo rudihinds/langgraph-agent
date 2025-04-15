@@ -1,13 +1,14 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { documentLoaderNode } from "../nodes";
 import { DocumentService } from "../../../lib/db/documents";
-import { parseRfpDocument } from "../../../lib/parsers/rfp";
+import { parseRfpFromBuffer } from "../../../lib/parsers/rfp";
 import { ResearchState } from "../state";
 
 // Mock dependencies
-jest.mock("../../../lib/db/documents", () => {
+vi.mock("../../../lib/db/documents", () => {
   return {
-    DocumentService: jest.fn().mockImplementation(() => ({
-      downloadDocument: jest.fn().mockResolvedValue({
+    DocumentService: vi.fn().mockImplementation(() => ({
+      downloadDocument: vi.fn().mockResolvedValue({
         buffer: Buffer.from("Test RFP document content"),
         metadata: {
           id: "test-doc-id",
@@ -22,29 +23,30 @@ jest.mock("../../../lib/db/documents", () => {
   };
 });
 
-jest.mock("../../../lib/parsers/rfp", () => {
+vi.mock("../../../lib/parsers/rfp", () => {
   return {
-    parseRfpDocument: jest
-      .fn()
-      .mockImplementation((buffer, fileType) =>
-        Promise.resolve(`Parsed content from ${fileType}`)
-      ),
+    parseRfpFromBuffer: vi.fn().mockImplementation((buffer, fileType) =>
+      Promise.resolve({
+        text: `Parsed content from ${fileType}`,
+        metadata: {},
+      })
+    ),
   };
 });
 
-jest.mock("../../../logger", () => {
+vi.mock("../../../logger", () => {
   return {
     logger: {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
     },
   };
 });
 
 describe("Document Loader Node", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("should successfully load a document", async () => {
@@ -68,9 +70,9 @@ describe("Document Loader Node", () => {
 
     // Verify
     expect(DocumentService).toHaveBeenCalled();
-    const mockDocService = (DocumentService as jest.Mock).mock.results[0].value;
+    const mockDocService = (DocumentService as any).mock.results[0].value;
     expect(mockDocService.downloadDocument).toHaveBeenCalledWith("test-doc-id");
-    expect(parseRfpDocument).toHaveBeenCalledWith(
+    expect(parseRfpFromBuffer).toHaveBeenCalledWith(
       Buffer.from("Test RFP document content"),
       "application/pdf"
     );
@@ -99,8 +101,8 @@ describe("Document Loader Node", () => {
   it("should handle errors when loading a document", async () => {
     // Setup
     const mockError = new Error("Test error");
-    jest.mocked(DocumentService).mockImplementationOnce(() => ({
-      downloadDocument: jest.fn().mockRejectedValue(mockError),
+    vi.mocked(DocumentService).mockImplementationOnce(() => ({
+      downloadDocument: vi.fn().mockRejectedValue(mockError),
     }));
 
     const initialState: Partial<ResearchState> = {
@@ -133,9 +135,9 @@ describe("Document Loader Node", () => {
 
   it("should handle parser errors", async () => {
     // Setup
-    jest
-      .mocked(parseRfpDocument)
-      .mockRejectedValueOnce(new Error("Parser error"));
+    vi.mocked(parseRfpFromBuffer).mockRejectedValueOnce(
+      new Error("Parser error")
+    );
 
     const initialState: Partial<ResearchState> = {
       rfpDocument: {

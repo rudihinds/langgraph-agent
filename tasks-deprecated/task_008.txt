@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Build Proposal Manager Agent with Dependencies
+# Status: pending
+# Dependencies: 7
+# Priority: high
+# Description: Implement the coordinator for section generation with dependency tracking
+# Details:
+Create the Proposal Manager Agent to coordinate section generation with dependency awareness. Implement section dependency graph with proper ordering. Create scheduling logic for sections based on dependencies. Implement map-reduce patterns for parallel processing where possible. Utilize LangGraph features for context window management when handling multiple sections. Implement streaming patterns for section generation updates. Add fallback strategies for API failures during coordination operations.
+
+# Test Strategy:
+Test dependency tracking with various section relationships. Verify correct ordering of section generation. Test handling of dependency violations and circular references. Validate context window management with large proposal data. Test streaming of section generation updates. Verify fallback strategies during simulated API failures.

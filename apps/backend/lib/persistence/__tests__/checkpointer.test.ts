@@ -1,30 +1,30 @@
 /**
  * Tests for the ProposalCheckpointer
  */
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createClient } from "@supabase/supabase-js";
 import { Checkpoint } from "@langchain/langgraph";
 import { ProposalCheckpointer } from "../checkpointer";
-import { OverallProposalState, createInitialProposalState } from "../../../state/proposal.state";
+import { createInitialProposalState } from "../../../state/proposal.state";
 
 // Mock the withRetry utility
-jest.mock("../../utils/backoff", () => ({
-  withRetry: jest.fn().mockImplementation(async (fn) => {
+vi.mock("../../utils/backoff", () => ({
+  withRetry: vi.fn().mockImplementation(async (fn) => {
     return fn();
   }),
 }));
 
 // Mock Supabase client
-jest.mock("@supabase/supabase-js", () => ({
-  createClient: jest.fn(() => ({
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          single: jest.fn(() => ({
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => ({
             data: { checkpoint_data: { values: { state: { test: "data" } } } },
             error: null,
           })),
-          order: jest.fn(() => ({
+          order: vi.fn(() => ({
             data: [
               { thread_id: "test-123", updated_at: new Date().toISOString() },
               { thread_id: "test-456", updated_at: new Date().toISOString() },
@@ -33,12 +33,12 @@ jest.mock("@supabase/supabase-js", () => ({
           })),
         })),
       })),
-      upsert: jest.fn(() => ({
+      upsert: vi.fn(() => ({
         data: { id: "test-123" },
         error: null,
       })),
-      delete: jest.fn(() => ({
-        eq: jest.fn(() => ({
+      delete: vi.fn(() => ({
+        eq: vi.fn(() => ({
           data: null,
           error: null,
         })),
@@ -51,7 +51,7 @@ describe("ProposalCheckpointer", () => {
   let checkpointer: ProposalCheckpointer;
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Initialize checkpointer with mocked dependencies
     checkpointer = new ProposalCheckpointer({
@@ -60,11 +60,11 @@ describe("ProposalCheckpointer", () => {
       userIdGetter: async () => "user-123",
       proposalIdGetter: async () => "proposal-123",
       logger: {
-        warn: jest.fn(),
-        error: jest.fn(),
-        info: jest.fn(),
-        debug: jest.fn(),
-        log: jest.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+        log: vi.fn(),
       } as unknown as Console,
     });
   });

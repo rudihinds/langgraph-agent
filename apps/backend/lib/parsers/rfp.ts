@@ -1,221 +1,175 @@
-import { Buffer } from "buffer";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-import { Logger } from "../../logger.js";
+import pdf from "pdf-parse";
+import mammoth from "mammoth";
+// import { Logger } from '../../../../apps/web/src/lib/logger/index.js';
 
-// Set the worker source path
-const WORKER_SRC = "pdfjs-dist/legacy/build/pdf.worker.mjs";
+// const logger = Logger.getInstance();
+const logger = {
+  debug: (..._args: any[]) => {},
+  info: (..._args: any[]) => {},
+  warn: (..._args: any[]) => {},
+  error: (..._args: any[]) => {},
+}; // Mock logger implementation
 
-// Define PDF.js worker source
-if (typeof window === "undefined") {
-  // In Node.js environments
-  (pdfjsLib as any).GlobalWorkerOptions = {};
-  (pdfjsLib as any).GlobalWorkerOptions.workerSrc = WORKER_SRC;
+// Custom Error for unsupported types
+export class UnsupportedFileTypeError extends Error {
+  constructor(fileType: string) {
+    super(`Unsupported file type: ${fileType}`);
+    this.name = "UnsupportedFileTypeError";
+  }
 }
 
-export interface ParsedDocument {
+// Custom Error for parsing issues
+export class ParsingError extends Error {
+  constructor(fileType: string, originalError?: Error) {
+    super(
+      `Failed to parse ${fileType} file.${originalError ? ` Reason: ${originalError.message}` : ""}`
+    );
+    this.name = "ParsingError";
+    if (originalError) {
+      this.stack = originalError.stack;
+    }
+  }
+}
+
+interface ParsedDocument {
   text: string;
-  metadata?: Record<string, any>;
+  metadata: Record<string, any>;
+  // sections?: Array<{ title?: string; content: string }>; // Future enhancement?
 }
 
 /**
- * Parse an RFP document from a buffer
+ * Parses text content and metadata from a Buffer representing an RFP document.
+ * Supports PDF, DOCX, and TXT file types.
  *
- * @param buffer - The document buffer
- * @param fileType - The MIME type of the document
- * @returns The extracted text from the document
- */
-export async function parseRfpDocument(
-  buffer: Buffer,
-  fileType?: string
-): Promise<string> {
-  try {
-    Logger.getInstance().info(
-      `Parsing document with fileType: ${fileType || "unknown"}`
-    );
-
-    if (!fileType) {
-      // If no file type, try to detect from buffer or assume text
-      return buffer.toString("utf-8");
-    }
-
-    // Handle different file types
-    if (fileType.includes("pdf")) {
-      return await parsePdfDocument(buffer);
-    } else if (
-      fileType.includes("text") ||
-      fileType.includes("plain") ||
-      fileType.includes("markdown") ||
-      fileType.includes("md")
-    ) {
-      return buffer.toString("utf-8");
-    } else if (
-      fileType.includes("docx") ||
-      fileType.includes("doc") ||
-      fileType.includes("word")
-    ) {
-      // For MVP, just extract text as-is
-      // In a production implementation, would use a library like mammoth.js for DOCX parsing
-      return buffer.toString("utf-8");
-    } else {
-      // Default fallback
-      Logger.getInstance().warn(
-        `Unsupported file type: ${fileType}, attempting text extraction`
-      );
-      return buffer.toString("utf-8");
-    }
-  } catch (error) {
-    Logger.getInstance().error(
-      `Error parsing RFP document: ${error instanceof Error ? error.message : String(error)}`
-    );
-    throw new Error(
-      `Failed to parse document: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-}
-
-/**
- * Parse a PDF document using pdf.js
- *
- * @param buffer - The PDF document buffer
- * @returns The extracted text from the PDF
- */
-async function parsePdfDocument(buffer: Buffer): Promise<string> {
-  try {
-    // Load the PDF document
-    const data = new Uint8Array(buffer);
-    const loadingTask = pdfjsLib.getDocument({ data });
-    const pdfDocument = await loadingTask.promise;
-
-    // Extract text from each page
-    const textContent: string[] = [];
-
-    for (let i = 1; i <= pdfDocument.numPages; i++) {
-      const page = await pdfDocument.getPage(i);
-      const content = await page.getTextContent();
-
-      const items = content.items;
-      let lastY;
-      let text = "";
-
-      for (const item of items) {
-        if ("str" in item) {
-          // Add newlines between blocks of text
-          if (lastY !== undefined && lastY !== item.transform[5]) {
-            text += "\n";
-          }
-
-          text += item.str;
-          lastY = item.transform[5];
-        }
-      }
-
-      textContent.push(text);
-    }
-
-    return textContent.join("\n\n");
-  } catch (error) {
-    Logger.getInstance().error(
-      `Error parsing PDF: ${error instanceof Error ? error.message : String(error)}`
-    );
-    throw new Error(
-      `Failed to parse PDF: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-}
-
-/**
- * Parses a document buffer based on its MIME type
- * @param buffer - The document buffer
- * @param mimeType - The MIME type of the document
- * @param filename - Optional filename for logging purposes
- * @returns Promise<ParsedDocument> - The parsed document with text content
+ * @param buffer The file content as a Buffer.
+ * @param fileType The determined file type (e.g., 'pdf', 'docx', 'txt'). Case-insensitive.
+ * @param filePath Optional path of the original file for metadata purposes.
+ * @returns A promise resolving to an object containing the extracted text and metadata.
+ * @throws {UnsupportedFileTypeError} If the fileType is not supported.
+ * @throws {ParsingError} If parsing fails for a supported type.
  */
 export async function parseRfpFromBuffer(
   buffer: Buffer,
-  mimeType: string,
-  filename = "unknown"
-): Promise<ParsedDocument> {
-  Logger.getInstance().info(`Parsing document: ${filename} (${mimeType})`);
+  fileType: string,
+  filePath?: string
+): Promise<{ text: string; metadata: Record<string, any> }> {
+  const lowerCaseFileType = fileType.toLowerCase();
+  logger.debug(
+    `Attempting to parse buffer for file type: ${lowerCaseFileType}`,
+    { filePath }
+  );
 
-  try {
-    switch (true) {
-      case mimeType.includes("pdf"):
-        return await parsePdfBuffer(buffer);
-      case mimeType.includes("text"):
-        return parseTextBuffer(buffer);
-      case mimeType.includes("markdown"):
-      case mimeType.includes("md"):
-        return parseTextBuffer(buffer);
-      case mimeType.includes("docx"):
-      case mimeType.includes("doc"):
-        // For now, throw error for unsupported formats
-        // In a real implementation, we would add docx parsing
-        throw new Error("Word document parsing not yet implemented");
-      default:
-        Logger.getInstance().error(`Unsupported document type: ${mimeType}`);
-        throw new Error("Unsupported document type");
+  if (lowerCaseFileType === "pdf") {
+    try {
+      // pdf-parse is mocked in tests
+      const data = await pdf(buffer);
+      const metadata: Record<string, any> = {
+        format: "pdf",
+        info: data.info, // PDF specific metadata
+        metadata: data.metadata, // PDF specific metadata (e.g., XML)
+        numPages: data.numpages,
+        filePath, // Include original path if provided
+      };
+      // Add common metadata fields if they exist
+      if (data.info?.Title) metadata.title = data.info.Title;
+      if (data.info?.Author) metadata.author = data.info.Author;
+      if (data.info?.Subject) metadata.subject = data.info.Subject;
+      if (data.info?.Keywords) metadata.keywords = data.info.Keywords;
+      if (data.info?.CreationDate)
+        metadata.creationDate = data.info.CreationDate;
+      if (data.info?.ModDate) metadata.modificationDate = data.info.ModDate;
+
+      logger.info(`Successfully parsed PDF`, {
+        filePath,
+        pages: data.numpages,
+      });
+      if (!data.text?.trim()) {
+        logger.warn(`Parsed PDF text content is empty or whitespace`, {
+          filePath,
+        });
+      }
+      return { text: data.text || "", metadata };
+    } catch (error: any) {
+      logger.error(`Failed to parse PDF`, { filePath, error: error.message });
+      throw new ParsingError("pdf", error);
     }
-  } catch (error) {
-    Logger.getInstance().error(`Error parsing document ${filename}: ${error}`);
-    throw error;
+  } else if (lowerCaseFileType === "docx") {
+    try {
+      // mammoth is mocked in tests
+      const result = await mammoth.extractRawText({ buffer });
+      const metadata = {
+        format: "docx",
+        filePath,
+      };
+      logger.info(`Successfully parsed DOCX`, { filePath });
+      if (!result.value?.trim()) {
+        logger.warn(`Parsed DOCX text content is empty or whitespace`, {
+          filePath,
+        });
+      }
+      // Note: mammoth doesn't easily expose standard metadata like author, title etc.
+      return { text: result.value || "", metadata };
+    } catch (error: any) {
+      logger.error(`Failed to parse DOCX`, { filePath, error: error.message });
+      throw new ParsingError("docx", error);
+    }
+  } else if (lowerCaseFileType === "txt") {
+    try {
+      const text = buffer.toString("utf-8");
+      const metadata = {
+        format: "txt",
+        filePath,
+      };
+      logger.info(`Successfully parsed TXT`, { filePath });
+      if (!text.trim()) {
+        logger.warn(`Parsed TXT content is empty or whitespace`, { filePath });
+      }
+      return { text, metadata };
+    } catch (error: any) {
+      logger.error(`Failed to parse TXT (toString failed)`, {
+        filePath,
+        error: error.message,
+      });
+      throw new ParsingError("txt", error);
+    }
+  } else {
+    logger.warn(`Unsupported file type encountered: ${fileType}`, { filePath });
+    throw new UnsupportedFileTypeError(fileType);
   }
 }
 
-/**
- * Parses a PDF buffer using PDF.js
- * @param buffer - The PDF buffer
- * @returns Promise<ParsedDocument> - The parsed PDF document
- */
-async function parsePdfBuffer(buffer: Buffer): Promise<ParsedDocument> {
-  try {
-    const data = new Uint8Array(buffer);
-    const loadingTask = pdfjsLib.getDocument({ data });
-    const pdf = await loadingTask.promise;
+// --- Helper Functions ---
 
-    Logger.getInstance().info(`PDF loaded with ${pdf.numPages} pages`);
-
-    let fullText = "";
-
-    // Process each page
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-
-      // Extract text strings and join with spaces
-      const pageText = content.items.map((item: any) => item.str).join(" ");
-
-      fullText += pageText + "\n\n";
-    }
-
-    return {
-      text: fullText.trim(),
-      metadata: {
-        pageCount: pdf.numPages,
-      },
-    };
-  } catch (error) {
-    Logger.getInstance().error(`Failed to parse PDF: ${error}`);
-    throw new Error(`Failed to parse PDF: ${error.message}`);
-  }
+async function parsePdf(buffer: ArrayBuffer): Promise<ParsedDocument> {
+  // pdf-parse expects a Buffer
+  const nodeBuffer = Buffer.from(buffer);
+  const data = await pdf(nodeBuffer);
+  return {
+    text: data.text || "",
+    metadata: {
+      pdfVersion: data.version,
+      pageCount: data.numpages,
+      info: data.info, // Author, Title, etc.
+    },
+  };
 }
 
-/**
- * Parses a text buffer
- * @param buffer - The text buffer
- * @returns ParsedDocument - The parsed text document
- */
-function parseTextBuffer(buffer: Buffer): ParsedDocument {
-  try {
-    const text = buffer.toString("utf8");
-    return {
-      text,
-      metadata: {
-        charCount: text.length,
-        wordCount: text.split(/\s+/).length,
-      },
-    };
-  } catch (error) {
-    Logger.getInstance().error(`Failed to parse text: ${error}`);
-    throw new Error(`Failed to parse text: ${error.message}`);
-  }
+async function parseDocx(buffer: ArrayBuffer): Promise<ParsedDocument> {
+  // mammoth works directly with ArrayBuffer
+  const { value } = await mammoth.extractRawText({ arrayBuffer: buffer });
+  return {
+    text: value || "",
+    metadata: {
+      // mammoth focuses on text extraction, less metadata
+    },
+  };
+}
+
+function parseTxt(buffer: ArrayBuffer): ParsedDocument {
+  const decoder = new TextDecoder("utf-8"); // Assume UTF-8 for text files
+  const text = decoder.decode(buffer);
+  return {
+    text: text || "",
+    metadata: {},
+  };
 }

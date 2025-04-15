@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Create Connection Pairs Agent Subgraph
+# Status: pending
+# Dependencies: 6
+# Priority: medium
+# Description: Implement agent for identifying alignment between applicant and funder
+# Details:
+Develop the Connection Pairs Agent subgraph to analyze applicant capabilities against funder priorities and generate specific connection pairs. Implement priority ranking for connections and provide evidence for each identified alignment point. Utilize LangGraph features for context window management when processing large datasets. Implement streaming patterns for returning connection pairs as they are identified. Add fallback strategies for API failures during alignment analysis.
+
+# Test Strategy:
+Test generation of connection pairs with sample applicant and funder data. Verify proper ranking of connection strengths. Test evidence generation for alignment points. Validate context window management with large documents. Test streaming of connection pairs. Verify fallback strategies during simulated API failures.
