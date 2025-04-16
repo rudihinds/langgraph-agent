@@ -23,9 +23,7 @@
           "id": 2,
           "title": "Install core dependencies and set up TypeScript configuration",
           "description": "Install all required npm packages and configure TypeScript for the project",
-          "dependencies": [
-            1
-          ],
+          "dependencies": [1],
           "details": "Implementation steps:\n1. Install core dependencies using npm:\n   - `npm install @langchain/core @langchain/langgraph @langchain/langgraph-checkpoint-postgres @supabase/supabase-js express zod`\n2. Install development dependencies:\n   - `npm install -D typescript @types/node @types/express ts-node nodemon`\n3. Create tsconfig.json with appropriate compiler options:\n   - Set target to ES2020 or later\n   - Enable strict type checking\n   - Configure module resolution\n   - Set output directory to ./dist\n   - Include source directories\n4. Create a basic index.ts file in the project root to verify TypeScript setup\n\nTesting approach:\n- Verify all dependencies are properly installed in node_modules\n- Test TypeScript compilation with `npx tsc --noEmit`\n- Ensure the configuration supports the project structure",
           "status": "done",
           "parentTaskId": 1
@@ -34,10 +32,7 @@
           "id": 3,
           "title": "Set up environment configuration and create starter files",
           "description": "Create environment variable configurations and add placeholder files in each directory",
-          "dependencies": [
-            1,
-            2
-          ],
+          "dependencies": [1, 2],
           "details": "Implementation steps:\n1. Create a .env file with placeholders for required environment variables:\n   - SUPABASE_URL\n   - SUPABASE_KEY\n   - PORT (for Express server)\n   - Other configuration variables\n2. Create a .env.example file as a template without sensitive values\n3. Create a config.ts file in /lib to load and validate environment variables using zod\n4. Add placeholder index.ts files in each directory (/api, /services, /agents, /state, /lib/persistence) with basic exports\n5. Create a basic README.md with project setup instructions\n\nTesting approach:\n- Verify environment variables are properly loaded using the config module\n- Check that all placeholder files are correctly created\n- Ensure the project can be started without errors using `npm start` or equivalent command\n- Test that environment validation works correctly with zod",
           "status": "done",
           "parentTaskId": 1
@@ -49,9 +44,7 @@
       "title": "Implement State Interface and Annotations",
       "description": "Create the core state interface and type definitions with LangGraph annotations for state management.",
       "status": "pending",
-      "dependencies": [
-        1
-      ],
+      "dependencies": [1],
       "priority": "high",
       "details": "Create the /state/proposal.state.ts file implementing the OverallProposalState interface as defined in section 7.1. Define all required types (LoadingStatus, ProcessingStatus, SectionProcessingStatus, EvaluationResult, SectionData). Implement proper LangGraph state annotations using Annotation.Root to define how state updates are processed. Create appropriate typed reducers for complex state updates.",
       "testStrategy": "Write unit tests to verify the state interface works correctly with sample data. Test that reducers properly implement immutable state updates. Validate TypeScript type checking works correctly for the state interface."
@@ -61,9 +54,7 @@
       "title": "Implement PostgreSQL Checkpointer for State Persistence",
       "description": "Create the persistence layer using PostgreSQL and Supabase for storing graph state.",
       "status": "pending",
-      "dependencies": [
-        2
-      ],
+      "dependencies": [2],
       "priority": "high",
       "details": "Implement /lib/persistence/postgres-checkpointer.ts using @langchain/langgraph-checkpoint-postgres. Set up Supabase client configuration with proper authentication. Create the necessary database tables as defined in section 7.2 (proposal_checkpoints, proposals, rfp_documents). Implement proper serialization/deserialization of state objects. Add error handling for database operations.",
       "testStrategy": "Write integration tests that verify state can be saved to and loaded from the database. Test error scenarios such as connection failures. Verify that complex state objects serialize and deserialize correctly."
@@ -73,9 +64,7 @@
       "title": "Create Basic StateGraph Structure",
       "description": "Implement the core LangGraph StateGraph structure with essential nodes and edges.",
       "status": "pending",
-      "dependencies": [
-        2
-      ],
+      "dependencies": [2],
       "priority": "high",
       "details": "Create /agents/proposal_generation/graph.ts implementing the createProposalGenerationGraph function. Define skeleton implementations for all node functions in /agents/proposal_generation/nodes/. Implement basic conditionals for routing in /agents/proposal_generation/conditionals/. Set up the graph structure with proper edges connecting all nodes. Configure interrupt points for human-in-the-loop interactions.",
       "testStrategy": "Write unit tests for individual nodes with mock inputs and outputs. Test the graph structure to ensure all nodes are connected correctly. Verify that conditional routing functions work as expected with different state scenarios."
@@ -85,10 +74,7 @@
       "title": "Implement Orchestrator Service",
       "description": "Create the central orchestration service that manages workflow execution and state.",
       "status": "pending",
-      "dependencies": [
-        3,
-        4
-      ],
+      "dependencies": [3, 4],
       "priority": "high",
       "details": "Implement /services/orchestrator.service.ts with methods for initializing sessions, getting state, resuming graph execution, and handling edits. Create dependency tracking logic to identify relationships between sections. Implement methods to mark sections as stale when dependencies change. Add error handling and recovery mechanisms. Integrate with the checkpointer for state persistence.",
       "testStrategy": "Write unit tests with mocked dependencies to verify orchestrator logic. Test session initialization, resumption, and edit handling. Verify dependency tracking correctly identifies affected sections. Test error recovery scenarios."
@@ -98,9 +84,7 @@
       "title": "Implement Document Processing Nodes",
       "description": "Create nodes for processing RFP documents, including loading, analysis, and research generation.",
       "status": "pending",
-      "dependencies": [
-        4
-      ],
+      "dependencies": [4],
       "priority": "medium",
       "details": "Implement document loading node in /agents/proposal_generation/nodes/document_loader.ts with support for PDF, DOCX, and TXT formats. Create deep research node in /agents/proposal_generation/nodes/deep_research.ts to analyze RFP content and generate research. Implement research evaluation node in /agents/proposal_generation/nodes/evaluate_research.ts to assess research quality. Add solution sought identification node in /agents/proposal_generation/nodes/solution_sought.ts.",
       "testStrategy": "Test document loading with various file formats. Write unit tests for research generation with sample RFP content. Verify evaluation logic produces expected results for different quality levels. Test with mock LLM responses to ensure proper integration."
@@ -110,9 +94,7 @@
       "title": "Implement Section Generation and Evaluation Nodes",
       "description": "Create nodes for generating and evaluating proposal sections based on RFP analysis.",
       "status": "pending",
-      "dependencies": [
-        6
-      ],
+      "dependencies": [6],
       "priority": "medium",
       "details": "Implement section manager node in /agents/proposal_generation/nodes/section_manager.ts to determine required sections. Create section generation nodes for each section type (problem statement, methodology, etc.). Implement evaluation nodes for each section type to assess quality. Ensure generated sections maintain consistency with previously approved content. Add connection pairs node to link RFP requirements with solution components.",
       "testStrategy": "Test section generation with various inputs to verify quality and relevance. Verify evaluation nodes correctly identify strengths and weaknesses. Test dependency handling between sections to ensure consistency. Verify connection pairs correctly map requirements to solutions."
@@ -122,10 +104,7 @@
       "title": "Implement Editor Agent for Non-Sequential Editing",
       "description": "Create the specialized EditorAgent service for handling section revisions and dependency updates.",
       "status": "pending",
-      "dependencies": [
-        5,
-        7
-      ],
+      "dependencies": [5, 7],
       "priority": "medium",
       "details": "Implement /services/editor-agent.service.ts with methods for processing edits and identifying affected dependencies. Create logic to preserve context during edits. Implement intelligent regeneration of dependent sections. Add methods for handling user choices regarding stale sections. Integrate with the orchestrator service for workflow coordination.",
       "testStrategy": "Test edit processing with various section types. Verify dependency tracking correctly identifies affected sections. Test regeneration of dependent sections with both automatic and manual options. Verify context preservation during edits maintains consistency."
@@ -135,9 +114,7 @@
       "title": "Implement API Layer with Express.js",
       "description": "Create the REST API endpoints for client interaction using Express.js.",
       "status": "pending",
-      "dependencies": [
-        5
-      ],
+      "dependencies": [5],
       "priority": "medium",
       "details": "Implement Express.js server in /api/index.ts. Create controller in /api/proposals.controller.ts with methods for all required endpoints (create proposal, get state, resume workflow, edit section, etc.). Implement request validation using Zod schemas. Add authentication middleware using Supabase. Implement error handling middleware. Create routes configuration in /api/routes.ts.",
       "testStrategy": "Test all API endpoints with valid and invalid requests. Verify authentication and authorization work correctly. Test error handling for various scenarios. Verify request validation correctly identifies invalid inputs."
@@ -147,10 +124,7 @@
       "title": "Implement Human-in-the-Loop (HITL) Interaction",
       "description": "Create the interrupt and resume mechanisms for human review and feedback incorporation.",
       "status": "pending",
-      "dependencies": [
-        8,
-        9
-      ],
+      "dependencies": [8, 9],
       "priority": "low",
       "details": "Enhance the StateGraph with properly configured interrupt points at review stages. Implement feedback processing in the orchestrator service. Create mechanisms to incorporate user feedback when resuming workflow. Add context preservation during interrupts. Implement tracking of feedback history for learning and improvement.",
       "testStrategy": "Test interrupt points trigger correctly at defined stages. Verify workflow can be resumed after interrupts with different feedback types. Test feedback incorporation affects generated content appropriately. Verify context is maintained correctly during interrupts and resumption."
@@ -237,9 +211,7 @@
           "id": 2,
           "title": "Implement Routing Functions and Conditional Logic",
           "description": "Develop a comprehensive routing system that determines the next node in the graph based on current state, context, and conditions.",
-          "dependencies": [
-            1
-          ],
+          "dependencies": [1],
           "details": "Implementation steps:\n1. Create a core routing service that integrates with the updated graph structure\n2. Implement the main routing algorithm that traverses the graph based on node connections\n3. Add conditional branching logic that evaluates proposal context data to determine path selection\n4. Develop a rule-based system for complex routing decisions with multiple factors\n5. Implement error handling for invalid routes, cycles, or dead ends in the graph\n6. Add detailed logging throughout the routing process to capture decision points\n7. Create helper functions for common routing patterns\n8. Implement route validation to prevent invalid state transitions\n\nTesting approach:\n- Create unit tests for each routing function with various input conditions\n- Develop integration tests that verify complete routing paths through the graph\n- Test edge cases such as missing data, invalid states, and error conditions\n- Create visual logging output for debugging complex routing scenarios",
           "status": "pending",
           "parentTaskId": 14
@@ -248,10 +220,7 @@
           "id": 3,
           "title": "Configure HITL Interrupt Points and OrchestratorService Integration",
           "description": "Implement Human-In-The-Loop interrupt capabilities and integrate the refactored graph with OrchestratorService.",
-          "dependencies": [
-            1,
-            2
-          ],
+          "dependencies": [1, 2],
           "details": "Implementation steps:\n1. Define an interrupt interface that specifies how to pause and resume graph processing\n2. Identify and mark specific nodes in the graph as HITL interrupt points\n3. Implement a notification system to alert users when human intervention is required\n4. Create input collection interfaces that gather and validate user responses at interrupt points\n5. Develop timeout handling for interrupted processes with configurable durations\n6. Implement state persistence during interrupts to ensure no data is lost\n7. Update the graph to emit events for state changes that OrchestratorService can consume\n8. Integrate with OrchestratorService APIs for workflow management\n9. Implement resume functionality that correctly restores graph state after user input\n10. Add comprehensive error handling for interrupted processes\n\nTesting approach:\n- Create tests that simulate HITL interrupts at various points in the graph\n- Test timeout scenarios and verify proper error handling\n- Verify that state is properly preserved during interrupts\n- Integration tests with OrchestratorService to ensure proper event handling\n- End-to-end tests that simulate complete workflows with multiple interrupt points",
           "status": "pending",
           "parentTaskId": 14
@@ -277,6 +246,54 @@
       "priority": "high",
       "details": "The EditorAgentService should be implemented as follows:\n\n1. Core functionality:\n   - Implement `processEdit(editData)` method to handle document modifications at any position\n   - Create `analyzeDependencies(sectionId)` to identify affected sections when changes occur\n   - Develop `reconcileChanges(changedSections)` to ensure document consistency\n   - Implement `trackRevisionHistory(sectionId)` to maintain an audit trail of changes\n\n2. Non-sequential edit handling:\n   - Design a conflict resolution system for overlapping edits\n   - Implement logic to reorder and apply edits based on dependencies\n   - Create mechanisms to handle concurrent edits from multiple sources\n\n3. Section revision management:\n   - Develop versioning system for sections with proper timestamps\n   - Implement diff calculation between versions\n   - Create rollback capabilities for reverting problematic changes\n\n4. Proposal consistency maintenance:\n   - Implement validation checks to ensure document integrity\n   - Create notification system for downstream impacts of changes\n   - Design propagation rules for cascading updates to dependent sections\n\n5. Integration points:\n   - Connect with ProposalGenerationGraph for structure awareness\n   - Interface with persistence layer for saving revision history\n   - Implement hooks for the UI to display edit status and conflicts\n\nThe implementation should follow the established architecture patterns and utilize appropriate design patterns for managing the complexity of edit operations.",
       "testStrategy": "Testing should cover the following areas:\n\n1. Unit tests:\n   - Test each method of the EditorAgentService in isolation\n   - Verify proper handling of various edit scenarios (insertions, deletions, replacements)\n   - Test conflict detection and resolution with simulated concurrent edits\n   - Validate dependency analysis with mock document structures\n\n2. Integration tests:\n   - Test interaction with ProposalGenerationGraph\n   - Verify proper persistence of revision history\n   - Test end-to-end edit flow from UI to storage\n\n3. Specific test cases:\n   - Edit propagation: Change a section and verify dependent sections are correctly flagged for review\n   - Conflict resolution: Submit overlapping edits and verify proper resolution\n   - Performance: Test with large documents to ensure edit processing remains efficient\n   - Rollback: Test ability to revert to previous versions of sections\n   - Concurrency: Simulate multiple users editing the same document\n\n4. Validation methods:\n   - Create document consistency validators that can be run after edits\n   - Implement automated checks for document structure integrity\n   - Design visual diff tools for manual verification of complex edits\n\nAll tests should be automated where possible and integrated into the CI pipeline."
+    },
+    {
+      "id": 15,
+      "title": "Implement Checkpointer Adapter Pattern",
+      "description": "Create a robust adapter pattern for the checkpointer service to enhance testability, maintainability, and flexibility.",
+      "status": "done",
+      "dependencies": [13],
+      "priority": "high",
+      "details": "This task involves implementing a layered adapter pattern for the checkpointer functionality to separate storage implementations from LangGraph interface requirements:\n\n1. **Storage Layer Implementation**:\n   - Create an `ICheckpointer` interface that defines the storage contract (put, get, list, delete)\n   - Implement `InMemoryCheckpointer` for local development and testing\n   - Refactor `SupabaseCheckpointer` to properly implement the interface\n   - Add comprehensive error handling and logging\n\n2. **Adapter Layer Creation**:\n   - Create adapter classes that convert our storage implementations to LangGraph's `BaseCheckpointSaver`\n   - Implement `MemoryLangGraphCheckpointer` for the in-memory storage\n   - Implement `LangGraphCheckpointer` for the Supabase storage\n   - Ensure proper TypeScript typing throughout\n\n3. **Factory Pattern Implementation**:\n   - Create a `createCheckpointer` factory function that provides the appropriate implementation\n   - Add configuration options for user ID and other parameters\n   - Implement automatic fallback to in-memory storage when database credentials are missing\n   - Add appropriate logging and error handling\n\n4. **Testing and Validation**:\n   - Create a test script to verify all checkpointer operations\n   - Implement comprehensive error handling and recovery\n   - Document the implementation with JSDoc comments\n   - Update README and architecture documentation",
+      "testStrategy": "Testing should verify the functionality and robustness of the checkpointer implementation:\n\n1. **Unit Tests**:\n   - Test each checkpointer implementation independently\n   - Verify that all methods in the interface are correctly implemented\n   - Test error handling by simulating failures\n   - Validate serialization/deserialization of state objects\n\n2. **Adapter Tests**:\n   - Verify that the adapter correctly converts between our interface and LangGraph's\n   - Test with various state object structures\n   - Verify proper error propagation\n\n3. **Factory Tests**:\n   - Test the factory function with various configuration options\n   - Verify automatic fallback behavior\n   - Test with valid and invalid Supabase credentials\n\n4. **Integration Tests**:\n   - Test the checkpointer with LangGraph\n   - Verify proper storage and retrieval of state\n   - Test with realistic workflow scenarios\n\nAll tests should be automated and include appropriate assertions to validate behavior.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Design ICheckpointer Interface and Storage Implementations",
+          "description": "Create the core interface and its implementations for in-memory and Supabase storage.",
+          "dependencies": [],
+          "details": "Implementation steps:\n1. Define the `ICheckpointer` interface with methods for put, get, list, and delete\n2. Implement `InMemoryCheckpointer` using Map-based storage\n3. Refactor `SupabaseCheckpointer` to implement the interface\n4. Add proper error handling and testing for each implementation\n5. Ensure thread safety for the in-memory implementation\n6. Add user ID filtering for multi-tenant isolation\n\nTesting approach:\n- Write unit tests for each implementation\n- Test basic operations (put, get, list, delete)\n- Verify error handling and recovery\n- Test with various data types and structures",
+          "status": "done",
+          "parentTaskId": 15
+        },
+        {
+          "id": 2,
+          "title": "Create LangGraph Adapter Classes",
+          "description": "Implement adapter classes that convert our storage implementations to LangGraph's BaseCheckpointSaver interface.",
+          "dependencies": [1],
+          "details": "Implementation steps:\n1. Analyze the LangGraph `BaseCheckpointSaver` interface requirements\n2. Create `MemoryLangGraphCheckpointer` adapter for in-memory storage\n3. Create `LangGraphCheckpointer` adapter for Supabase storage\n4. Implement all required methods from the LangGraph interface\n5. Add proper serialization/deserialization of state objects\n6. Ensure type safety throughout the implementation\n\nTesting approach:\n- Test each adapter with its corresponding storage implementation\n- Verify that all LangGraph interface methods are correctly implemented\n- Test with various state object structures\n- Verify proper error propagation",
+          "status": "done",
+          "parentTaskId": 15
+        },
+        {
+          "id": 3,
+          "title": "Implement Factory Pattern for Checkpointer Creation",
+          "description": "Create a factory function that provides the appropriate checkpointer implementation based on configuration.",
+          "dependencies": [2],
+          "details": "Implementation steps:\n1. Create a `createCheckpointer` factory function that returns the appropriate implementation\n2. Add configuration options for user ID and other parameters\n3. Implement validation of Supabase credentials\n4. Add automatic fallback to in-memory storage when credentials are missing\n5. Implement appropriate logging for configuration status\n6. Document the factory function with JSDoc comments\n\nTesting approach:\n- Test the factory with various configuration options\n- Verify automatic fallback behavior\n- Test with valid and invalid Supabase credentials\n- Check that the correct implementation is returned based on configuration",
+          "status": "done",
+          "parentTaskId": 15
+        },
+        {
+          "id": 4,
+          "title": "Create Test Script and Documentation",
+          "description": "Develop a comprehensive test script and update documentation for the checkpointer implementation.",
+          "dependencies": [3],
+          "details": "Implementation steps:\n1. Create a test script to verify all checkpointer operations\n2. Add tests for both in-memory and Supabase implementations\n3. Update README files with usage examples and configuration options\n4. Update architecture documentation to reflect the adapter pattern\n5. Ensure all code is thoroughly documented with JSDoc comments\n\nTesting approach:\n- Run the test script with various configurations\n- Verify that all operations complete successfully\n- Check that error handling works correctly\n- Ensure documentation is clear and comprehensive",
+          "status": "done",
+          "parentTaskId": 15
+        }
+      ]
     }
   ],
   "metadata": {
