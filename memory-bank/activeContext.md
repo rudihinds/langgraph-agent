@@ -1,47 +1,198 @@
 # Active Development Context
 
-_Last updated: August 21, 2023_
+_Last updated: August 22, 2023_
 
 ## Current Focus
 
-The development is currently focused on implementing a robust persistence layer using the adapter pattern. This ensures:
+We are currently implementing Human-In-The-Loop (HITL) functionality for the proposal generation system, following the architecture specified in AGENT_ARCHITECTURE.md and AGENT_BASESPEC.md.
 
-1. **Storage Flexibility**: We can switch between storage solutions (in-memory, Supabase, potentially others) without changing application code.
-2. **Interface Consistency**: All storage implementations expose the same interface aligned with LangGraph's `BaseCheckpointSaver`.
-3. **Multi-tenant Security**: Proper isolation of data by userId to ensure security in a multi-tenant environment.
-4. **Graceful Fallbacks**: Automatic fallback to in-memory storage when database credentials are missing or invalid.
-5. **Environment Simplification**: Centralized environment variable management in the root `.env` file.
+### Recent Progress
+
+1. **HITL State Structure** ✅ COMPLETED
+
+   - Successfully implemented the `InterruptStatus` interface with properties for tracking interruption state
+   - Created Zod schemas for validating interrupt status data
+   - Implemented `interruptStatusReducer` for proper immutable state updates
+   - Added appropriate state annotations for the interrupt-related fields
+   - All schema validation tests for interrupt status are passing
+
+2. **Conditional Logic** ✅ COMPLETED
+   - Implemented `routeAfterStaleContentChoice` function in conditionals.ts
+   - This function properly routes based on user feedback when content is stale due to dependency changes
+   - It handles cases where the user chooses to regenerate or keep existing content
+   - All tests for stale content routing are passing
+
+### Next Steps
+
+1. **Graph Configuration** ⏩ NEXT PRIORITY
+
+   - Configure the graph's `interruptAfter` list to include all evaluation nodes
+   - Define clear interruption points after evaluation nodes
+
+2. **OrchestratorService Integration** ⏩ NEXT PRIORITY
+
+   - Implement `handleInterrupt` method to detect and process graph pauses
+   - Create `submitFeedback` method to handle user input during interrupts
+   - Implement graph resumption after feedback processing
+
+3. **Feedback Processing Nodes**
+
+   - Implement `processFeedbackNode` to handle user input
+   - Create revision handling via EditorAgent
+   - Implement regeneration with user guidance
+
+4. **API Endpoints**
+   - Create endpoints for status checking (including interrupt status)
+   - Implement feedback submission API
+   - Add resume functionality endpoint
+
+### Current Technical Focus
+
+The HITL implementation is foundationally solid with working state structure and conditional logic. Focus now is on configuring graph interrupt points and implementing the OrchestratorService integration to manage the actual interruption lifecycle.
+
+## Key Decisions & Patterns
+
+- Using the `interruptStatus` field in state to track whether a graph is currently paused for human input
+- Implementing specialized reducers for complex state updates (like `interruptStatusReducer`)
+- Using conditional logic to route based on user feedback type
+
+## Open Questions & Challenges
+
+- How to best structure the interruption resumption flow in terms of OrchestratorService APIs
+- How to handle timeouts for long-running interrupts
+- How to properly test the full interrupt cycle from interruption to feedback to resumption
+
+## Recent Learnings
+
+1. The Zod validation schema implementation for `interruptStatus` is working well, with all tests passing
+2. The conditional routing for stale content is functioning correctly, which is a critical part of the system
+3. The `routeAfterStaleContentChoice` function properly handles different types of user feedback
 
 ## Recent Changes
 
-1. **Completed the `ICheckpointer` interface** that defines the contract for all storage implementations.
-2. **Implemented `InMemoryCheckpointer`** for development and testing scenarios.
-3. **Implemented `SupabaseCheckpointer`** for production use with proper error handling.
-4. **Created adapter classes** to bridge our storage implementations with LangGraph's requirements.
-5. **Implemented a factory function** that selects the appropriate checkpointer based on environment configuration.
-6. **Developed comprehensive error handling** throughout the persistence layer.
-7. **Standardized environment configuration** by centralizing all variables in the root `.env` file.
-8. **Created a robust test script** to verify all checkpointer operations.
-9. **Ensured multi-tenant isolation** by including userId in thread ID generation.
+1. **HITL Implementation Plan**: Created a detailed implementation plan for task 14.3 with hierarchical task breakdown including checkboxes for tracking progress. The plan includes clear specifications for:
+
+   - State structure updates
+   - Graph configuration
+   - Orchestrator service integration
+   - API endpoints
+   - Testing strategy
+
+2. **Routing Conditionals Implementation**: Implemented routing conditionals for the proposal generation graph with comprehensive test coverage.
+
+3. **StateGraph Design**: Established the StateGraph design with proper node connections and edge definitions.
+
+4. **Conditionals Test Suite**: Developed a complete test suite for conditionals with 100% test coverage.
+
+5. **Dependency Completion**: Confirmed completion of all prerequisites for HITL implementation:
+   - Task 13: Checkpointer Implementation ✅
+   - Task 14.1: ProposalGenerationGraph with evaluation nodes ✅
+   - Task 14.2: OrchestratorService framework ✅
+
+## Implementation Plans
+
+### HITL Capabilities (Task 14.3)
+
+The implementation plan for HITL capabilities has been fully developed and includes a clear task breakdown with priorities and estimated timelines. The plan follows a hierarchical structure for easy tracking and implementation:
+
+1. **State Structure** (Days 1-2, High Priority)
+
+   - Add interrupt tracking to `OverallProposalState`
+   - Implement interfaces for interrupts and feedback
+   - Update state documentation
+
+2. **Graph Configuration** (Days 2-3, High Priority)
+
+   - Add interrupt points after evaluation nodes
+   - Configure `interruptAfter` list
+   - Add edge definitions for interrupt handling
+
+3. **State Annotations** (Day 4, High Priority)
+
+   - Add annotations for interrupt fields
+   - Implement state reducers
+   - Add tests for state updates
+
+4. **OrchestratorService Integration** (Days 5-7, High Priority)
+
+   - Implement `detectInterrupt` method
+   - Add `submitFeedback` method
+   - Create `resumeFromInterrupt` method
+   - Add comprehensive tests
+
+5. **Feedback Processing** (Days 8-9, High/Medium Priority)
+
+   - Implement `processFeedbackNode`
+   - Create revision handling
+   - Implement regeneration logic
+   - Add tests for all feedback types
+
+6. **Conditional Logic** (Days 10-11, High/Medium Priority)
+
+   - Add routing functions for feedback types
+   - Test conditional routing
+
+7. **API Layer** (Days 12-13, High Priority)
+
+   - Add interrupt status endpoint
+   - Implement feedback submission
+   - Create resume endpoint
+   - Add validation middleware
+
+8. **Timeout Handling** (Day 14, Medium Priority)
+
+   - Configure timeouts
+   - Implement detection logic
+   - Add recovery mechanisms
+
+9. **Integration Testing** (Days 15-16, High/Medium Priority)
+
+   - Test full interrupt cycle
+   - Test all feedback types
+   - Verify state persistence
+
+10. **Error Handling** (Day 17, High/Medium Priority)
+    - Test timeout scenarios
+    - Test invalid feedback
+    - Test interrupted state recovery
+
+This implementation approach has been validated against the requirements in `AGENT_ARCHITECTURE.md` and follows the established patterns in `AGENT_BASESPEC.md`. The approach focuses on maintaining a clear separation of concerns, robust error handling, and comprehensive testing at each stage.
+
+## Important Design Patterns
+
+1. **Hybrid Orchestration Pattern**: The system uses a combination of a central Orchestrator service for coordination and a LangGraph for the proposal generation workflow.
+
+2. **State-Driven Routing**: Conditional routing within the graph is based on the current state of the proposal, allowing for dynamic workflow adjustments.
+
+3. **Checkpointing Strategy**: The system uses a persistent checkpointing strategy to save state at critical points, enabling resumption after interruptions.
+
+4. **HITL Integration**: Human-in-the-loop capabilities are integrated at strategic points in the workflow, particularly after evaluation nodes, to allow for user feedback and course correction.
+
+5. **Component Separation**: Clear separation between the Orchestrator, ProposalGenerationGraph, and EditorAgent components, with well-defined interfaces.
+
+## Learnings and Insights
+
+1. **State Design**: The state structure needs to be carefully designed to support both the graph's internal logic and external interactions with the Orchestrator and API.
+
+2. **Testing Strategy**: Comprehensive testing at multiple levels (unit, integration, end-to-end) is essential for ensuring the reliability of the complex workflow.
+
+3. **Modular Architecture**: The separation of concerns between the Orchestrator, Graph, and EditorAgent components has proven beneficial for maintainability and testability.
+
+4. **Dependency Management**: Clear documentation of dependencies between tasks has helped in planning and executing the implementation in a logical sequence.
+
+5. **Interrupt Handling**: The design of interrupt points and state management for interrupts requires careful consideration to ensure seamless user experience.
 
 ## Next Steps
 
-1. **Complete the LangGraph implementation**:
+1. Begin implementing HITL capabilities according to the detailed task breakdown in the implementation plan, starting with state structure updates and graph configuration for interrupt points.
 
-   - Update the proposal agent graph to align with the latest state definitions
-   - Implement the required node functions for each stage of proposal generation
-   - Create conditional routing functions for decision points and error handling
+2. Complete the integration of the EditorAgent service with the Orchestrator and ProposalGenerationGraph.
 
-2. **Develop comprehensive testing**:
+3. Develop the API endpoints for the HITL workflow, including status retrieval, feedback submission, and resumption.
 
-   - Unit tests for individual node functions
-   - Integration tests for graph execution
-   - End-to-end tests for full proposal generation
+4. Add robust error handling throughout the system, particularly for interrupted workflows and timeout scenarios.
 
-3. **Create the API layer**:
-   - Develop endpoints for initiating and controlling proposal generation
-   - Implement proper authentication and authorization
-   - Expose appropriate state information for the frontend
+5. Implement comprehensive testing for all components of the HITL workflow, including both happy path and edge cases.
 
 ## Important Patterns & Preferences
 
