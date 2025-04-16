@@ -526,9 +526,26 @@ export async function evaluateResearchNode(
   // --- End Placeholder ---
 
   console.log(`Evaluation Passed: ${placeholderEvaluation.passed}`);
+
+  // Set interrupt metadata and status for HITL interrupt
   return {
     researchEvaluation: placeholderEvaluation,
-    // Always go to review after evaluation, even if passed (as per architecture)
+    // Set interrupt metadata to provide context for the UI
+    interruptMetadata: {
+      reason: "EVALUATION_NEEDED",
+      nodeId: "evaluateResearchNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "research",
+      evaluationResult: placeholderEvaluation,
+    },
+    // Set interrupt status to 'awaiting_input' to signal user review needed
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "evaluateResearch",
+      feedback: null,
+      processingStatus: "pending",
+    },
+    // Always set research status to awaiting_review for consistency
     researchStatus: "awaiting_review",
   };
 }
@@ -682,21 +699,43 @@ export async function evaluateSectionNode(
   // In a real implementation, this would analyze the section content against
   // evaluation criteria and provide detailed feedback
 
-  // For now, mark the section as awaiting review
+  // Create an evaluation result
+  const sectionEvaluation = {
+    score: 7,
+    passed: true,
+    feedback: `This ${sectionType} section looks good overall but could use some minor refinement.`,
+    strengths: [`Good alignment with ${sectionType} requirements`],
+    weaknesses: ["Could use more specific examples"],
+    suggestions: ["Add more concrete examples"],
+  };
+
+  // Update the section with evaluation result
   const updatedSections = new Map(state.sections);
   updatedSections.set(sectionType, {
     ...section,
     status: "awaiting_review",
-    evaluation: {
-      score: 7,
-      passed: true,
-      feedback: `This ${sectionType} section looks good overall but could use some minor refinement.`,
-    },
+    evaluation: sectionEvaluation,
     lastUpdated: new Date().toISOString(),
   });
 
+  // Set interrupt metadata and status for HITL interrupt
   return {
     sections: updatedSections,
+    // Set interrupt metadata to provide context for the UI
+    interruptMetadata: {
+      reason: "EVALUATION_NEEDED",
+      nodeId: "evaluateSectionNode",
+      timestamp: new Date().toISOString(),
+      contentReference: sectionType,
+      evaluationResult: sectionEvaluation,
+    },
+    // Set interrupt status to 'awaiting_input' to signal user review needed
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: `evaluateSection:${sectionType}`,
+      feedback: null,
+      processingStatus: "pending",
+    },
     status: "awaiting_review",
   };
 }
@@ -919,8 +958,25 @@ export async function evaluateSolutionNode(
       "The solution approach is well-aligned with the funder's priorities and research findings.",
   };
 
+  // Set interrupt metadata and status for HITL interrupt
   return {
     solutionEvaluation,
+    // Set interrupt metadata to provide context for the UI
+    interruptMetadata: {
+      reason: "EVALUATION_NEEDED",
+      nodeId: "evaluateSolutionNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "solution",
+      evaluationResult: solutionEvaluation,
+    },
+    // Set interrupt status to 'awaiting_input' to signal user review needed
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "evaluateSolution",
+      feedback: null,
+      processingStatus: "pending",
+    },
+    // Update solution status
     solutionStatus: "awaiting_review",
     status: "awaiting_review",
   };

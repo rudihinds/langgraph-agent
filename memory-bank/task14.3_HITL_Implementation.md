@@ -109,10 +109,10 @@ export const OverallProposalStateAnnotation =
 
 - [ ] 2.1. Add interrupt points in `ProposalGenerationGraph` after each evaluation node as specified in AGENT_BASESPEC.md:
 
-  - [ ] 2.1.1. `evaluateResearchNode`
-  - [ ] 2.1.2. `evaluateSolutionNode`
+  - [x] 2.1.1. `evaluateResearchNode`
+  - [x] 2.1.2. `evaluateSolutionNode`
   - [ ] 2.1.3. `evaluateConnectionsNode`
-  - [ ] 2.1.4. Each `evaluate<Section>Node`
+  - [x] 2.1.4. Each `evaluate<Section>Node`
   - Dependencies: 1.1, 1.2 (State structure must be defined first)
 
 - [ ] 2.2. Configure the graph's `interruptAfter` list in `graph.compile()` to include these nodes
@@ -472,17 +472,24 @@ We've made significant progress on the HITL implementation:
    - ✅ Created schema validation for interrupt status with passing tests
    - ✅ Implemented `interruptStatusReducer` for proper state management
    - ✅ Implemented conditional routing for stale content choices with passing tests
+   - ✅ Implemented HITL interrupt for `evaluateResearchNode` with proper status and metadata
+   - ✅ Implemented HITL interrupt for `evaluateSolutionNode` with proper status and metadata
+   - ✅ Implemented HITL interrupt for `evaluateSectionNode` with proper status and metadata specific to each section
+   - ✅ Added comprehensive tests for all evaluation nodes with HITL functionality
 
 2. **Next Steps**:
 
-   - ⏩ Configure graph interrupt points after evaluation nodes
+   - ⏩ Implement HITL for `evaluateConnectionsNode` once it's created
+   - ⏩ Complete the graph configuration with all interrupt points in `interruptAfter` array
    - ⏩ Implement OrchestratorService integration to detect and handle interrupts
    - Continue with feedback processing nodes implementation
 
 3. **Testing Status**:
    - ✅ Schema validation tests for interrupt status are passing
    - ✅ Conditional routing tests for stale content are passing
-   - More tests needed for orchestrator integration
+   - ✅ Added tests to verify the interrupt functionality for all evaluation nodes
+   - ✅ Error handling tests for interrupted nodes are passing
+   - More tests needed for orchestrator integration and other nodes
 
 ## File Path Mapping
 
