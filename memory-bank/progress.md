@@ -27,29 +27,38 @@ Last Modified: August 22, 2023
    - ✅ Implemented `routeAfterStaleContentChoice` function with passing tests
 
 4. **Checkpointer Implementation**
+
    - ✅ Set up Postgres tables for state persistence
    - ✅ Configured BaseCheckpointSaver implementation
    - ✅ Implemented thread_id-based state lookup and retrieval
 
-## In Progress
-
-1. **HITL Implementation**
+5. **HITL Implementation - Part 1**
    - ✅ State structure and interface (Task 14.3.1)
    - ✅ Schema validation with passing tests
    - ✅ Routing logic for stale content with passing tests
-   - 🔄 Graph configuration for interrupts (Task 14.3.2)
-   - 🔄 OrchestratorService integration (Task 14.3.3)
+   - ✅ Graph configuration for interrupts (Task 14.3.2)
+   - ✅ Implemented all evaluation nodes with HITL interrupt capabilities
+   - ✅ OrchestratorService implementation for interrupt detection and handling (Task 3.1)
+   - ✅ Comprehensive tests for interrupt detection and handling
+
+## In Progress
+
+1. **HITL Implementation - Part 2**
+   - 🔄 User feedback submission and processing (Task 3.2)
+   - 🔄 Graph resumption after feedback (Task 3.3)
+   - 🔄 Feedback processing nodes (Task 4.x)
+   - 🔄 API endpoints (Task 6.x)
 
 ## Up Next
 
 1. **Complete HITL Implementation**
 
-   - Graph configuration for interrupts
-   - OrchestratorService integration
-   - Feedback processing nodes
-   - API endpoints
-   - Timeout handling
-   - Full test suite
+   - Implement user feedback submission in OrchestratorService
+   - Add graph resumption logic
+   - Create feedback processing nodes
+   - Build API endpoints for frontend interaction
+   - Add timeout handling
+   - Complete end-to-end tests
 
 2. **Frontend Integration**
    - User interface for interrupt handling
@@ -78,6 +87,8 @@ Last Modified: August 22, 2023
 
 - HITL State structure and validation implementation
 - HITL Conditional routing implementation
+- HITL Evaluation nodes with interrupt capabilities
+- OrchestratorService with interrupt detection and handling
 
 ## What Works
 
@@ -121,16 +132,14 @@ Last Modified: August 22, 2023
 - ✅ Integrated conditionals with graph structure
 - ✅ Created documentation for conditional logic
 
-### HITL Planning
+### HITL Implementation
 
-- ✅ Developed detailed implementation plan for HITL capabilities
-- ✅ Created structured task breakdown with tickboxes for progress tracking
-- ✅ Defined interfaces for interrupt tracking and user feedback
-- ✅ Designed OrchestratorService integration for HITL workflow
-- ✅ Specified API endpoints for HITL interaction
-- ✅ Created testing strategy for HITL components
-- ✅ Established clear dependencies between tasks
-- ✅ Added timeline estimation for implementation phases
+- ✅ Implemented HITL state structure with InterruptStatus interface
+- ✅ Created evaluation nodes with interrupt capabilities
+- ✅ Configured graph with interruptAfter for evaluation nodes
+- ✅ Implemented OrchestratorService with interrupt detection and handling
+- ✅ Added comprehensive tests for all HITL components implemented so far
+- ✅ Created detailed implementation plan with clear task dependencies
 
 ## Evolution of Design Decisions
 
@@ -159,10 +168,10 @@ Last Modified: August 22, 2023
 - **Evolution**:
   1. Started with basic interrupt concept
   2. Evolved to define clear interrupt points in the graph
-  3. Added structured user feedback handling
-  4. Implemented resumption logic with state preservation
-  5. Created a task-based implementation plan with clear dependencies
-  6. Added timeout handling and recovery mechanisms
+  3. Added structured user feedback handling with InterruptStatus interface
+  4. Implemented OrchestratorService as central manager for HITL workflow
+  5. Created content reference extraction for improved UI presentation
+  6. Added comprehensive testing for all HITL components
 
 ### API Design
 

@@ -6,45 +6,35 @@ _Last updated: August 22, 2023_
 
 We are currently implementing Human-In-The-Loop (HITL) functionality for the proposal generation system, following the architecture specified in AGENT_ARCHITECTURE.md and AGENT_BASESPEC.md.
 
-### Recent Progress
+### Recently Completed
 
-1. **HITL State Structure** ✅ COMPLETED
+- Implemented all evaluation nodes with HITL interrupt capabilities:
+  - `evaluateResearchNode`
+  - `evaluateSolutionNode`
+  - `evaluateSectionNode`
+  - `evaluateConnectionsNode`
+- Configured the graph's `interruptAfter` list to include all evaluation nodes
+- Implemented `OrchestratorService` with methods to detect interrupts, retrieve interrupt details, and extract content for UI presentation
+- Added comprehensive tests for all interrupt detection and handling functionality
 
-   - Successfully implemented the `InterruptStatus` interface with properties for tracking interruption state
-   - Created Zod schemas for validating interrupt status data
-   - Implemented `interruptStatusReducer` for proper immutable state updates
-   - Added appropriate state annotations for the interrupt-related fields
-   - All schema validation tests for interrupt status are passing
+### Current Task
 
-2. **Conditional Logic** ✅ COMPLETED
-   - Implemented `routeAfterStaleContentChoice` function in conditionals.ts
-   - This function properly routes based on user feedback when content is stale due to dependency changes
-   - It handles cases where the user chooses to regenerate or keep existing content
-   - All tests for stale content routing are passing
+**Task 14.3.2: Implement user feedback submission and processing in OrchestratorService**
+
+We are now working on extending the `OrchestratorService` to handle user feedback when an interrupt occurs. This involves:
+
+1. Adding methods to receive and process user feedback (approve/revise/regenerate)
+2. Updating the proposal state with feedback information
+3. Preparing the state for graph resumption
+
+This task forms a critical part of the HITL workflow, allowing users to provide feedback on generated content before the graph proceeds.
 
 ### Next Steps
 
-1. **Graph Configuration** ⏩ NEXT PRIORITY
-
-   - Configure the graph's `interruptAfter` list to include all evaluation nodes
-   - Define clear interruption points after evaluation nodes
-
-2. **OrchestratorService Integration** ⏩ NEXT PRIORITY
-
-   - Implement `handleInterrupt` method to detect and process graph pauses
-   - Create `submitFeedback` method to handle user input during interrupts
-   - Implement graph resumption after feedback processing
-
-3. **Feedback Processing Nodes**
-
-   - Implement `processFeedbackNode` to handle user input
-   - Create revision handling via EditorAgent
-   - Implement regeneration with user guidance
-
-4. **API Endpoints**
-   - Create endpoints for status checking (including interrupt status)
-   - Implement feedback submission API
-   - Add resume functionality endpoint
+- Complete feedback submission implementation (Task 3.2)
+- Implement graph resumption after feedback (Task 3.3)
+- Implement feedback processing nodes (Task 4.x)
+- Create API endpoints for frontend integration (Task 6.x)
 
 ### Current Technical Focus
 
