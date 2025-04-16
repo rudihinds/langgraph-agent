@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SupabaseCheckpointer } from "../supabase-checkpointer.js";
 import { createClient } from "@supabase/supabase-js";
-import { Checkpoint, CheckpointMetadata } from "@langchain/langgraph";
+import { CheckpointMetadata } from "@langchain/langgraph";
 
 // Mock the Supabase client creation
 vi.mock("@supabase/supabase-js", () => {
@@ -34,8 +34,11 @@ vi.mock("../../utils/backoff.js", () => ({
 
 describe("SupabaseCheckpointer", () => {
   let checkpointer: SupabaseCheckpointer;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockSupabaseClient: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockUserIdGetter: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockProposalIdGetter: any;
 
   beforeEach(() => {
@@ -52,12 +55,13 @@ describe("SupabaseCheckpointer", () => {
     });
 
     // Access the client for assertions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSupabaseClient = (createClient as any).mock.results[0].value;
   });
 
   it("should generate a valid thread ID with the correct format", () => {
     const proposalId = "test-proposal-123";
-    const threadId = SupabaseCheckpointer.generateThreadId(proposalId, "test");
+    const threadId = checkpointer.generateThreadId(proposalId, "test");
 
     // The threadId should be in the format: componentName_proposalId_timestamp
     expect(threadId).toMatch(new RegExp(`^test_${proposalId}_\\d+$`));
@@ -65,7 +69,7 @@ describe("SupabaseCheckpointer", () => {
 
   it("should generate a thread ID with default component name when not provided", () => {
     const proposalId = "test-proposal-123";
-    const threadId = SupabaseCheckpointer.generateThreadId(proposalId);
+    const threadId = checkpointer.generateThreadId(proposalId);
 
     // The default component name is 'proposal'
     expect(threadId).toMatch(new RegExp(`^proposal_${proposalId}_\\d+$`));
@@ -120,7 +124,8 @@ describe("SupabaseCheckpointer", () => {
 
   describe("put method", () => {
     it("should throw error when no thread_id is provided", async () => {
-      const checkpoint: Checkpoint = { state: { foo: "bar" } };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const checkpoint: any = { state: { foo: "bar" } };
       const metadata: CheckpointMetadata = {
         parents: {},
         source: "input",
@@ -136,7 +141,8 @@ describe("SupabaseCheckpointer", () => {
     it("should throw error when user or proposal IDs are not available", async () => {
       mockUserIdGetter.mockResolvedValue(null);
 
-      const checkpoint: Checkpoint = { state: { foo: "bar" } };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const checkpoint: any = { state: { foo: "bar" } };
       const metadata: CheckpointMetadata = {
         parents: {},
         source: "input",

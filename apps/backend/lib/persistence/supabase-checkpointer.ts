@@ -14,6 +14,11 @@ import type { RunnableConfig } from "@langchain/core/runnables";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { withRetry } from "../utils/backoff.js";
+import {
+  ICheckpointer,
+  IExtendedCheckpointer,
+  CheckpointSummary,
+} from "./ICheckpointer.js";
 
 /**
  * Configuration for the SupabaseCheckpointer
@@ -38,10 +43,10 @@ const CheckpointSchema = z.object({
 });
 
 /**
- * SupabaseCheckpointer implements a minimal subset of the BaseCheckpointSaver interface
+ * SupabaseCheckpointer implements the IExtendedCheckpointer interface
  * providing persistence for checkpoints using Supabase
  */
-export class SupabaseCheckpointer implements Partial<BaseCheckpointSaver> {
+export class SupabaseCheckpointer implements IExtendedCheckpointer {
   private supabase: SupabaseClient;
   private tableName: string;
   private sessionTableName: string;
@@ -75,7 +80,7 @@ export class SupabaseCheckpointer implements Partial<BaseCheckpointSaver> {
   /**
    * Generate a consistent thread ID with optional prefix
    */
-  public static generateThreadId(
+  public generateThreadId(
     proposalId: string,
     componentName: string = "proposal"
   ): string {
@@ -147,10 +152,8 @@ export class SupabaseCheckpointer implements Partial<BaseCheckpointSaver> {
   async put(
     config: RunnableConfig,
     checkpoint: Checkpoint,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _metadata: CheckpointMetadata,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _newVersions: any
+    metadata: CheckpointMetadata,
+    newVersions: unknown
   ): Promise<RunnableConfig> {
     const threadId = config?.configurable?.thread_id as string;
     if (!threadId) {
@@ -245,13 +248,106 @@ export class SupabaseCheckpointer implements Partial<BaseCheckpointSaver> {
    *
    * Note: Parameters are unused but required by the interface
    */
-  async listNamespaces(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _match?: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _matchType?: string
-  ): Promise<string[]> {
-    return [];
+  async listNamespaces(match?: string, matchType?: string): Promise<string[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select("proposal_id")
+        .order("proposal_id", { ascending: true });
+
+      if (error) {
+        this.logger.error("Error listing namespaces", { error });
+        return [];
+      }
+
+      // Extract unique proposal IDs as namespaces
+      const namespaces = Array.from(
+        new Set(data.map((row) => row.proposal_id))
+      );
+
+      // Filter by match pattern if provided
+      if (match) {
+        return namespaces.filter((namespace) => {
+          if (matchType === "startsWith") {
+            return namespace.startsWith(match);
+          } else if (matchType === "endsWith") {
+            return namespace.endsWith(match);
+          } else if (matchType === "contains") {
+            return namespace.includes(match);
+          }
+          // Default to exact match
+          return namespace === match;
+        });
+      }
+
+      return namespaces;
+    } catch (error) {
+      this.logger.error("Failed to list namespaces", { error });
+      return [];
+    }
+  }
+
+  /**
+   * Get all checkpoints for a user
+   */
+  async getUserCheckpoints(userId: string): Promise<CheckpointSummary[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select("thread_id, user_id, proposal_id, updated_at, size_bytes")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        throw new Error(`Error fetching user checkpoints: ${error.message}`);
+      }
+
+      return data.map((row) => ({
+        threadId: row.thread_id,
+        userId: row.user_id,
+        proposalId: row.proposal_id,
+        lastUpdated: new Date(row.updated_at),
+        size: row.size_bytes,
+      }));
+    } catch (error) {
+      this.logger.error("Failed to get user checkpoints", { userId, error });
+      return [];
+    }
+  }
+
+  /**
+   * Get all checkpoints for a proposal
+   */
+  async getProposalCheckpoints(
+    proposalId: string
+  ): Promise<CheckpointSummary[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select("thread_id, user_id, proposal_id, updated_at, size_bytes")
+        .eq("proposal_id", proposalId)
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        throw new Error(
+          `Error fetching proposal checkpoints: ${error.message}`
+        );
+      }
+
+      return data.map((row) => ({
+        threadId: row.thread_id,
+        userId: row.user_id,
+        proposalId: row.proposal_id,
+        lastUpdated: new Date(row.updated_at),
+        size: row.size_bytes,
+      }));
+    } catch (error) {
+      this.logger.error("Failed to get proposal checkpoints", {
+        proposalId,
+        error,
+      });
+      return [];
+    }
   }
 
   /**
