@@ -132,9 +132,11 @@ await compiledGraph.invoke(
 
 ### 5. Database Setup
 
-Ensure your Supabase database has the required tables. The SQL schema is available in `/apps/backend/lib/persistence/db-schema.sql`.
+Ensure your Supabase database has the required tables. The SQL schema is available in `/apps/backend/lib/persistence/db-schema.sql`. check it to make sure it aligns. Use the Supabase mcp to perform any actions to bring it in line with our new patterns.
 
 ## Testing Your Migration
+
+Check the tests give good coverage. Update if not.
 
 Run tests to ensure your migration is successful:
 

@@ -2,5 +2,5 @@
  * Persistence layer for LangGraph agents
  */
 
-export { ProposalCheckpointer } from './checkpointer';
-export type { ProposalCheckpointerConfig } from './checkpointer';
+export { SupabaseCheckpointer } from "./supabase-checkpointer.js";
+export type { SupabaseCheckpointerConfig } from "./supabase-checkpointer.js";
