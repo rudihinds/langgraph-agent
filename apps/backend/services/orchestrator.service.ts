@@ -18,9 +18,9 @@ import {
   UserFeedback,
   ProcessingStatus,
   SectionType,
-  FeedbackType,
   SectionProcessingStatus,
 } from "../state/modules/types.js";
+import { FeedbackType } from "../lib/types/feedback.js";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger, LogLevel } from "../lib/logger.js";
 

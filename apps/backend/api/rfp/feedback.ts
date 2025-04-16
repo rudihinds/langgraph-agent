@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logger } from "../../lib/logger.js";
 import { OrchestratorService } from "../../services/orchestrator.service.js";
+import { FeedbackType } from "../../lib/types/feedback.js";
 
 /**
  * Schema for validating the feedback submission request
@@ -9,7 +10,7 @@ import { OrchestratorService } from "../../services/orchestrator.service.js";
 const FeedbackSubmissionSchema = z.object({
   threadId: z.string(),
   feedback: z.object({
-    type: z.enum(["approve", "revise", "regenerate"]),
+    type: z.nativeEnum(FeedbackType),
     comments: z.string().optional(),
     specificEdits: z.record(z.any()).optional(),
     timestamp: z.string(),

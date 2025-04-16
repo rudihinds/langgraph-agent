@@ -11,6 +11,7 @@ import {
   SectionProcessingStatus,
 } from "../../state/modules/types.js";
 import { Logger, LogLevel } from "../../lib/logger.js";
+import { FeedbackType } from "../../lib/types/feedback.js";
 import { OverallProposalState as ProposalState } from "../../state/modules/types.js";
 
 // Create logger for conditionals module

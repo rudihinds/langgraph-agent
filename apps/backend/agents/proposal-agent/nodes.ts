@@ -10,6 +10,7 @@ import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { z } from "zod";
 import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { FeedbackType } from "../../lib/types/feedback.js";
 
 // Initialize OpenAI chat model - later can be parameterized or moved to config
 const model = new ChatOpenAI({
@@ -1124,7 +1125,7 @@ export async function processFeedbackNode(
 
   // Different handling based on feedback type
   switch (type) {
-    case "approve":
+    case FeedbackType.APPROVE:
       // For approval, we update status and continue
       logger.info("User approved content, continuing flow");
 
@@ -1183,7 +1184,7 @@ export async function processFeedbackNode(
       }
       break;
 
-    case "revise":
+    case FeedbackType.REVISE:
       // For revision, we update content with specific edits
       logger.info("User requested revisions with specific edits");
 
@@ -1249,7 +1250,7 @@ export async function processFeedbackNode(
       }
       break;
 
-    case "regenerate":
+    case FeedbackType.REGENERATE:
       // For regeneration, we reset to an earlier state
       logger.info("User requested complete regeneration");
 
