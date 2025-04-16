@@ -10,16 +10,17 @@ import {
 import { BaseMessage } from "@langchain/core/messages";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
 import {
-  ProposalState,
+  OverallProposalState as ProposalState,
   SectionType,
   SectionData,
-} from "../../state/proposal.state.js";
+} from "../../state/modules/types.js";
 import {
   lastValueReducer,
   lastValueWinsReducerStrict,
   sectionsReducer,
   errorsReducer,
-} from "../../state/proposal.state.js";
+} from "../../state/modules/reducers.js";
+import { OverallProposalStateAnnotation as ProposalStateAnnotation } from "../../state/modules/annotations.js";
 import {
   researchNode,
   evaluateResearchNode,
@@ -44,12 +45,7 @@ import {
   routeAfterSolutionEvaluation,
   determineNextSection,
   routeAfterSectionEvaluation,
-  routeAfterSectionFeedback,
-  routeFinalizeProposal,
-  routeAfterResearchReview,
-  routeAfterSolutionReview,
-  routeAfterStaleChoice,
-  handleError,
+  routeAfterStaleContentChoice,
 } from "./conditionals.js";
 import { SupabaseCheckpointer } from "../../lib/persistence/supabase-checkpointer.js";
 import { LangGraphCheckpointer } from "../../lib/persistence/langgraph-adapter.js";
@@ -115,6 +111,24 @@ const proposalGraphStateChannels: StateGraphArgs<ProposalState>["channels"] = {
   requiredSections: {
     reducer: lastValueReducer,
     default: () => [],
+  },
+  // HITL Interrupt handling
+  interruptStatus: {
+    reducer: (existing, incoming) => incoming ?? existing,
+    default: () => ({
+      isInterrupted: false,
+      interruptionPoint: null,
+      feedback: null,
+      processingStatus: null,
+    }),
+  },
+  interruptMetadata: {
+    reducer: lastValueReducer,
+    default: () => undefined,
+  },
+  userFeedback: {
+    reducer: lastValueReducer,
+    default: () => undefined,
   },
   // Workflow tracking
   currentStep: {
@@ -284,6 +298,13 @@ export function createProposalGenerationGraph(
   // Compile the graph with the provided checkpointer
   return graph.compile({
     checkpointer: checkpointer,
+    // Task 2.1 & 2.2: Configure interrupt points after evaluation nodes
+    interruptAfter: [
+      "evaluateResearch",
+      "evaluateSolution",
+      "evaluateConnections",
+      "evaluateSection",
+    ],
   });
 }
 

@@ -107,15 +107,15 @@ export const OverallProposalStateAnnotation =
 
 ### 2. Graph Configuration for Interrupts (1 day)
 
-- [ ] 2.1. Add interrupt points in `ProposalGenerationGraph` after each evaluation node as specified in AGENT_BASESPEC.md:
+- [x] 2.1. Add interrupt points in `ProposalGenerationGraph` after each evaluation node as specified in AGENT_BASESPEC.md:
 
   - [x] 2.1.1. `evaluateResearchNode`
   - [x] 2.1.2. `evaluateSolutionNode`
-  - [ ] 2.1.3. `evaluateConnectionsNode`
+  - [x] 2.1.3. `evaluateConnectionsNode`
   - [x] 2.1.4. Each `evaluate<Section>Node`
   - Dependencies: 1.1, 1.2 (State structure must be defined first)
 
-- [ ] 2.2. Configure the graph's `interruptAfter` list in `graph.compile()` to include these nodes
+- [x] 2.2. Configure the graph's `interruptAfter` list in `graph.compile()` to include these nodes
   - Dependencies: 2.1 (Interrupt points must be identified first)
 
 ### 3. OrchestratorService Integration (3 days)
@@ -475,19 +475,22 @@ We've made significant progress on the HITL implementation:
    - ✅ Implemented HITL interrupt for `evaluateResearchNode` with proper status and metadata
    - ✅ Implemented HITL interrupt for `evaluateSolutionNode` with proper status and metadata
    - ✅ Implemented HITL interrupt for `evaluateSectionNode` with proper status and metadata specific to each section
+   - ✅ Implemented HITL interrupt for `evaluateConnectionsNode` with proper status and metadata
+   - ✅ Configured all necessary interrupt points in the graph's `interruptAfter` array
    - ✅ Added comprehensive tests for all evaluation nodes with HITL functionality
 
 2. **Next Steps**:
 
-   - ⏩ Implement HITL for `evaluateConnectionsNode` once it's created
-   - ⏩ Complete the graph configuration with all interrupt points in `interruptAfter` array
-   - ⏩ Implement OrchestratorService integration to detect and handle interrupts
-   - Continue with feedback processing nodes implementation
+   - ⏩ Implement OrchestratorService integration to detect and handle interrupts (Task 3.1)
+   - ⏩ Implement user feedback submission and processing (Task 3.2)
+   - ⏩ Implement graph resumption after feedback (Task 3.3)
+   - ⏩ Implement feedback processing nodes (Task 4.x)
+   - Continue with API endpoints and timeout handling
 
 3. **Testing Status**:
    - ✅ Schema validation tests for interrupt status are passing
    - ✅ Conditional routing tests for stale content are passing
-   - ✅ Added tests to verify the interrupt functionality for all evaluation nodes
+   - ✅ Tests for all evaluation nodes with HITL functionality are passing
    - ✅ Error handling tests for interrupted nodes are passing
    - More tests needed for orchestrator integration and other nodes
 

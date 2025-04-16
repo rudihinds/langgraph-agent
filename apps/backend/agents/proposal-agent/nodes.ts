@@ -1021,4 +1021,67 @@ export async function finalizeProposalNode(
   };
 }
 
+/**
+ * Node to evaluate the connection pairs between funder and applicant priorities
+ * @param state Current proposal state
+ * @returns Updated state with connection evaluation
+ */
+export async function evaluateConnectionsNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Evaluating connection pairs...");
+
+  // Check if connections exist
+  if (!state.connections || state.connections.length === 0) {
+    return {
+      errors: [...state.errors, "No connection pairs found to evaluate."],
+      connectionsStatus: "error",
+    };
+  }
+
+  // In a real implementation, this would analyze the connection pairs against
+  // research findings, solution sought, and funder priorities to ensure
+  // they represent strong alignment
+
+  // Example evaluation result for connections
+  const connectionsEvaluation = {
+    score: 8,
+    passed: true,
+    feedback:
+      "Connection pairs show good alignment between funder priorities and applicant capabilities.",
+    strengths: [
+      "Clear alignment with mission",
+      "Addresses specific priorities",
+    ],
+    weaknesses: ["Could be more specific in some areas"],
+    suggestions: [
+      "Add more quantifiable impact metrics",
+      "Strengthen connection to timeline",
+    ],
+  };
+
+  // Set interrupt metadata and status for HITL interrupt
+  return {
+    connectionsEvaluation,
+    // Set interrupt metadata to provide context for the UI
+    interruptMetadata: {
+      reason: "EVALUATION_NEEDED",
+      nodeId: "evaluateConnectionsNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "connections",
+      evaluationResult: connectionsEvaluation,
+    },
+    // Set interrupt status to 'awaiting_input' to signal user review needed
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "evaluateConnections",
+      feedback: null,
+      processingStatus: "pending",
+    },
+    // Update connections status
+    connectionsStatus: "awaiting_review",
+    status: "awaiting_review",
+  };
+}
+
 // Additional node functions can be added here

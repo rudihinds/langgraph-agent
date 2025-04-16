@@ -3,6 +3,7 @@ import {
   evaluateResearchNode,
   evaluateSolutionNode,
   evaluateSectionNode,
+  evaluateConnectionsNode,
 } from "../nodes";
 import { SectionType } from "../../../state/modules/types";
 import { OverallProposalState } from "../../../state/modules/types";
@@ -221,6 +222,76 @@ describe("evaluateSectionNode", () => {
     // Verify error is added and no interrupt is set
     expect(result.errors).toBeDefined();
     expect(result.errors?.length).toBe(1);
+    expect(result.interruptStatus).toBeUndefined();
+    expect(result.interruptMetadata).toBeUndefined();
+  });
+});
+
+describe("evaluateConnectionsNode", () => {
+  it("should set interrupt metadata and status correctly", async () => {
+    // Set up initial state with connections
+    const initialState: Partial<OverallProposalState> = {
+      connections: [
+        "Funder prioritizes education access, applicant has expertise in digital learning platforms",
+        "Funder seeks climate solutions, applicant has developed sustainable energy technologies",
+        "Funder values community impact, applicant has strong local partnerships",
+      ],
+      connectionsStatus: "completed",
+      errors: [],
+      messages: [],
+      sections: new Map(),
+      status: "running",
+    };
+
+    // Call the node
+    const result = await evaluateConnectionsNode(
+      initialState as OverallProposalState
+    );
+
+    // Verify interrupt status
+    expect(result.interruptStatus).toBeDefined();
+    expect(result.interruptStatus?.isInterrupted).toBe(true);
+    expect(result.interruptStatus?.interruptionPoint).toBe(
+      "evaluateConnections"
+    );
+    expect(result.interruptStatus?.feedback).toBeNull();
+    expect(result.interruptStatus?.processingStatus).toBe("pending");
+
+    // Verify interrupt metadata
+    expect(result.interruptMetadata).toBeDefined();
+    expect(result.interruptMetadata?.reason).toBe("EVALUATION_NEEDED");
+    expect(result.interruptMetadata?.nodeId).toBe("evaluateConnectionsNode");
+    expect(result.interruptMetadata?.contentReference).toBe("connections");
+    expect(result.interruptMetadata?.timestamp).toBeDefined();
+
+    // Verify evaluation result is included in metadata
+    expect(result.interruptMetadata?.evaluationResult).toBeDefined();
+    expect(result.interruptMetadata?.evaluationResult.passed).toBeDefined();
+
+    // Verify connections status is set properly
+    expect(result.connectionsStatus).toBe("awaiting_review");
+    expect(result.status).toBe("awaiting_review");
+  });
+
+  it("should handle missing connections", async () => {
+    // Set up initial state without connections
+    const initialState: Partial<OverallProposalState> = {
+      connectionsStatus: "error",
+      errors: [],
+      messages: [],
+      sections: new Map(),
+      status: "running",
+    };
+
+    // Call the node
+    const result = await evaluateConnectionsNode(
+      initialState as OverallProposalState
+    );
+
+    // Verify error is added and no interrupt is set
+    expect(result.errors).toBeDefined();
+    expect(result.errors?.length).toBe(1);
+    expect(result.connectionsStatus).toBe("error");
     expect(result.interruptStatus).toBeUndefined();
     expect(result.interruptMetadata).toBeUndefined();
   });
