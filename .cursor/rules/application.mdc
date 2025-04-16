@@ -7,6 +7,19 @@ alwaysApply: true
 
 These rules must be read and followed before executing any command or chat instruction.
 
+**CRITICAL: LANGGRAPH DOCUMENTATION ADHERENCE**
+
+*   **ALWAYS** prioritize and adhere to the **current, official LangGraph.js documentation** (provided context or via web search) for ALL LangGraph-related implementations. This includes, but is not limited to:
+    *   State Definition (`Annotation.Root`, `channels`)
+    *   Reducers (custom and standard)
+    *   Checkpointers (`BaseCheckpointSaver` implementations)
+    *   Graph Structure (Nodes, Edges, Entry/End points)
+    *   Conditional Logic and Routing
+    *   Human-in-the-Loop (HITL) patterns and interrupts
+    *   Tool Integration (`ToolNode`, etc.)
+*   **DO NOT** rely solely on internal knowledge or past examples, as the library evolves rapidly and internal knowledge may be outdated or incorrect.
+*   If a documented approach fails, investigate the environment (versions, TS config) or search for documented issues before attempting non-standard workarounds.
+
 ## Project Awareness & Context
 - **Always read `PLANNING.md`** at the start of a new conversation to understand the architecture, goals, and dependencies.
 - **Check `TASK.md`** before starting new work - if the task isn't listed, add it with a brief description and today's date.
@@ -31,7 +44,9 @@ These rules must be read and followed before executing any command or chat instr
 - **Use clear, consistent imports** (prefer relative imports within packages).
 
 ## LangGraph Specific Patterns
+- **Verify with Docs:** Define state annotations (`state.ts`) and node functions (`nodes.ts`) strictly according to current LangGraph documentation.
 - **Define state annotations** in dedicated `state.ts` files with comprehensive interfaces.
+- **Verify with Docs:** Document every node function (JSDoc: purpose, input/output state, errors) following documented best practices.
 - **Document every node function** with JSDoc comments explaining:
   - Purpose and responsibility
   - Expected input state
@@ -42,6 +57,7 @@ These rules must be read and followed before executing any command or chat instr
 - **Implement error handling for all LLM calls** using standardized patterns.
 
 ## State Management
+- **Verify with Docs:** Define explicit interfaces (`state.ts`), reducer functions (`reducers.ts` or inline), and checkpointing mechanisms according to current LangGraph documentation.
 - **Define explicit interfaces** for all state objects with JSDoc comments for each field.
 - **Create dedicated reducer functions** for complex state updates in a `reducers.ts` file.
 - **Use immutable patterns** for all state updates.

@@ -11,7 +11,7 @@ graph TD
     OR <--> CK[Persistent Checkpointer]
     OR <--> PG[ProposalGenerationGraph]
     OR <--> EA[EditorAgent]
-    
+
     subgraph "LangGraph StateGraph"
         PG --> LD[documentLoaderNode]
         PG --> DR[deepResearchNode]
@@ -24,13 +24,13 @@ graph TD
         PG --> SG[Section Generator Nodes]
         PG --> SE[Section Evaluator Nodes]
     end
-    
+
     CK <--> DB[(PostgreSQL/Supabase)]
-    
+
     classDef core fill:#f9f,stroke:#333;
     classDef graph fill:#bbf,stroke:#333;
     classDef storage fill:#bfb,stroke:#333;
-    
+
     class OR,CK,PG core;
     class LD,DR,ER,SS,ES,CP,EC,SM,SG,SE graph;
     class DB storage;
@@ -50,67 +50,69 @@ graph TD
 
 ### State Management
 
-* **Single Source of Truth**: Define comprehensive `OverallProposalState` interface containing all workflow state.
-* **Immutable Updates**: Use reducer functions for predictable state transformations.
-* **Persistent Checkpointing**: Utilize `@langchain/langgraph-checkpoint-postgres` for PostgreSQL-based state persistence.
-* **Status Tracking**: Define explicit status enums for tracking progress at various granularities.
+- **Single Source of Truth**: Define comprehensive `OverallProposalState` interface containing all workflow state.
+- **Immutable Updates**: Use reducer functions for predictable state transformations.
+- **Persistent Checkpointing**: Utilize `@langchain/langgraph-checkpoint-postgres` for PostgreSQL-based state persistence.
+- **Status Tracking**: Define explicit status enums for tracking progress at various granularities.
 
 ### Workflow Control
 
-* **Orchestration Pattern**: Centralize control logic in the Orchestrator rather than embedding in the graph.
-* **Human-in-the-Loop**: Use LangGraph interrupts for approval checkpoints and feedback incorporation.
-* **Non-Sequential Editing**: Enable targeted node execution via Orchestrator rather than always linear graph traversal.
-* **Dependency Management**: Track section relationships in a dependency map for intelligent regeneration guidance.
+- **Orchestration Pattern**: Centralize control logic in the Orchestrator rather than embedding in the graph.
+- **Human-in-the-Loop**: Use LangGraph interrupts for approval checkpoints and feedback incorporation.
+- **Non-Sequential Editing**: Enable targeted node execution via Orchestrator rather than always linear graph traversal.
+- **Dependency Management**: Track section relationships in a dependency map for intelligent regeneration guidance.
 
 ### Agent Communication
 
-* **Message-Based Protocol**: Use BaseMessage instances for standardized agent communication.
-* **Context Preservation**: Ensure critical context is included in state and passed between components.
-* **Structured Outputs**: Define Zod schemas for validating agent outputs in a type-safe manner.
+- **Message-Based Protocol**: Use BaseMessage instances for standardized agent communication.
+- **Context Preservation**: Ensure critical context is included in state and passed between components.
+- **Structured Outputs**: Define Zod schemas for validating agent outputs in a type-safe manner.
 
 ### Infrastructure
 
-* **Supabase Integration**: Leverage Supabase for authentication, database, and PostgreSQL access.
-* **Service-Based Design**: Implement core business logic in services rather than directly in graph nodes.
-* **File Length Limits**: Enforce 300-line maximum to maintain modularity and readability.
+- **Supabase Integration**: Leverage Supabase for authentication, database, and PostgreSQL access.
+- **Service-Based Design**: Implement core business logic in services rather than directly in graph nodes.
+- **File Length Limits**: Enforce 300-line maximum to maintain modularity and readability.
 
 ## 3. Core Design Patterns
 
 ### StateGraph Pattern
 
-* Graph nodes represent discrete processing steps with well-defined inputs/outputs
-* State is passed and updated through the graph rather than using side effects
-* Conditional routing determines the execution path based on state evaluation
+- Graph nodes represent discrete processing steps with well-defined inputs/outputs
+- State is passed and updated through the graph rather than using side effects
+- Conditional routing determines the execution path based on state evaluation
+- **Note:** Implementation MUST follow current LangGraph.js documentation for defining state, nodes, and edges.
 
 ### Orchestrator Pattern
 
-* Central service coordinates the overall flow and integrates components
-* State loading/saving handled by Orchestrator via Checkpointer
-* Graph invocation, interruption, and resumption managed consistently
+- Central service coordinates the overall flow and integrates components
+- State loading/saving handled by Orchestrator via Checkpointer
+- Graph invocation, interruption, and resumption managed consistently
 
 ### Human-in-the-Loop Pattern
 
-* Interrupt graph execution at critical review points
-* Capture and incorporate human feedback
-* Resume execution with updated context
+- Interrupt graph execution at critical review points
+- Capture and incorporate human feedback
+- Resume execution with updated context
 
 ### Edit-with-Dependencies Pattern
 
-* Track relationships between content sections
-* Mark dependent sections as stale when predecessors change
-* Provide guided regeneration based on dependency context
+- Track relationships between content sections
+- Mark dependent sections as stale when predecessors change
+- Provide guided regeneration based on dependency context
 
 ### Reducer Pattern
 
-* Custom reducer functions for complex state updates
-* Ensures immutable state transitions
-* Handles array updates, nested objects, and section maps
+- Custom reducer functions for complex state updates
+- Ensures immutable state transitions
+- Handles array updates, nested objects, and section maps
+- **Note:** Reducer implementation and integration with state annotations MUST align with current LangGraph.js documentation.
 
 ### Evaluation-Revision Pattern
 
-* Generate content → Evaluate against criteria → Present for review → Revise based on feedback
-* Apply consistent evaluation framework across content types
-* Capture evaluation results in state for decision-making
+- Generate content → Evaluate against criteria → Present for review → Revise based on feedback
+- Apply consistent evaluation framework across content types
+- Capture evaluation results in state for decision-making
 
 ## 4. Data Flow
 
@@ -125,7 +127,7 @@ graph TD
    - Research generation
    - Solution analysis
    - Section generation
-   - Evaluation 
+   - Evaluation
 6. Each node updates state through reducer functions
 7. Checkpointer persists state after each update
 8. Graph interrupts at review points
@@ -160,9 +162,24 @@ import { Annotation } from "@langchain/langgraph";
 import { messagesStateReducer } from "@langchain/langgraph";
 
 // Status types
-type LoadingStatus = 'not_started' | 'loading' | 'loaded' | 'error';
-type ProcessingStatus = 'queued' | 'running' | 'awaiting_review' | 'approved' | 'edited' | 'stale' | 'complete' | 'error';
-type SectionProcessingStatus = 'queued' | 'generating' | 'awaiting_review' | 'approved' | 'edited' | 'stale' | 'error';
+type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
+type ProcessingStatus =
+  | "queued"
+  | "running"
+  | "awaiting_review"
+  | "approved"
+  | "edited"
+  | "stale"
+  | "complete"
+  | "error";
+type SectionProcessingStatus =
+  | "queued"
+  | "generating"
+  | "awaiting_review"
+  | "approved"
+  | "edited"
+  | "stale"
+  | "error";
 
 // Core interfaces
 interface EvaluationResult {
@@ -185,25 +202,31 @@ interface SectionData {
 
 // Main state interface
 export interface OverallProposalState {
-  rfpDocument: { id: string; fileName?: string; text?: string; metadata?: Record<string, any>; status: LoadingStatus; };
-  researchResults?: Record<string, any>; 
+  rfpDocument: {
+    id: string;
+    fileName?: string;
+    text?: string;
+    metadata?: Record<string, any>;
+    status: LoadingStatus;
+  };
+  researchResults?: Record<string, any>;
   researchStatus: ProcessingStatus;
   researchEvaluation?: EvaluationResult | null;
-  solutionSoughtResults?: Record<string, any>; 
+  solutionSoughtResults?: Record<string, any>;
   solutionSoughtStatus: ProcessingStatus;
   solutionSoughtEvaluation?: EvaluationResult | null;
-  connectionPairs?: any[]; 
+  connectionPairs?: any[];
   connectionPairsStatus: ProcessingStatus;
   connectionPairsEvaluation?: EvaluationResult | null;
-  sections: { [sectionId: string]: SectionData | undefined; };
+  sections: { [sectionId: string]: SectionData | undefined };
   requiredSections: string[];
   currentStep: string | null;
   activeThreadId: string;
   messages: BaseMessage[];
   errors: string[];
-  projectName?: string; 
-  userId?: string; 
-  createdAt: string; 
+  projectName?: string;
+  userId?: string;
+  createdAt: string;
   lastUpdatedAt: string;
 }
 
@@ -243,60 +266,74 @@ export class OrchestratorService {
   }
 
   // Resume graph execution
-  async resumeGraph(threadId: string, feedback?: any): Promise<OverallProposalState> {
+  async resumeGraph(
+    threadId: string,
+    feedback?: any
+  ): Promise<OverallProposalState> {
     const state = await this.checkpointer.get(threadId);
     const updatedState = this.incorporateFeedback(state, feedback);
     await this.checkpointer.put(threadId, updatedState);
-    
+
     const result = await this.graph.invoke(updatedState);
     return result;
   }
 
   // Handle user edits
-  async handleEdit(threadId: string, sectionId: string, editedContent: string): Promise<OverallProposalState> {
+  async handleEdit(
+    threadId: string,
+    sectionId: string,
+    editedContent: string
+  ): Promise<OverallProposalState> {
     const state = await this.checkpointer.get(threadId);
     const updatedContent = await this.editorAgent.reviseContent(
-      sectionId, 
-      state.sections[sectionId]?.content || "", 
+      sectionId,
+      state.sections[sectionId]?.content || "",
       editedContent,
       state
     );
-    
+
     // Update state with edited content
     const updatedState = this.updateSection(state, sectionId, {
       ...state.sections[sectionId],
       content: updatedContent,
-      status: 'edited',
-      lastUpdated: new Date().toISOString()
+      status: "edited",
+      lastUpdated: new Date().toISOString(),
     });
-    
+
     // Mark dependent sections as stale
     const dependentSections = this.getDependentSections(sectionId);
-    const staleState = this.markSectionsAsStale(updatedState, dependentSections);
-    
+    const staleState = this.markSectionsAsStale(
+      updatedState,
+      dependentSections
+    );
+
     await this.checkpointer.put(threadId, staleState);
     return staleState;
   }
 
   // Handle user choices for stale sections
-  async handleStaleChoice(threadId: string, sectionId: string, choice: 'keep' | 'regenerate'): Promise<OverallProposalState> {
+  async handleStaleChoice(
+    threadId: string,
+    sectionId: string,
+    choice: "keep" | "regenerate"
+  ): Promise<OverallProposalState> {
     const state = await this.checkpointer.get(threadId);
-    
-    if (choice === 'keep') {
+
+    if (choice === "keep") {
       // Update status from stale to approved
       const approvedState = this.updateSection(state, sectionId, {
         ...state.sections[sectionId],
-        status: 'approved',
-        lastUpdated: new Date().toISOString()
+        status: "approved",
+        lastUpdated: new Date().toISOString(),
       });
-      
+
       await this.checkpointer.put(threadId, approvedState);
       return approvedState;
     } else {
       // Add regeneration guidance to state
       const guidanceState = this.addRegenerationGuidance(state, sectionId);
       await this.checkpointer.put(threadId, guidanceState);
-      
+
       // Resume graph execution, targeting the specific generator node
       const result = await this.graph.invoke(guidanceState);
       return result;
@@ -307,4 +344,4 @@ export class OrchestratorService {
 }
 ```
 
-*This document serves as a blueprint for the system, illustrating key architectural decisions, patterns, relationships, and implementation strategies. It provides essential context for understanding how components interact and how data flows through the system.*
+_This document serves as a blueprint for the system, illustrating key architectural decisions, patterns, relationships, and implementation strategies. It provides essential context for understanding how components interact and how data flows through the system._
