@@ -571,4 +571,398 @@ export async function handleErrorNode(
   return {};
 }
 
+/**
+ * Node for planning proposal sections based on research and solution analysis
+ * @param state Current proposal state
+ * @returns Updated state with planned sections
+ */
+export async function planSectionsNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Planning proposal sections...");
+
+  // This would contain logic to determine required sections and their order
+  // based on the research and solution sought
+
+  // For now, return a simple set of required sections
+  return {
+    requiredSections: [
+      SectionType.PROBLEM_STATEMENT,
+      SectionType.METHODOLOGY,
+      SectionType.BUDGET,
+      SectionType.TIMELINE,
+      SectionType.CONCLUSION,
+    ],
+    currentStep: "plan_sections",
+    // Update the status to indicate the planning is complete
+    status: "running",
+  };
+}
+
+/**
+ * Node for generating specific proposal sections
+ * @param state Current proposal state
+ * @returns Updated state with the generated section
+ */
+export async function generateSectionNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Generating section...");
+
+  // Determine which section to generate from the state
+  // In a real implementation, this would use the specific section assigned
+  // during the determineNextSection routing
+
+  // For this stub, we'll just pick the first pending section
+  let sectionToGenerate: SectionType | undefined;
+
+  for (const sectionType of state.requiredSections) {
+    const section = state.sections.get(sectionType);
+    if (
+      !section ||
+      section.status === "not_started" ||
+      section.status === "error"
+    ) {
+      sectionToGenerate = sectionType;
+      break;
+    }
+  }
+
+  if (!sectionToGenerate) {
+    // Default to problem statement if no pending section
+    sectionToGenerate = SectionType.PROBLEM_STATEMENT;
+  }
+
+  // Create updated sections map
+  const updatedSections = new Map(state.sections);
+  updatedSections.set(sectionToGenerate, {
+    id: sectionToGenerate,
+    content: `Placeholder content for ${sectionToGenerate}`,
+    status: "generating",
+    lastUpdated: new Date().toISOString(),
+  });
+
+  return {
+    sections: updatedSections,
+    currentStep: `section:${sectionToGenerate}`,
+    status: "running",
+  };
+}
+
+/**
+ * Node for evaluating a generated section
+ * @param state Current proposal state
+ * @returns Updated state with section evaluation
+ */
+export async function evaluateSectionNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Evaluating section...");
+
+  // Determine the current section from the currentStep
+  const currentStepMatch = state.currentStep?.match(/^section:(.+)$/);
+  if (!currentStepMatch) {
+    return {
+      errors: [
+        ...state.errors,
+        "No current section found in state for evaluation",
+      ],
+    };
+  }
+
+  const sectionType = currentStepMatch[1] as SectionType;
+  const section = state.sections.get(sectionType);
+
+  if (!section) {
+    return {
+      errors: [...state.errors, `Section ${sectionType} not found in state`],
+    };
+  }
+
+  // In a real implementation, this would analyze the section content against
+  // evaluation criteria and provide detailed feedback
+
+  // For now, mark the section as awaiting review
+  const updatedSections = new Map(state.sections);
+  updatedSections.set(sectionType, {
+    ...section,
+    status: "awaiting_review",
+    evaluation: {
+      score: 7,
+      passed: true,
+      feedback: `This ${sectionType} section looks good overall but could use some minor refinement.`,
+    },
+    lastUpdated: new Date().toISOString(),
+  });
+
+  return {
+    sections: updatedSections,
+    status: "awaiting_review",
+  };
+}
+
+/**
+ * Node to improve a section based on evaluation feedback
+ * @param state Current proposal state
+ * @returns Updated state with improved section
+ */
+export async function improveSection(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Improving section based on feedback...");
+
+  // Extract current section from state
+  const currentStepMatch = state.currentStep?.match(/^section:(.+)$/);
+  if (!currentStepMatch) {
+    return {
+      errors: [
+        ...state.errors,
+        "No current section found in state for improvement",
+      ],
+    };
+  }
+
+  const sectionType = currentStepMatch[1] as SectionType;
+  const section = state.sections.get(sectionType);
+
+  if (!section) {
+    return {
+      errors: [...state.errors, `Section ${sectionType} not found in state`],
+    };
+  }
+
+  // In a real implementation, this would incorporate feedback to improve the section
+
+  const updatedSections = new Map(state.sections);
+  updatedSections.set(sectionType, {
+    ...section,
+    content: `Improved content for ${sectionType} based on feedback: ${section.content}`,
+    status: "generating", // Reset to generating for re-evaluation
+    lastUpdated: new Date().toISOString(),
+  });
+
+  return {
+    sections: updatedSections,
+    status: "running",
+  };
+}
+
+/**
+ * Node to submit a section for human review
+ * @param state Current proposal state
+ * @returns Updated state with section ready for review
+ */
+export async function submitSectionForReviewNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Submitting section for review...");
+
+  // Extract current section from state
+  const currentStepMatch = state.currentStep?.match(/^section:(.+)$/);
+  if (!currentStepMatch) {
+    return {
+      errors: [
+        ...state.errors,
+        "No current section found in state for review submission",
+      ],
+    };
+  }
+
+  const sectionType = currentStepMatch[1] as SectionType;
+  const section = state.sections.get(sectionType);
+
+  if (!section) {
+    return {
+      errors: [...state.errors, `Section ${sectionType} not found in state`],
+    };
+  }
+
+  // Update the section status to awaiting review
+  const updatedSections = new Map(state.sections);
+  updatedSections.set(sectionType, {
+    ...section,
+    status: "awaiting_review",
+    lastUpdated: new Date().toISOString(),
+  });
+
+  // Add a message requesting review
+  const reviewRequestMessage = {
+    content: `Please review the ${sectionType} section of the proposal.`,
+    role: "assistant",
+  };
+
+  return {
+    sections: updatedSections,
+    messages: [...state.messages, reviewRequestMessage],
+    status: "awaiting_review",
+  };
+}
+
+/**
+ * Node to await human review for a section
+ * @param state Current proposal state
+ * @returns Updated state indicating waiting for review
+ */
+export async function awaitSectionReviewNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Awaiting section review...");
+
+  // In a real implementation, this would integrate with the human-in-the-loop system
+  // to wait for user feedback
+
+  return {
+    status: "awaiting_review",
+    // Note: This node doesn't modify state but would normally pause execution
+    // until human input is received
+  };
+}
+
+/**
+ * Node to await human review for the solution
+ * @param state Current proposal state
+ * @returns Updated state indicating waiting for solution review
+ */
+export async function awaitSolutionReviewNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Awaiting solution review...");
+
+  // Add a message explaining what is needed from the human reviewer
+  const reviewRequestMessage = {
+    content:
+      "Please review the solution approach before proceeding with section generation.",
+    role: "assistant",
+  };
+
+  return {
+    messages: [...state.messages, reviewRequestMessage],
+    solutionStatus: "awaiting_review",
+    status: "awaiting_review",
+  };
+}
+
+/**
+ * Node to await user input after an error
+ * @param state Current proposal state
+ * @returns Updated state with error notification
+ */
+export async function awaitUserInputNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Awaiting user input after error...");
+
+  // Compose an error message for the user
+  const errorMessages =
+    state.errors.length > 0
+      ? state.errors.join(". ")
+      : "An unspecified error occurred";
+
+  const errorNotificationMessage = {
+    content: `Error in the proposal generation process: ${errorMessages}. Please provide instructions on how to proceed.`,
+    role: "assistant",
+  };
+
+  return {
+    messages: [...state.messages, errorNotificationMessage],
+    status: "error",
+  };
+}
+
+/**
+ * Node to finalize the proposal once all sections are complete
+ * @param state Current proposal state
+ * @returns Updated state with completed proposal
+ */
+export async function completeProposalNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Completing proposal...");
+
+  // In a real implementation, this might:
+  // - Organize all sections in final order
+  // - Generate executive summary
+  // - Create PDF/docx output
+  // - Notify stakeholders
+
+  const completionMessage = {
+    content:
+      "Proposal has been successfully generated and finalized with all required sections.",
+    role: "assistant",
+  };
+
+  return {
+    messages: [...state.messages, completionMessage],
+    status: "complete",
+    currentStep: "completed",
+    lastUpdatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Node to evaluate a solution sought section
+ * @param state Current proposal state
+ * @returns Updated state with solution evaluation
+ */
+export async function evaluateSolutionNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Evaluating solution sought...");
+
+  // In a real implementation, this would assess the solution against
+  // the research findings and funder priorities
+
+  const solutionEvaluation = {
+    score: 8,
+    passed: true,
+    feedback:
+      "The solution approach is well-aligned with the funder's priorities and research findings.",
+  };
+
+  return {
+    solutionEvaluation,
+    solutionStatus: "awaiting_review",
+    status: "awaiting_review",
+  };
+}
+
+/**
+ * Node to handle the finalization step and check if all sections are ready
+ * @param state Current proposal state
+ * @returns Updated state after finalization check
+ */
+export async function finalizeProposalNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  console.log("Finalizing proposal...");
+
+  // Check if all required sections are complete
+  let allSectionsComplete = true;
+  const incompleteSections: SectionType[] = [];
+
+  for (const sectionType of state.requiredSections) {
+    const section = state.sections.get(sectionType);
+    if (!section || section.status !== "approved") {
+      allSectionsComplete = false;
+      incompleteSections.push(sectionType);
+    }
+  }
+
+  if (!allSectionsComplete) {
+    return {
+      errors: [
+        ...state.errors,
+        `Cannot finalize: Sections still incomplete: ${incompleteSections.join(", ")}`,
+      ],
+      status: "error",
+    };
+  }
+
+  // Prepare for completion
+  return {
+    status: "awaiting_review",
+    currentStep: "finalizing",
+  };
+}
+
 // Additional node functions can be added here
