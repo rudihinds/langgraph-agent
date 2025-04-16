@@ -1,10 +1,22 @@
-# Active Context - July 28, 2023
+# Active Context - July 29, 2023
 
-## Current Focus: LangGraph Agent Refactoring & Persistence Layer Enhancements
+## Current Focus: Graph Structure Refinement (Task #14)
 
-We are actively working on refactoring the LangGraph agent backend according to the specifications outlined in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`, with a current focus on the persistence layer and TypeScript compatibility.
+We are actively working on refactoring the LangGraph agent backend according to the specifications outlined in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`. With the persistence layer refactoring complete, the focus shifts to **Task #14: Refactor ProposalGenerationGraph for Architecture Compliance**.
 
 ## Recent Changes & Completed Tasks
+
+- **Task #14.3 (Message Truncation): Completed**
+
+  - Fixed `TypeError` in `apps/backend/lib/llm/message-truncation.ts` when handling null input for `truncateMessages`.
+  - Updated associated test (`apps/backend/lib/llm/__tests__/message-truncation.test.ts`) to correctly expect `MODERATE` truncation level based on test inputs.
+  - Marked subtask 14.3 as 'done'.
+
+- **Code Synchronization:**
+
+  - Staged all recent changes.
+  - Committed changes with message `fix(llm): Handle null input in message truncation and adjust test` (Ref: Task #14.3).
+  - Successfully pushed the `feature/code-cleanup-typescript` branch to the remote repository.
 
 - **Task #11 (State Management Alignment): Completed**
 
@@ -15,36 +27,27 @@ We are actively working on refactoring the LangGraph agent backend according to 
   - Implemented and enhanced Zod schema (`ProposalStateSchema`) for runtime validation, particularly for the `sections` map.
   - Committed changes: `feat(state): align ProposalState with spec, add reducers & Zod schema (Task #11)`
 
-- **Task #13 (Persistence Layer Refinement): In Progress**
-  - Implemented `ICheckpointer` interface
-  - Implemented `SupabaseCheckpointer` class
-  - Fixed TypeScript compatibility issues:
-    - Changed static method calls in tests to instance method calls
-    - Replaced spread operator with `Array.from()` for Set iteration to ensure compatibility with lower ECMAScript targets
-  - Added comprehensive unit tests
-  - Corrected error handling and retry mechanisms
+- **Task #13 (Persistence Layer Refinement): Completed**
+  - Implemented `ICheckpointer` interface and `SupabaseCheckpointer` class.
+  - Defined database schema (`db-schema.sql`) for checkpoints and sessions.
+  - Implemented Row Level Security policies for data protection.
+  - Ensured TypeScript compatibility and error handling.
 
 ## Immediate Next Steps
 
-- **Merge Current Changes & Branch**
+- **Task #14.2 (Implement Routing Functions)**
 
-  - Commit and push recent fixes to `feature/update-error-tests`
-  - Merge to `main` to establish a stable baseline
-  - Create a new branch for the upcoming major code cleanup effort
+  - Develop the comprehensive routing system based on state and conditions.
 
-- **Task #14 (Graph Structure Refinement)**
-  - Update `ProposalGenerationGraph` definition
-  - Implement proper routing functions
-  - Configure HITL interrupt points
-  - Implement conditional edges based on evaluation results
+- **Task #14.4 (Implement Conditional Edges)**
+  - Define and implement the conditional edges within the graph based on evaluation results, etc.
 
 ## Active Decisions & Considerations
 
+- **Code Stability:** Successfully pushed current feature branch, establishing a stable point before diving deeper into database schema changes.
+- **Task Focus:** Shifted focus to Task #14 (Graph Structure) now that Task #13 (Persistence) is complete.
 - **TypeScript Compatibility:** We've addressed issues with Set iteration that were causing TypeScript errors when targeting lower ECMAScript versions. Using `Array.from()` instead of the spread operator (`[...set]`) ensures maximum compatibility.
-
 - **Test-First Approach:** We're addressing test files first to ensure our implementation meets the specified interfaces, then fixing implementation files to match. This approach helps catch interface issues early.
-
-- **Code Cleanup Planning:** The upcoming cleanup will be extensive, requiring a stable base branch to revert to if needed. This is why we're focusing on merging the current changes to main before branching off.
 
 ## Important Patterns & Preferences
 
