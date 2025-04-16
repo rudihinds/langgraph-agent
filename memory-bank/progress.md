@@ -92,89 +92,117 @@ Last Modified: August 22, 2023
 
 ## What Works
 
-### Checkpointer Implementation
+### Architecture
 
-- ✅ Created Supabase adapter for `BaseCheckpointSaver`
-- ✅ Implemented in-memory fallback for local development
-- ✅ Added error handling for database connection failures
-- ✅ Implemented serialization/deserialization for state objects
-- ✅ Added UUID generation for thread identification
-- ✅ Created tests for checkpointer functionality
+- The overall architecture is established and follows the design specified in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
+- The agent framework is set up with LangGraph for the state management and graph execution.
+- Express.js backend is implemented for API endpoints.
 
-### State Management
+### Core Components
 
-- ✅ Defined `OverallProposalState` interface with all required fields
-- ✅ Added message history tracking with proper typing
-- ✅ Implemented interfaces for section status tracking
-- ✅ Created JSON schemas for state validation
-- ✅ Added documentation for state structure
-- ✅ Set up initial state factory function
+- The basic proposal generation graph is implemented with nodes and edges.
+- State management using the LangGraph state annotations and checkpointer is working.
+- OrchestratorService has been implemented to coordinate the proposal generation process.
 
-### Environment Configuration
+### Human-In-The-Loop (HITL) Workflow
 
-- ✅ Centralized environment variable handling
-- ✅ Added validation for required variables
-- ✅ Created configuration module for settings management
-- ✅ Added support for local development overrides
+- The HITL workflow has been implemented with proper interrupt, feedback, and resume mechanisms.
+- API endpoints are in place for interrupt status checking, feedback submission, and resuming after feedback.
+- Tests have been created to verify the HITL functionality.
+- Fixed issues with the `submitFeedback` method signature and parameter handling.
+- Updated API endpoints to correctly instantiate the OrchestratorService with the required parameters.
+- Fixed feedback processing to apply the correct status updates based on feedback type.
 
-### Database Schema
+### Testing
 
-- ✅ Designed schema for checkpoints table
-- ✅ Added UUID generation for checkpoint identification
-- ✅ Set up indexes for efficient querying
-- ✅ Implemented Row Level Security for data protection
+- Unit tests for most components are in place.
+- Integration tests for the HITL workflow are implemented.
 
-### Conditionals Implementation
+## What's Left to Build
 
-- ✅ Created routing functions for all decision points
-- ✅ Implemented tests for each conditional with 100% coverage
-- ✅ Added type safety with proper interfaces
-- ✅ Integrated conditionals with graph structure
-- ✅ Created documentation for conditional logic
+### HITL Refinement
 
-### HITL Implementation
+- Address remaining type errors in the OrchestratorService.
+- Add more comprehensive tests for edge cases in the HITL workflow.
+- Improve error handling in API endpoints.
 
-- ✅ Implemented HITL state structure with InterruptStatus interface
-- ✅ Created evaluation nodes with interrupt capabilities
-- ✅ Configured graph with interruptAfter for evaluation nodes
-- ✅ Implemented OrchestratorService with interrupt detection and handling
-- ✅ Added comprehensive tests for all HITL components implemented so far
-- ✅ Created detailed implementation plan with clear task dependencies
+### Frontend Integration
 
-## Evolution of Design Decisions
+- Connect the frontend components to the HITL API endpoints.
+- Implement UI components for submitting feedback.
+- Add real-time status updates.
 
-### Checkpointer Implementation
+### Documentation
 
-- **Initial Design**: Started with a simple in-memory solution for development
-- **Current Design**: Created a modular design with Supabase integration and fallback mechanisms
-- **Evolution**: Added error handling, retry logic, and better serialization
+- Document all API endpoints in detail.
+- Provide examples of request/response formats.
+- Create diagrams illustrating the HITL workflow.
 
-### Graph Architecture
+### Performance Optimizations
 
-- **Initial Design**: Linear flow with limited branching
-- **Current Design**: Complex graph with conditional routing and interrupt points
-- **Evolution**: Added support for HITL capabilities and better state management
+- Monitor state size growth during HITL cycles.
+- Implement caching for repeated LLM calls.
+- Optimize large proposal state handling.
 
-### State Management
+## Current Status
 
-- **Initial Design**: Simple state object with minimal tracking
-- **Current Design**: Comprehensive state interface with status tracking for all sections
-- **Evolution**: Added support for message history, interrupt tracking, and user feedback
+The core HITL workflow is implemented and the tests are starting to pass. The issue with the `submitFeedback` method signature and feedback processing has been fixed.
 
-### HITL Capabilities
+## Known Issues
 
-- **Initial Design**: Simple approval mechanism for generated content
-- **Current Design**: Comprehensive system with multiple feedback types and interrupt points
-- **Evolution**:
-  1. Started with basic interrupt concept
-  2. Evolved to define clear interrupt points in the graph
-  3. Added structured user feedback handling with InterruptStatus interface
-  4. Implemented OrchestratorService as central manager for HITL workflow
-  5. Created content reference extraction for improved UI presentation
-  6. Added comprehensive testing for all HITL components
+- There are still some type errors in the OrchestratorService implementation that need to be addressed.
+- Some API endpoints may not be properly tested.
+- The integration between the frontend and HITL API endpoints needs to be completed.
+- Error handling could be improved in some areas.
 
-### API Design
+## Evolution of Project Decisions
 
-- **Initial Design**: Basic REST API with limited functionality
-- **Current Design**: Comprehensive API with authentication and validation
-- **Evolution**: Added HITL-specific endpoints and better error handling
+### Original Plan
+
+- Initially planned to use LangChain for the agent implementation.
+- Considered using a different state management approach.
+
+### Current Direction
+
+- Using LangGraph for state management and graph execution.
+- Implementing a robust HITL workflow for better proposal quality.
+- Focusing on proper state transitions and immutable updates for consistency.
+
+### Future Considerations
+
+- May need to optimize state serialization for large proposals.
+- Considering implementing more sophisticated feedback mechanisms.
+- Exploring options for more fine-grained control over the proposal generation process.
+
+## HITL Implementation (Task 14.3)
+
+✅ **Completed:**
+
+- Implemented the core HITL workflow in the OrchestratorService:
+  - Interrupt detection and status reporting via `getInterruptStatus`
+  - Feedback processing via `submitFeedback` (approve, revise, regenerate)
+  - Resumption after feedback via `resumeAfterFeedback`
+- Refactored API endpoints to use Express.js patterns:
+  - `/rfp/interrupt-status` to check for interruptions
+  - `/rfp/feedback` to submit user feedback
+  - `/rfp/resume` to continue generation after feedback
+- Implemented factory pattern with `getOrchestrator` for consistent service instantiation
+- Created unit and integration tests for the HITL workflow
+- Added detailed test status report with fixes in dependency order
+- Standardized method signatures and error handling across the implementation
+
+⏳ **In Progress:**
+
+- Fixing remaining test issues:
+  - Package dependencies (supertest)
+  - Type definitions for BaseCheckpointSaver
+  - Module resolution in tests
+  - Test mock updates
+
+⬜ **To Do:**
+
+- Enhance test coverage for edge cases (concurrent operations, error handling)
+- Improve documentation for API endpoints and testing approach
+- Add performance testing for large state objects and checkpoint operations
+
+The HITL implementation now ensures that users can review, modify, and approve content during the proposal generation process, with the system handling all necessary state transitions and dependency management.
