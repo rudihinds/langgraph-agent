@@ -64,3 +64,4 @@ tasks.json
 tasks/ 
 # LangGraph API
 .langgraph_api
+apps/web/.next/
