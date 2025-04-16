@@ -96,7 +96,7 @@ function createProposalAgent() {
 }
 
 // Create the agent
-export const graph = createProposalAgent();
+const graph = createProposalAgent();
 
 /**
  * Example function to run the proposal agent

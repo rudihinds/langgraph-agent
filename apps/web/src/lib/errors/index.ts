@@ -93,7 +93,7 @@ export async function handleFetchResponse<T>(
 }
 
 // Re-export the types and constants
-export { ErrorCodes, HttpStatusToErrorCode } from "./types";
+export { ErrorCodes,  } from "./types";
 // Also directly export the API response types
 export type {
   ApiResponse,

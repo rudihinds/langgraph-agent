@@ -6,7 +6,7 @@ import { z } from "zod";
  * Structure for a subcategory analysis within a main research category
  * Each key is a subcategory name, and the value is the analysis text
  */
-export type CategoryAnalysis = Record<string, string>;
+type CategoryAnalysis = Record<string, string>;
 
 /**
  * Deep research results structure that matches the 12-category output
@@ -14,7 +14,7 @@ export type CategoryAnalysis = Record<string, string>;
  * the agent to classify observations as it sees fit within the defined
  * top-level categories.
  */
-export interface DeepResearchResults {
+interface DeepResearchResults {
   "Structural & Contextual Analysis": CategoryAnalysis;
   "Author/Organization Deep Dive": CategoryAnalysis;
   "Hidden Needs & Constraints": CategoryAnalysis;
@@ -34,7 +34,7 @@ export interface DeepResearchResults {
  * Solution sought analysis results with a flexible structure
  * Captures core expected fields while allowing for additional data
  */
-export interface SolutionSoughtResults {
+interface SolutionSoughtResults {
   // Core fields aligned with the solution sought prompt
   solution_sought: string;
   solution_approach: {
@@ -118,7 +118,7 @@ export type ResearchState = typeof ResearchStateAnnotation.State;
  * solutionSoughtResults structures while still providing validation
  * for expected fields
  */
-export const ResearchStateSchema = z.object({
+const ResearchStateSchema = z.object({
   rfpDocument: z.object({
     id: z.string(),
     text: z.string(),

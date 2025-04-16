@@ -1,5 +1,5 @@
 import { createServer } from "http";
-import { createCustomAgent } from "./agents/basic-agent";
+// import { createCustomAgent } from "./agents/basic-agent"; // Removed import
 import { runMultiAgentExample } from "./agents/multi-agent";
 import { runProposalAgent } from "./agents/proposal-agent/graph";
 import { runStreamingProposalAgent } from "./agents/proposal-agent/graph-streaming.js";
@@ -20,28 +20,7 @@ const server = createServer(async (req, res) => {
   }
 
   // Basic router for different agent endpoints
-  if (req.url === "/api/basic-agent" && req.method === "POST") {
-    try {
-      let body = "";
-      req.on("data", (chunk) => {
-        body += chunk.toString();
-      });
-
-      req.on("end", async () => {
-        const { query } = JSON.parse(body);
-        const agent = createCustomAgent();
-        const result = await agent.invoke({
-          messages: [{ type: "human", content: query }],
-        });
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(result));
-      });
-    } catch (error) {
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Server error" }));
-    }
-  } else if (req.url === "/api/multi-agent" && req.method === "POST") {
+  if (req.url === "/api/multi-agent" && req.method === "POST") {
     try {
       let body = "";
       req.on("data", (chunk) => {
@@ -115,7 +94,6 @@ server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log("Available endpoints:");
   console.log("- GET /api/health - Health check");
-  console.log("- POST /api/basic-agent - Basic agent");
   console.log("- POST /api/multi-agent - Multi-agent system");
   console.log("- POST /api/proposal-agent - Proposal agent");
   console.log(

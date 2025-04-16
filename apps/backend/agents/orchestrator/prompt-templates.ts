@@ -38,7 +38,7 @@ Respond ONLY with the JSON object and nothing else.`;
 /**
  * Prompt for the orchestrator to plan a workflow
  */
-export const PLAN_WORKFLOW_PROMPT = `You are an AI workflow orchestrator responsible for creating a plan to fulfill a user's request.
+const PLAN_WORKFLOW_PROMPT = `You are an AI workflow orchestrator responsible for creating a plan to fulfill a user's request.
 
 User Query: {user_query}
 Determined Intent: {intent}
@@ -75,7 +75,7 @@ Respond ONLY with the JSON object and nothing else.`;
 /**
  * Prompt for generating routing instructions for an agent
  */
-export const AGENT_ROUTING_PROMPT = `You are an AI workflow orchestrator responsible for creating instructions for the {agent_name} agent to complete a specific task.
+const AGENT_ROUTING_PROMPT = `You are an AI workflow orchestrator responsible for creating instructions for the {agent_name} agent to complete a specific task.
 
 Current Step: {step_name}
 Step Description: {step_description}
@@ -96,7 +96,7 @@ Respond with your instructions as a well-structured message that the agent can e
 /**
  * Prompt for error handling and recovery
  */
-export const ERROR_HANDLING_PROMPT = `You are an AI workflow orchestrator responsible for handling errors in the workflow.
+const ERROR_HANDLING_PROMPT = `You are an AI workflow orchestrator responsible for handling errors in the workflow.
 
 Current Workflow: {workflow_name}
 Failed Step: {step_name}
@@ -125,7 +125,7 @@ Respond ONLY with the JSON object and nothing else.`;
 /**
  * Prompt to summarize workflow results
  */
-export const SUMMARIZE_WORKFLOW_PROMPT = `You are an AI workflow orchestrator responsible for summarizing the results of a completed workflow.
+const SUMMARIZE_WORKFLOW_PROMPT = `You are an AI workflow orchestrator responsible for summarizing the results of a completed workflow.
 
 Workflow: {workflow_name}
 Workflow Description: {workflow_description}
@@ -145,7 +145,7 @@ Your summary should be well-structured, easy to understand, and directly address
 /**
  * Prompt for integrating a new agent into the system
  */
-export const AGENT_INTEGRATION_PROMPT = `You are an AI workflow orchestrator responsible for integrating a new agent into the system.
+const AGENT_INTEGRATION_PROMPT = `You are an AI workflow orchestrator responsible for integrating a new agent into the system.
 
 New Agent Information:
 Name: {agent_name}

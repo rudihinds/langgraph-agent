@@ -35,7 +35,7 @@ export interface PreparedMessages {
   totalTokens: number;
 }
 
-export interface ContextWindowManagerOptions {
+interface ContextWindowManagerOptions {
   /**
    * Model ID to use for summarization. Defaults to "claude-3-7-sonnet".
    */

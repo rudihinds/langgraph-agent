@@ -51,12 +51,12 @@ export interface OrchestratorConfig {
 /**
  * Available LLM provider options
  */
-export type LLMProvider = "openai" | "anthropic";
+type LLMProvider = "openai" | "anthropic";
 
 /**
  * Custom LLM configuration options
  */
-export interface LLMOptions {
+interface LLMOptions {
   provider: LLMProvider;
   model?: string;
   temperature?: number;
@@ -67,7 +67,7 @@ export interface LLMOptions {
 /**
  * Create the default LLM based on environment and configuration
  */
-export function createDefaultLLM(
+function createDefaultLLM(
   options?: Partial<LLMOptions>
 ): BaseLanguageModel {
   const provider =
@@ -109,7 +109,7 @@ export function createDefaultConfig(): OrchestratorConfig {
 /**
  * Merge user configuration with default values
  */
-export function mergeConfig(
+function mergeConfig(
   userConfig: Partial<OrchestratorConfig> = {}
 ): OrchestratorConfig {
   return {
@@ -126,7 +126,7 @@ export function mergeConfig(
 /**
  * Map of available agents by type
  */
-export const AVAILABLE_AGENTS: Record<AgentType, string> = {
+const AVAILABLE_AGENTS: Record<AgentType, string> = {
   proposal: "ProposalAgent",
   research: "ResearchAgent",
   solution_analysis: "SolutionAnalysisAgent",

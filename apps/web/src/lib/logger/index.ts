@@ -2,7 +2,7 @@
  * Standardized logging utility for consistent logging across the application
  */
 
-export const LogLevel = {
+const LogLevel = {
   DEBUG: 'debug',
   INFO: 'info',
   WARN: 'warn',
@@ -10,7 +10,7 @@ export const LogLevel = {
   FATAL: 'fatal',
 } as const;
 
-export type LogLevelType = typeof LogLevel[keyof typeof LogLevel];
+type LogLevelType = typeof LogLevel[keyof typeof LogLevel];
 
 interface LogContext {
   [key: string]: unknown;
@@ -19,7 +19,7 @@ interface LogContext {
 /**
  * Log a message with the specified level and optional context/error
  */
-export function log(
+function log(
   level: LogLevelType,
   message: string,
   context?: LogContext,

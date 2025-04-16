@@ -6,7 +6,7 @@ import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import { cn } from "@/lib/utils";
 
 // MODEL: Define the data structure
-export interface ProposalGridProps {
+interface ProposalGridProps {
   proposals: Array<{
     id: string;
     title: string;
@@ -26,7 +26,7 @@ export interface ProposalGridProps {
 }
 
 // PRESENTATION: Render the UI
-export function ProposalGridView({
+function ProposalGridView({
   proposals,
   isLoading,
   onEdit,

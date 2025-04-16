@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // MODEL: Define the data structure
-export interface ProposalCardProps {
+interface ProposalCardProps {
   proposal: {
     id: string;
     title: string;
@@ -69,7 +69,7 @@ const getDueDateStyles = (dueDate?: string) => {
 };
 
 // PRESENTATION: Render the UI
-export function ProposalCardView({
+function ProposalCardView({
   proposal,
   onDelete,
   onEdit,

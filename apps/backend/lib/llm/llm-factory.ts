@@ -11,7 +11,7 @@ import { LLMClient, LLMModel } from "./types.js";
 /**
  * Available LLM providers
  */
-export type LLMProvider = "openai" | "anthropic" | "mistral" | "gemini";
+type LLMProvider = "openai" | "anthropic" | "mistral" | "gemini";
 
 /**
  * LLM Factory for creating and accessing LLM clients

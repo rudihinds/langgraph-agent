@@ -65,7 +65,7 @@ export interface FingerprintOptions {
 /**
  * Default fingerprinting options.
  */
-export const DEFAULT_FINGERPRINT_OPTIONS: FingerprintOptions = {
+const DEFAULT_FINGERPRINT_OPTIONS: FingerprintOptions = {
   sortKeys: true,
   hashAlgorithm: 'sha256',
   maxHistoryLength: 50,
@@ -181,7 +181,7 @@ export function createStateFingerprint(
  * @param path - Current path (for nested objects)
  * @returns Transformed object
  */
-export function deepMap(
+function deepMap(
   obj: any,
   fn: (value: any, path: string) => any,
   path: string = ''
@@ -217,7 +217,7 @@ export function deepMap(
  * 
  * @returns Replacer function for JSON.stringify
  */
-export function getSortedReplacer(): (key: string, value: any) => any {
+function getSortedReplacer(): (key: string, value: any) => any {
   return (key: string, value: any) => {
     if (value === null || value === undefined) {
       return value;
@@ -244,7 +244,7 @@ export function getSortedReplacer(): (key: string, value: any) => any {
  * @param options - Fingerprinting options
  * @returns True if states are equivalent
  */
-export function areStatesEquivalent(
+function areStatesEquivalent(
   state1: Record<string, any>,
   state2: Record<string, any>,
   options: FingerprintOptions = {}
@@ -349,7 +349,7 @@ function areSectionsEqual(section1: string[], section2: string[]): boolean {
  * @param maxLength - Maximum history length
  * @returns Pruned array of fingerprints
  */
-export function pruneStateHistory(
+function pruneStateHistory(
   fingerprints: string[],
   maxLength: number
 ): string[] {
@@ -404,7 +404,7 @@ export function prepareStateForTracking(
  * @param field - Field to check (supports dot notation)
  * @returns True if field has changed
  */
-export function hasFieldChanged(
+function hasFieldChanged(
   prevState: Record<string, any>,
   currentState: Record<string, any>,
   field: string
@@ -422,7 +422,7 @@ export function hasFieldChanged(
  * @param path - Path to the value using dot notation
  * @returns The value at the specified path or undefined
  */
-export function getNestedValue(obj: Record<string, any>, path: string): any {
+function getNestedValue(obj: Record<string, any>, path: string): any {
   const keys = path.split('.');
   let current = obj;
   
@@ -444,7 +444,7 @@ export function getNestedValue(obj: Record<string, any>, path: string): any {
  * @param b - Second value
  * @returns True if values are deeply equal
  */
-export function isDeepEqual(a: any, b: any): boolean {
+function isDeepEqual(a: any, b: any): boolean {
   if (a === b) return true;
   
   if (a == null || b == null) return a === b;

@@ -351,7 +351,7 @@ export function createOrchestratorNode(
 /**
  * Analyzes the user query to determine the next action
  */
-export async function analyzeUserQuery(
+async function analyzeUserQuery(
   state: OrchestratorState
 ): Promise<Partial<OrchestratorState>> {
   if (!state.lastUserQuery) {
@@ -438,7 +438,7 @@ Capabilities: ${agent.capabilities.join(", ")}`;
 /**
  * Determines which workflow to create based on user query analysis
  */
-export async function determineWorkflow(
+async function determineWorkflow(
   state: OrchestratorState
 ): Promise<Partial<OrchestratorState>> {
   const analysis = state.context.analysis;
@@ -543,7 +543,7 @@ export async function determineWorkflow(
 /**
  * Starts execution of the current workflow
  */
-export async function startWorkflow(
+async function startWorkflow(
   state: OrchestratorState
 ): Promise<Partial<OrchestratorState>> {
   if (!state.currentWorkflowId) {
@@ -599,7 +599,7 @@ export async function startWorkflow(
 /**
  * Executes the next step in the current workflow
  */
-export async function executeNextStep(
+async function executeNextStep(
   state: OrchestratorState
 ): Promise<Partial<OrchestratorState>> {
   if (!state.currentWorkflowId) {
@@ -694,7 +694,7 @@ export async function executeNextStep(
 /**
  * Routes control flow based on current workflow status
  */
-export function routeWorkflow(
+function routeWorkflow(
   state: OrchestratorState
 ): "continue" | "complete" | "error" {
   if (state.errors.length > 0) {
@@ -732,7 +732,7 @@ export function routeWorkflow(
 /**
  * Marks the current workflow as complete
  */
-export async function completeWorkflow(
+async function completeWorkflow(
   state: OrchestratorState
 ): Promise<Partial<OrchestratorState>> {
   if (!state.currentWorkflowId) {
@@ -788,7 +788,7 @@ export async function completeWorkflow(
 /**
  * Handles errors in the orchestration process
  */
-export async function handleError(
+async function handleError(
   state: OrchestratorState
 ): Promise<Partial<OrchestratorState>> {
   const latestError = state.errors[state.errors.length - 1];

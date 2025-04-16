@@ -17,10 +17,10 @@ import { createClient as createClientInternal } from '@/lib/supabase/client';
 
 // Re-export with same names to maintain compatibility
 export const createClient = createClientInternal;
-export const getRedirectURL = authGetRedirectURL;
+const getRedirectURL = authGetRedirectURL;
 export const signIn = authSignIn;
-export const signOut = authSignOut;
+const signOut = authSignOut;
 export const getSession = authGetSession;
-export const getAccessToken = authGetAccessToken;
-export const validateSession = authValidateSession;
+const getAccessToken = authGetAccessToken;
+const validateSession = authValidateSession;
 export const getCurrentUser = authGetCurrentUser;

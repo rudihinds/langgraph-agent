@@ -120,7 +120,7 @@ export function createRetryingLLM(
  * @param fallbackBehavior - Optional fallback behavior when error occurs
  * @returns A wrapper function that handles errors for the node
  */
-export function createNodeErrorHandler<T, S>(
+function createNodeErrorHandler<T, S>(
   nodeName: string,
   fallbackBehavior?: (state: T, error: Error) => Promise<Partial<S>>
 ): (

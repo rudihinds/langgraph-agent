@@ -38,7 +38,7 @@ export type SupportedModel =
  * @param streaming Whether to enable streaming (default: true)
  * @returns A configured chat model instance
  */
-export function createStreamingModel(
+function createStreamingModel(
   modelName: SupportedModel,
   temperature: number = 0.7,
   streaming: boolean = true

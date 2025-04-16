@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-export interface ProgressCircleProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ProgressCircleProps extends React.HTMLAttributes<HTMLDivElement> {
   value: number
   size?: "sm" | "md" | "lg"
   showValue?: boolean

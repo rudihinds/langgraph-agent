@@ -13,7 +13,7 @@ import { StateHistoryTracking, StateTrackingOptions } from "./state-tracking";
 /**
  * Interface for a state that includes loop prevention fields.
  */
-export interface WithLoopPrevention {
+interface WithLoopPrevention {
   /**
    * Loop prevention metadata and tracking information.
    */
@@ -71,7 +71,7 @@ export interface WithLoopPrevention {
  * @param options - Configuration options for termination
  * @returns A node function that can be added to a StateGraph
  */
-export function terminateOnLoop<T extends WithLoopPrevention>(options: {
+function terminateOnLoop<T extends WithLoopPrevention>(options: {
   message?: string;
   shouldTerminate?: (state: T) => boolean;
   nextNode?: string;
@@ -106,7 +106,7 @@ export function terminateOnLoop<T extends WithLoopPrevention>(options: {
  * @param options - Configuration options for progress detection
  * @returns A node function that can be added to a StateGraph
  */
-export function createProgressDetectionNode<T extends WithLoopPrevention & Record<string, any>>(
+function createProgressDetectionNode<T extends WithLoopPrevention & Record<string, any>>(
   progressField: string,
   options: {
     maxNoProgressIterations?: number;
@@ -182,7 +182,7 @@ export function createProgressDetectionNode<T extends WithLoopPrevention & Recor
  * @param options - Configuration options for iteration limits
  * @returns A node function that can be added to a StateGraph
  */
-export function createIterationLimitNode<T extends WithLoopPrevention>(
+function createIterationLimitNode<T extends WithLoopPrevention>(
   options: {
     maxIterations?: number;
     message?: string;
@@ -242,7 +242,7 @@ export function createIterationLimitNode<T extends WithLoopPrevention>(
  * @param options - Configuration options for completion checking
  * @returns A node function that can be added to a StateGraph
  */
-export function createCompletionCheckNode<T extends Record<string, any>>(
+function createCompletionCheckNode<T extends Record<string, any>>(
   completionCheck: (state: T) => boolean,
   options: {
     message?: string;
@@ -277,7 +277,7 @@ export function createCompletionCheckNode<T extends Record<string, any>>(
  * @param options - Configuration options for integrated loop prevention
  * @returns A node function that can be added to a StateGraph
  */
-export function createSafetyCheckNode<T extends WithLoopPrevention & Record<string, any>>(
+function createSafetyCheckNode<T extends WithLoopPrevention & Record<string, any>>(
   options: {
     maxIterations?: number;
     progressField?: string;
@@ -434,7 +434,7 @@ export interface StateFingerprint {
  * @param sourceNode Name of the current node
  * @returns A StateFingerprint object
  */
-export function createCompatibleFingerprint(
+function createCompatibleFingerprint(
   state: Record<string, any>,
   options: FingerprintOptions = {},
   sourceNode?: string

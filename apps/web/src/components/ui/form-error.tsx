@@ -114,7 +114,7 @@ export function FieldError({ error, className, id }: FieldErrorProps) {
 /**
  * Component that provides error context to forms
  */
-export const FormErrorProvider = React.createContext<{
+const FormErrorProvider = React.createContext<{
   errors: Record<string, string>;
   setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }>({

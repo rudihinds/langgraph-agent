@@ -1,5 +1,5 @@
 import { StateGraph } from "@langchain/langgraph";
-import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import { SupabaseCheckpointer } from "../../lib/persistence/supabase-checkpointer.js";
 import { BaseMessage } from "@langchain/core/messages";
 import { ResearchStateAnnotation, ResearchState } from "./state.js";
 import {
@@ -75,7 +75,7 @@ export const createResearchGraph = () => {
   return researchGraph;
 };
 
-export interface ResearchAgentInput {
+interface ResearchAgentInput {
   documentId: string;
   threadId?: string; // Optional threadId for resuming
 }
@@ -94,20 +94,22 @@ export const researchAgent = {
    * @returns The final state of the research agent
    */
   invoke: async (input: ResearchAgentInput): Promise<ResearchState> => {
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
-      logger.error("DATABASE_URL environment variable is not set.");
-      throw new Error("Database connection URL is missing.");
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      logger.error(
+        "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable is not set."
+      );
+      throw new Error("Supabase connection details are missing.");
     }
 
-    // Use the official PostgresSaver, instantiated via the static method
-    // const checkpointer = new PostgresSaver({
-    //     connectionString: dbUrl,
-    // });
-    const checkpointer = PostgresSaver.fromConnString(dbUrl);
-
-    // Ensure the necessary tables are set up before compiling/invoking
-    await checkpointer.setup();
+    const checkpointer = new SupabaseCheckpointer({
+      supabaseUrl,
+      supabaseKey,
+      userIdGetter: async () => "research-agent-user",
+      proposalIdGetter: async () => input.documentId,
+    });
 
     try {
       const graph = createResearchGraph();
@@ -183,6 +185,4 @@ export const researchAgent = {
 // };
 
 // Export public API
-export { ResearchStateAnnotation };
-// Type exports
-export type { ResearchState };
+// Type exports;

@@ -71,7 +71,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // MODEL
-export interface FunderDetailsViewProps {
+interface FunderDetailsViewProps {
   onSubmit: (
     data: FunderDetailsForm | { errors: Record<string, string> }
   ) => void;

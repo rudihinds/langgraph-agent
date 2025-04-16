@@ -13,8 +13,8 @@ import {
 /**
  * Status definitions for different components of the proposal state
  */
-export type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
-export type ProcessingStatus =
+type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
+type ProcessingStatus =
   | "queued"
   | "running"
   | "awaiting_review"
@@ -49,7 +49,7 @@ export enum SectionType {
 /**
  * Evaluation result structure for quality checks
  */
-export interface EvaluationResult {
+interface EvaluationResult {
   score: number;
   passed: boolean;
   feedback: string;
@@ -77,7 +77,7 @@ export interface SectionData {
  * Main state interface for the proposal generation system
  * Extends StateDefinition to satisfy LangGraph requirements
  */
-export interface ProposalState extends StateDefinition {
+interface ProposalState extends StateDefinition {
   // Document handling
   rfpDocument: {
     id: string;
@@ -189,10 +189,10 @@ export function errorsReducer(
   return [...current, ...newValue];
 }
 
-// Generic "last value wins" reducer
+// Generic "last value wins" reducer - typed more explicitly
 function lastValueReducer<T>(
   _currentValue: T | undefined,
-  newValue: T | undefined
+  newValue: T | undefined // Allow undefined new value
 ): T | undefined {
   return newValue;
 }
@@ -219,106 +219,106 @@ function lastUpdatedAtReducer(
  * and specifies custom reducers where necessary.
  */
 export const ProposalStateAnnotation = Annotation.Root<ProposalState>({
-  // Document handling: Use custom reducer, default to not_started
+  // Document handling: Use generic reducer, default to not_started
   rfpDocument: Annotation<ProposalState["rfpDocument"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => ({ id: "", status: "not_started" as LoadingStatus }),
   }),
 
-  // Research phase: Use custom reducer, default undefined/queued
+  // Research phase: Use generic reducer, default undefined/queued
   researchResults: Annotation<ProposalState["researchResults"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
   researchStatus: Annotation<ProposalState["researchStatus"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => "queued" as ProcessingStatus,
   }),
   researchEvaluation: Annotation<ProposalState["researchEvaluation"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
 
-  // Solution sought phase: Use custom reducer, default undefined/queued
+  // Solution sought phase: Use generic reducer, default undefined/queued
   solutionResults: Annotation<ProposalState["solutionResults"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
   solutionStatus: Annotation<ProposalState["solutionStatus"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => "queued" as ProcessingStatus,
   }),
   solutionEvaluation: Annotation<ProposalState["solutionEvaluation"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
 
-  // Connection pairs phase: Use custom reducer, default undefined/queued
+  // Connection pairs phase: Use generic reducer, default undefined/queued
   connections: Annotation<ProposalState["connections"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
   connectionsStatus: Annotation<ProposalState["connectionsStatus"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => "queued" as ProcessingStatus,
   }),
   connectionsEvaluation: Annotation<ProposalState["connectionsEvaluation"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
 
   // Proposal sections: Use specific reducer, default empty map
   sections: Annotation<ProposalState["sections"]>({
-    reducer: sectionsReducer, // Already defined
+    reducer: sectionsReducer,
     default: () => new Map<SectionType, SectionData>(),
   }),
-  // Required sections: Use custom reducer, default empty array
+  // Required sections: Use generic reducer, default empty array
   requiredSections: Annotation<ProposalState["requiredSections"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => [] as SectionType[],
   }),
 
-  // Workflow tracking: Use custom reducer, default null/empty
+  // Workflow tracking: Use generic reducer, default null/empty
   currentStep: Annotation<ProposalState["currentStep"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => null,
   }),
   activeThreadId: Annotation<ProposalState["activeThreadId"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => "",
   }),
 
   // Communication and errors: Use specific reducers, default empty arrays
   messages: Annotation<BaseMessage[]>({
-    reducer: messagesStateReducer, // Built-in
+    reducer: messagesStateReducer,
     default: () => [] as BaseMessage[],
   }),
   errors: Annotation<ProposalState["errors"]>({
-    reducer: errorsReducer, // Already defined
+    reducer: errorsReducer,
     default: () => [] as string[],
   }),
 
-  // Metadata: Use custom reducers, default undefined/timestamps
+  // Metadata: Use generic reducer, default undefined/timestamps
   projectName: Annotation<ProposalState["projectName"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
   userId: Annotation<ProposalState["userId"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => undefined,
   }),
   createdAt: Annotation<ProposalState["createdAt"]>({
-    reducer: createdAtReducer as any, // Use specific reducer
+    reducer: createdAtReducer as any,
     default: () => new Date().toISOString(),
   }),
   lastUpdatedAt: Annotation<ProposalState["lastUpdatedAt"]>({
-    reducer: lastUpdatedAtReducer as any, // Use specific reducer
+    reducer: lastUpdatedAtReducer as any,
     default: () => new Date().toISOString(),
   }),
 
-  // Overall status: Use custom reducer, default queued
+  // Overall status: Use generic reducer, default queued
   status: Annotation<ProposalState["status"]>({
-    reducer: lastValueReducer as any, // Use generic reducer
+    reducer: lastValueReducer as any,
     default: () => "queued" as ProcessingStatus,
   }),
 });
@@ -326,7 +326,7 @@ export const ProposalStateAnnotation = Annotation.Root<ProposalState>({
 /**
  * Zod schema for validation of proposal state
  */
-export const ProposalStateSchema = z.object({
+const ProposalStateSchema = z.object({
   rfpDocument: z.object({
     id: z.string(),
     fileName: z.string().optional(),

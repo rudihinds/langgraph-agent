@@ -7,7 +7,7 @@ import NewProposalModal from "./NewProposalModal";
 import { cn } from "@/lib/utils";
 
 // MODEL
-export interface NewProposalCardProps {
+interface NewProposalCardProps {
   className?: string;
   onClick?: () => void;
 }

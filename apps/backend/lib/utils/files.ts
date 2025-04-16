@@ -66,7 +66,7 @@ export function getMimeTypeFromExtension(extension: string): string {
  * @param filePath - The file path to extract the filename from
  * @returns The filename without directory path
  */
-export function getFileName(filePath: string): string {
+function getFileName(filePath: string): string {
   if (!filePath) return "";
 
   // Handle paths with query parameters or fragments
@@ -84,7 +84,7 @@ export function getFileName(filePath: string): string {
  * @param decimals - Number of decimal places in the result
  * @returns Formatted file size (e.g., "1.5 MB")
  */
-export function formatFileSize(bytes: number, decimals: number = 2): string {
+function formatFileSize(bytes: number, decimals: number = 2): string {
   if (bytes === 0) return "0 Bytes";
 
   const k = 1024;

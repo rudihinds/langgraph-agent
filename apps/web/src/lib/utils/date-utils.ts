@@ -56,7 +56,7 @@ export function parseUIDate(input: string): Date | null {
  * @param input - The date string in YYYY-MM-DD format
  * @returns A Date object, or null if parsing fails
  */
-export function parseAPIDate(input: string): Date | null {
+function parseAPIDate(input: string): Date | null {
   if (!input) return null;
   
   try {
@@ -78,7 +78,7 @@ export function parseAPIDate(input: string): Date | null {
  * @param input - The date string to validate
  * @returns True if the date is valid
  */
-export function isValidUIDate(input: string): boolean {
+function isValidUIDate(input: string): boolean {
   return !!parseUIDate(input);
 }
 
@@ -87,6 +87,6 @@ export function isValidUIDate(input: string): boolean {
  * @param input - The date string to validate
  * @returns True if the date is valid
  */
-export function isValidAPIDate(input: string): boolean {
+function isValidAPIDate(input: string): boolean {
   return !!parseAPIDate(input);
 }

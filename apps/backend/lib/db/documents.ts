@@ -8,7 +8,7 @@ import { Logger } from "@/lib/logger.js";
 /**
  * Schema for document metadata validation based on actual database schema
  */
-export const DocumentMetadataSchema = z.object({
+const DocumentMetadataSchema = z.object({
   id: z.string().uuid(),
   proposal_id: z.string().uuid(),
   document_type: z.enum([
@@ -42,7 +42,7 @@ const DOCUMENTS_BUCKET = "proposal-documents";
 /**
  * Document data interface
  */
-export interface Document {
+interface Document {
   id: string;
   text: string;
   metadata: DocumentMetadata;

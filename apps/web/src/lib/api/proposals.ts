@@ -66,7 +66,7 @@ export async function getUserProposals(
 /**
  * Get a proposal by ID, ensuring it belongs to the current user
  */
-export async function getProposalById(id: string) {
+async function getProposalById(id: string) {
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);

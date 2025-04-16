@@ -19,4 +19,4 @@ export {
 } from "./utils";
 
 // Re-export from hooks
-export { useCurrentUser, useRequireAuth } from "./hooks";
+;

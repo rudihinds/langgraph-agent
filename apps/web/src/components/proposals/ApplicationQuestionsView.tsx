@@ -112,7 +112,7 @@ export interface Question extends Omit<SharedQuestion, "id"> {
   charLimit: number | null;
 }
 
-export interface ApplicationQuestionsViewProps {
+interface ApplicationQuestionsViewProps {
   onSubmit: (data: {
     questions: Question[];
     errors?: Record<string, string>;

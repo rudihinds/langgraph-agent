@@ -19,7 +19,7 @@ import {
 /**
  * Workflow phase for tracking the current stage of proposal development
  */
-export type WorkflowPhase =
+type WorkflowPhase =
   | "research"
   | "solution_analysis"
   | "connection_pairs"
@@ -31,7 +31,7 @@ export type WorkflowPhase =
 /**
  * User feedback for interactive improvements and revisions
  */
-export interface UserFeedback {
+interface UserFeedback {
   targetSection?: string;
   feedback: string;
   requestedChanges?: string[];

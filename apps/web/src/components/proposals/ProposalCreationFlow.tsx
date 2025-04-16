@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 // MODEL
 export type ProposalType = "rfp" | "application";
 
-export interface ProposalCreationFlowProps {
+interface ProposalCreationFlowProps {
   proposalType: ProposalType;
   onCancel: () => void;
 }
@@ -269,7 +269,7 @@ interface ProposalCreationFlowViewProps extends ProposalCreationFlowProps {
   handleCancel: () => void;
 }
 
-export function ProposalCreationFlowView({
+function ProposalCreationFlowView({
   proposalType,
   currentStep,
   totalSteps,

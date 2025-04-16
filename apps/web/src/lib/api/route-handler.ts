@@ -37,7 +37,7 @@ export function createRouteHandler(handler: RouteHandler): RouteHandler {
  * @returns Validated data
  * @throws ValidationError if validation fails
  */
-export function validateRequest<T>(
+function validateRequest<T>(
   data: unknown,
   schema: { safeParse: (data: unknown) => { success: boolean; data: T; error: any } }
 ): T {

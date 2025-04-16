@@ -17,7 +17,7 @@ import { FileText, ClipboardList, Check } from "lucide-react";
 // MODEL: Define types and business logic
 export type ProposalType = "rfp" | "application";
 
-export interface ProposalTypeModalProps {
+interface ProposalTypeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (type: ProposalType) => void;

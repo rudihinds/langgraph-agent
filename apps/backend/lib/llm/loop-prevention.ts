@@ -16,7 +16,7 @@ import {
 /**
  * Configuration options for loop prevention.
  */
-export interface LoopPreventionOptions {
+interface LoopPreventionOptions {
   /**
    * Maximum allowed iterations before throwing an error (default: 10).
    */
@@ -96,7 +96,7 @@ const DEFAULT_LOOP_PREVENTION_OPTIONS: LoopPreventionOptions = {
 /**
  * Loop detection state that gets added to the graph state.
  */
-export interface LoopDetectionState {
+interface LoopDetectionState {
   /**
    * Current iteration count.
    */
@@ -131,7 +131,7 @@ export interface LoopDetectionState {
 /**
  * Error thrown when a loop is detected.
  */
-export class LoopDetectionError extends Error {
+class LoopDetectionError extends Error {
   state: Record<string, any>;
   reason: string;
 
@@ -314,7 +314,7 @@ export function configureLoopPrevention<T extends Record<string, any>>(
  * @param options - Loop prevention options
  * @returns A node function that checks loop conditions
  */
-export function createLoopDetectionNode(options: LoopPreventionOptions = {}) {
+function createLoopDetectionNode(options: LoopPreventionOptions = {}) {
   const mergedOptions = { ...DEFAULT_LOOP_PREVENTION_OPTIONS, ...options };
 
   return function loopDetectionNode(
@@ -392,7 +392,7 @@ export function createLoopDetectionNode(options: LoopPreventionOptions = {}) {
  *
  * @returns A node function that increments the iteration counter
  */
-export function createIterationCounterNode() {
+function createIterationCounterNode() {
   return function iterationCounterNode(
     state: Record<string, any>
   ): Record<string, any> {
@@ -420,7 +420,7 @@ export function createIterationCounterNode() {
  * @param progressField - Field to track for progress
  * @returns A node function that updates progress tracking
  */
-export function createProgressTrackingNode(progressField: string) {
+function createProgressTrackingNode(progressField: string) {
   return function progressTrackingNode(
     state: Record<string, any>
   ): Record<string, any> {

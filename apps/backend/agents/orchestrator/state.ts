@@ -17,21 +17,22 @@ export enum StepStatus {
   SKIPPED = "skipped",
 }
 
+// Define and export AgentType
+export type AgentType =
+  | "proposal"
+  | "research"
+  | "solution_analysis"
+  | "evaluation";
+
 /**
  * Agent roles in the system
  */
-export enum AgentRole {
-  COORDINATOR = "coordinator",
-  PROPOSAL = "proposal",
-  RESEARCH = "research",
-  MEETING = "meeting",
-  OUTREACH = "outreach",
-}
+export enum AgentRole {}
 
 /**
  * Message type for inter-agent communication
  */
-export interface Message {
+interface Message {
   role: string;
   content: string;
   agentId?: string;
@@ -41,7 +42,7 @@ export interface Message {
 /**
  * Metadata about a registered agent
  */
-export interface AgentMetadata {
+interface AgentMetadata {
   id: string;
   name: string;
   role: AgentRole;
@@ -95,6 +96,7 @@ export interface OrchestratorState {
   lastUserQuery?: string;
   context: Record<string, any>;
   stateHistory?: StateFingerprint[]; // Track state history for loop detection
+  currentAgent?: AgentType; // Added field
   metadata?: {
     updatedAt?: string;
     initialized?: boolean;
@@ -112,7 +114,7 @@ export interface OrchestratorState {
 /**
  * Define the state validator schema
  */
-export const orchestratorStateSchema = z.object({
+const orchestratorStateSchema = z.object({
   userId: z.string(),
   projectId: z.string(),
   agents: z.array(
@@ -187,6 +189,7 @@ export const orchestratorStateSchema = z.object({
       timeoutSeconds: z.number().optional(),
     })
     .optional(),
+  currentAgent: z.nativeEnum(AgentType).optional(),
 });
 
 // --- Define the LangGraph Annotation ---
@@ -198,6 +201,7 @@ export const OrchestratorStateAnnotation = Annotation.Root({
   agents: Annotation<AgentMetadata[]>(),
   workflows: Annotation<Workflow[]>(),
   currentWorkflowId: Annotation<string | undefined>(),
+  currentAgent: Annotation<AgentType | undefined>(),
   errors: Annotation<string[]>(),
   lastAgentResponse: Annotation<any | undefined>(),
   lastUserQuery: Annotation<string | undefined>(),
@@ -231,7 +235,7 @@ export const OrchestratorStateAnnotation = Annotation.Root({
 /**
  * Get initial state for the orchestrator
  */
-export function getInitialOrchestratorState(
+function getInitialOrchestratorState(
   userId: string,
   projectId: string
 ): OrchestratorState {
@@ -253,7 +257,7 @@ export function getInitialOrchestratorState(
 /**
  * Returns true if a workflow can be executed (all dependencies are met)
  */
-export function canExecuteWorkflow(workflow: Workflow): boolean {
+function canExecuteWorkflow(workflow: Workflow): boolean {
   // A workflow can be executed if it's in pending state
   return workflow.status === StepStatus.PENDING;
 }
@@ -261,10 +265,7 @@ export function canExecuteWorkflow(workflow: Workflow): boolean {
 /**
  * Returns true if a step can be executed (all dependencies are met)
  */
-export function canExecuteStep(
-  step: WorkflowStep,
-  workflow: Workflow
-): boolean {
+function canExecuteStep(step: WorkflowStep, workflow: Workflow): boolean {
   // A step can be executed if:
   // 1. It's in pending state
   // 2. All its dependencies are in completed state

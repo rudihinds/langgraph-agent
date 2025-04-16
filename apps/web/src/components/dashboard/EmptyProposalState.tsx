@@ -22,7 +22,7 @@ const featureList = [
   "Get AI-powered feedback on your writing",
 ];
 
-export interface EmptyProposalStateProps {
+interface EmptyProposalStateProps {
   onCreateClick?: () => void;
 }
 

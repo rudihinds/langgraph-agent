@@ -9,7 +9,7 @@ import { BaseMessage } from "@langchain/core/messages";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
 // Add a constant to make sure this module is properly loaded with named exports
-export const MESSAGE_TRUNCATION_VERSION = "1.0";
+const MESSAGE_TRUNCATION_VERSION = "1.0";
 
 /**
  * Rough token count estimation
@@ -30,6 +30,11 @@ export function estimateTokenCount(text: string): number {
  * @returns Estimated token count
  */
 export function estimateMessageTokens(messages: BaseMessage[]): number {
+  // Handle invalid input
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return 0;
+  }
+
   // Start with base overhead for the conversation
   let totalTokens = 0;
 
@@ -100,6 +105,11 @@ export function truncateMessages(
   messages: BaseMessage[],
   options: TruncateMessagesOptions
 ): BaseMessage[] {
+  // Handle invalid input early
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return [];
+  }
+
   const {
     maxTokens,
     strategy,

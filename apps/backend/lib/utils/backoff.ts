@@ -5,7 +5,7 @@
 /**
  * Configuration for the retry operation
  */
-export interface RetryOptions {
+interface RetryOptions {
   /** Maximum number of retry attempts */
   maxRetries?: number;
   
@@ -31,7 +31,7 @@ export interface RetryOptions {
 /**
  * Default retry options
  */
-export const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
+const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   initialDelayMs: 500,
   maxDelayMs: 30000,
@@ -47,7 +47,7 @@ export const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
  * @param options Retry options
  * @returns Delay in milliseconds
  */
-export function calculateBackoffDelay(
+function calculateBackoffDelay(
   attempt: number,
   options: Required<RetryOptions>
 ): number {
@@ -135,7 +135,7 @@ export async function withRetry<T>(
  * @param options Retry options
  * @returns A decorator that adds retry functionality to a method
  */
-export function withRetryDecorator(options: RetryOptions = {}) {
+function withRetryDecorator(options: RetryOptions = {}) {
   return function(
     _target: any,
     _propertyKey: string,
@@ -157,7 +157,7 @@ export function withRetryDecorator(options: RetryOptions = {}) {
  * @param options Retry options
  * @returns A new function with retry capability
  */
-export function createRetryableFunction<T extends (...args: any[]) => Promise<any>>(
+function createRetryableFunction<T extends (...args: any[]) => Promise<any>>(
   fn: T,
   options: RetryOptions = {}
 ): T {

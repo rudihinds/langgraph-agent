@@ -79,7 +79,7 @@ export function createStreamingNode<TState extends { messages: any[] }>(
  * @param config Additional configuration options
  * @returns A function that can be used as a LangGraph node
  */
-export function createStreamingChainNode<TState extends object>(
+function createStreamingChainNode<TState extends object>(
   promptTemplate: string | ChatPromptTemplate | PromptTemplate,
   inputMapping: (state: TState) => Record<string, any>,
   modelName: SupportedModel = "gpt-4o",

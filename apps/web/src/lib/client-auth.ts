@@ -18,5 +18,5 @@ import {
 // Re-export with same names to maintain compatibility
 export const useCurrentUser = useCurrentUserInternal;
 export const useRequireAuth = useRequireAuthInternal;
-export const checkAuthAndRedirect = checkAuthAndRedirectInternal;
+const checkAuthAndRedirect = checkAuthAndRedirectInternal;
 export const signOut = signOutInternal;

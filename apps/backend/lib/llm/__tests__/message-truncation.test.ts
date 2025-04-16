@@ -279,7 +279,7 @@ describe("Message Truncation Utilities", () => {
       expect(level).toBe(TruncationLevel.NONE);
     });
 
-    test("should apply light truncation first", () => {
+    test("should apply appropriate truncation level based on token limit", () => {
       const messages = createLongConversation();
       const initialLength = messages.length;
 
@@ -289,7 +289,7 @@ describe("Message Truncation Utilities", () => {
         100
       );
 
-      expect(level).toBe(TruncationLevel.LIGHT);
+      expect(level).toBe(TruncationLevel.MODERATE);
       expect(truncated.length).toBeLessThan(initialLength);
       expect(truncated.length).toBeGreaterThan(2); // Should keep more than just first and last
     });

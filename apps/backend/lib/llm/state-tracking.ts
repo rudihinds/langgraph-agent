@@ -80,7 +80,7 @@ export interface StateTrackingOptions extends FingerprintOptions {
 /**
  * Default state tracking options.
  */
-export const DEFAULT_STATE_TRACKING_OPTIONS: StateTrackingOptions = {
+const DEFAULT_STATE_TRACKING_OPTIONS: StateTrackingOptions = {
   trackedFields: [],
   progressIndicatorFields: [],
   maxIterations: 20,
@@ -92,7 +92,7 @@ export const DEFAULT_STATE_TRACKING_OPTIONS: StateTrackingOptions = {
 /**
  * Error thrown when a loop is detected in the state.
  */
-export class StateLoopDetectedError extends Error {
+class StateLoopDetectedError extends Error {
   public cycleInfo: any;
   
   constructor(message: string, cycleInfo: any) {
@@ -105,7 +105,7 @@ export class StateLoopDetectedError extends Error {
 /**
  * Error thrown when max iterations is exceeded.
  */
-export class MaxIterationsExceededError extends Error {
+class MaxIterationsExceededError extends Error {
   public stateInfo: any;
   
   constructor(message: string, stateInfo: any) {
@@ -122,7 +122,7 @@ export class MaxIterationsExceededError extends Error {
  * @param options - State tracking options
  * @returns State with tracking initialized
  */
-export function initializeStateTracking(
+function initializeStateTracking(
   state: Record<string, any>,
   options: StateTrackingOptions = {}
 ): Record<string, any> {
@@ -161,7 +161,7 @@ export function initializeStateTracking(
  * @param options - State tracking options
  * @returns Updated state with tracking information
  */
-export function updateStateTracking(
+function updateStateTracking(
   prevState: Record<string, any>,
   currentState: Record<string, any>,
   options: StateTrackingOptions = {}
@@ -274,7 +274,7 @@ export function updateStateTracking(
  * @param field - Field to check (supports dot notation)
  * @returns True if field has changed
  */
-export function hasFieldChanged(
+function hasFieldChanged(
   prevState: Record<string, any>,
   currentState: Record<string, any>,
   field: string
@@ -310,7 +310,7 @@ export function hasFieldChanged(
  * @param options - Tracking options
  * @returns True if workflow is making progress
  */
-export function isWorkflowMakingProgress(
+function isWorkflowMakingProgress(
   prevState: Record<string, any>,
   currentState: Record<string, any>,
   history: string[],
@@ -347,7 +347,7 @@ export function isWorkflowMakingProgress(
  * @param options - State tracking options
  * @returns Node function with state tracking
  */
-export function withStateTracking(
+function withStateTracking(
   nodeFunction: (state: Record<string, any>) => Record<string, any> | Promise<Record<string, any>>,
   options: StateTrackingOptions = {}
 ): (state: Record<string, any>) => Promise<Record<string, any>> {
@@ -372,7 +372,7 @@ export function withStateTracking(
  * @param options - Tracking options
  * @returns Analysis report
  */
-export function analyzeStateTransitions(
+function analyzeStateTransitions(
   state: Record<string, any>,
   options: StateTrackingOptions = {}
 ): {

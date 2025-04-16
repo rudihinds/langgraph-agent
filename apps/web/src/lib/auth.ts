@@ -53,7 +53,7 @@ export async function redirectIfAuthenticated() {
 /**
  * Utility for reading auth cookies from requests
  */
-export function getAuthCookie(req: NextRequest) {
+function getAuthCookie(req: NextRequest) {
   // Read the session cookie directly from the request
   return req.cookies.get("sb-auth-token")?.value;
 }
@@ -62,7 +62,7 @@ export function getAuthCookie(req: NextRequest) {
  * Simplified function to check if a user is authenticated
  * based on the presence of auth cookies
  */
-export function isAuthenticated(req: NextRequest): boolean {
+function isAuthenticated(req: NextRequest): boolean {
   const cookie = getAuthCookie(req);
   return !!cookie;
 }
@@ -70,7 +70,7 @@ export function isAuthenticated(req: NextRequest): boolean {
 /**
  * Utility to set auth cookies on a response
  */
-export function setAuthCookie(
+function setAuthCookie(
   res: NextResponse,
   value: string,
   options: { maxAge?: number; secure?: boolean; path?: string } = {}
@@ -89,7 +89,7 @@ export function setAuthCookie(
 /**
  * Utility to remove auth cookies
  */
-export function removeAuthCookie(res: NextResponse) {
+function removeAuthCookie(res: NextResponse) {
   res.cookies.set({
     name: "sb-auth-token",
     value: "",
@@ -102,7 +102,7 @@ export function removeAuthCookie(res: NextResponse) {
  * Server-side function to validate a session
  * Can be used in middleware or route handlers
  */
-export async function validateSessionFromCookie(
+async function validateSessionFromCookie(
   req: NextRequest
 ): Promise<boolean> {
   const cookie = getAuthCookie(req);

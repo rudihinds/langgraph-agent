@@ -90,4 +90,4 @@ class Logger {
 }
 
 // Export the Logger class and LogLevel enum
-export { Logger, LogLevel };
+export { Logger,  };

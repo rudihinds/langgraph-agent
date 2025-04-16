@@ -35,7 +35,7 @@ import { ProposalType } from "./ProposalCreationFlow";
 import ServerForm from "./ServerForm";
 
 // MODEL
-export interface ReviewProposalViewProps {
+interface ReviewProposalViewProps {
   onSubmit: (data: any) => void;
   onBack: () => void;
   onEdit: (step: number) => void;

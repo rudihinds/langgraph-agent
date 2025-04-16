@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/toast"
 import { useToast as useToastLib } from "@/components/ui/toast"
 
-export type ToasterToast = ToastProps & {
+type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -15,4 +15,3 @@ export type ToasterToast = ToastProps & {
 
 export const useToast = useToastLib
 
-export { ToastProvider, ToastViewport }

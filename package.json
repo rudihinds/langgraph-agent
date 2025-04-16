@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "tsx watch --require tsconfig-paths/register index.ts",
+    "dev:backend": "cd apps/backend && tsx watch --require tsconfig-paths/register index.ts",
     "dev:frontend": "cd apps/web && npm run dev",
     "dev:agents": "npx @langchain/langgraph-cli dev --port 2024 --config langgraph.json",
     "build": "npm run build:backend && npm run build:frontend",

@@ -103,7 +103,7 @@ function createStreamingProposalAgent() {
 }
 
 // Create the agent
-export const streamingGraph = createStreamingProposalAgent();
+const streamingGraph = createStreamingProposalAgent();
 
 /**
  * Run the streaming proposal agent

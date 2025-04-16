@@ -3,7 +3,7 @@ import { ProposalState } from "../agents/proposal-agent/state.js";
 /**
  * Options for state serialization and pruning
  */
-export interface SerializationOptions {
+interface SerializationOptions {
   /** Maximum number of messages to keep in history */
   maxMessageHistory?: number;
   /** Whether to trim large content */

@@ -116,7 +116,7 @@ export enum LLMStreamEventType {
 /**
  * Stream event for content
  */
-export interface LLMStreamContentEvent {
+interface LLMStreamContentEvent {
   type: LLMStreamEventType.Content;
   content: string;
 }
@@ -124,7 +124,7 @@ export interface LLMStreamContentEvent {
 /**
  * Stream event for function calls
  */
-export interface LLMStreamFunctionCallEvent {
+interface LLMStreamFunctionCallEvent {
   type: LLMStreamEventType.FunctionCall;
   functionName: string;
   content: string;
@@ -133,7 +133,7 @@ export interface LLMStreamFunctionCallEvent {
 /**
  * Stream event for errors
  */
-export interface LLMStreamErrorEvent {
+interface LLMStreamErrorEvent {
   type: LLMStreamEventType.Error;
   error: Error;
 }
@@ -141,7 +141,7 @@ export interface LLMStreamErrorEvent {
 /**
  * Stream event for end of stream
  */
-export interface LLMStreamEndEvent {
+interface LLMStreamEndEvent {
   type: LLMStreamEventType.End;
   /** Metadata about the completion */
   metadata: {
@@ -158,7 +158,7 @@ export interface LLMStreamEndEvent {
 /**
  * Union type for all stream events
  */
-export type LLMStreamEvent =
+type LLMStreamEvent =
   | LLMStreamContentEvent
   | LLMStreamFunctionCallEvent
   | LLMStreamErrorEvent

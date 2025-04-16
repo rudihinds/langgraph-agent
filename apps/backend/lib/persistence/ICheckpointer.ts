@@ -90,14 +90,14 @@ export interface CheckpointSummary {
   threadId: string;
   userId: string;
   proposalId: string;
-  lastUpdated: Date;
+  updated_at: Date;
   size: number;
 }
 
 /**
  * Configuration options for checkpointer implementations
  */
-export interface CheckpointerConfig {
+interface CheckpointerConfig {
   maxRetries?: number;
   retryDelayMs?: number;
   logger?: Console;

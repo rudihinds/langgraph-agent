@@ -1,6 +1,6 @@
 /**
  * Timeout and cancellation manager for LangGraph workflows
- * 
+ *
  * This module provides timeout safeguards and cancellation support for LangGraph workflows,
  * with a focus on being generous with limits for research-heavy nodes while still providing
  * protection against infinite runs.
@@ -12,46 +12,46 @@ import { StateGraph } from "@langchain/langgraph";
 const DEFAULT_TIMEOUTS = {
   // Overall workflow timeout (30 minutes)
   WORKFLOW: 30 * 60 * 1000,
-  
+
   // Default node timeout (3 minutes)
   DEFAULT_NODE: 3 * 60 * 1000,
-  
+
   // Research node timeout (10 minutes)
   RESEARCH_NODE: 10 * 60 * 1000,
-  
+
   // Generation node timeout (5 minutes)
-  GENERATION_NODE: 5 * 60 * 1000
+  GENERATION_NODE: 5 * 60 * 1000,
 };
 
 // Node types for specialized timeouts
-export type NodeType = 'default' | 'research' | 'generation';
+type NodeType = "default" | "research" | "generation";
 
-export interface TimeoutOptions {
+interface TimeoutOptions {
   // Overall workflow timeout in milliseconds
   workflowTimeout?: number;
-  
+
   // Node-specific timeouts (by node name)
   nodeTimeouts?: Record<string, number>;
-  
+
   // Default timeout for each node type
   defaultTimeouts?: {
     default?: number;
     research?: number;
     generation?: number;
   };
-  
+
   // Names of research nodes (will use research timeout by default)
   researchNodes?: string[];
-  
+
   // Names of generation nodes (will use generation timeout by default)
   generationNodes?: string[];
-  
+
   // Whether to enable cancellation support
   enableCancellation?: boolean;
-  
+
   // Event handler for timeout events
   onTimeout?: (nodeName: string, elapsedTime: number) => void;
-  
+
   // Event handler for cancellation events
   onCancellation?: (reason: string) => void;
 }
@@ -67,16 +67,20 @@ export class TimeoutManager<T extends object> {
   private nodeTimeoutIds: Map<string, NodeJS.Timeout> = new Map();
   private cancelled = false;
   private cancelReason: string | null = null;
-  
+
   constructor(options: TimeoutOptions = {}) {
     // Set default options with fallbacks
     this.options = {
       workflowTimeout: options.workflowTimeout ?? DEFAULT_TIMEOUTS.WORKFLOW,
       nodeTimeouts: options.nodeTimeouts ?? {},
       defaultTimeouts: {
-        default: options.defaultTimeouts?.default ?? DEFAULT_TIMEOUTS.DEFAULT_NODE,
-        research: options.defaultTimeouts?.research ?? DEFAULT_TIMEOUTS.RESEARCH_NODE,
-        generation: options.defaultTimeouts?.generation ?? DEFAULT_TIMEOUTS.GENERATION_NODE,
+        default:
+          options.defaultTimeouts?.default ?? DEFAULT_TIMEOUTS.DEFAULT_NODE,
+        research:
+          options.defaultTimeouts?.research ?? DEFAULT_TIMEOUTS.RESEARCH_NODE,
+        generation:
+          options.defaultTimeouts?.generation ??
+          DEFAULT_TIMEOUTS.GENERATION_NODE,
       },
       researchNodes: options.researchNodes ?? [],
       generationNodes: options.generationNodes ?? [],
@@ -85,68 +89,38 @@ export class TimeoutManager<T extends object> {
       onCancellation: options.onCancellation ?? (() => {}),
     };
   }
-  
-  /**
-   * Configure a StateGraph with timeout and cancellation support
-   */
-  configureGraph(graph: StateGraph<T>): StateGraph<T> {
-    if (this.options.enableCancellation) {
-      // Add a beforeCall hook to check for cancellation and timeouts
-      graph.addBeforeCallHook(async (nodeName, state, config, metadata) => {
-        // Check if the workflow has been cancelled
-        if (this.cancelled) {
-          throw new WorkflowCancellationError(this.cancelReason || 'Workflow was cancelled');
-        }
-        
-        // Start node timer if not already started
-        if (!this.nodeStartTimes.has(nodeName)) {
-          this.startNodeTimer(nodeName);
-        }
-        
-        return { state, config, metadata };
-      });
-      
-      // Add an afterCall hook to clean up node timers
-      graph.addAfterCallHook(async (nodeName, state, response, metadata) => {
-        this.clearNodeTimer(nodeName);
-        return { state, response, metadata };
-      });
-    }
-    
-    return graph;
-  }
-  
+
   /**
    * Start the workflow timeout timer
    */
   startWorkflow(): void {
     this.workflowStartTime = Date.now();
-    
+
     if (this.options.workflowTimeout > 0) {
       this.workflowTimeoutId = setTimeout(() => {
         this.handleWorkflowTimeout();
       }, this.options.workflowTimeout);
     }
   }
-  
+
   /**
    * Start a node timeout timer
    */
   private startNodeTimer(nodeName: string): void {
     this.nodeStartTimes.set(nodeName, Date.now());
-    
+
     // Determine the timeout for this node
     const timeout = this.getNodeTimeout(nodeName);
-    
+
     if (timeout > 0) {
       const timeoutId = setTimeout(() => {
         this.handleNodeTimeout(nodeName);
       }, timeout);
-      
+
       this.nodeTimeoutIds.set(nodeName, timeoutId);
     }
   }
-  
+
   /**
    * Clear a node timeout timer
    */
@@ -158,45 +132,47 @@ export class TimeoutManager<T extends object> {
     }
     this.nodeStartTimes.delete(nodeName);
   }
-  
+
   /**
    * Handle a workflow timeout
    */
   private handleWorkflowTimeout(): void {
-    const elapsedTime = this.workflowStartTime ? Date.now() - this.workflowStartTime : 0;
+    const elapsedTime = this.workflowStartTime
+      ? Date.now() - this.workflowStartTime
+      : 0;
     this.cancel(`Workflow timeout exceeded (${elapsedTime}ms)`);
   }
-  
+
   /**
    * Handle a node timeout
    */
   private handleNodeTimeout(nodeName: string): void {
     const startTime = this.nodeStartTimes.get(nodeName);
     const elapsedTime = startTime ? Date.now() - startTime : 0;
-    
+
     // Call the timeout handler
     this.options.onTimeout(nodeName, elapsedTime);
-    
+
     // Cancel the workflow
     this.cancel(`Node "${nodeName}" timeout exceeded (${elapsedTime}ms)`);
   }
-  
+
   /**
    * Cancel the workflow
    */
   cancel(reason: string): void {
     if (this.cancelled) return;
-    
+
     this.cancelled = true;
     this.cancelReason = reason;
-    
+
     // Clear all timers
     this.cleanup();
-    
+
     // Call the cancellation handler
     this.options.onCancellation(reason);
   }
-  
+
   /**
    * Clean up all timers and resources
    */
@@ -206,24 +182,24 @@ export class TimeoutManager<T extends object> {
       clearTimeout(this.workflowTimeoutId);
       this.workflowTimeoutId = null;
     }
-    
+
     // Clear all node timeouts
     for (const [nodeName, timeoutId] of this.nodeTimeoutIds.entries()) {
       clearTimeout(timeoutId);
       this.nodeTimeoutIds.delete(nodeName);
     }
-    
+
     // Reset state
     this.nodeStartTimes.clear();
   }
-  
+
   /**
    * Check if the workflow has been cancelled
    */
   isCancelled(): boolean {
     return this.cancelled;
   }
-  
+
   /**
    * Get the timeout for a specific node
    */
@@ -232,17 +208,17 @@ export class TimeoutManager<T extends object> {
     if (nodeName in this.options.nodeTimeouts) {
       return this.options.nodeTimeouts[nodeName];
     }
-    
+
     // Check if it's a research node
     if (this.options.researchNodes.includes(nodeName)) {
       return this.options.defaultTimeouts.research;
     }
-    
+
     // Check if it's a generation node
     if (this.options.generationNodes.includes(nodeName)) {
       return this.options.defaultTimeouts.generation;
     }
-    
+
     // Use default timeout
     return this.options.defaultTimeouts.default;
   }
@@ -254,20 +230,20 @@ export class TimeoutManager<T extends object> {
 export class WorkflowCancellationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'WorkflowCancellationError';
+    this.name = "WorkflowCancellationError";
   }
 }
 
 /**
  * Error thrown when a node timeout is exceeded
  */
-export class NodeTimeoutError extends Error {
+class NodeTimeoutError extends Error {
   nodeName: string;
   elapsedTime: number;
-  
+
   constructor(nodeName: string, elapsedTime: number) {
     super(`Node "${nodeName}" timeout exceeded (${elapsedTime}ms)`);
-    this.name = 'NodeTimeoutError';
+    this.name = "NodeTimeoutError";
     this.nodeName = nodeName;
     this.elapsedTime = elapsedTime;
   }
@@ -285,9 +261,9 @@ export function configureTimeouts<T extends object>(
 } {
   const timeoutManager = new TimeoutManager<T>(options);
   const configuredGraph = timeoutManager.configureGraph(graph);
-  
+
   return {
     graph: configuredGraph,
-    timeoutManager
+    timeoutManager,
   };
 }

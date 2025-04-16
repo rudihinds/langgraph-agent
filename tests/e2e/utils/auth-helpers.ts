@@ -1,7 +1,7 @@
 import { Page } from "@playwright/test";
 
 // Mock user data
-export const mockUser = {
+const mockUser = {
   id: "test-user-id",
   email: "test@example.com",
   user_metadata: {

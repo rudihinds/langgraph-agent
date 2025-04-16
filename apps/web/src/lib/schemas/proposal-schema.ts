@@ -3,19 +3,19 @@ import { z } from "zod";
 /**
  * Shared question schema used across different proposal types
  */
-export const QuestionSchema = z.object({
+const QuestionSchema = z.object({
   text: z.string().min(1, "Question text is required"),
   category: z.string().nullable(),
   wordLimit: z.number().nullable(),
   charLimit: z.number().nullable(),
 });
 
-export type QuestionType = z.infer<typeof QuestionSchema>;
+type QuestionType = z.infer<typeof QuestionSchema>;
 
 /**
  * Schema for funder details
  */
-export const FunderDetailsSchema = z.object({
+const FunderDetailsSchema = z.object({
   funderName: z.string().min(1, "Funder name is required"),
   funderType: z.string().min(1, "Funder type is required"),
   funderDescription: z.string().optional(),
@@ -34,12 +34,12 @@ export const FunderDetailsSchema = z.object({
   eligibilityCriteria: z.string().optional(),
 });
 
-export type FunderDetailsType = z.infer<typeof FunderDetailsSchema>;
+type FunderDetailsType = z.infer<typeof FunderDetailsSchema>;
 
 /**
  * Define metadata schema for additional fields
  */
-export const MetadataSchema = z
+const MetadataSchema = z
   .object({
     description: z.string().optional(),
     funder_details: FunderDetailsSchema.optional(),
@@ -80,4 +80,4 @@ export const ProposalSchema = z.object({
   metadata: z.any().optional(), // Accept any object structure for metadata
 });
 
-export type ProposalType = z.infer<typeof ProposalSchema>;
+type ProposalType = z.infer<typeof ProposalSchema>;

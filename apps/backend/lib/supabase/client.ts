@@ -29,7 +29,7 @@ if (!SUPABASE_ANON_KEY) {
 /**
  * Configuration options for creating a Supabase client
  */
-export interface SupabaseConfig {
+interface SupabaseConfig {
   /**
    * Supabase project URL (e.g., https://your-project.supabase.co)
    */
@@ -48,7 +48,7 @@ export interface SupabaseConfig {
  * @returns Configured Supabase client
  * @throws Error if required configuration is missing
  */
-export function createSupabaseClient(config?: Partial<SupabaseConfig>) {
+function createSupabaseClient(config?: Partial<SupabaseConfig>) {
   const supabaseUrl = config?.supabaseUrl || process.env.SUPABASE_URL;
   const supabaseKey =
     config?.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -74,7 +74,7 @@ export const serverSupabase = createSupabaseClient();
  * @param cookieHeader Cookie header string
  * @returns Object with cookie name-value pairs
  */
-export function parseCookies(cookieHeader: string): Record<string, string> {
+function parseCookies(cookieHeader: string): Record<string, string> {
   return cookieHeader.split(";").reduce(
     (cookies, cookie) => {
       const [name, value] = cookie.trim().split("=");
@@ -92,7 +92,7 @@ export function parseCookies(cookieHeader: string): Record<string, string> {
  * @param cookieHeader Optional cookie header for auth
  * @returns Supabase client with the user's session
  */
-export function getAuthenticatedClient(cookieHeader?: string): SupabaseClient {
+function getAuthenticatedClient(cookieHeader?: string): SupabaseClient {
   const client = createSupabaseClient();
 
   if (typeof window === "undefined" && cookieHeader) {

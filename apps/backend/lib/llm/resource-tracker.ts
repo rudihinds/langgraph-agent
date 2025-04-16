@@ -128,7 +128,7 @@ export function createResourceTracker(options: ResourceLimitOptions = {}) {
  * @param state State object to check and update
  * @returns Updated state with termination flag if limits are exceeded
  */
-export function createResourceLimitCheckNode<T extends object>(
+function createResourceLimitCheckNode<T extends object>(
   tracker: ReturnType<typeof createResourceTracker>
 ) {
   return async (state: T): Promise<Partial<T>> => {
@@ -155,7 +155,7 @@ export function createResourceLimitCheckNode<T extends object>(
  * @param options Resource limit options
  * @returns The resource tracker instance
  */
-export function integrateResourceTracking<T extends object>(
+function integrateResourceTracking<T extends object>(
   graph: any,  // StateGraph<T> type - using any to avoid import issues
   options: ResourceLimitOptions
 ): ReturnType<typeof createResourceTracker> {

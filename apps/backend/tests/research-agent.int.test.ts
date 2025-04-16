@@ -1,30 +1,82 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { researchAgent } from "../agents/research";
-import { SupabaseCheckpointer } from "../lib/state/supabase";
+import { SupabaseCheckpointer } from "../lib/persistence/supabase-checkpointer";
 import { AIMessage } from "@langchain/core/messages";
+import { Checkpoint } from "@langchain/langgraph";
+import { BaseMessage } from "@langchain/core/messages";
 
-// Mock Supabase client
-vi.mock("@supabase/supabase-js", () => {
-  const mockSupabase = {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: null }),
-    upsert: vi.fn().mockResolvedValue({ error: null }),
-    delete: vi.fn().mockResolvedValue({ error: null }),
-    insert: vi.fn().mockResolvedValue({ error: null }),
-    update: vi.fn().mockResolvedValue({ error: null }),
-  };
+// Mock environment variables
+process.env.DATABASE_URL = "postgres://fake:fake@localhost:5432/fake_db";
+process.env.SUPABASE_URL = "https://fake-supabase-url.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "fake-service-role-key";
+process.env.SUPABASE_ANON_KEY = "fake-anon-key";
 
+// Mock the Supabase client
+vi.mock("../lib/supabase/client.ts", () => {
   return {
-    createClient: vi.fn().mockReturnValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({ 
-          data: { user: { id: "test-user-id" } },
-          error: null 
+    serverSupabase: {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      update: vi.fn().mockResolvedValue({ data: null, error: null }),
+      delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+      storage: {
+        from: vi.fn().mockReturnValue({
+          upload: vi
+            .fn()
+            .mockResolvedValue({ data: { path: "test-path" }, error: null }),
+          getPublicUrl: vi
+            .fn()
+            .mockReturnValue({ data: { publicUrl: "https://test-url.com" } }),
         }),
       },
-      ...mockSupabase,
+    },
+    createSupabaseClient: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      update: vi.fn().mockResolvedValue({ data: null, error: null }),
+      delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+    }),
+  };
+});
+
+// Mock the message pruning
+vi.mock("../lib/state/messages.js", () => {
+  return {
+    pruneMessageHistory: vi.fn().mockImplementation((messages) => messages),
+  };
+});
+
+// Mock Logger
+vi.mock("@/lib/logger.js", () => {
+  return {
+    Logger: {
+      getInstance: vi.fn().mockReturnValue({
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      }),
+    },
+  };
+});
+
+// Mock pdf-parse to prevent it from trying to load test files
+vi.mock("pdf-parse", () => {
+  return {
+    default: vi.fn().mockResolvedValue({
+      text: "Mocked PDF content for testing",
+      numpages: 5,
+      info: { Title: "Test Document", Author: "Test Author" },
+      metadata: {},
+      version: "1.10.100",
     }),
   };
 });
@@ -98,6 +150,24 @@ vi.mock("@langchain/openai", () => {
   };
 });
 
+vi.mock("@/lib/persistence/supabase-checkpointer", () => {
+  return {
+    SupabaseCheckpointer: vi.fn().mockImplementation(() => {
+      return {
+        get: vi.fn(),
+        put: vi.fn().mockResolvedValue(undefined),
+        list: vi.fn().mockResolvedValue([]),
+        getNamespaces: vi.fn().mockResolvedValue([]),
+        getUserCheckpoints: vi.fn().mockResolvedValue([]),
+        getProposalCheckpoints: vi.fn().mockResolvedValue([]),
+        updateSessionActivity: vi.fn().mockResolvedValue(undefined),
+        generateThreadId: vi.fn().mockResolvedValue("test-thread-id"),
+        config: { configurable: {} },
+      };
+    }),
+  };
+});
+
 describe("Research Agent Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -107,82 +177,98 @@ describe("Research Agent Integration Tests", () => {
     it("completes a full research process with persistence", async () => {
       // Create a thread ID for this test
       const threadId = `test-thread-${Date.now()}`;
-      
+
       // Run the research agent
       const result = await researchAgent.invoke({
         documentId: "test-doc-123",
         threadId,
       });
-      
+
       // Verify we get a complete research result
       expect(result.status).toBe("COMPLETE");
       expect(result.document).toBeDefined();
       expect(result.document.id).toBe("test-doc-123");
-      
+
       // Check that deep research was performed
       expect(result.deepResearchResults).toBeDefined();
       expect(result.deepResearchResults.categories).toBeDefined();
-      expect(result.deepResearchResults.categories.organizationBackground).toBeDefined();
-      
+      expect(
+        result.deepResearchResults.categories.organizationBackground
+      ).toBeDefined();
+
       // Check that solution was generated
       expect(result.solutionSoughtResults).toBeDefined();
       expect(result.solutionSoughtResults.primaryApproach).toBeDefined();
       expect(result.solutionSoughtResults.secondaryApproaches).toBeDefined();
-      expect(result.solutionSoughtResults.secondaryApproaches.length).toBeGreaterThan(0);
+      expect(
+        result.solutionSoughtResults.secondaryApproaches.length
+      ).toBeGreaterThan(0);
     });
-    
+
     it("can resume from a persisted state", async () => {
-      // This test would normally check persistence by:
-      // 1. Starting a research process
-      // 2. Interrupting it midway
-      // 3. Resuming with the same thread ID
-      // 4. Verifying it doesn't start over
-      
-      // Since we're using mocks, we'll simulate this by:
-      // - Mocking the checkpointer to return a mock state on first call
-      
-      // Create a partially complete state
-      const partialState = {
-        document: {
-          id: "test-doc-123",
-          content: "Test RFP document",
-          title: "Test RFP",
-        },
-        deepResearchResults: {
-          categories: {
-            organizationBackground: {
-              findings: "Previously saved findings about the organization",
-              relevanceScore: 8,
-            },
-          },
-        },
-        status: "SOLUTION_NEEDED",
-        threadId: "test-resumption-thread",
+      // --- Simulate initial run (implicitly done by mocking put/get later) ---
+      // We assume some initial state was previously saved for 'test-resumption-thread'
+
+      // --- Setup Mock for Resumption ---
+      const { SupabaseCheckpointer } = await import(
+        "@/lib/persistence/supabase-checkpointer"
+      );
+      const mockedCheckpointerInstance = new SupabaseCheckpointer({});
+
+      // Define the state to resume from (e.g., after query generation)
+      const resumeState: ResearchState = {
+        documentId: "test-doc-123",
+        originalRfp: "Test RFP content",
+        parsedRfp: { purpose: "Test purpose", scope: "Test scope" },
+        researchQueries: ["query1", "query2"],
+        solutionSoughtResults: undefined,
+        painPointsResults: undefined,
+        currentMandatesResults: undefined,
+        evaluationCriteriaResults: undefined,
+        timelineResults: undefined,
+        messages: [] as BaseMessage[],
+        status: "QUERIES_GENERATED",
+        errors: [],
+        userId: "test-user",
+        proposalId: "test-proposal",
       };
-      
-      // Mock the checkpointer to return our partial state
-      vi.mock("../lib/state/supabase", () => {
-        return {
-          SupabaseCheckpointer: vi.fn().mockImplementation(() => ({
-            get: vi.fn().mockResolvedValue(partialState),
-            put: vi.fn().mockResolvedValue(undefined),
-            delete: vi.fn().mockResolvedValue(undefined),
-          })),
-        };
-      });
-      
+
+      const resumeCheckpoint: Checkpoint = {
+        v: 1,
+        ts: new Date().toISOString(),
+        channel_values: { ...resumeState },
+        channel_versions: {},
+        versions_seen: {},
+      };
+
+      // Mock the 'get' method to return the resume state
+      (mockedCheckpointerInstance.get as vi.Mock).mockResolvedValueOnce(
+        resumeCheckpoint
+      );
+
+      // --- Mock Supabase interactions (already partially done in beforeAll/beforeEach) ---
+      // Ensure Supabase client mocks are correctly set up if needed for resumption logic
+      // (Current mocks seem okay for put/upsert/delete, GET might be needed if agent logic calls it)
+      // Example (if needed):
+      // mockSupabaseClient.from('proposal_checkpoints').select.mockResolvedValueOnce({ data: [resumeCheckpoint], error: null });
+
       // Run the research agent with the same thread ID
       const result = await researchAgent.invoke({
         documentId: "test-doc-123",
         threadId: "test-resumption-thread",
       });
-      
+
       // Verify it completed from where it left off
+      // The final status depends on the full graph logic after QUERIES_GENERATED
+      // Assuming it runs research and completes:
       expect(result.status).toBe("COMPLETE");
       expect(result.solutionSoughtResults).toBeDefined();
-      
-      // Reset the mock to prevent affecting other tests
-      vi.resetModules();
+      expect(result.researchQueries).toEqual(["query1", "query2"]);
+
+      // Verify checkpointer 'get' was called
+      expect(mockedCheckpointerInstance.get).toHaveBeenCalledWith({
+        configurable: { thread_id: "test-resumption-thread" },
+      });
     });
   });
 });

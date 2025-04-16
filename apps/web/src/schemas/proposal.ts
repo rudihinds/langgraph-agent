@@ -90,7 +90,7 @@ const ProposalSchema = z.object({
 });
 
 // Export type definitions
-export type Question = z.infer<typeof QuestionSchema>;
-export type FunderDetails = z.infer<typeof FunderDetailsSchema>;
-export type Document = z.infer<typeof DocumentSchema>;
-export type Proposal = z.infer<typeof ProposalSchema>;
+type Question = z.infer<typeof QuestionSchema>;
+type FunderDetails = z.infer<typeof FunderDetailsSchema>;
+type Document = z.infer<typeof DocumentSchema>;
+type Proposal = z.infer<typeof ProposalSchema>;

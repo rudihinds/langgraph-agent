@@ -3,7 +3,7 @@ import { getModelContextSize, calculateMaxTokens } from "@langchain/core/languag
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { logger } from "../../agents/logger";
 
-export interface PruneMessageHistoryOptions {
+interface PruneMessageHistoryOptions {
   /**
    * Maximum number of tokens to keep in the message history
    * @default 4000
@@ -150,7 +150,7 @@ function getTokenCount(message: BaseMessage): number {
 /**
  * Create a summary message for a conversation
  */
-export async function summarizeConversation(
+async function summarizeConversation(
   messages: BaseMessage[], 
   llm: any
 ): Promise<AIMessage> {

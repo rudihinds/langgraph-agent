@@ -23,7 +23,7 @@ import {
 /**
  * Configuration for the SupabaseCheckpointer
  */
-export interface SupabaseCheckpointerConfig {
+interface SupabaseCheckpointerConfig {
   supabaseUrl: string;
   supabaseKey: string;
   tableName?: string;

@@ -39,12 +39,12 @@ export const ErrorEventSchema = z.object({
   }).optional(),
 });
 
-export type ErrorEvent = z.infer<typeof ErrorEventSchema>;
+type ErrorEvent = z.infer<typeof ErrorEventSchema>;
 
 /**
  * Detect rate limit errors in error messages
  */
-export function isRateLimitError(error: Error | string): boolean {
+function isRateLimitError(error: Error | string): boolean {
   const message = typeof error === 'string' ? error : error.message;
   return (
     message.includes('rate limit') ||
@@ -58,7 +58,7 @@ export function isRateLimitError(error: Error | string): boolean {
 /**
  * Detect context window exceeded errors in error messages
  */
-export function isContextWindowError(error: Error | string): boolean {
+function isContextWindowError(error: Error | string): boolean {
   const message = typeof error === 'string' ? error : error.message;
   return (
     message.includes('context window') ||
@@ -73,7 +73,7 @@ export function isContextWindowError(error: Error | string): boolean {
 /**
  * Detect LLM unavailable errors in error messages
  */
-export function isLLMUnavailableError(error: Error | string): boolean {
+function isLLMUnavailableError(error: Error | string): boolean {
   const message = typeof error === 'string' ? error : error.message;
   return (
     message.includes('service unavailable') ||
@@ -89,7 +89,7 @@ export function isLLMUnavailableError(error: Error | string): boolean {
 /**
  * Detect tool execution errors in error messages
  */
-export function isToolExecutionError(error: Error | string): boolean {
+function isToolExecutionError(error: Error | string): boolean {
   const message = typeof error === 'string' ? error : error.message;
   return (
     message.includes('tool execution failed') ||
@@ -101,7 +101,7 @@ export function isToolExecutionError(error: Error | string): boolean {
 /**
  * Detect invalid response format errors in error messages
  */
-export function isInvalidResponseFormatError(error: Error | string): boolean {
+function isInvalidResponseFormatError(error: Error | string): boolean {
   const message = typeof error === 'string' ? error : error.message;
   return (
     message.includes('invalid format') ||
@@ -115,7 +115,7 @@ export function isInvalidResponseFormatError(error: Error | string): boolean {
 /**
  * Detect checkpoint errors in error messages
  */
-export function isCheckpointError(error: Error | string): boolean {
+function isCheckpointError(error: Error | string): boolean {
   const message = typeof error === 'string' ? error : error.message;
   return (
     message.includes('checkpoint error') ||

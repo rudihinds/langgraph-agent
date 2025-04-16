@@ -14,7 +14,7 @@ export interface AppUser extends User {
 /**
  * Supabase session extended with application-specific properties
  */
-export interface AppSession extends Session {
+interface AppSession extends Session {
   // Add any application-specific session properties here
 }
 
@@ -34,7 +34,7 @@ export interface SignInResult {
 /**
  * Type for successful sign-in data
  */
-export interface SignInData {
+interface SignInData {
   url?: string;
   session?: AppSession;
   user?: AppUser;
@@ -52,7 +52,7 @@ export interface SignOutResult {
 /**
  * Type for successful sign-out data
  */
-export interface SignOutData {
+interface SignOutData {
   success: boolean;
 }
 
@@ -68,12 +68,12 @@ export interface CurrentUserState {
 /**
  * Type alias for auth operation responses using standardized format
  */
-export type AuthResponse<T> = ApiResponse<T>;
+type AuthResponse<T> = ApiResponse<T>;
 
 /**
  * Type for auth error details
  */
-export interface AuthErrorDetails extends BaseError {
+interface AuthErrorDetails extends BaseError {
   status?: number;
   supabaseErrorCode?: string;
   originalError?: string;
