@@ -39,6 +39,7 @@ import {
   completeProposalNode,
   finalizeProposalNode,
   evaluateSolutionNode,
+  processFeedbackNode,
 } from "./nodes.js";
 import {
   routeAfterResearchEvaluation,
@@ -46,6 +47,11 @@ import {
   determineNextSection,
   routeAfterSectionEvaluation,
   routeAfterStaleContentChoice,
+  routeAfterFeedbackProcessing,
+  routeAfterResearchReview,
+  routeAfterSolutionReview,
+  routeAfterSectionFeedback,
+  routeFinalizeProposal,
 } from "./conditionals.js";
 import { SupabaseCheckpointer } from "../../lib/persistence/supabase-checkpointer.js";
 import { LangGraphCheckpointer } from "../../lib/persistence/langgraph-adapter.js";
@@ -207,11 +213,7 @@ export function createProposalGenerationGraph(
   graph.addNode("completeProposal", completeProposalNode);
   graph.addNode("finalizeProposal", finalizeProposalNode);
   graph.addNode("evaluateSolution", evaluateSolutionNode);
-  // Create a simple node for determineNextSection (which is a routing function when used as a conditional)
-  graph.addNode("determineNextSection", async (state: ProposalState) => {
-    console.log("Determining next section to generate...");
-    return { currentStep: "next_section_determination" };
-  });
+  graph.addNode("processFeedback", processFeedbackNode);
 
   // 2. Define initial flow
   graph.addEdge(START, "research");
@@ -253,20 +255,26 @@ export function createProposalGenerationGraph(
 
   // Human review routing
   graph.addConditionalEdges("awaitResearchReview", routeAfterResearchReview, {
-    solutionSought: "solutionSought",
-    research: "research",
+    processFeedback: "processFeedback",
     handleError: "handleError",
   });
 
   graph.addConditionalEdges("awaitSolutionReview", routeAfterSolutionReview, {
-    planSections: "planSections",
-    solutionSought: "solutionSought",
+    processFeedback: "processFeedback",
     handleError: "handleError",
   });
 
   graph.addConditionalEdges("awaitSectionReview", routeAfterSectionFeedback, {
-    determineNextSection: "determineNextSection",
+    processFeedback: "processFeedback",
+    handleError: "handleError",
+  });
+
+  // Add routing after feedback processing
+  graph.addConditionalEdges("processFeedback", routeAfterFeedbackProcessing, {
+    research: "research",
+    solutionSought: "solutionSought",
     generateSection: "generateSection",
+    determineNextSection: "determineNextSection",
     handleError: "handleError",
   });
 

@@ -3,10 +3,19 @@
  * These conditionals analyze the current state and direct the flow based on evaluations, statuses, and content needs.
  */
 
-import { ProposalState } from "../../state/proposal.state.js";
-import { createLogger } from "../../lib/utils/logger.js";
+import {
+  OverallProposalState,
+  SectionType,
+  SectionData,
+  EvaluationResult,
+  SectionProcessingStatus,
+} from "../../state/modules/types.js";
+import { Logger, LogLevel } from "../../lib/logger.js";
+import { OverallProposalState as ProposalState } from "../../state/modules/types.js";
 
-const logger = createLogger("conditionals");
+// Create logger for conditionals module
+const logger = Logger.getInstance();
+logger.setLogLevel(LogLevel.INFO);
 
 /**
  * Routes the workflow after research evaluation based on the evaluation result.
@@ -15,23 +24,23 @@ const logger = createLogger("conditionals");
  * @returns The name of the next node to execute in the graph
  */
 export function routeAfterResearchEvaluation(
-  state: ProposalState
+  state: OverallProposalState
 ): "regenerateResearch" | "generateSolutionSought" {
   logger.info("Routing after research evaluation");
 
   // Check if research evaluation exists and has results
   if (
-    !state.research?.evaluation?.result ||
-    typeof state.research.evaluation.result !== "string"
+    !state.researchEvaluation?.passed ||
+    typeof state.researchEvaluation.feedback !== "string"
   ) {
     logger.error("No research evaluation result found, regenerating research");
     return "regenerateResearch";
   }
 
-  const result = state.research.evaluation.result.toLowerCase();
-  logger.info(`Research evaluation result: ${result}`);
+  const passed = state.researchEvaluation.passed;
+  logger.info(`Research evaluation result: ${passed ? "pass" : "fail"}`);
 
-  if (result === "pass") {
+  if (passed) {
     logger.info("Research passed evaluation, moving to solution sought");
     return "generateSolutionSought";
   } else {
@@ -47,14 +56,14 @@ export function routeAfterResearchEvaluation(
  * @returns The name of the next node to execute in the graph
  */
 export function routeAfterSolutionEvaluation(
-  state: ProposalState
+  state: OverallProposalState
 ): "regenerateSolutionSought" | "generateConnectionPairs" {
   logger.info("Routing after solution evaluation");
 
   // Check if solution evaluation exists and has results
   if (
-    !state.solutionSought?.evaluation?.result ||
-    typeof state.solutionSought.evaluation.result !== "string"
+    !state.solutionEvaluation?.passed ||
+    typeof state.solutionEvaluation.feedback !== "string"
   ) {
     logger.error(
       "No solution sought evaluation result found, regenerating solution"
@@ -62,10 +71,10 @@ export function routeAfterSolutionEvaluation(
     return "regenerateSolutionSought";
   }
 
-  const result = state.solutionSought.evaluation.result.toLowerCase();
-  logger.info(`Solution evaluation result: ${result}`);
+  const passed = state.solutionEvaluation.passed;
+  logger.info(`Solution evaluation result: ${passed ? "pass" : "fail"}`);
 
-  if (result === "pass") {
+  if (passed) {
     logger.info("Solution passed evaluation, moving to connection pairs");
     return "generateConnectionPairs";
   } else {
@@ -81,14 +90,14 @@ export function routeAfterSolutionEvaluation(
  * @returns The name of the next node to execute in the graph
  */
 export function routeAfterConnectionPairsEvaluation(
-  state: ProposalState
+  state: OverallProposalState
 ): "regenerateConnectionPairs" | "determineNextSection" {
   logger.info("Routing after connection pairs evaluation");
 
   // Check if connection pairs evaluation exists and has results
   if (
-    !state.connectionPairs?.evaluation?.result ||
-    typeof state.connectionPairs.evaluation.result !== "string"
+    !state.connectionsEvaluation?.passed ||
+    typeof state.connectionsEvaluation.feedback !== "string"
   ) {
     logger.error(
       "No connection pairs evaluation result found, regenerating pairs"
@@ -96,32 +105,18 @@ export function routeAfterConnectionPairsEvaluation(
     return "regenerateConnectionPairs";
   }
 
-  const result = state.connectionPairs.evaluation.result.toLowerCase();
-  logger.info(`Connection pairs evaluation result: ${result}`);
+  const passed = state.connectionsEvaluation.passed;
+  logger.info(
+    `Connection pairs evaluation result: ${passed ? "pass" : "fail"}`
+  );
 
-  if (result === "pass") {
+  if (passed) {
     logger.info("Connection pairs passed evaluation, determining next section");
     return "determineNextSection";
   } else {
     logger.info("Connection pairs failed evaluation, regenerating");
     return "regenerateConnectionPairs";
   }
-}
-
-// Define section types to match state structure
-type ProposalSection =
-  | "executiveSummary"
-  | "goalsAligned"
-  | "teamAssembly"
-  | "implementationPlan"
-  | "budget"
-  | "impact";
-
-interface SectionData {
-  status: string;
-  evaluation?: {
-    result?: string;
-  };
 }
 
 /**
@@ -131,7 +126,7 @@ interface SectionData {
  * @returns The name of the next node to execute in the graph
  */
 export function determineNextSection(
-  state: ProposalState
+  state: OverallProposalState
 ):
   | "generateExecutiveSummary"
   | "generateGoalsAligned"
@@ -144,34 +139,37 @@ export function determineNextSection(
   logger.info("Determining next section to generate");
 
   // Check if we have sections in state
-  if (!state.sections) {
+  if (!state.sections || state.sections.size === 0) {
     logger.error("No sections found in state");
     return "handleError";
   }
 
   // Helper function to check if a section is ready to be generated based on its dependencies
-  const isSectionReady = (section: ProposalSection): boolean => {
+  const isSectionReady = (section: SectionType): boolean => {
     const dependencies = getSectionDependencies(section);
     if (!dependencies || dependencies.length === 0) {
       return true;
     }
 
     return dependencies.every((dependency) => {
-      const dependencySection = state.sections?.[dependency] as
-        | SectionData
-        | undefined;
+      const dependencySection = state.sections.get(dependency);
       return dependencySection?.status === "approved";
     });
   };
 
   // Helper function to get the next queued section that's ready to be generated
-  const getNextReadySection = (): ProposalSection | null => {
-    const queuedSections = Object.entries(state.sections)
-      .filter(([_, sectionData]) => {
-        const section = sectionData as SectionData;
-        return section.status === "queued" || section.status === "not_started";
-      })
-      .map(([section, _]) => section as ProposalSection);
+  const getNextReadySection = (): SectionType | null => {
+    const queuedSections: SectionType[] = [];
+
+    // Filter sections that are queued or not_started
+    state.sections.forEach((sectionData, sectionType) => {
+      if (
+        sectionData.status === "queued" ||
+        sectionData.status === "not_started"
+      ) {
+        queuedSections.push(sectionType);
+      }
+    });
 
     const readySections = queuedSections.filter((section) =>
       isSectionReady(section)
@@ -188,14 +186,15 @@ export function determineNextSection(
   logger.info(`Next section to generate: ${nextSection || "none available"}`);
 
   if (!nextSection) {
-    const allSectionsCompleted = Object.values(state.sections).every(
-      (section) => {
-        const sectionData = section as SectionData;
-        return (
-          sectionData.status === "approved" || sectionData.status === "complete"
-        );
+    let allSectionsCompleted = true;
+
+    // Check if all sections are approved or completed
+    state.sections.forEach((section) => {
+      const status = section.status;
+      if (status !== "approved" && status !== "edited") {
+        allSectionsCompleted = false;
       }
-    );
+    });
 
     if (allSectionsCompleted) {
       logger.info("All sections complete, finalizing proposal");
@@ -206,19 +205,14 @@ export function determineNextSection(
     return "handleError";
   }
 
+  // Map section type to the appropriate node name
   switch (nextSection) {
-    case "executiveSummary":
+    case SectionType.PROBLEM_STATEMENT:
       return "generateExecutiveSummary";
-    case "goalsAligned":
+    case SectionType.METHODOLOGY:
       return "generateGoalsAligned";
-    case "teamAssembly":
-      return "generateTeamAssembly";
-    case "implementationPlan":
-      return "generateImplementationPlan";
-    case "budget":
-      return "generateBudget";
-    case "impact":
-      return "generateImpact";
+    // Add appropriate mappings for other section types
+    // This is a placeholder mapping - adjust according to your actual section types
     default:
       logger.error(`Unknown section: ${nextSection}`);
       return "handleError";
@@ -231,15 +225,14 @@ export function determineNextSection(
  * @param section - The proposal section to get dependencies for
  * @returns Array of section names that are dependencies for the specified section
  */
-function getSectionDependencies(section: ProposalSection): ProposalSection[] {
+function getSectionDependencies(section: SectionType): SectionType[] {
   // Define section dependencies based on proposal structure
-  const dependencies: Record<ProposalSection, ProposalSection[]> = {
-    executiveSummary: [],
-    goalsAligned: [],
-    teamAssembly: ["goalsAligned"],
-    implementationPlan: ["goalsAligned", "teamAssembly"],
-    budget: ["implementationPlan"],
-    impact: ["implementationPlan", "budget"],
+  const dependencies: Record<SectionType, SectionType[]> = {
+    [SectionType.PROBLEM_STATEMENT]: [],
+    [SectionType.METHODOLOGY]: [],
+    [SectionType.BUDGET]: [SectionType.METHODOLOGY],
+    [SectionType.TIMELINE]: [SectionType.METHODOLOGY, SectionType.BUDGET],
+    [SectionType.CONCLUSION]: [SectionType.TIMELINE, SectionType.BUDGET],
   };
 
   return dependencies[section] || [];
@@ -252,34 +245,43 @@ function getSectionDependencies(section: ProposalSection): ProposalSection[] {
  * @returns The name of the next node to execute in the graph
  */
 export function routeAfterSectionEvaluation(
-  state: ProposalState
+  state: OverallProposalState
 ): "regenerateCurrentSection" | "determineNextSection" {
   logger.info("Routing after section evaluation");
 
-  const currentPhase = state.currentPhase;
-  if (!currentPhase || !currentPhase.section) {
-    logger.error("No current phase or section found");
+  const currentStep = state.currentStep;
+  if (!currentStep) {
+    logger.error("No current step found");
     return "determineNextSection";
   }
 
-  const section = currentPhase.section as ProposalSection;
-  const sectionData = state.sections?.[section] as SectionData | undefined;
-  const evaluationResult = sectionData?.evaluation?.result;
+  // Extract section type from currentStep (assuming format like "evaluateSection:PROBLEM_STATEMENT")
+  const sectionMatch = currentStep.match(/evaluate.*?:(\w+)/);
+  if (!sectionMatch) {
+    logger.error(`Could not extract section from step ${currentStep}`);
+    return "determineNextSection";
+  }
 
-  if (!evaluationResult) {
-    logger.error(`No evaluation result found for section ${section}`);
+  const sectionType = sectionMatch[1] as SectionType;
+  const sectionData = state.sections.get(sectionType);
+
+  if (!sectionData || !sectionData.evaluation) {
+    logger.error(`No evaluation found for section ${sectionType}`);
     return "regenerateCurrentSection";
   }
 
-  logger.info(`Section ${section} evaluation result: ${evaluationResult}`);
+  const passed = sectionData.evaluation.passed;
+  logger.info(
+    `Section ${sectionType} evaluation result: ${passed ? "pass" : "fail"}`
+  );
 
-  if (evaluationResult.toLowerCase() === "pass") {
+  if (passed) {
     logger.info(
-      `Section ${section} passed evaluation, determining next section`
+      `Section ${sectionType} passed evaluation, determining next section`
     );
     return "determineNextSection";
   } else {
-    logger.info(`Section ${section} failed evaluation, regenerating`);
+    logger.info(`Section ${sectionType} failed evaluation, regenerating`);
     return "regenerateCurrentSection";
   }
 }
@@ -292,26 +294,225 @@ export function routeAfterSectionEvaluation(
  * @returns The name of the next node to execute in the graph
  */
 export function routeAfterStaleContentChoice(
-  state: ProposalState
+  state: OverallProposalState
 ): "regenerateStaleContent" | "useExistingContent" | "handleError" {
   logger.info("Routing after stale content choice");
 
-  if (!state.userChoices || !state.userChoices.staleContentChoice) {
+  if (
+    !state.interruptStatus ||
+    !state.interruptStatus.feedback ||
+    !state.interruptStatus.feedback.type
+  ) {
     logger.error("No stale content choice found in state");
     return "handleError";
   }
 
-  const choice = state.userChoices.staleContentChoice.toLowerCase();
+  const choice = state.interruptStatus.feedback.type;
   logger.info(`User's stale content choice: ${choice}`);
 
   if (choice === "regenerate") {
     logger.info("User chose to regenerate stale content");
     return "regenerateStaleContent";
-  } else if (choice === "use_existing") {
+  } else if (choice === "approve") {
     logger.info("User chose to use existing content");
     return "useExistingContent";
   } else {
     logger.error(`Invalid stale content choice: ${choice}`);
     return "handleError";
+  }
+}
+
+/**
+ * Routes the graph after feedback processing based on feedback type and updated state
+ *
+ * @param state Current proposal state after feedback processing
+ * @returns The next node to route to
+ */
+export function routeAfterFeedbackProcessing(state: ProposalState): string {
+  const logger = console;
+  logger.info("Routing after feedback processing");
+
+  // Check for errors
+  if (state.errors && state.errors.length > 0) {
+    const lastError = state.errors[state.errors.length - 1];
+    logger.error(`Error in feedback processing: ${lastError}`);
+    return "handleError";
+  }
+
+  // Route based on content reference and its status
+  const contentRef = state.interruptMetadata?.contentReference;
+
+  if (!contentRef) {
+    logger.error("No content reference found for routing after feedback");
+    return "handleError";
+  }
+
+  // Research routing
+  if (contentRef === "research") {
+    if (state.researchStatus === "stale") {
+      logger.info("Regenerating research after feedback");
+      return "research";
+    } else if (state.researchStatus === "approved") {
+      logger.info("Moving to solution sought after research approval");
+      return "solutionSought";
+    } else if (state.researchStatus === "edited") {
+      logger.info("Regenerating research with edits");
+      return "research";
+    }
+  }
+
+  // Solution routing
+  else if (contentRef === "solution") {
+    if (state.solutionStatus === "stale") {
+      logger.info("Regenerating solution after feedback");
+      return "solutionSought";
+    } else if (state.solutionStatus === "approved") {
+      logger.info("Moving to section planning after solution approval");
+      return "planSections";
+    } else if (state.solutionStatus === "edited") {
+      logger.info("Regenerating solution with edits");
+      return "solutionSought";
+    }
+  }
+
+  // Connections routing
+  else if (contentRef === "connections") {
+    if (state.connectionsStatus === "stale") {
+      // Need to implement connections regeneration
+      logger.info("Regenerating connections after feedback");
+      return "generateConnections"; // This node needs to be implemented
+    } else if (state.connectionsStatus === "approved") {
+      logger.info("Moving to next section after connections approval");
+      return "determineNextSection";
+    } else if (state.connectionsStatus === "edited") {
+      // Need to implement connections editing
+      logger.info("Regenerating connections with edits");
+      return "generateConnections"; // This node needs to be implemented
+    }
+  }
+
+  // Section routing (when contentRef is a section ID)
+  else {
+    // Try to parse the contentRef as a SectionType
+    try {
+      const sectionType = contentRef as SectionType;
+      if (state.sections.has(sectionType)) {
+        const section = state.sections.get(sectionType);
+
+        if (section && section.status === "stale") {
+          logger.info(`Regenerating section ${contentRef} after feedback`);
+          // Set current section before regenerating
+          return "generateSection";
+        } else if (section && section.status === "approved") {
+          logger.info(`Moving to next section after ${contentRef} approval`);
+          return "determineNextSection";
+        } else if (section && section.status === "edited") {
+          logger.info(`Regenerating section ${contentRef} with edits`);
+          return "generateSection";
+        }
+      }
+    } catch (e) {
+      logger.error(`Invalid section reference: ${contentRef}`);
+    }
+  }
+
+  // Fallback
+  logger.error(`Unexpected state after feedback processing for ${contentRef}`);
+  return "handleError";
+}
+
+/**
+ * Routes the graph after research review based on user feedback
+ *
+ * @param state Current proposal state
+ * @returns The name of the next node to transition to
+ */
+export function routeAfterResearchReview(state: ProposalState): string {
+  const logger = console;
+  logger.info("Routing after research review");
+
+  if (state.researchStatus === "approved") {
+    return "processFeedback";
+  } else if (
+    state.researchStatus === "stale" ||
+    state.researchStatus === "edited"
+  ) {
+    return "processFeedback";
+  } else {
+    return "handleError";
+  }
+}
+
+/**
+ * Routes the graph after solution review based on user feedback
+ *
+ * @param state Current proposal state
+ * @returns The name of the next node to transition to
+ */
+export function routeAfterSolutionReview(state: ProposalState): string {
+  const logger = console;
+  logger.info("Routing after solution review");
+
+  if (state.solutionStatus === "approved") {
+    return "processFeedback";
+  } else if (
+    state.solutionStatus === "stale" ||
+    state.solutionStatus === "edited"
+  ) {
+    return "processFeedback";
+  } else {
+    return "handleError";
+  }
+}
+
+/**
+ * Routes the graph after section review based on user feedback
+ *
+ * @param state Current proposal state
+ * @returns The name of the next node to transition to
+ */
+export function routeAfterSectionFeedback(state: ProposalState): string {
+  const logger = console;
+  logger.info("Routing after section feedback");
+
+  // Simply route to the processFeedback node to handle the details
+  return "processFeedback";
+}
+
+/**
+ * Routes the graph after proposal finalization
+ *
+ * @param state Current proposal state
+ * @returns The name of the next node to transition to
+ */
+export function routeFinalizeProposal(state: ProposalState): string {
+  const logger = console;
+  logger.info("Routing after finalize proposal");
+
+  // Check if there are any sections left to generate
+  if (state.requiredSections && state.requiredSections.length > 0) {
+    let allSectionsComplete = true;
+
+    for (const sectionType of state.requiredSections) {
+      if (state.sections.has(sectionType)) {
+        const section = state.sections.get(sectionType);
+        if (section && section.status !== "approved") {
+          allSectionsComplete = false;
+          break;
+        }
+      } else {
+        allSectionsComplete = false;
+        break;
+      }
+    }
+
+    if (allSectionsComplete) {
+      return "completeProposal";
+    } else {
+      return "determineNextSection";
+    }
+  } else {
+    // If no sections defined yet, go back to planning
+    return "determineNextSection";
   }
 }

@@ -1084,4 +1084,256 @@ export async function evaluateConnectionsNode(
   };
 }
 
+/**
+ * Process user feedback and determine the next steps
+ * This node is called after the graph has been resumed from a HITL interrupt
+ * and uses the feedback provided by the user to determine how to proceed
+ *
+ * @param state Current proposal state
+ * @returns Updated state based on feedback processing
+ */
+export async function processFeedbackNode(
+  state: ProposalState
+): Promise<Partial<ProposalState>> {
+  const logger = console;
+  logger.info("Processing user feedback");
+
+  // Validate that we have feedback to process
+  if (!state.userFeedback) {
+    logger.error("No user feedback found in state");
+    return {
+      errors: [
+        ...(state.errors || []),
+        {
+          nodeId: "processFeedbackNode",
+          message: "No user feedback found in state",
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+  }
+
+  // Get the feedback type and additional content
+  const { type, comments, specificEdits } = state.userFeedback;
+  const interruptPoint = state.interruptStatus?.interruptionPoint;
+  const contentRef = state.interruptMetadata?.contentReference;
+
+  logger.info(
+    `Processing ${type} feedback for ${interruptPoint} at ${contentRef}`
+  );
+
+  // Different handling based on feedback type
+  switch (type) {
+    case "approve":
+      // For approval, we update status and continue
+      logger.info("User approved content, continuing flow");
+
+      // Determine what was approved to update the appropriate status
+      if (contentRef && contentRef === "research") {
+        return {
+          researchStatus: "approved",
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && contentRef === "solution") {
+        return {
+          solutionStatus: "approved",
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && contentRef === "connections") {
+        return {
+          connectionsStatus: "approved",
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && state.sections && state.sections[contentRef]) {
+        // This is a section approval
+        return {
+          sections: {
+            ...state.sections,
+            [contentRef]: {
+              ...state.sections[contentRef],
+              status: "approved",
+            },
+          },
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      }
+      break;
+
+    case "revise":
+      // For revision, we update content with specific edits
+      logger.info("User requested revisions with specific edits");
+
+      // Capture revision instructions
+      const revisionInstructions = comments || "Revise based on user feedback";
+
+      if (contentRef && contentRef === "research") {
+        return {
+          researchStatus: "edited",
+          revisionInstructions: revisionInstructions,
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && contentRef === "solution") {
+        return {
+          solutionStatus: "edited",
+          revisionInstructions: revisionInstructions,
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && contentRef === "connections") {
+        return {
+          connectionsStatus: "edited",
+          revisionInstructions: revisionInstructions,
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && state.sections && state.sections[contentRef]) {
+        // This is a section revision
+        return {
+          sections: {
+            ...state.sections,
+            [contentRef]: {
+              ...state.sections[contentRef],
+              status: "edited",
+              edits: specificEdits || {},
+              revisionInstructions: revisionInstructions,
+            },
+          },
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      }
+      break;
+
+    case "regenerate":
+      // For regeneration, we reset to an earlier state
+      logger.info("User requested complete regeneration");
+
+      if (contentRef && contentRef === "research") {
+        return {
+          researchStatus: "stale",
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && contentRef === "solution") {
+        return {
+          solutionStatus: "stale",
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && contentRef === "connections") {
+        return {
+          connectionsStatus: "stale",
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      } else if (contentRef && state.sections && state.sections[contentRef]) {
+        // This is a section regeneration
+        return {
+          sections: {
+            ...state.sections,
+            [contentRef]: {
+              ...state.sections[contentRef],
+              status: "stale",
+              content: "", // Clear content for regeneration
+            },
+          },
+          interruptStatus: {
+            isInterrupted: false,
+            interruptionPoint: null,
+            feedback: null,
+            processingStatus: null,
+          },
+          interruptMetadata: undefined,
+        };
+      }
+      break;
+
+    default:
+      logger.error(`Unknown feedback type: ${type}`);
+      return {
+        errors: [
+          ...(state.errors || []),
+          {
+            nodeId: "processFeedbackNode",
+            message: `Unknown feedback type: ${type}`,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      };
+  }
+
+  // If we couldn't determine what to do, log an error and return
+  logger.error(`Could not process feedback for content: ${contentRef}`);
+  return {
+    errors: [
+      ...(state.errors || []),
+      {
+        nodeId: "processFeedbackNode",
+        message: `Could not process feedback for content: ${contentRef}`,
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
 // Additional node functions can be added here

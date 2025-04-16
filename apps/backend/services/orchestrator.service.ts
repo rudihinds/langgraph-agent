@@ -18,6 +18,8 @@ import {
   UserFeedback,
   ProcessingStatus,
   SectionType,
+  FeedbackType,
+  SectionProcessingStatus,
 } from "../state/modules/types.js";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger, LogLevel } from "../lib/logger.js";
@@ -187,5 +189,225 @@ export class OrchestratorService {
    */
   async getState(threadId: string): Promise<OverallProposalState> {
     return (await this.checkpointer.get(threadId)) as OverallProposalState;
+  }
+
+  /**
+   * Submits user feedback during an interrupt for review of content
+   *
+   * @param threadId The thread ID of the interrupted proposal
+   * @param feedback User feedback object containing type, comments, etc.
+   * @returns Updated state with the feedback incorporated
+   */
+  async submitFeedback(
+    threadId: string,
+    feedback: UserFeedback
+  ): Promise<OverallProposalState> {
+    // Get the current state
+    const state = await this.getState(threadId);
+
+    // Verify there is an active interrupt
+    if (!state?.interruptStatus?.isInterrupted) {
+      throw new Error("Cannot submit feedback when no interrupt is active");
+    }
+
+    // Validate feedback type
+    if (!["approve", "revise", "regenerate"].includes(feedback.type)) {
+      throw new Error(`Invalid feedback type: ${feedback.type}`);
+    }
+
+    // Create updated state with feedback
+    const updatedState: OverallProposalState = {
+      ...state,
+      interruptStatus: {
+        ...state.interruptStatus,
+        feedback: {
+          type: feedback.type,
+          content: feedback.comments || null,
+          timestamp: feedback.timestamp || new Date().toISOString(),
+        },
+        processingStatus: "pending",
+      },
+      userFeedback: feedback,
+    };
+
+    // Persist the updated state
+    await this.checkpointer.put(threadId, updatedState);
+    this.logger.info(
+      `User feedback (${feedback.type}) submitted for thread ${threadId}`
+    );
+
+    // Prepare state based on feedback type
+    return this.prepareFeedbackForProcessing(threadId, feedback.type);
+  }
+
+  /**
+   * Prepares state for processing based on feedback type
+   *
+   * @param threadId The thread ID of the proposal
+   * @param feedbackType Type of feedback provided
+   * @returns State prepared for resumption
+   */
+  private async prepareFeedbackForProcessing(
+    threadId: string,
+    feedbackType: FeedbackType
+  ): Promise<OverallProposalState> {
+    // Get latest state with feedback incorporated
+    const state = await this.getState(threadId);
+    let updatedState: OverallProposalState = { ...state };
+
+    // Get the content reference from interrupt metadata
+    const contentRef = state.interruptMetadata?.contentReference;
+
+    switch (feedbackType) {
+      case "approve":
+        // Mark the relevant content as approved
+        updatedState = this.updateContentStatus(
+          updatedState,
+          contentRef,
+          "approved"
+        );
+        break;
+
+      case "revise":
+        // Mark the content for revision
+        updatedState = this.updateContentStatus(
+          updatedState,
+          contentRef,
+          "needs_revision"
+        );
+        break;
+
+      case "regenerate":
+        // Mark the content as stale to trigger regeneration
+        updatedState = this.updateContentStatus(
+          updatedState,
+          contentRef,
+          "stale"
+        );
+        break;
+    }
+
+    // Persist the updated state
+    await this.checkpointer.put(threadId, updatedState);
+    return updatedState;
+  }
+
+  /**
+   * Updates the status of a specific content reference based on feedback
+   *
+   * @param state The current state
+   * @param contentRef The content reference (research, solution, section, etc.)
+   * @param status The new status to apply
+   * @returns Updated state with the content status changed
+   */
+  private updateContentStatus(
+    state: OverallProposalState,
+    contentRef?: string,
+    status?: ProcessingStatus | SectionProcessingStatus
+  ): OverallProposalState {
+    if (!contentRef || !status) {
+      return state;
+    }
+
+    // Create a new state object to avoid mutation
+    let updatedState = { ...state };
+
+    // Update state based on content type
+    if (contentRef === "research") {
+      updatedState.researchStatus = status as ProcessingStatus;
+    } else if (contentRef === "solution") {
+      updatedState.solutionStatus = status as ProcessingStatus;
+    } else if (contentRef === "connections") {
+      updatedState.connectionsStatus = status as ProcessingStatus;
+    } else {
+      // Try to handle as a section reference
+      try {
+        const sectionType = contentRef as SectionType;
+        if (updatedState.sections.has(sectionType)) {
+          // Get the existing section
+          const section = updatedState.sections.get(sectionType);
+
+          if (section) {
+            // Create updated section with new status
+            const updatedSection = {
+              ...section,
+              status: status as SectionProcessingStatus,
+              lastUpdated: new Date().toISOString(),
+            };
+
+            // Create new sections map to maintain immutability
+            const newSections = new Map(updatedState.sections);
+            newSections.set(sectionType, updatedSection);
+
+            // Update the state with the new sections map
+            updatedState.sections = newSections;
+          }
+        }
+      } catch (e) {
+        this.logger.error(`Failed to update status for content: ${contentRef}`);
+      }
+    }
+
+    return updatedState;
+  }
+
+  /**
+   * Resume the graph execution after feedback has been processed
+   *
+   * @param threadId The thread ID of the interrupted proposal
+   * @returns Promise that resolves when the graph resumes successfully
+   */
+  async resumeAfterFeedback(threadId: string): Promise<void> {
+    // Get the current state
+    const state = await this.getState(threadId);
+
+    // Validate the state has feedback that needs processing
+    if (!state?.userFeedback) {
+      throw new Error("Cannot resume: no user feedback found in state");
+    }
+
+    // Check that the processing status is correct
+    if (state.interruptStatus.processingStatus !== "pending") {
+      this.logger.warn(
+        `Unexpected processing status when resuming: ${state.interruptStatus.processingStatus}`
+      );
+    }
+
+    // Update the interrupt status to indicate processing is happening
+    const updatedState: OverallProposalState = {
+      ...state,
+      interruptStatus: {
+        ...state.interruptStatus,
+        processingStatus: "processing_feedback",
+      },
+    };
+
+    // Persist the updated state
+    await this.checkpointer.put(threadId, updatedState);
+    this.logger.info(`Resuming graph after feedback for thread ${threadId}`);
+
+    try {
+      // Resume the graph execution
+      await this.graph.resume(threadId);
+      this.logger.info(`Graph resumed successfully for thread ${threadId}`);
+    } catch (error) {
+      this.logger.error(`Error resuming graph: ${error}`);
+
+      // Update state to indicate failure
+      const errorState: OverallProposalState = {
+        ...updatedState,
+        interruptStatus: {
+          ...updatedState.interruptStatus,
+          processingStatus: "failed",
+        },
+        errors: [
+          ...(updatedState.errors || []),
+          `Failed to resume graph: ${error}`,
+        ],
+      };
+
+      await this.checkpointer.put(threadId, errorState);
+      throw error;
+    }
   }
 }
