@@ -120,27 +120,60 @@ export const OverallProposalStateAnnotation =
 
 ### 3. OrchestratorService Integration (3 days)
 
-- [ ] 3.1. Extend the OrchestratorService to detect interrupts and manage state:
-  - [ ] 3.1.1. Detect when the graph has paused at an interrupt point
-  - [ ] 3.1.2. Retrieve the latest state via the Checkpointer
+- [x] 3.1. Extend the OrchestratorService to detect interrupts and manage state:
+  - [x] 3.1.1. Detect when the graph has paused at an interrupt point
+  - [x] 3.1.2. Retrieve the latest state via the Checkpointer
   - Dependencies: 1.1, 1.2, 2.2 (Requires state structure and graph configuration)
+  - Status: COMPLETED. Successfully implemented methods for detecting and handling interrupts in the OrchestratorService, including detecting interrupt status, retrieving detailed interrupt data, and retrieving the relevant content being evaluated. All tests are passing.
 
 ```typescript
 // In orchestrator.service.ts
+/**
+ * Detects if the graph has paused at an interrupt point
+ */
+async detectInterrupt(threadId: string): Promise<boolean> {
+  // Get the latest state from the checkpointer
+  const state = await this.checkpointer.get(threadId) as OverallProposalState;
+
+  // Check if state is interrupted
+  return state?.interruptStatus?.isInterrupted === true;
+}
+
 /**
  * Handles an interrupt from the proposal generation graph
  */
 async handleInterrupt(threadId: string): Promise<OverallProposalState> {
   // Get the latest state via checkpointer
-  const state = await this.checkpointer.get(threadId);
+  const state = await this.checkpointer.get(threadId) as OverallProposalState;
 
-  // Verify interrupt status and prepare for UI
-  if (state.interruptStatus !== 'awaiting_input') {
-    throw new Error('Expected state to be awaiting input');
+  // Verify interrupt status
+  if (!state?.interruptStatus?.isInterrupted) {
+    throw new Error('No interrupt detected in the current state');
   }
 
-  // Return the state for UI presentation
+  // Log the interrupt for debugging/auditing
+  this.logger.info(`Interrupt detected at ${state.interruptStatus.interruptionPoint}`);
+
   return state;
+}
+
+/**
+ * Gets interrupt details and content for UI presentation
+ */
+async getInterruptDetails(threadId: string): Promise<InterruptDetails | null> {
+  const state = await this.checkpointer.get(threadId) as OverallProposalState;
+
+  if (!state?.interruptStatus?.isInterrupted || !state.interruptMetadata) {
+    return null;
+  }
+
+  return {
+    nodeId: state.interruptMetadata.nodeId,
+    reason: state.interruptMetadata.reason,
+    contentReference: state.interruptMetadata.contentReference || '',
+    timestamp: state.interruptMetadata.timestamp,
+    evaluationResult: state.interruptMetadata.evaluationResult
+  };
 }
 ```
 
@@ -478,10 +511,11 @@ We've made significant progress on the HITL implementation:
    - ✅ Implemented HITL interrupt for `evaluateConnectionsNode` with proper status and metadata
    - ✅ Configured all necessary interrupt points in the graph's `interruptAfter` array
    - ✅ Added comprehensive tests for all evaluation nodes with HITL functionality
+   - ✅ Created `OrchestratorService` with methods to detect interrupts, retrieve interrupt details, and provide content to UI
+   - ✅ Implemented unit tests for all interrupt detection and handling functions
 
 2. **Next Steps**:
 
-   - ⏩ Implement OrchestratorService integration to detect and handle interrupts (Task 3.1)
    - ⏩ Implement user feedback submission and processing (Task 3.2)
    - ⏩ Implement graph resumption after feedback (Task 3.3)
    - ⏩ Implement feedback processing nodes (Task 4.x)
@@ -492,7 +526,8 @@ We've made significant progress on the HITL implementation:
    - ✅ Conditional routing tests for stale content are passing
    - ✅ Tests for all evaluation nodes with HITL functionality are passing
    - ✅ Error handling tests for interrupted nodes are passing
-   - More tests needed for orchestrator integration and other nodes
+   - ✅ Tests for OrchestratorService interrupt detection and handling are passing
+   - More tests needed for feedback processing and graph resumption
 
 ## File Path Mapping
 
