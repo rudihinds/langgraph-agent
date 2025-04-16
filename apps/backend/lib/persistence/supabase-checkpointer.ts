@@ -9,11 +9,9 @@ import {
   BaseCheckpointSaver,
   Checkpoint,
   CheckpointMetadata,
-  ChannelVersions,
 } from "@langchain/langgraph";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { createHash } from "crypto";
 import { z } from "zod";
 import { withRetry } from "../utils/backoff.js";
 
@@ -40,10 +38,10 @@ const CheckpointSchema = z.object({
 });
 
 /**
- * SupabaseCheckpointer implements BaseCheckpointSaver interface for LangGraph
+ * SupabaseCheckpointer implements a minimal subset of the BaseCheckpointSaver interface
  * providing persistence for checkpoints using Supabase
  */
-export class SupabaseCheckpointer<T = any> implements BaseCheckpointSaver<T> {
+export class SupabaseCheckpointer implements Partial<BaseCheckpointSaver> {
   private supabase: SupabaseClient;
   private tableName: string;
   private sessionTableName: string;
@@ -143,12 +141,16 @@ export class SupabaseCheckpointer<T = any> implements BaseCheckpointSaver<T> {
 
   /**
    * Store a checkpoint by thread_id
+   *
+   * Note: _metadata and _newVersions parameters are unused but required by the interface
    */
   async put(
     config: RunnableConfig,
     checkpoint: Checkpoint,
-    metadata: CheckpointMetadata,
-    newVersions: ChannelVersions
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _metadata: CheckpointMetadata,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _newVersions: any
   ): Promise<RunnableConfig> {
     const threadId = config?.configurable?.thread_id as string;
     if (!threadId) {
@@ -240,8 +242,15 @@ export class SupabaseCheckpointer<T = any> implements BaseCheckpointSaver<T> {
 
   /**
    * List namespaces (required by BaseCheckpointSaver interface)
+   *
+   * Note: Parameters are unused but required by the interface
    */
-  async listNamespaces(match?: string, matchType?: string): Promise<string[]> {
+  async listNamespaces(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _match?: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _matchType?: string
+  ): Promise<string[]> {
     return [];
   }
 
