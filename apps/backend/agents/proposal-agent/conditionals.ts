@@ -1,429 +1,317 @@
 /**
- * Conditional routing functions for the Proposal Agent Graph.
- * These functions determine the path through the graph based on state evaluation.
- *
- * Following patterns in AGENT_ARCHITECTURE.md:
- * - All routing functions accept ProposalState and return a string (next node)
- * - Each function includes detailed logging
- * - Functions check state fields defined in /state/proposal.state.ts
- * - Handle potential errors and edge cases
+ * @fileoverview Routing functions that determine the next steps in the proposal generation workflow.
+ * These conditionals analyze the current state and direct the flow based on evaluations, statuses, and content needs.
  */
 
-import {
-  ProposalState,
-  SectionType,
-  SectionProcessingStatus,
-} from "../../state/proposal.state.js";
+import { ProposalState } from "../../state/proposal.state.js";
+import { createLogger } from "../../lib/utils/logger.js";
+
+const logger = createLogger("conditionals");
 
 /**
- * Determines the next step after the research evaluation node.
+ * Routes the workflow after research evaluation based on the evaluation result.
  *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute ('solutionSought', 'await_research_review', or 'handle_error').
+ * @param state - The current proposal state
+ * @returns The name of the next node to execute in the graph
  */
-export function routeAfterResearchEvaluation(state: ProposalState): string {
-  console.log("--- Routing after Research Evaluation ---");
-  const evaluation = state.researchEvaluation;
-  // Log the detailed evaluation object if it exists
-  console.log(
-    "Evaluation Result:",
-    evaluation ? JSON.stringify(evaluation, null, 2) : "Not present"
-  );
-  console.log(`Current Research Status: ${state.researchStatus}`);
+export function routeAfterResearchEvaluation(
+  state: ProposalState
+): "regenerateResearch" | "generateSolutionSought" {
+  logger.info("Routing after research evaluation");
 
-  // 1. Check for evaluation error state OR missing evaluation object
-  //    We assume the evaluateResearchNode sets researchStatus to 'error' if it fails internally.
-  if (state.researchStatus === "error" || !evaluation) {
-    console.log(
-      "Routing to handle_error due to error status or missing evaluation."
-    );
-    return "handleError";
+  // Check if research evaluation exists and has results
+  if (
+    !state.research?.evaluation?.result ||
+    typeof state.research.evaluation.result !== "string"
+  ) {
+    logger.error("No research evaluation result found, regenerating research");
+    return "regenerateResearch";
   }
 
-  // 2. Check if evaluation passed (assuming evaluation object exists now)
-  if (evaluation.passed) {
-    console.log("Routing to solutionSought as evaluation passed.");
-    // Note: The 'researchStatus' might still be 'running' or 'awaiting_review' here.
-    // The subsequent node ('solutionSought') should likely update its own status.
-    // We don't strictly need to check for 'approved' status here if 'passed' is true.
-    return "solutionSought";
-  }
+  const result = state.research.evaluation.result.toLowerCase();
+  logger.info(`Research evaluation result: ${result}`);
 
-  // 3. Evaluation exists but did not pass (failed or needs explicit review)
-  console.log(
-    "Routing to awaiting_research_review as evaluation did not pass."
-  );
-  // Note: The evaluateResearchNode should ideally set the state.researchStatus
-  // to 'awaiting_review' when evaluation.passed is false.
-  return "awaitResearchReview";
+  if (result === "pass") {
+    logger.info("Research passed evaluation, moving to solution sought");
+    return "generateSolutionSought";
+  } else {
+    logger.info("Research failed evaluation, regenerating");
+    return "regenerateResearch";
+  }
 }
 
 /**
- * Determines the next step after solution generation and evaluation.
+ * Routes the workflow after solution sought evaluation based on the evaluation result.
  *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute ('planSections', 'await_solution_review', or 'handle_error').
+ * @param state - The current proposal state
+ * @returns The name of the next node to execute in the graph
  */
-export function routeAfterSolutionEvaluation(state: ProposalState): string {
-  console.log("--- Routing after Solution Evaluation ---");
-  const evaluation = state.solutionEvaluation;
+export function routeAfterSolutionEvaluation(
+  state: ProposalState
+): "regenerateSolutionSought" | "generateConnectionPairs" {
+  logger.info("Routing after solution evaluation");
 
-  // Log the detailed evaluation object if it exists
-  console.log(
-    "Solution Evaluation Result:",
-    evaluation ? JSON.stringify(evaluation, null, 2) : "Not present"
-  );
-  console.log(`Current Solution Status: ${state.solutionStatus}`);
-
-  // Check for error state or missing evaluation
-  if (state.solutionStatus === "error" || !evaluation) {
-    console.log(
-      "Routing to handleError due to error status or missing solution evaluation."
+  // Check if solution evaluation exists and has results
+  if (
+    !state.solutionSought?.evaluation?.result ||
+    typeof state.solutionSought.evaluation.result !== "string"
+  ) {
+    logger.error(
+      "No solution sought evaluation result found, regenerating solution"
     );
-    return "handleError";
+    return "regenerateSolutionSought";
   }
 
-  // Check if evaluation passed
-  if (evaluation.passed) {
-    console.log("Routing to planSections as solution evaluation passed.");
-    return "planSections";
-  }
+  const result = state.solutionSought.evaluation.result.toLowerCase();
+  logger.info(`Solution evaluation result: ${result}`);
 
-  // Evaluation exists but did not pass
-  console.log("Routing to awaitSolutionReview as evaluation did not pass.");
-  return "awaitSolutionReview";
+  if (result === "pass") {
+    logger.info("Solution passed evaluation, moving to connection pairs");
+    return "generateConnectionPairs";
+  } else {
+    logger.info("Solution failed evaluation, regenerating");
+    return "regenerateSolutionSought";
+  }
 }
 
 /**
- * Determines if we need to generate more sections or if the proposal is complete.
+ * Routes the workflow after connection pairs evaluation based on the evaluation result.
  *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
+ * @param state - The current proposal state
+ * @returns The name of the next node to execute in the graph
  */
-export function determineNextSection(state: ProposalState): string {
-  console.log("--- Determining Next Section to Generate ---");
+export function routeAfterConnectionPairsEvaluation(
+  state: ProposalState
+): "regenerateConnectionPairs" | "determineNextSection" {
+  logger.info("Routing after connection pairs evaluation");
 
-  // Check if we have the required sections defined
-  if (!state.requiredSections || state.requiredSections.length === 0) {
-    console.log("Required sections not defined. Routing to handleError.");
+  // Check if connection pairs evaluation exists and has results
+  if (
+    !state.connectionPairs?.evaluation?.result ||
+    typeof state.connectionPairs.evaluation.result !== "string"
+  ) {
+    logger.error(
+      "No connection pairs evaluation result found, regenerating pairs"
+    );
+    return "regenerateConnectionPairs";
+  }
+
+  const result = state.connectionPairs.evaluation.result.toLowerCase();
+  logger.info(`Connection pairs evaluation result: ${result}`);
+
+  if (result === "pass") {
+    logger.info("Connection pairs passed evaluation, determining next section");
+    return "determineNextSection";
+  } else {
+    logger.info("Connection pairs failed evaluation, regenerating");
+    return "regenerateConnectionPairs";
+  }
+}
+
+// Define section types to match state structure
+type ProposalSection =
+  | "executiveSummary"
+  | "goalsAligned"
+  | "teamAssembly"
+  | "implementationPlan"
+  | "budget"
+  | "impact";
+
+interface SectionData {
+  status: string;
+  evaluation?: {
+    result?: string;
+  };
+}
+
+/**
+ * Determines which section to generate next based on sections that are queued and their dependencies.
+ *
+ * @param state - The current proposal state
+ * @returns The name of the next node to execute in the graph
+ */
+export function determineNextSection(
+  state: ProposalState
+):
+  | "generateExecutiveSummary"
+  | "generateGoalsAligned"
+  | "generateTeamAssembly"
+  | "generateImplementationPlan"
+  | "generateBudget"
+  | "generateImpact"
+  | "finalizeProposal"
+  | "handleError" {
+  logger.info("Determining next section to generate");
+
+  // Check if we have sections in state
+  if (!state.sections) {
+    logger.error("No sections found in state");
     return "handleError";
   }
 
-  // Find sections that haven't been started or are in error state
-  const pendingSections: SectionType[] = [];
-
-  for (const sectionType of state.requiredSections) {
-    const section = state.sections.get(sectionType);
-
-    if (
-      !section ||
-      section.status === "not_started" ||
-      section.status === "error"
-    ) {
-      pendingSections.push(sectionType);
+  // Helper function to check if a section is ready to be generated based on its dependencies
+  const isSectionReady = (section: ProposalSection): boolean => {
+    const dependencies = getSectionDependencies(section);
+    if (!dependencies || dependencies.length === 0) {
+      return true;
     }
-  }
 
-  console.log(`Pending sections: ${pendingSections.join(", ") || "none"}`);
+    return dependencies.every((dependency) => {
+      const dependencySection = state.sections?.[dependency] as
+        | SectionData
+        | undefined;
+      return dependencySection?.status === "approved";
+    });
+  };
 
-  // If there are pending sections, pick the first one and update state
-  if (pendingSections.length > 0) {
-    const nextSectionType = pendingSections[0];
-    console.log(`Routing to generateSection for ${nextSectionType}`);
+  // Helper function to get the next queued section that's ready to be generated
+  const getNextReadySection = (): ProposalSection | null => {
+    const queuedSections = Object.entries(state.sections)
+      .filter(([_, sectionData]) => {
+        const section = sectionData as SectionData;
+        return section.status === "queued" || section.status === "not_started";
+      })
+      .map(([section, _]) => section as ProposalSection);
 
-    // Note: The actual node (generateSection) needs to read this value
-    // and set the appropriate section as the current one being worked on
-    return "generateSection";
-  }
+    const readySections = queuedSections.filter((section) =>
+      isSectionReady(section)
+    );
 
-  // Check if any sections are awaiting review
-  const sectionsAwaitingReview: SectionType[] = [];
-
-  for (const sectionType of state.requiredSections) {
-    const section = state.sections.get(sectionType);
-
-    if (section && section.status === "awaiting_review") {
-      sectionsAwaitingReview.push(sectionType);
+    if (readySections.length === 0) {
+      return null;
     }
-  }
 
-  if (sectionsAwaitingReview.length > 0) {
-    console.log(
-      "Some sections are awaiting review. Routing to awaitSectionReview."
+    return readySections[0];
+  };
+
+  const nextSection = getNextReadySection();
+  logger.info(`Next section to generate: ${nextSection || "none available"}`);
+
+  if (!nextSection) {
+    const allSectionsCompleted = Object.values(state.sections).every(
+      (section) => {
+        const sectionData = section as SectionData;
+        return (
+          sectionData.status === "approved" || sectionData.status === "complete"
+        );
+      }
     );
-    return "awaitSectionReview";
-  }
 
-  // If everything is complete, finish the proposal
-  console.log("All sections complete. Routing to finalizeProposal.");
-  return "finalizeProposal";
-}
+    if (allSectionsCompleted) {
+      logger.info("All sections complete, finalizing proposal");
+      return "finalizeProposal";
+    }
 
-/**
- * Routes after a section has been generated and evaluated.
- * Determines whether to improve the section or submit it for review.
- *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
- */
-export function routeAfterSectionEvaluation(state: ProposalState): string {
-  // Check if currentStep follows the expected format "section:TYPE"
-  const currentStep = state.currentStep;
-  const sectionTypeMatch = currentStep?.match(/^section:(.+)$/);
-  const currentSectionType = sectionTypeMatch
-    ? (sectionTypeMatch[1] as SectionType)
-    : undefined;
-
-  console.log(
-    `--- Routing After Section Evaluation for ${currentSectionType || "unknown"} ---`
-  );
-
-  if (!currentSectionType) {
-    console.error("No current section identified in state.currentStep");
+    logger.error("No sections ready to generate and not all sections complete");
     return "handleError";
   }
 
-  const section = state.sections.get(currentSectionType as SectionType);
-
-  if (!section) {
-    console.error(`Section ${currentSectionType} not found in state.`);
-    return "handleError";
-  }
-
-  if (section.status === "needs_revision") {
-    console.log(
-      `Section ${currentSectionType} needs revision. Routing to improveSection.`
-    );
-    return "improveSection";
-  }
-
-  if (section.status === "queued" || section.status === "not_started") {
-    console.log(
-      `Section ${currentSectionType} is still in progress. Continuing with awaiting_review.`
-    );
-    return "submitSectionForReview";
-  }
-
-  // Section is ready for review
-  console.log(
-    `Section ${currentSectionType} is ready for review. Routing to submitSectionForReview.`
-  );
-  return "submitSectionForReview";
-}
-
-/**
- * Routes after user feedback has been received for a section.
- *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
- */
-export function routeAfterSectionFeedback(state: ProposalState): string {
-  console.log("--- Routing after Section Feedback ---");
-
-  // Get the current section from state
-  const currentStep = state.currentStep;
-
-  if (!currentStep || !currentStep.startsWith("section:")) {
-    console.log(
-      "Error: Cannot determine current section. Routing to handleError."
-    );
-    return "handleError";
-  }
-
-  // Extract section type from currentStep (assuming format "section:SECTION_TYPE")
-  const sectionTypeStr = currentStep.split(":")[1];
-  const sectionType = sectionTypeStr as SectionType;
-
-  const section = state.sections.get(sectionType);
-
-  if (!section) {
-    console.log(
-      `Error: Section ${sectionType} not found in state. Routing to handleError.`
-    );
-    return "handleError";
-  }
-
-  console.log(
-    `Section ${sectionType} status after feedback: ${section.status}`
-  );
-
-  // Route based on the updated status after feedback
-  switch (section.status) {
-    case "approved":
-      console.log(`Section ${sectionType} approved. Determining next section.`);
-      return "determineNextSection";
-
-    case "needs_revision":
-      console.log(
-        `Section ${sectionType} needs revision. Routing back to generateSection.`
-      );
-      return "generateSection";
-
-    case "error":
-      console.log(
-        `Section ${sectionType} has error status. Routing to handleError.`
-      );
-      return "handleError";
-
+  switch (nextSection) {
+    case "executiveSummary":
+      return "generateExecutiveSummary";
+    case "goalsAligned":
+      return "generateGoalsAligned";
+    case "teamAssembly":
+      return "generateTeamAssembly";
+    case "implementationPlan":
+      return "generateImplementationPlan";
+    case "budget":
+      return "generateBudget";
+    case "impact":
+      return "generateImpact";
     default:
-      console.log(
-        `Unknown status ${section.status} for section ${sectionType}. Routing to handleError.`
-      );
+      logger.error(`Unknown section: ${nextSection}`);
       return "handleError";
   }
 }
 
 /**
- * Routes after the entire proposal has been generated.
- * Makes a final decision on whether the proposal is complete or needs more work.
+ * Helper function that retrieves dependencies for a given proposal section.
  *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
+ * @param section - The proposal section to get dependencies for
+ * @returns Array of section names that are dependencies for the specified section
  */
-export function routeFinalizeProposal(state: ProposalState): string {
-  console.log("--- Routing Final Proposal Decision ---");
+function getSectionDependencies(section: ProposalSection): ProposalSection[] {
+  // Define section dependencies based on proposal structure
+  const dependencies: Record<ProposalSection, ProposalSection[]> = {
+    executiveSummary: [],
+    goalsAligned: [],
+    teamAssembly: ["goalsAligned"],
+    implementationPlan: ["goalsAligned", "teamAssembly"],
+    budget: ["implementationPlan"],
+    impact: ["implementationPlan", "budget"],
+  };
 
-  // Check if any sections are not completed
-  const incompleteSections: SectionType[] = [];
+  return dependencies[section] || [];
+}
 
-  for (const sectionType of state.requiredSections) {
-    const section = state.sections.get(sectionType);
+/**
+ * Routes the workflow after a section evaluation based on the evaluation result.
+ *
+ * @param state - The current proposal state
+ * @returns The name of the next node to execute in the graph
+ */
+export function routeAfterSectionEvaluation(
+  state: ProposalState
+): "regenerateCurrentSection" | "determineNextSection" {
+  logger.info("Routing after section evaluation");
 
-    if (!section || section.status !== "approved") {
-      incompleteSections.push(sectionType);
-    }
-  }
-
-  if (incompleteSections.length > 0) {
-    console.log(`Incomplete sections found: ${incompleteSections.join(", ")}`);
-    console.log("Routing back to determineNextSection.");
+  const currentPhase = state.currentPhase;
+  if (!currentPhase || !currentPhase.section) {
+    logger.error("No current phase or section found");
     return "determineNextSection";
   }
 
-  // All sections are approved, finalize the proposal
-  console.log("All sections are approved. Routing to completeProposal.");
-  return "completeProposal";
+  const section = currentPhase.section as ProposalSection;
+  const sectionData = state.sections?.[section] as SectionData | undefined;
+  const evaluationResult = sectionData?.evaluation?.result;
+
+  if (!evaluationResult) {
+    logger.error(`No evaluation result found for section ${section}`);
+    return "regenerateCurrentSection";
+  }
+
+  logger.info(`Section ${section} evaluation result: ${evaluationResult}`);
+
+  if (evaluationResult.toLowerCase() === "pass") {
+    logger.info(
+      `Section ${section} passed evaluation, determining next section`
+    );
+    return "determineNextSection";
+  } else {
+    logger.info(`Section ${section} failed evaluation, regenerating`);
+    return "regenerateCurrentSection";
+  }
 }
 
 /**
- * Routes after a human-in-the-loop interaction for research review.
+ * Routes the workflow after receiving a response to a stale content notification.
+ * This function determines what action to take based on the user's choice.
  *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
+ * @param state - The current proposal state
+ * @returns The name of the next node to execute in the graph
  */
-export function routeAfterResearchReview(state: ProposalState): string {
-  console.log("--- Routing after Research Review ---");
+export function routeAfterStaleContentChoice(
+  state: ProposalState
+): "regenerateStaleContent" | "useExistingContent" | "handleError" {
+  logger.info("Routing after stale content choice");
 
-  // Check the status after human review
-  console.log(`Research status after review: ${state.researchStatus}`);
-
-  if (state.researchStatus === "approved") {
-    console.log("Research approved. Routing to solutionSought.");
-    return "solutionSought";
+  if (!state.userChoices || !state.userChoices.staleContentChoice) {
+    logger.error("No stale content choice found in state");
+    return "handleError";
   }
 
-  if (state.researchStatus === "needs_revision") {
-    console.log("Research needs revision. Routing back to research.");
-    return "research";
-  }
+  const choice = state.userChoices.staleContentChoice.toLowerCase();
+  logger.info(`User's stale content choice: ${choice}`);
 
-  // If status is error or any other unexpected value
-  console.log(
-    `Unexpected research status: ${state.researchStatus}. Routing to handleError.`
-  );
-  return "handleError";
+  if (choice === "regenerate") {
+    logger.info("User chose to regenerate stale content");
+    return "regenerateStaleContent";
+  } else if (choice === "use_existing") {
+    logger.info("User chose to use existing content");
+    return "useExistingContent";
+  } else {
+    logger.error(`Invalid stale content choice: ${choice}`);
+    return "handleError";
+  }
 }
-
-/**
- * Routes after a human-in-the-loop interaction for solution review.
- *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
- */
-export function routeAfterSolutionReview(state: ProposalState): string {
-  console.log("--- Routing after Solution Review ---");
-
-  // Check the status after human review
-  console.log(`Solution status after review: ${state.solutionStatus}`);
-
-  if (state.solutionStatus === "approved") {
-    console.log("Solution approved. Routing to planSections.");
-    return "planSections";
-  }
-
-  if (state.solutionStatus === "needs_revision") {
-    console.log("Solution needs revision. Routing back to solutionSought.");
-    return "solutionSought";
-  }
-
-  // If status is error or any other unexpected value
-  console.log(
-    `Unexpected solution status: ${state.solutionStatus}. Routing to handleError.`
-  );
-  return "handleError";
-}
-
-/**
- * Handles routing when a user explicitly marks a section as stale and needs regeneration
- *
- * @param state The current overall proposal state
- * @returns The name of the next node to execute
- */
-export function routeAfterStaleChoice(state: ProposalState): string {
-  console.log("--- Routing After Stale Choice ---");
-
-  // Check if the current section or phase is marked as stale
-  if (state.currentStep?.startsWith("section:")) {
-    const sectionType = state.currentStep.split(":")[1] as SectionType;
-    const section = state.sections.get(sectionType);
-
-    if (section && section.status === "stale") {
-      console.log(
-        `Section ${sectionType} marked as stale. Routing to generateSection.`
-      );
-      return "generateSection";
-    }
-  }
-
-  // Check global research phase
-  if (state.researchStatus === "stale") {
-    console.log("Research marked as stale. Routing to research.");
-    return "research";
-  }
-
-  // Check solution sought phase
-  if (state.solutionStatus === "stale") {
-    console.log("Solution sought marked as stale. Routing to solutionSought.");
-    return "solutionSought";
-  }
-
-  // No stale content identified
-  console.log("No stale content identified. Routing to handleError.");
-  return "handleError";
-}
-
-/**
- * Generic error handler that determines what to do when an error occurs.
- *
- * @param state The current overall proposal state.
- * @returns The name of the next node to execute.
- */
-export function handleError(state: ProposalState): string {
-  console.log("--- Error Handler Routing ---");
-
-  // Log the errors
-  console.log("Errors:", state.errors);
-
-  // Check which step had the error
-  const currentStep = state.currentStep || "unknown";
-  console.log(`Error occurred during step: ${currentStep}`);
-
-  // Most errors should result in stopping and alerting the user,
-  // but some could be automatically retried
-
-  // For now, all errors go to await_user_input
-  return "awaitUserInput";
-}
-
-// Add other routing functions here as needed...
-// e.g., routeAfterSolutionEvaluation, routeAfterSectionEvaluation, determineNextSection...

@@ -213,7 +213,7 @@
           "description": "Develop a comprehensive routing system that determines the next node in the graph based on current state, context, and conditions.",
           "dependencies": [1],
           "details": "Implementation steps:\n1. Create a core routing service that integrates with the updated graph structure\n2. Implement the main routing algorithm that traverses the graph based on node connections\n3. Add conditional branching logic that evaluates proposal context data to determine path selection\n4. Develop a rule-based system for complex routing decisions with multiple factors\n5. Implement error handling for invalid routes, cycles, or dead ends in the graph\n6. Add detailed logging throughout the routing process to capture decision points\n7. Create helper functions for common routing patterns\n8. Implement route validation to prevent invalid state transitions\n\nTesting approach:\n- Create unit tests for each routing function with various input conditions\n- Develop integration tests that verify complete routing paths through the graph\n- Test edge cases such as missing data, invalid states, and error conditions\n- Create visual logging output for debugging complex routing scenarios",
-          "status": "pending",
+          "status": "done",
           "parentTaskId": 14
         },
         {
@@ -226,26 +226,6 @@
           "parentTaskId": 14
         }
       ]
-    },
-    {
-      "id": 15,
-      "title": "Refactor Node Functions for Document Processing and Analysis",
-      "description": "Create or update node functions for document processing, requirement analysis, and section generation to align with architecture and work within the updated graph structure.",
-      "status": "pending",
-      "dependencies": [],
-      "priority": "high",
-      "details": "This task involves refactoring three key types of node functions to ensure compatibility with the new architecture and graph structure:\n\n1. Document Processing Nodes:\n   - Implement nodes that parse and extract information from input documents\n   - Create standardized document representation objects\n   - Add validation for input document formats and content\n   - Ensure nodes emit properly structured events for downstream consumption\n\n2. Requirement Analysis Nodes:\n   - Refactor analysis functions to work with the updated graph routing\n   - Implement nodes that extract, categorize, and prioritize requirements\n   - Create functions to identify dependencies between requirements\n   - Ensure analysis results are persisted correctly via the enhanced Supabase layer\n\n3. Section Generation Nodes:\n   - Update section generation logic to align with the new architecture\n   - Implement content templating with variable substitution\n   - Create functions for generating section outlines based on requirements\n   - Add support for Human-In-The-Loop interrupts during generation\n\nAll nodes should:\n- Follow a consistent interface pattern with standardized input/output contracts\n- Include proper error handling and logging\n- Support asynchronous operation and emit appropriate events\n- Integrate with the OrchestratorService for workflow management\n- Be properly typed with TypeScript interfaces\n- Include JSDoc documentation for all public methods and interfaces",
-      "testStrategy": "Testing should be comprehensive across all refactored node functions:\n\n1. Unit Tests:\n   - Create unit tests for each node function in isolation\n   - Test with various input types including edge cases and error conditions\n   - Mock dependencies to ensure focused testing of node logic\n   - Verify correct event emission patterns\n\n2. Integration Tests:\n   - Test document processing pipeline with sample documents\n   - Verify requirement analysis with predefined test scenarios\n   - Test section generation with various requirement inputs\n   - Ensure proper interaction with the OrchestratorService\n\n3. End-to-End Tests:\n   - Create at least one complete workflow test that exercises all node types\n   - Verify correct data flow between nodes\n   - Test HITL interrupt points function correctly\n   - Confirm persistence of intermediate and final results\n\n4. Performance Tests:\n   - Benchmark processing times for typical document sizes\n   - Test with large documents to verify scaling behavior\n\nTest fixtures should include sample documents, requirements, and expected outputs. All tests should be automated and included in the CI pipeline."
-    },
-    {
-      "id": 16,
-      "title": "Implement Editor Agent Service for Non-Sequential Document Editing",
-      "description": "Create the EditorAgentService to handle non-sequential document edits, manage section revisions, and maintain overall proposal consistency across changes.",
-      "status": "pending",
-      "dependencies": [],
-      "priority": "high",
-      "details": "The EditorAgentService should be implemented as follows:\n\n1. Core functionality:\n   - Implement `processEdit(editData)` method to handle document modifications at any position\n   - Create `analyzeDependencies(sectionId)` to identify affected sections when changes occur\n   - Develop `reconcileChanges(changedSections)` to ensure document consistency\n   - Implement `trackRevisionHistory(sectionId)` to maintain an audit trail of changes\n\n2. Non-sequential edit handling:\n   - Design a conflict resolution system for overlapping edits\n   - Implement logic to reorder and apply edits based on dependencies\n   - Create mechanisms to handle concurrent edits from multiple sources\n\n3. Section revision management:\n   - Develop versioning system for sections with proper timestamps\n   - Implement diff calculation between versions\n   - Create rollback capabilities for reverting problematic changes\n\n4. Proposal consistency maintenance:\n   - Implement validation checks to ensure document integrity\n   - Create notification system for downstream impacts of changes\n   - Design propagation rules for cascading updates to dependent sections\n\n5. Integration points:\n   - Connect with ProposalGenerationGraph for structure awareness\n   - Interface with persistence layer for saving revision history\n   - Implement hooks for the UI to display edit status and conflicts\n\nThe implementation should follow the established architecture patterns and utilize appropriate design patterns for managing the complexity of edit operations.",
-      "testStrategy": "Testing should cover the following areas:\n\n1. Unit tests:\n   - Test each method of the EditorAgentService in isolation\n   - Verify proper handling of various edit scenarios (insertions, deletions, replacements)\n   - Test conflict detection and resolution with simulated concurrent edits\n   - Validate dependency analysis with mock document structures\n\n2. Integration tests:\n   - Test interaction with ProposalGenerationGraph\n   - Verify proper persistence of revision history\n   - Test end-to-end edit flow from UI to storage\n\n3. Specific test cases:\n   - Edit propagation: Change a section and verify dependent sections are correctly flagged for review\n   - Conflict resolution: Submit overlapping edits and verify proper resolution\n   - Performance: Test with large documents to ensure edit processing remains efficient\n   - Rollback: Test ability to revert to previous versions of sections\n   - Concurrency: Simulate multiple users editing the same document\n\n4. Validation methods:\n   - Create document consistency validators that can be run after edits\n   - Implement automated checks for document structure integrity\n   - Design visual diff tools for manual verification of complex edits\n\nAll tests should be automated where possible and integrated into the CI pipeline."
     },
     {
       "id": 15,
@@ -270,7 +250,7 @@
           "id": 2,
           "title": "Create LangGraph Adapter Classes",
           "description": "Implement adapter classes that convert our storage implementations to LangGraph's BaseCheckpointSaver interface.",
-          "dependencies": [1],
+          "dependencies": [],
           "details": "Implementation steps:\n1. Analyze the LangGraph `BaseCheckpointSaver` interface requirements\n2. Create `MemoryLangGraphCheckpointer` adapter for in-memory storage\n3. Create `LangGraphCheckpointer` adapter for Supabase storage\n4. Implement all required methods from the LangGraph interface\n5. Add proper serialization/deserialization of state objects\n6. Ensure type safety throughout the implementation\n\nTesting approach:\n- Test each adapter with its corresponding storage implementation\n- Verify that all LangGraph interface methods are correctly implemented\n- Test with various state object structures\n- Verify proper error propagation",
           "status": "done",
           "parentTaskId": 15
@@ -279,7 +259,7 @@
           "id": 3,
           "title": "Implement Factory Pattern for Checkpointer Creation",
           "description": "Create a factory function that provides the appropriate checkpointer implementation based on configuration.",
-          "dependencies": [2],
+          "dependencies": [],
           "details": "Implementation steps:\n1. Create a `createCheckpointer` factory function that returns the appropriate implementation\n2. Add configuration options for user ID and other parameters\n3. Implement validation of Supabase credentials\n4. Add automatic fallback to in-memory storage when credentials are missing\n5. Implement appropriate logging for configuration status\n6. Document the factory function with JSDoc comments\n\nTesting approach:\n- Test the factory with various configuration options\n- Verify automatic fallback behavior\n- Test with valid and invalid Supabase credentials\n- Check that the correct implementation is returned based on configuration",
           "status": "done",
           "parentTaskId": 15
@@ -288,10 +268,74 @@
           "id": 4,
           "title": "Create Test Script and Documentation",
           "description": "Develop a comprehensive test script and update documentation for the checkpointer implementation.",
-          "dependencies": [3],
+          "dependencies": [],
           "details": "Implementation steps:\n1. Create a test script to verify all checkpointer operations\n2. Add tests for both in-memory and Supabase implementations\n3. Update README files with usage examples and configuration options\n4. Update architecture documentation to reflect the adapter pattern\n5. Ensure all code is thoroughly documented with JSDoc comments\n\nTesting approach:\n- Run the test script with various configurations\n- Verify that all operations complete successfully\n- Check that error handling works correctly\n- Ensure documentation is clear and comprehensive",
           "status": "done",
           "parentTaskId": 15
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Refactor Node Functions for Document Processing and Analysis",
+      "description": "Create or update node functions for document processing, requirement analysis, and section generation to align with architecture and work within the updated graph structure.",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "high",
+      "details": "This task involves refactoring three key types of node functions to ensure compatibility with the new architecture and graph structure:\n\n1. Document Processing Nodes:\n   - Implement nodes that parse and extract information from input documents\n   - Create standardized document representation objects\n   - Add validation for input document formats and content\n   - Ensure nodes emit properly structured events for downstream consumption\n\n2. Requirement Analysis Nodes:\n   - Refactor analysis functions to work with the updated graph routing\n   - Implement nodes that extract, categorize, and prioritize requirements\n   - Create functions to identify dependencies between requirements\n   - Ensure analysis results are persisted correctly via the enhanced Supabase layer\n\n3. Section Generation Nodes:\n   - Update section generation logic to align with the new architecture\n   - Implement content templating with variable substitution\n   - Create functions for generating section outlines based on requirements\n   - Add support for Human-In-The-Loop interrupts during generation\n\nAll nodes should:\n- Follow a consistent interface pattern with standardized input/output contracts\n- Include proper error handling and logging\n- Support asynchronous operation and emit appropriate events\n- Integrate with the OrchestratorService for workflow management\n- Be properly typed with TypeScript interfaces\n- Include JSDoc documentation for all public methods and interfaces",
+      "testStrategy": "Testing should be comprehensive across all refactored node functions:\n\n1. Unit Tests:\n   - Create unit tests for each node function in isolation\n   - Test with various input types including edge cases and error conditions\n   - Mock dependencies to ensure focused testing of node logic\n   - Verify correct event emission patterns\n\n2. Integration Tests:\n   - Test document processing pipeline with sample documents\n   - Verify requirement analysis with predefined test scenarios\n   - Test section generation with various requirement inputs\n   - Ensure proper interaction with the OrchestratorService\n\n3. End-to-End Tests:\n   - Create at least one complete workflow test that exercises all node types\n   - Verify correct data flow between nodes\n   - Test HITL interrupt points function correctly\n   - Confirm persistence of intermediate and final results\n\n4. Performance Tests:\n   - Benchmark processing times for typical document sizes\n   - Test with large documents to verify scaling behavior\n\nTest fixtures should include sample documents, requirements, and expected outputs. All tests should be automated and included in the CI pipeline."
+    },
+    {
+      "id": 18,
+      "title": "Implement Editor Agent Service for Non-Sequential Document Editing",
+      "description": "Create the EditorAgentService to handle non-sequential document edits, manage section revisions, and maintain overall proposal consistency across changes.",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "high",
+      "details": "The EditorAgentService should be implemented as follows:\n\n1. Core functionality:\n   - Implement `processEdit(editData)` method to handle document modifications at any position\n   - Create `analyzeDependencies(sectionId)` to identify affected sections when changes occur\n   - Develop `reconcileChanges(changedSections)` to ensure document consistency\n   - Implement `trackRevisionHistory(sectionId)` to maintain an audit trail of changes\n\n2. Non-sequential edit handling:\n   - Design a conflict resolution system for overlapping edits\n   - Implement logic to reorder and apply edits based on dependencies\n   - Create mechanisms to handle concurrent edits from multiple sources\n\n3. Section revision management:\n   - Develop versioning system for sections with proper timestamps\n   - Implement diff calculation between versions\n   - Create rollback capabilities for reverting problematic changes\n\n4. Proposal consistency maintenance:\n   - Implement validation checks to ensure document integrity\n   - Create notification system for downstream impacts of changes\n   - Design propagation rules for cascading updates to dependent sections\n\n5. Integration points:\n   - Connect with ProposalGenerationGraph for structure awareness\n   - Interface with persistence layer for saving revision history\n   - Implement hooks for the UI to display edit status and conflicts\n\nThe implementation should follow the established architecture patterns and utilize appropriate design patterns for managing the complexity of edit operations.",
+      "testStrategy": "Testing should cover the following areas:\n\n1. Unit tests:\n   - Test each method of the EditorAgentService in isolation\n   - Verify proper handling of various edit scenarios (insertions, deletions, replacements)\n   - Test conflict detection and resolution with simulated concurrent edits\n   - Validate dependency analysis with mock document structures\n\n2. Integration tests:\n   - Test interaction with ProposalGenerationGraph\n   - Verify proper persistence of revision history\n   - Test end-to-end edit flow from UI to storage\n\n3. Specific test cases:\n   - Edit propagation: Change a section and verify dependent sections are correctly flagged for review\n   - Conflict resolution: Submit overlapping edits and verify proper resolution\n   - Performance: Test with large documents to ensure edit processing remains efficient\n   - Rollback: Test ability to revert to previous versions of sections\n   - Concurrency: Simulate multiple users editing the same document\n\n4. Validation methods:\n   - Create document consistency validators that can be run after edits\n   - Implement automated checks for document structure integrity\n   - Design visual diff tools for manual verification of complex edits\n\nAll tests should be automated where possible and integrated into the CI pipeline."
+    },
+    {
+      "id": 17,
+      "title": "Implement Human-in-the-Loop (HITL) Capabilities",
+      "description": "Create a comprehensive implementation of Human-in-the-Loop interrupts, feedback processing, and workflow resumption that aligns with architecture requirements.",
+      "status": "pending",
+      "dependencies": [14],
+      "priority": "high",
+      "details": "Implementation of HITL capabilities requires several interconnected components working together:\n\n1. **Interrupt Points**:\n   - Define specific points in the graph where human intervention is required\n   - Implement mechanisms to pause automated processing\n   - Ensure state is properly preserved during interrupts\n\n2. **User Feedback Processing**:\n   - Create interfaces for user input collection\n   - Validate and incorporate user feedback into the proposal state\n   - Handle different types of feedback (approval, revisions, rejections)\n\n3. **Workflow Resumption**:\n   - Implement proper resumption of graph execution after user input\n   - Ensure state consistency before and after interruptions\n   - Handle timeout and error scenarios\n\n4. **Orchestrator Integration**:\n   - Connect HITL capabilities with the Orchestrator Service\n   - Implement event-based communication for state changes\n   - Ensure proper authentication and authorization\n\nAll implementations must follow the architectural guidelines and ensure proper state integrity throughout the HITL process.",
+      "testStrategy": "Testing should cover all aspects of the HITL implementation:\n\n1. **Unit Tests**:\n   - Test interrupt point identification and activation\n   - Verify feedback processing functions\n   - Test state preservation during interrupts\n   - Validate resumption logic with various input types\n\n2. **Integration Tests**:\n   - Test full HITL workflow with simulated user inputs\n   - Verify interactions between HITL components and Orchestrator\n   - Test error handling and recovery\n\n3. **Edge Case Testing**:\n   - Test behavior with invalid user inputs\n   - Verify timeout handling\n   - Test multiple interrupts in sequence\n   - Test concurrent user access scenarios\n\nAll tests should be automated where possible and include detailed assertions to verify correct behavior.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Interrupt Point Identification and Activation",
+          "description": "Create mechanisms to identify appropriate interrupt points in the workflow and properly activate pauses for user intervention.",
+          "dependencies": [],
+          "status": "pending",
+          "parentTaskId": 17
+        },
+        {
+          "id": 2,
+          "title": "Implement User Feedback Collection and Processing",
+          "description": "Develop interfaces and handlers for collecting, validating, and incorporating user feedback into the proposal state.",
+          "dependencies": [1],
+          "status": "pending",
+          "parentTaskId": 17
+        },
+        {
+          "id": 3,
+          "title": "Implement Workflow Resumption Logic",
+          "description": "Create robust resumption capabilities that correctly restore state and continue execution after user input.",
+          "dependencies": [2],
+          "status": "pending",
+          "parentTaskId": 17
+        },
+        {
+          "id": 4,
+          "title": "Integrate HITL Capabilities with Orchestrator Service",
+          "description": "Connect HITL components with the Orchestrator Service using event-based communication for seamless workflow management.",
+          "dependencies": [3],
+          "status": "pending",
+          "parentTaskId": 17
         }
       ]
     }
