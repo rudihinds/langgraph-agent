@@ -1,5 +1,5 @@
--- Migration: Enhance checkpoint tables for OverallProposalState
--- Description: Updates the existing tables to better support OverallProposalState and adds additional indexing
+-- Migration: Enhance checkpoint tables for LangGraph compatibility
+-- Description: Updates the existing tables to better support LangGraph checkpoints
 
 -- Add a JSON index for faster querying of checkpoint data
 CREATE INDEX IF NOT EXISTS idx_proposal_checkpoints_state_lookup ON proposal_checkpoints USING GIN (checkpoint_data);
@@ -77,17 +77,17 @@ CREATE POLICY IF NOT EXISTS "Proposal members can access proposal sessions"
     )
   );
 
--- Add storage size monitoring
+-- Add storage size monitoring column required by LangGraph
 ALTER TABLE proposal_checkpoints 
 ADD COLUMN IF NOT EXISTS size_bytes BIGINT DEFAULT NULL;
 
--- Add checkpoint_version column for migrating state schemas
+-- Add checkpoint_version column for schema versioning
 ALTER TABLE proposal_checkpoints 
 ADD COLUMN IF NOT EXISTS checkpoint_version TEXT DEFAULT 'v1';
 
--- Add metadata columns
+-- Add metadata columns for state type tracking
 ALTER TABLE proposal_checkpoints 
-ADD COLUMN IF NOT EXISTS state_type TEXT DEFAULT 'OverallProposalState';
+ADD COLUMN IF NOT EXISTS state_type TEXT DEFAULT 'ProposalState';
 
 -- Add trigger to update size_bytes
 CREATE OR REPLACE FUNCTION update_checkpoint_size_trigger()

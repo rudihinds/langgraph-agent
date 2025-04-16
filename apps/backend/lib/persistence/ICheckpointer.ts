@@ -90,7 +90,7 @@ export interface CheckpointSummary {
   threadId: string;
   userId: string;
   proposalId: string;
-  updated_at: Date;
+  lastUpdated: Date;
   size: number;
 }
 

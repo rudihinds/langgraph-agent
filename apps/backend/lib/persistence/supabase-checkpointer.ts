@@ -1,385 +1,210 @@
 /**
- * SupabaseCheckpointer for LangGraph
+ * Supabase Checkpointer
  *
- * Implements LangGraph's Checkpointer interface to store and retrieve
- * checkpoint state from Supabase.
+ * An implementation of checkpoint storage that persists
+ * checkpoints in a Supabase database.
  */
+import { SupabaseClient } from "@supabase/supabase-js";
+// Note: We don't import BaseCheckpointSaver here as this is our basic implementation
+// The adapter classes handle the LangGraph interface compatibility
 
-import {
-  BaseCheckpointSaver,
-  Checkpoint,
-  CheckpointMetadata,
-} from "@langchain/langgraph";
-import type { RunnableConfig } from "@langchain/core/runnables";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
-import { withRetry } from "../utils/backoff.js";
-import {
-  ICheckpointer,
-  IExtendedCheckpointer,
-  CheckpointSummary,
-} from "./ICheckpointer.js";
-
-/**
- * Configuration for the SupabaseCheckpointer
- */
-interface SupabaseCheckpointerConfig {
-  supabaseUrl: string;
-  supabaseKey: string;
-  tableName?: string;
-  sessionTableName?: string;
-  maxRetries?: number;
-  retryDelayMs?: number;
-  logger?: Console;
-  userIdGetter?: () => Promise<string | null>;
-  proposalIdGetter?: (threadId: string) => Promise<string | null>;
+interface CheckpointRecord {
+  id: string;
+  thread_id: string;
+  user_id: string;
+  proposal_id?: string;
+  data: unknown;
+  created_at: string;
+  updated_at: string;
+  size_bytes?: number;
 }
 
-// Schema for validating checkpoint data structure
-const CheckpointSchema = z.object({
-  thread_id: z.string().optional(),
-  config: z.record(z.any()).optional(),
-  state: z.record(z.any()),
-});
+/**
+ * Options for configuring the SupabaseCheckpointer
+ */
+export interface SupabaseCheckpointerOptions {
+  /** Supabase client instance */
+  client: SupabaseClient;
+  /** Table name to store checkpoints in */
+  tableName: string;
+  /** Table name to store session data in */
+  sessionTableName?: string;
+  /** Maximum number of retry attempts */
+  maxRetries?: number;
+  /** Initial delay between retries in ms */
+  retryDelayMs?: number;
+  /** Function to get the current user ID */
+  userIdGetter: () => Promise<string>;
+  /** Function to get the proposal ID for a thread */
+  proposalIdGetter: (threadId: string) => Promise<string | null>;
+}
 
 /**
- * SupabaseCheckpointer implements the IExtendedCheckpointer interface
- * providing persistence for checkpoints using Supabase
+ * Checkpointer implementation that stores checkpoints in Supabase
  */
-export class SupabaseCheckpointer implements IExtendedCheckpointer {
-  private supabase: SupabaseClient;
+export class SupabaseCheckpointer {
+  private client: SupabaseClient;
   private tableName: string;
   private sessionTableName: string;
   private maxRetries: number;
   private retryDelayMs: number;
-  private logger: Console;
-  private userIdGetter: () => Promise<string | null>;
+  private userIdGetter: () => Promise<string>;
   private proposalIdGetter: (threadId: string) => Promise<string | null>;
 
-  constructor({
-    supabaseUrl,
-    supabaseKey,
-    tableName = "proposal_checkpoints",
-    sessionTableName = "proposal_sessions",
-    maxRetries = 3,
-    retryDelayMs = 500,
-    logger = console,
-    userIdGetter = async () => null,
-    proposalIdGetter = async () => null,
-  }: SupabaseCheckpointerConfig) {
-    this.supabase = createClient(supabaseUrl, supabaseKey);
-    this.tableName = tableName;
-    this.sessionTableName = sessionTableName;
-    this.maxRetries = maxRetries;
-    this.retryDelayMs = retryDelayMs;
-    this.logger = logger;
-    this.userIdGetter = userIdGetter;
-    this.proposalIdGetter = proposalIdGetter;
-  }
-
   /**
-   * Generate a consistent thread ID with optional prefix
-   */
-  public generateThreadId(
-    proposalId: string,
-    componentName: string = "proposal"
-  ): string {
-    return `${componentName}_${proposalId}_${Date.now()}`;
-  }
-
-  /**
-   * Get a checkpoint by thread_id from config
-   */
-  async get(config: RunnableConfig): Promise<Checkpoint | undefined> {
-    const threadId = config?.configurable?.thread_id as string;
-    if (!threadId) {
-      this.logger.warn("No thread_id provided in config");
-      return undefined;
-    }
-
-    try {
-      const result = await withRetry(
-        async () => {
-          const { data, error } = await this.supabase
-            .from(this.tableName)
-            .select("checkpoint_data")
-            .eq("thread_id", threadId)
-            .single();
-
-          if (error) {
-            // Only throw on errors other than not found
-            if (error.code !== "PGRST116") {
-              throw new Error(`Error fetching checkpoint: ${error.message}`);
-            }
-            return null;
-          }
-
-          if (!data || !data.checkpoint_data) {
-            return null;
-          }
-
-          try {
-            // Validate schema if possible
-            CheckpointSchema.parse(data.checkpoint_data);
-            return data.checkpoint_data as Checkpoint;
-          } catch (validationError) {
-            this.logger.warn("Invalid checkpoint data format", { threadId });
-            return data.checkpoint_data as Checkpoint;
-          }
-        },
-        {
-          maxRetries: this.maxRetries,
-          initialDelayMs: this.retryDelayMs,
-          logger: this.logger,
-        }
-      );
-
-      return result || undefined;
-    } catch (error) {
-      this.logger.error("Failed to get checkpoint after all retries", {
-        threadId,
-        error,
-      });
-      return undefined;
-    }
-  }
-
-  /**
-   * Store a checkpoint by thread_id
+   * Create a new SupabaseCheckpointer
    *
-   * Note: _metadata and _newVersions parameters are unused but required by the interface
+   * @param options Configuration options or individual parameters
    */
-  async put(
-    config: RunnableConfig,
-    checkpoint: Checkpoint,
-    metadata: CheckpointMetadata,
-    newVersions: unknown
-  ): Promise<RunnableConfig> {
-    const threadId = config?.configurable?.thread_id as string;
-    if (!threadId) {
-      throw new Error("No thread_id provided in config");
+  constructor(options: SupabaseCheckpointerOptions);
+  constructor(
+    clientOrOptions: SupabaseClient | SupabaseCheckpointerOptions,
+    userId?: string,
+    proposalId?: string,
+    tableName?: string
+  ) {
+    // Handle options object constructor
+    if (typeof clientOrOptions !== "function" && "client" in clientOrOptions) {
+      const options = clientOrOptions as SupabaseCheckpointerOptions;
+      this.client = options.client;
+      this.tableName = options.tableName;
+      this.sessionTableName = options.sessionTableName || "proposal_sessions";
+      this.maxRetries = options.maxRetries || 3;
+      this.retryDelayMs = options.retryDelayMs || 500;
+      this.userIdGetter = options.userIdGetter;
+      this.proposalIdGetter = options.proposalIdGetter;
+    }
+    // Handle individual parameters constructor (legacy)
+    else {
+      this.client = clientOrOptions as SupabaseClient;
+      this.tableName = tableName || "proposal_checkpoints";
+      this.sessionTableName = "proposal_sessions";
+      this.maxRetries = 3;
+      this.retryDelayMs = 500;
+
+      const userIdValue = userId || "anonymous";
+      this.userIdGetter = async () => userIdValue;
+
+      const proposalIdValue = proposalId;
+      this.proposalIdGetter = async () => proposalIdValue || null;
+    }
+  }
+
+  /**
+   * Store a checkpoint in Supabase
+   *
+   * @param threadId - Thread ID to store the checkpoint under
+   * @param checkpoint - Checkpoint data to store
+   * @returns The stored checkpoint
+   */
+  async put(threadId: string, checkpoint: unknown): Promise<unknown> {
+    const stringifiedData = JSON.stringify(checkpoint);
+    const sizeBytes = new TextEncoder().encode(stringifiedData).length;
+    const userId = await this.userIdGetter();
+    const proposalId = await this.proposalIdGetter(threadId);
+
+    const { data, error } = await this.client.from(this.tableName).upsert(
+      {
+        thread_id: threadId,
+        user_id: userId,
+        proposal_id: proposalId,
+        data: checkpoint,
+        updated_at: new Date().toISOString(),
+        size_bytes: sizeBytes,
+      },
+      { onConflict: "thread_id" }
+    );
+
+    if (error) {
+      throw new Error(`Failed to store checkpoint: ${error.message}`);
     }
 
-    try {
-      // Get the associated user and proposal
-      const userId = await this.userIdGetter();
-      const proposalId = await this.proposalIdGetter(threadId);
+    return checkpoint;
+  }
 
-      if (!userId || !proposalId) {
-        throw new Error(
-          "Cannot store checkpoint without user ID and proposal ID"
-        );
+  /**
+   * Retrieve a checkpoint from Supabase
+   *
+   * @param threadId - Thread ID to retrieve the checkpoint for
+   * @returns The checkpoint data, or null if not found
+   */
+  async get(threadId: string): Promise<unknown> {
+    const userId = await this.userIdGetter();
+
+    const { data, error } = await this.client
+      .from(this.tableName)
+      .select("data")
+      .eq("thread_id", threadId)
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // PGRST116 is the error code for "no rows returned"
+        return null;
       }
-
-      // Store the checkpoint with retry logic
-      await withRetry(
-        async () => {
-          // Use upsert to handle both insert and update
-          const { error } = await this.supabase.from(this.tableName).upsert(
-            {
-              thread_id: threadId,
-              user_id: userId,
-              proposal_id: proposalId,
-              checkpoint_data: checkpoint,
-              updated_at: new Date().toISOString(),
-              size_bytes: Buffer.byteLength(JSON.stringify(checkpoint)),
-            },
-            { onConflict: "thread_id, user_id" }
-          );
-
-          if (error) {
-            throw new Error(`Error storing checkpoint: ${error.message}`);
-          }
-
-          // Also update session tracking
-          await this.updateSessionActivity(threadId, userId, proposalId);
-        },
-        {
-          maxRetries: this.maxRetries,
-          initialDelayMs: this.retryDelayMs,
-          logger: this.logger,
-        }
-      );
-
-      // Return the config as required by BaseCheckpointSaver interface
-      return config;
-    } catch (error) {
-      this.logger.error("Failed to store checkpoint after all retries", {
-        threadId,
-        error,
-      });
-      throw error;
+      throw new Error(`Failed to retrieve checkpoint: ${error.message}`);
     }
+
+    return data?.data || null;
   }
 
   /**
-   * Delete a checkpoint by thread_id
-   */
-  async delete(threadId: string): Promise<void> {
-    try {
-      await withRetry(
-        async () => {
-          const { error } = await this.supabase
-            .from(this.tableName)
-            .delete()
-            .eq("thread_id", threadId);
-
-          if (error) {
-            throw new Error(`Error deleting checkpoint: ${error.message}`);
-          }
-        },
-        {
-          maxRetries: this.maxRetries,
-          initialDelayMs: this.retryDelayMs,
-          logger: this.logger,
-        }
-      );
-    } catch (error) {
-      this.logger.error("Failed to delete checkpoint after all retries", {
-        threadId,
-        error,
-      });
-      // Don't throw on deletion errors to avoid blocking the application
-    }
-  }
-
-  /**
-   * List namespaces (required by BaseCheckpointSaver interface)
+   * List all thread IDs with checkpoints for the current user
    *
-   * Note: Parameters are unused but required by the interface
+   * @returns Array of thread IDs
+   */
+  async list(): Promise<string[]> {
+    const userId = await this.userIdGetter();
+
+    const query = this.client
+      .from(this.tableName)
+      .select("thread_id")
+      .eq("user_id", userId);
+
+    // Add proposal filter if available from a recent threadId
+    const proposalId = await this.proposalIdGetter("recent");
+    if (proposalId) {
+      query.eq("proposal_id", proposalId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to list checkpoints: ${error.message}`);
+    }
+
+    return data.map((record) => record.thread_id);
+  }
+
+  /**
+   * List checkpoint namespaces matching a pattern
+   *
+   * @param match Optional pattern to match
+   * @param matchType Optional type of matching to perform
+   * @returns Array of namespace strings
    */
   async listNamespaces(match?: string, matchType?: string): Promise<string[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select("proposal_id")
-        .order("proposal_id", { ascending: true });
-
-      if (error) {
-        this.logger.error("Error listing namespaces", { error });
-        return [];
-      }
-
-      // Extract unique proposal IDs as namespaces
-      const namespaces = Array.from(
-        new Set(data.map((row) => row.proposal_id))
-      );
-
-      // Filter by match pattern if provided
-      if (match) {
-        return namespaces.filter((namespace) => {
-          if (matchType === "startsWith") {
-            return namespace.startsWith(match);
-          } else if (matchType === "endsWith") {
-            return namespace.endsWith(match);
-          } else if (matchType === "contains") {
-            return namespace.includes(match);
-          }
-          // Default to exact match
-          return namespace === match;
-        });
-      }
-
-      return namespaces;
-    } catch (error) {
-      this.logger.error("Failed to list namespaces", { error });
-      return [];
-    }
+    // For basic implementation, namespaces are the same as thread IDs
+    return this.list();
   }
 
   /**
-   * Get all checkpoints for a user
+   * Delete a checkpoint from Supabase
+   *
+   * @param threadId - Thread ID to delete the checkpoint for
    */
-  async getUserCheckpoints(userId: string): Promise<CheckpointSummary[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select("thread_id, user_id, proposal_id, updated_at, size_bytes")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false });
+  async delete(threadId: string): Promise<void> {
+    const userId = await this.userIdGetter();
 
-      if (error) {
-        throw new Error(`Error fetching user checkpoints: ${error.message}`);
-      }
+    const { error } = await this.client
+      .from(this.tableName)
+      .delete()
+      .eq("thread_id", threadId)
+      .eq("user_id", userId);
 
-      return data.map((row) => ({
-        threadId: row.thread_id,
-        userId: row.user_id,
-        proposalId: row.proposal_id,
-        lastUpdated: new Date(row.updated_at),
-        size: row.size_bytes,
-      }));
-    } catch (error) {
-      this.logger.error("Failed to get user checkpoints", { userId, error });
-      return [];
-    }
-  }
-
-  /**
-   * Get all checkpoints for a proposal
-   */
-  async getProposalCheckpoints(
-    proposalId: string
-  ): Promise<CheckpointSummary[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select("thread_id, user_id, proposal_id, updated_at, size_bytes")
-        .eq("proposal_id", proposalId)
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        throw new Error(
-          `Error fetching proposal checkpoints: ${error.message}`
-        );
-      }
-
-      return data.map((row) => ({
-        threadId: row.thread_id,
-        userId: row.user_id,
-        proposalId: row.proposal_id,
-        lastUpdated: new Date(row.updated_at),
-        size: row.size_bytes,
-      }));
-    } catch (error) {
-      this.logger.error("Failed to get proposal checkpoints", {
-        proposalId,
-        error,
-      });
-      return [];
-    }
-  }
-
-  /**
-   * Update session activity tracking
-   */
-  private async updateSessionActivity(
-    threadId: string,
-    userId: string,
-    proposalId: string
-  ): Promise<void> {
-    try {
-      const { error } = await this.supabase.from(this.sessionTableName).upsert(
-        {
-          thread_id: threadId,
-          user_id: userId,
-          proposal_id: proposalId,
-          last_activity: new Date().toISOString(),
-        },
-        { onConflict: "thread_id" }
-      );
-
-      if (error) {
-        this.logger.warn("Error updating session activity", {
-          threadId,
-          error: error.message,
-        });
-      }
-    } catch (error) {
-      this.logger.warn("Failed to update session activity", {
-        threadId,
-        error,
-      });
+    if (error) {
+      throw new Error(`Failed to delete checkpoint: ${error.message}`);
     }
   }
 }

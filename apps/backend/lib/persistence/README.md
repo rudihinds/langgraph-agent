@@ -163,3 +163,90 @@ Or individually:
 ```bash
 npm test -- "apps/backend/lib/persistence/__tests__/supabase-checkpointer.test.ts"
 ```
+
+## LangGraph Integration
+
+To use the SupabaseCheckpointer with LangGraph, we need to use a special adapter that implements LangGraph's `BaseCheckpointSaver` interface correctly. This is done with the `LangGraphCheckpointer` class:
+
+```typescript
+import { SupabaseCheckpointer } from "./lib/persistence/supabase-checkpointer.js";
+import { LangGraphCheckpointer } from "./lib/persistence/langgraph-adapter.js";
+
+// Create the base SupabaseCheckpointer
+const supabaseCheckpointer = new SupabaseCheckpointer({
+  supabaseUrl: process.env.SUPABASE_URL || "",
+  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  userIdGetter: async () => getUserId(), // Function that returns the current user ID
+  proposalIdGetter: async (threadId) => extractProposalId(threadId), // Function that extracts proposal ID from thread ID
+});
+
+// Create the LangGraph adapter
+const langGraphCheckpointer = new LangGraphCheckpointer(supabaseCheckpointer);
+
+// Use with a LangGraph StateGraph
+const graph = new StateGraph({ channels: {} });
+// ...add nodes and edges...
+
+const compiledGraph = graph.compile({
+  checkpointer: langGraphCheckpointer,
+});
+```
+
+### Testing the Checkpointer
+
+You can test the checkpointer integration with LangGraph using the test script:
+
+```bash
+# From the apps/backend directory
+npm run test-checkpointer
+
+# Or using ts-node directly
+npx ts-node scripts/test-checkpointer.ts
+```
+
+This script will verify that the checkpointer can properly save, retrieve, and delete checkpoints through the LangGraph interface.
+
+## Testing Without a Database (In-Memory Mode)
+
+For development and testing purposes, you can use the in-memory checkpointer implementation:
+
+```typescript
+import { InMemoryCheckpointer } from "./lib/persistence/memory-checkpointer.js";
+import { MemoryLangGraphCheckpointer } from "./lib/persistence/memory-adapter.js";
+
+// Create the in-memory checkpointer
+const memoryCheckpointer = new InMemoryCheckpointer();
+
+// Create the LangGraph adapter
+const langGraphCheckpointer = new MemoryLangGraphCheckpointer(
+  memoryCheckpointer
+);
+
+// Use with a LangGraph StateGraph
+const graph = new StateGraph({ channels: {} });
+// ...add nodes and edges...
+
+const compiledGraph = graph.compile({
+  checkpointer: langGraphCheckpointer,
+});
+```
+
+This implementation stores checkpoints in memory only and doesn't persist them across application restarts. It's useful for:
+
+- Testing in environments without a Supabase database
+- Local development without setting up Supabase credentials
+- Unit testing with predictable state management
+
+The system will automatically fall back to the in-memory implementation if Supabase credentials aren't provided in the environment variables.
+
+### Configuration with Environment Variables
+
+The checkpointer system uses the following environment variables:
+
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key
+- `TEST_USER_ID`: (Optional) User ID to use for testing
+- `CHECKPOINTER_TABLE_NAME`: (Optional) Override for the checkpoints table name
+- `CHECKPOINTER_SESSION_TABLE_NAME`: (Optional) Override for the sessions table name
+
+You can copy `.env.example` to `.env` and update the values to configure the system.
