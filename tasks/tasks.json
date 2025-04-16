@@ -253,7 +253,7 @@
             2
           ],
           "details": "Implementation steps:\n1. Define an interrupt interface that specifies how to pause and resume graph processing\n2. Identify and mark specific nodes in the graph as HITL interrupt points\n3. Implement a notification system to alert users when human intervention is required\n4. Create input collection interfaces that gather and validate user responses at interrupt points\n5. Develop timeout handling for interrupted processes with configurable durations\n6. Implement state persistence during interrupts to ensure no data is lost\n7. Update the graph to emit events for state changes that OrchestratorService can consume\n8. Integrate with OrchestratorService APIs for workflow management\n9. Implement resume functionality that correctly restores graph state after user input\n10. Add comprehensive error handling for interrupted processes\n\nTesting approach:\n- Create tests that simulate HITL interrupts at various points in the graph\n- Test timeout scenarios and verify proper error handling\n- Verify that state is properly preserved during interrupts\n- Integration tests with OrchestratorService to ensure proper event handling\n- End-to-end tests that simulate complete workflows with multiple interrupt points",
-          "status": "done",
+          "status": "pending",
           "parentTaskId": 14
         }
       ]

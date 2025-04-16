@@ -174,3 +174,92 @@ The backend exposes the following API routes when running:
 - `GET /api/proposal/:id/history` - Get the message history of a proposal
 
 See the API documentation for more details on request and response formats.
+
+# Backend Service
+
+This directory contains the backend service for the LangGraph-based proposal agent.
+
+## Setup
+
+1. Environment variables are loaded from the root `.env` file. See `.env.example` for required variables.
+2. Run `npm install` from the root of the project
+3. Run `npx tsx scripts/setup-checkpointer.ts` to set up the database tables (if using Supabase)
+
+## Key Components
+
+### Persistence Layer
+
+The persistence layer uses the adapter pattern to provide flexible storage options:
+
+- `ICheckpointer` interface defines the contract for all storage implementations
+- `InMemoryCheckpointer` provides an in-memory implementation for development and testing
+- `SupabaseCheckpointer` provides a database implementation for production
+
+#### Factory Pattern
+
+The `createCheckpointer` factory function creates the appropriate checkpointer instance based on environment configuration:
+
+```typescript
+// With Supabase credentials
+const checkpointer = await createCheckpointer({
+  userId: "user-123",
+  useSupabase: true,
+});
+
+// Without Supabase (falls back to in-memory)
+const checkpointer = await createCheckpointer({
+  userId: "user-123",
+});
+```
+
+#### Storage Adapter
+
+The storage adapter converts our internal storage implementations to the LangGraph `BaseCheckpointSaver` interface:
+
+```typescript
+// Create a LangGraph-compatible checkpoint saver
+const checkpointSaver = createCheckpointSaver(checkpointer);
+
+// Use with LangGraph
+const graph = StateGraph.from_state_annotation({
+  checkpointSaver,
+});
+```
+
+### Testing
+
+To test the checkpointer implementation:
+
+```bash
+# Run the test script
+npx tsx scripts/test-checkpointer.ts
+```
+
+## Database Schema
+
+If using Supabase, the following tables are created:
+
+### checkpoints
+
+| Column     | Type      | Description                       |
+| ---------- | --------- | --------------------------------- |
+| thread_id  | text      | Unique identifier for the thread  |
+| state      | jsonb     | Serialized state object           |
+| created_at | timestamp | Creation timestamp                |
+| updated_at | timestamp | Last update timestamp             |
+| user_id    | text      | User identifier for multi-tenancy |
+
+Row Level Security policies ensure users can only access their own checkpoints.
+
+## Development
+
+### Environment Variables
+
+The backend service uses the following environment variables from the root `.env` file:
+
+```
+SUPABASE_URL=your-supabase-url
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+If these are not present, the service will fall back to an in-memory checkpointer.

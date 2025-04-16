@@ -19,6 +19,7 @@ These rules must be read and followed before executing any command or chat instr
     *   Tool Integration (`ToolNode`, etc.)
 *   **DO NOT** rely solely on internal knowledge or past examples, as the library evolves rapidly and internal knowledge may be outdated or incorrect.
 *   If a documented approach fails, investigate the environment (versions, TS config) or search for documented issues before attempting non-standard workarounds.
+*   **Clarification via Search:** If confusion persists regarding LangGraph.js best practices or specific implementations, **actively use the web search tool (e.g., Brave Search)** to find the latest documentation, examples, GitHub issues, or community discussions relevant to the task.
 
 ## Project Awareness & Context
 - **Always read `PLANNING.md`** at the start of a new conversation to understand the architecture, goals, and dependencies.

@@ -7,6 +7,19 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Get the directory of this module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from both locations
+// First try the root .env (more important)
+dotenv.config({ path: path.resolve(__dirname, "../../../../../.env") });
+// Then local .env as fallback (less important)
+dotenv.config();
 
 // Environment variables with fallbacks
 const SUPABASE_URL = process.env.SUPABASE_URL || "";

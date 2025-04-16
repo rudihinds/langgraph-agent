@@ -11,7 +11,9 @@
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run --exclude '**/*.int.test.ts'",
     "test:integration": "exit 0 && echo 'Integration tests are currently disabled - to be fixed in a future PR'",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "test-checkpointer": "tsx scripts/test-checkpointer.ts",
+    "setup-checkpointer": "tsx scripts/setup-checkpointer.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

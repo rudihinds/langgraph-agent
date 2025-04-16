@@ -104,4 +104,26 @@
   - Package.json for npm dependencies
   - Strict versioning to prevent breaking changes
 
+## LangGraph Usage Patterns
+
+- **State Definition:** Using `OverallProposalState` interface. State schema passed to `StateGraph` constructor must follow current LangGraph documentation (either via `Annotation.Root` or explicit `{ channels: ... }` structure).
+
+  - **Documentation Adherence:** Verify state definition patterns against the **latest official LangGraph.js documentation**.
+  - **Clarification via Search:** If confusion persists regarding `StateGraph` initialization, state definition, or related type errors, **use the web search tool (e.g., Brave Search)** to find current examples, best practices, or issue discussions relevant to the LangGraph version.
+
+- **Persistence with Adapter Pattern:**
+
+  - **Basic Storage Implementations:**
+    - `InMemoryCheckpointer`: Simple in-memory implementation for testing and development
+    - `SupabaseCheckpointer`: Postgres-based implementation using Supabase for production use
+  - **LangGraph Adapters:**
+    - `LangGraphCheckpointer`: Adapts `SupabaseCheckpointer` to implement `BaseCheckpointSaver`
+    - `MemoryLangGraphCheckpointer`: Adapts `InMemoryCheckpointer` to implement `BaseCheckpointSaver`
+  - **Factory Function:** `createCheckpointer()` in `checkpointer.service.ts` creates properly configured checkpointer instances based on environment
+  - **This adapter pattern isolates our storage logic from LangGraph's interface requirements, making our system more resilient to API changes**
+
+- **Checkpointer Usage:** Passed during graph compilation: `graph.compile({ checkpointer })`
+
+- **Nodes:** Defined as TypeScript functions or LangChain Runnables, interacting with state.
+
 _This document provides the technical landscape for the project, essential for onboarding and understanding the development environment._

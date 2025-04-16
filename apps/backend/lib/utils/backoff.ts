@@ -1,133 +1,89 @@
 /**
- * Utility for implementing exponential backoff and retry logic
+ * Backoff utility
+ *
+ * Provides retry functionality with exponential backoff for database operations
+ * and other external API calls that may need retries.
  */
 
 /**
- * Configuration for the retry operation
+ * Retry options for the withRetry function
  */
-interface RetryOptions {
-  /** Maximum number of retry attempts */
-  maxRetries?: number;
-  
+export interface RetryOptions {
   /** Initial delay in milliseconds */
   initialDelayMs?: number;
-  
+  /** Maximum number of retry attempts */
+  maxRetries?: number;
+  /** Backoff factor for exponential backoff */
+  backoffFactor?: number;
   /** Maximum delay in milliseconds */
   maxDelayMs?: number;
-  
-  /** Exponential backoff factor (typically 2) */
-  backoffFactor?: number;
-  
   /** Whether to add jitter to the delay */
-  addJitter?: boolean;
-  
-  /** Predicate to determine if an error should trigger a retry */
-  shouldRetry?: (error: any) => boolean;
-  
-  /** Optional logger */
-  logger?: Console | null;
+  jitter?: boolean;
 }
 
 /**
  * Default retry options
  */
-const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
+const DEFAULT_RETRY_OPTIONS: RetryOptions = {
+  initialDelayMs: 100,
   maxRetries: 3,
-  initialDelayMs: 500,
-  maxDelayMs: 30000,
   backoffFactor: 2,
-  addJitter: true,
-  shouldRetry: () => true,
-  logger: console,
+  maxDelayMs: 5000,
+  jitter: true,
 };
 
 /**
- * Calculate the backoff delay for the current retry attempt
- * @param attempt Current retry attempt number (starting at 1)
- * @param options Retry options
- * @returns Delay in milliseconds
- */
-function calculateBackoffDelay(
-  attempt: number,
-  options: Required<RetryOptions>
-): number {
-  const { initialDelayMs, maxDelayMs, backoffFactor, addJitter } = options;
-  
-  // Calculate exponential delay
-  let delay = initialDelayMs * Math.pow(backoffFactor, attempt - 1);
-  
-  // Apply jitter if enabled (±20%)
-  if (addJitter) {
-    const jitterFactor = 0.8 + Math.random() * 0.4; // Random between 0.8 and 1.2
-    delay = delay * jitterFactor;
-  }
-  
-  // Cap at max delay
-  return Math.min(delay, maxDelayMs);
-}
-
-/**
- * Execute a function with exponential backoff and retry
- * @param fn The async function to execute with retry
+ * Retry a function with exponential backoff
+ *
+ * @param fn Function to retry
  * @param options Retry options
  * @returns Result of the function
- * @throws Last error encountered if max retries exceeded
+ * @throws Error if all retries fail
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
   options: RetryOptions = {}
 ): Promise<T> {
-  // Merge provided options with defaults
-  const mergedOptions: Required<RetryOptions> = {
-    ...DEFAULT_RETRY_OPTIONS,
-    ...options,
-  };
-  
-  const {
-    maxRetries,
-    shouldRetry,
-    logger,
-  } = mergedOptions;
-  
-  let lastError: any;
-  
-  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
+  let attempt = 0;
+
+  while (true) {
     try {
       return await fn();
     } catch (error) {
-      lastError = error;
-      
-      // Check if we should retry based on the error
-      if (attempt <= maxRetries && shouldRetry(error)) {
-        const delay = calculateBackoffDelay(attempt, mergedOptions);
-        
-        if (logger) {
-          logger.warn(`Attempt ${attempt} failed, retrying in ${Math.round(delay)}ms`, {
-            error: error instanceof Error ? error.message : String(error),
-            attempt,
-            maxRetries,
-          });
-        }
-        
-        // Wait for the calculated delay
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
+      attempt++;
+
+      if (attempt > (opts.maxRetries || DEFAULT_RETRY_OPTIONS.maxRetries!)) {
+        console.error(`All ${opts.maxRetries} retry attempts failed`, {
+          error,
+          maxRetries: opts.maxRetries,
+        });
+        throw error;
       }
-      
-      // If we're here, we've exhausted our retries or shouldn't retry
-      break;
+
+      // Calculate delay with exponential backoff
+      let delayMs =
+        opts.initialDelayMs! * Math.pow(opts.backoffFactor!, attempt - 1);
+
+      // Apply maximum delay
+      delayMs = Math.min(delayMs, opts.maxDelayMs!);
+
+      // Add jitter if enabled (±20%)
+      if (opts.jitter) {
+        const jitterFactor = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+        delayMs = Math.floor(delayMs * jitterFactor);
+      }
+
+      console.log(`Attempt ${attempt} failed, retrying in ${delayMs}ms`, {
+        error,
+        attempt,
+        maxRetries: opts.maxRetries,
+      });
+
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-  
-  // If we got here, we failed after all retries
-  if (logger) {
-    logger.error(`All ${maxRetries} retry attempts failed`, {
-      error: lastError instanceof Error ? lastError.message : String(lastError),
-      maxRetries,
-    });
-  }
-  
-  throw lastError;
 }
 
 /**
@@ -136,17 +92,17 @@ export async function withRetry<T>(
  * @returns A decorator that adds retry functionality to a method
  */
 function withRetryDecorator(options: RetryOptions = {}) {
-  return function(
+  return function (
     _target: any,
     _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;
-    
-    descriptor.value = async function(...args: any[]) {
+
+    descriptor.value = async function (...args: any[]) {
       return withRetry(() => originalMethod.apply(this, args), options);
     };
-    
+
     return descriptor;
   };
 }

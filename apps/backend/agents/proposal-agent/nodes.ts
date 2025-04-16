@@ -474,4 +474,101 @@ export async function humanFeedbackNode(state: ProposalState): Promise<{
   };
 }
 
+/**
+ * Represents the result of an evaluation.
+ */
+interface EvaluationResult {
+  score: number; // e.g., 1-10
+  feedback: string; // Qualitative feedback
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+  passed: boolean; // Did it meet the minimum threshold?
+}
+
+/**
+ * Node to evaluate the generated research based on predefined criteria.
+ * This node should ideally use a separate LLM call with specific evaluation prompts.
+ * @param state The current overall proposal state.
+ * @returns A partial state update containing the evaluation result and updated status.
+ */
+export async function evaluateResearchNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  console.log("--- Evaluating Research ---");
+  const researchResults = state.researchResults;
+
+  if (!researchResults) {
+    console.warn("No research results found to evaluate.");
+    return {
+      researchStatus: "error",
+      errors: ["No research results found to evaluate."],
+    };
+  }
+
+  // --- Placeholder Evaluation Logic ---
+  // TODO: Replace with actual LLM call for evaluation based on criteria.
+  // This involves:
+  // 1. Defining evaluation criteria (perhaps loaded from config).
+  // 2. Creating a specific prompt for the evaluator LLM.
+  // 3. Calling the LLM with the research content and criteria.
+  // 4. Parsing the LLM response into the EvaluationResult structure.
+  console.log("Using placeholder evaluation logic.");
+  const placeholderEvaluation: EvaluationResult = {
+    score: 8,
+    feedback:
+      "Research seems comprehensive and relevant (placeholder evaluation).",
+    strengths: ["Covers funder mission", "Identifies priorities"],
+    weaknesses: ["Could use more specific examples"],
+    suggestions: ["Add recent funding examples if possible"],
+    passed: true, // Assume it passed for now
+  };
+  // --- End Placeholder ---
+
+  console.log(`Evaluation Passed: ${placeholderEvaluation.passed}`);
+  return {
+    researchEvaluation: placeholderEvaluation,
+    // Always go to review after evaluation, even if passed (as per architecture)
+    researchStatus: "awaiting_review",
+  };
+}
+
+/**
+ * Placeholder node for handling the Human-in-the-Loop (HITL) review step for research.
+ * In a full implementation, this might trigger a UI notification or pause execution.
+ * @param state The current overall proposal state.
+ * @returns No state change, simply acts as a named step in the graph.
+ */
+export async function awaitResearchReviewNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  console.log("--- Awaiting Research Review --- ");
+  console.log(
+    "Graph execution paused, waiting for user review of research results."
+  );
+  // In a real system, this node would likely involve an interrupt
+  // or signal to the Orchestrator/UI to wait for user input.
+  // It does not modify the state itself, just represents the waiting point.
+  return {};
+}
+
+/**
+ * Placeholder node for handling errors encountered during graph execution.
+ * Logs the errors found in the state.
+ * @param state The current overall proposal state.
+ * @returns No state change, acts as a terminal error state for now.
+ */
+export async function handleErrorNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  console.error("--- Handling Graph Error --- ");
+  console.error("Errors recorded in state:", state.errors);
+  // This node could potentially:
+  // - Add a final error message to the state.messages
+  // - Notify an administrator
+  // - Update a general status field
+  // For now, it just logs and acts as an end point.
+  return {};
+}
+
 // Additional node functions can be added here

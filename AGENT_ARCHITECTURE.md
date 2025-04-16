@@ -95,6 +95,7 @@ export const ProposalStateAnnotation = Annotation.Root<OverallProposalState>({
 - **Role:** Enables persistence, pause/resume.
 - **Usage:** Automatic by LangGraph; Direct by Orchestrator.
 - **Note:** Checkpointer implementation and usage MUST adhere to current LangGraph.js standards and documentation.
+- **Clarification via Search:** If issues arise with checkpointer setup or usage, **use the web search tool (e.g., Brave Search)** to find current documentation, examples, or troubleshooting guides for the specific checkpointer implementation and LangGraph version.
 
 ### 5.3. Dependency Management
 

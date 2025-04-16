@@ -75,9 +75,9 @@ export interface SectionData {
 
 /**
  * Main state interface for the proposal generation system
- * Extends StateDefinition to satisfy LangGraph requirements
+ * Removed extends StateDefinition and index signature for potentially better type inference with Annotation.Root
  */
-interface ProposalState extends StateDefinition {
+export interface ProposalState {
   // Document handling
   rfpDocument: {
     id: string;
@@ -122,9 +122,6 @@ interface ProposalState extends StateDefinition {
 
   // Status for the overall proposal generation process
   status: ProcessingStatus;
-
-  // Index signature for StateDefinition compatibility
-  [key: string]: any;
 }
 
 /**
@@ -189,16 +186,41 @@ export function errorsReducer(
   return [...current, ...newValue];
 }
 
-// Generic "last value wins" reducer - typed more explicitly
-function lastValueReducer<T>(
+/**
+ * Reducer that always takes the last value provided.
+ * Allows undefined as a valid new value, returning undefined if newValue is undefined.
+ */
+export function lastValueReducer<T>(
   _currentValue: T | undefined,
-  newValue: T | undefined // Allow undefined new value
+  newValue: T | undefined
 ): T | undefined {
   return newValue;
 }
 
+/**
+ * Stricter "last value wins" reducer for non-optional fields.
+ * Throws an error if the new value is undefined, ensuring the field type is maintained.
+ * Alternatively, could return a default value if preferred.
+ */
+export function lastValueWinsReducerStrict<T>(
+  _currentValue: T, // Expects current value to be non-undefined too
+  newValue: T | undefined
+): T {
+  if (newValue === undefined) {
+    // Option 1: Throw error (safer to catch missing updates)
+    console.error(
+      "Error: lastValueWinsReducerStrict received undefined for a required field.",
+      { currentValue: _currentValue }
+    );
+    throw new Error("Reducer received undefined for a required field.");
+    // Option 2: Return current value (might hide issues)
+    // return _currentValue;
+  }
+  return newValue;
+}
+
 // Reducer for createdAt - only takes the first value
-function createdAtReducer(
+export function createdAtReducer(
   currentValue: string | undefined,
   newValue: string | undefined
 ): string | undefined {
@@ -206,122 +228,12 @@ function createdAtReducer(
 }
 
 // Reducer for lastUpdatedAt - always takes the new value or current time
-function lastUpdatedAtReducer(
+export function lastUpdatedAtReducer(
   _currentValue: string | undefined,
   newValue: string | undefined
 ): string {
   return newValue ?? new Date().toISOString(); // Use newValue if provided, otherwise current time
 }
-
-/**
- * LangGraph State Annotation Definition
- * Maps the ProposalState interface fields to LangGraph annotations
- * and specifies custom reducers where necessary.
- */
-export const ProposalStateAnnotation = Annotation.Root<ProposalState>({
-  // Document handling: Use generic reducer, default to not_started
-  rfpDocument: Annotation<ProposalState["rfpDocument"]>({
-    reducer: lastValueReducer as any,
-    default: () => ({ id: "", status: "not_started" as LoadingStatus }),
-  }),
-
-  // Research phase: Use generic reducer, default undefined/queued
-  researchResults: Annotation<ProposalState["researchResults"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-  researchStatus: Annotation<ProposalState["researchStatus"]>({
-    reducer: lastValueReducer as any,
-    default: () => "queued" as ProcessingStatus,
-  }),
-  researchEvaluation: Annotation<ProposalState["researchEvaluation"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-
-  // Solution sought phase: Use generic reducer, default undefined/queued
-  solutionResults: Annotation<ProposalState["solutionResults"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-  solutionStatus: Annotation<ProposalState["solutionStatus"]>({
-    reducer: lastValueReducer as any,
-    default: () => "queued" as ProcessingStatus,
-  }),
-  solutionEvaluation: Annotation<ProposalState["solutionEvaluation"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-
-  // Connection pairs phase: Use generic reducer, default undefined/queued
-  connections: Annotation<ProposalState["connections"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-  connectionsStatus: Annotation<ProposalState["connectionsStatus"]>({
-    reducer: lastValueReducer as any,
-    default: () => "queued" as ProcessingStatus,
-  }),
-  connectionsEvaluation: Annotation<ProposalState["connectionsEvaluation"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-
-  // Proposal sections: Use specific reducer, default empty map
-  sections: Annotation<ProposalState["sections"]>({
-    reducer: sectionsReducer,
-    default: () => new Map<SectionType, SectionData>(),
-  }),
-  // Required sections: Use generic reducer, default empty array
-  requiredSections: Annotation<ProposalState["requiredSections"]>({
-    reducer: lastValueReducer as any,
-    default: () => [] as SectionType[],
-  }),
-
-  // Workflow tracking: Use generic reducer, default null/empty
-  currentStep: Annotation<ProposalState["currentStep"]>({
-    reducer: lastValueReducer as any,
-    default: () => null,
-  }),
-  activeThreadId: Annotation<ProposalState["activeThreadId"]>({
-    reducer: lastValueReducer as any,
-    default: () => "",
-  }),
-
-  // Communication and errors: Use specific reducers, default empty arrays
-  messages: Annotation<BaseMessage[]>({
-    reducer: messagesStateReducer,
-    default: () => [] as BaseMessage[],
-  }),
-  errors: Annotation<ProposalState["errors"]>({
-    reducer: errorsReducer,
-    default: () => [] as string[],
-  }),
-
-  // Metadata: Use generic reducer, default undefined/timestamps
-  projectName: Annotation<ProposalState["projectName"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-  userId: Annotation<ProposalState["userId"]>({
-    reducer: lastValueReducer as any,
-    default: () => undefined,
-  }),
-  createdAt: Annotation<ProposalState["createdAt"]>({
-    reducer: createdAtReducer as any,
-    default: () => new Date().toISOString(),
-  }),
-  lastUpdatedAt: Annotation<ProposalState["lastUpdatedAt"]>({
-    reducer: lastUpdatedAtReducer as any,
-    default: () => new Date().toISOString(),
-  }),
-
-  // Overall status: Use generic reducer, default queued
-  status: Annotation<ProposalState["status"]>({
-    reducer: lastValueReducer as any,
-    default: () => "queued" as ProcessingStatus,
-  }),
-});
 
 /**
  * Zod schema for validation of proposal state
@@ -441,9 +353,6 @@ const ProposalStateSchema = z.object({
             value.id !== key || // Ensure section id matches the map key
             typeof value.content !== "string" ||
             typeof value.status !== "string" || // Basic check for status string
-            !Object.values(SectionProcessingStatus).includes(
-              value.status as SectionProcessingStatus
-            ) || // Check if status is valid enum value
             typeof value.lastUpdated !== "string" ||
             (value.evaluation !== undefined &&
               value.evaluation !== null &&
@@ -520,3 +429,116 @@ export function createInitialProposalState(
 export function validateProposalState(state: ProposalState): ProposalState {
   return ProposalStateSchema.parse(state);
 }
+
+// Restore the Annotation definition
+/**
+ * LangGraph State Annotation Definition
+ * Maps the ProposalState interface fields to LangGraph annotations
+ * and specifies custom reducers where necessary.
+ */
+export const ProposalStateAnnotation = Annotation.Root<ProposalState>({
+  // Document handling: Use generic reducer, default to not_started
+  rfpDocument: Annotation<ProposalState["rfpDocument"]>({
+    reducer: lastValueReducer,
+    default: () => ({ id: "", status: "not_started" as LoadingStatus }),
+  }),
+
+  // Research phase: Use generic reducer, default undefined/queued
+  researchResults: Annotation<ProposalState["researchResults"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  researchStatus: Annotation<ProposalState["researchStatus"]>({
+    reducer: lastValueWinsReducerStrict,
+    default: () => "queued" as ProcessingStatus,
+  }),
+  researchEvaluation: Annotation<ProposalState["researchEvaluation"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+
+  // Solution sought phase: Use generic reducer, default undefined/queued
+  solutionResults: Annotation<ProposalState["solutionResults"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  solutionStatus: Annotation<ProposalState["solutionStatus"]>({
+    reducer: lastValueWinsReducerStrict,
+    default: () => "queued" as ProcessingStatus,
+  }),
+  solutionEvaluation: Annotation<ProposalState["solutionEvaluation"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+
+  // Connection pairs phase: Use generic reducer, default undefined/queued
+  connections: Annotation<ProposalState["connections"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  connectionsStatus: Annotation<ProposalState["connectionsStatus"]>({
+    reducer: lastValueWinsReducerStrict,
+    default: () => "queued" as ProcessingStatus,
+  }),
+  connectionsEvaluation: Annotation<ProposalState["connectionsEvaluation"]>({
+    reducer: lastValueReducer,
+    default: () => null,
+  }),
+
+  // Proposal sections: Use specific reducer, default empty map
+  sections: Annotation<ProposalState["sections"]>({
+    reducer: sectionsReducer,
+    default: () => new Map<SectionType, SectionData>(),
+  }),
+  // Required sections: Use generic reducer, default empty array
+  requiredSections: Annotation<ProposalState["requiredSections"]>({
+    reducer: lastValueReducer,
+    default: () => [] as SectionType[],
+  }),
+
+  // Workflow tracking: Use generic reducer, default null/empty
+  currentStep: Annotation<ProposalState["currentStep"]>({
+    reducer: lastValueReducer,
+    default: () => null,
+  }),
+
+  activeThreadId: Annotation<ProposalState["activeThreadId"]>({
+    reducer: lastValueWinsReducerStrict,
+    default: () => "",
+  }),
+
+  // Communication and errors: Use specific reducers, default empty arrays
+  messages: Annotation<BaseMessage[]>({
+    // Keep Annotation for BaseMessage
+    reducer: messagesStateReducer, // Need to import this
+    default: () => [] as BaseMessage[],
+  }),
+  errors: Annotation<ProposalState["errors"]>({
+    reducer: errorsReducer,
+    default: () => [] as string[],
+  }),
+
+  // Metadata: Use generic reducer, default undefined/timestamps
+  projectName: Annotation<ProposalState["projectName"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  userId: Annotation<ProposalState["userId"]>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  createdAt: Annotation<ProposalState["createdAt"]>({
+    reducer: createdAtReducer,
+    default: () => new Date().toISOString(),
+  }),
+  lastUpdatedAt: Annotation<ProposalState["lastUpdatedAt"]>({
+    reducer: lastUpdatedAtReducer,
+    default: () => new Date().toISOString(),
+  }),
+
+  // Overall status: Use generic reducer, default queued
+  status: Annotation<ProposalState["status"]>({
+    reducer: lastValueWinsReducerStrict,
+    default: () => "queued" as ProcessingStatus,
+  }),
+});

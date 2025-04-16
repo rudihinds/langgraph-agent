@@ -1,4 +1,171 @@
-# System Patterns
+# System Patterns & Architecture
+
+This document outlines the key architectural patterns, decisions, and structures within our LangGraph agent implementation.
+
+## Core Agent Architecture
+
+The proposal agent system follows a structured workflow using LangGraph's `StateGraph` paradigm. Nodes within the graph represent discrete steps in the proposal generation process, with state flowing between them.
+
+### LangGraph Integration
+
+- We use `StateGraph<OverallProposalState>` as our core state management structure.
+- Standard LangGraph patterns are followed for node registration, edge definition, and compilation.
+- The graph is persisted using a custom checkpointer implementation for Supabase.
+
+### State Management
+
+State is defined through a comprehensive `OverallProposalState` interface with the following key components:
+
+- `messages`: Array of conversation messages
+- `sections`: Map of proposal sections with statuses and content
+- `userId`: User identification for multi-tenant isolation
+- `title`: Proposal title
+- `status`: Overall generation status
+- `dependencies`: Section dependency mapping
+- `evaluations`: Section evaluation results
+- `errors`: Error tracking
+- `timestamps`: Various time markers for operations
+- `history`: State update history for debugging
+
+Custom reducers handle immutable state updates, particularly for complex nested structures like the `sections` map.
+
+### Human-in-the-Loop (HITL) Integration
+
+The system incorporates HITL at key decision points:
+
+- Section approval/revision after initial generation
+- Overall proposal approval before final compilation
+- Error resolution when automated handling fails
+
+HITL integration is implemented through special conditional edges that route execution based on user feedback.
+
+## Persistence: Checkpointer Adapter Pattern
+
+We've implemented a layered adapter pattern for checkpointer functionality that separates storage implementation from LangGraph interface requirements:
+
+### Storage Layer
+
+- **ICheckpointer Interface**: Defines a common contract with methods:
+
+  - `put(threadId: string, key: string, value: any): Promise<void>`
+  - `get(threadId: string, key: string): Promise<any>`
+  - `list(threadId: string): Promise<string[]>`
+  - `delete(threadId: string): Promise<void>`
+
+- **Implementations**:
+  - `InMemoryCheckpointer`: Uses a Map-based in-memory storage for development/testing
+  - `SupabaseCheckpointer`: Persists to Supabase database with proper tenant isolation
+
+### Adapter Layer
+
+- **LangGraph-Compatible Adapters**: Convert our storage implementations to LangGraph's `BaseCheckpointSaver` interface:
+  - `MemoryLangGraphCheckpointer`: Adapts InMemoryCheckpointer
+  - `LangGraphCheckpointer`: Adapts SupabaseCheckpointer
+- These adapters implement LangGraph's required methods:
+  - `put`: Store a checkpoint (calls underlying storage.put)
+  - `get`: Retrieve a checkpoint (calls underlying storage.get)
+  - `list`: List checkpoints (calls underlying storage.list)
+
+### Factory Pattern
+
+- **`createCheckpointer()`**: Factory function that:
+  - Checks environment for valid Supabase credentials
+  - Creates SupabaseCheckpointer + adapter if credentials exist and are valid
+  - Falls back to InMemoryCheckpointer + adapter if credentials missing/invalid
+  - Logs appropriate warnings when falling back to in-memory storage
+  - Can be configured with specific user ID for multi-tenant isolation
+
+### Key Advantages
+
+1. **Decoupling**: Storage implementation is separate from LangGraph interface
+2. **Testability**: In-memory implementation makes testing straightforward
+3. **Future-Proofing**: If LangGraph changes `BaseCheckpointSaver` interface, we only update the adapter layer
+4. **Multi-Tenant Security**: Enforces Row Level Security in Supabase implementation
+5. **Development Flexibility**: Works without database configuration during development
+
+### Usage Example
+
+```typescript
+// In graph definition/compilation
+import { createGraph } from "./graph";
+import { createCheckpointer } from "../services/checkpointer.service";
+
+// Create a checkpointer with specific user ID
+const checkpointer = createCheckpointer({ userId: "user-123" });
+
+// Compile graph with the checkpointer
+const compiledGraph = await createGraph().compile({
+  checkpointer,
+});
+
+// Execute with thread ID
+await compiledGraph.invoke(
+  { messages: [] },
+  { configurable: { thread_id: "thread-456" } }
+);
+```
+
+## API Design
+
+The API layer serves as the interface between the frontend and the agent system:
+
+- RESTful endpoints for initiating proposal generation, checking status, and feedback
+- Authentication integration with Supabase Auth
+- Webhook support for asynchronous processing updates
+- Error handling with appropriate HTTP status codes and structured error responses
+
+## OrchestrationService
+
+The `OrchestrationService` manages the LangGraph execution lifecycle:
+
+- Thread creation and management
+- State persistence coordination
+- Recovery from interruptions
+- Human feedback integration
+- Progress tracking and status reporting
+
+## Error Handling Strategy
+
+We implement multi-layered error handling:
+
+- **Node-level** try/catch with error state updates
+- **Graph-level** error edges for recoverable errors
+- **Service-level** error handling in the `OrchestrationService`
+- **API-level** error responses with appropriate status codes
+- **Logging** for operational visibility
+
+## Dependency Management
+
+Section generation follows a DAG (Directed Acyclic Graph) of dependencies:
+
+- Executive Summary depends on Solution Approach
+- Implementation Plan depends on Solution Approach
+- Budget depends on Implementation Plan
+- Timeline depends on Implementation Plan
+
+Dependencies ensure that sections are generated in an order that maintains logical consistency in the final proposal.
+
+## Tools and External Integrations
+
+The system integrates with external services:
+
+- LLM providers for content generation
+- Vector databases for context retrieval
+- External research APIs
+- Document generation services
+
+## Code Organization
+
+The codebase follows a structured organization:
+
+- `agents/` - LangGraph definitions, nodes, and conditionals
+- `services/` - Core business logic
+- `api/` - Express.js routing and controllers
+- `state/` - State definitions and reducers
+- `lib/` - Shared utilities
+- `prompts/` - LLM prompt templates
+- `tools/` - Agent tool implementations
+- `__tests__/` - Test files (sibling to implementation files)
 
 ## 1. High-Level Architecture
 
@@ -345,3 +512,70 @@ export class OrchestratorService {
 ```
 
 _This document serves as a blueprint for the system, illustrating key architectural decisions, patterns, relationships, and implementation strategies. It provides essential context for understanding how components interact and how data flows through the system._
+
+## Core Workflow: LangGraph StateGraph
+
+- **Pattern:** The primary workflow for proposal generation is implemented as a LangGraph `StateGraph` (`ProposalGenerationGraph`).
+- **State:** Managed by the `OverallProposalState` interface, persisted via `SupabaseCheckpointer`.
+- **Initialization:** The `StateGraph` constructor requires a schema definition. This MUST align with current LangGraph documentation, potentially using `Annotation.Root` or an explicit `{ channels: ... }` structure.
+  - **Documentation Adherence:** Verify initialization patterns against the **latest official LangGraph.js documentation**.
+  - **Clarification via Search:** If type errors or confusion persist regarding `StateGraph` initialization or state definition, **use the web search tool (e.g., Brave Search)** to find current examples, best practices, or issue discussions relevant to the LangGraph version being used.
+- **Nodes:** Represent distinct steps (e.g., `researchNode`, `evaluateResearchNode`, `generateSectionNode`). Implemented as functions or LangChain Runnables taking state and returning updates.
+- **Edges:** Define transitions. Sequential (`addEdge`) and conditional (`addConditionalEdges`) based on state (e.g., evaluation results).
+- **HITL:** Implemented via graph interrupts, managed by the Orchestrator Service based on evaluation node results (`awaiting_review` status).
+
+## Orchestration: Coded Service
+
+- **Pattern:** A central `OrchestratorService` manages the overall process lifecycle.
+- **Responsibilities:**
+  - Session management (using `thread_id`).
+  - Invoking/Resuming the `ProposalGenerationGraph` via the `checkpointer`.
+  - Handling user input/feedback from the API layer.
+  - Calling the `EditorAgentService` for revisions.
+  - Managing state updates outside the graph flow (e.g., applying edits, marking sections `stale`).
+  - Tracking dependencies (using `config/dependencies.json`) and guiding regeneration.
+
+## Persistence: Checkpointer Adapter Pattern
+
+- **Pattern:** A layered adapter pattern that separates storage implementation from LangGraph interface requirements.
+- **Storage Layer:**
+  - `InMemoryCheckpointer`: Basic implementation for development and testing.
+  - `SupabaseCheckpointer`: Production implementation using Supabase PostgreSQL.
+  - These implement a consistent interface with basic `put()`, `get()`, `list()`, `delete()` methods.
+- **Adapter Layer:**
+  - `MemoryLangGraphCheckpointer`: Adapts `InMemoryCheckpointer` to implement `BaseCheckpointSaver<number>`.
+  - `LangGraphCheckpointer`: Adapts `SupabaseCheckpointer` to implement `BaseCheckpointSaver<number>`.
+  - These adapters translate between our simple storage API and LangGraph's more specific checkpoint interface.
+- **Factory Pattern:**
+  - `createCheckpointer()`: Factory function that creates the appropriate checkpointer based on environment configuration.
+  - Handles fallback logic: if Supabase credentials are missing/invalid, falls back to in-memory implementation.
+- **Key Advantages:**
+  - **Decoupling:** Storage implementation details are isolated from LangGraph's interface requirements.
+  - **Testability:** Can easily swap implementations for testing purposes.
+  - **Future-Proofing:** If LangGraph's `BaseCheckpointSaver` interface changes, only adapters need to be updated.
+- **Usage:** The compiled graph requires the appropriate adapter:
+  ```typescript
+  const checkpointer = createCheckpointer();
+  const compiledGraph = graph.compile({
+    checkpointer: checkpointer,
+  });
+  ```
+
+## Editing: Editor Agent Service
+
+- **Pattern:** A dedicated `EditorAgentService` handles non-sequential edits.
+- **Responsibilities:** Takes section ID, current content, user feedback, and relevant context (e.g., surrounding sections, research results) to produce revised content.
+- **Invocation:** Called by the `OrchestratorService` upon user edit requests.
+
+## State Reducers
+
+- **Pattern:** Custom reducer functions are used within the state definition (`ProposalStateAnnotation` or explicit channels object) for complex updates.
+- **Examples:** `sectionsReducer` (merges map entries), `errorsReducer` (appends to array), `messagesStateReducer` (LangGraph built-in).
+- **Requirement:** Reducers MUST ensure immutability.
+
+## Validation: Zod Schemas
+
+- **Pattern:** Zod schemas are used for validating:
+  - API request/response bodies.
+  - Structured outputs from LLMs/tools (e.g., evaluation results, research data).
+  - Potentially parts of the `OverallProposalState` (though full state validation might be complex).

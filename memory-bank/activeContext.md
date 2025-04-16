@@ -1,59 +1,67 @@
-# Active Context - July 29, 2023
+# Active Development Context
 
-## Current Focus: Graph Structure Refinement (Task #14)
+_Last updated: July 30, 2023_
 
-We are actively working on refactoring the LangGraph agent backend according to the specifications outlined in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`. With the persistence layer refactoring complete, the focus shifts to **Task #14: Refactor ProposalGenerationGraph for Architecture Compliance**.
+## Current Focus
 
-## Recent Changes & Completed Tasks
+We are implementing a robust persistence layer for the LangGraph-based proposal agent using the adapter pattern. This provides:
 
-- **Task #14.3 (Message Truncation): Completed**
+1. **Storage flexibility** - Supporting both in-memory storage for development/testing and Supabase database storage for production.
+2. **Interface consistency** - Maintaining a clean interface that adapts to LangGraph's `BaseCheckpointSaver` requirements.
+3. **Multi-tenant security** - Including userId in storage operations to ensure proper data isolation.
+4. **Graceful fallbacks** - Defaulting to in-memory storage when database credentials are unavailable.
 
-  - Fixed `TypeError` in `apps/backend/lib/llm/message-truncation.ts` when handling null input for `truncateMessages`.
-  - Updated associated test (`apps/backend/lib/llm/__tests__/message-truncation.test.ts`) to correctly expect `MODERATE` truncation level based on test inputs.
-  - Marked subtask 14.3 as 'done'.
+## Recent Changes
 
-- **Code Synchronization:**
+- Implemented the `ICheckpointer` interface defining our storage contract
+- Created `InMemoryCheckpointer` for local development and testing
+- Implemented `SupabaseCheckpointer` for production database storage
+- Built adapter classes that bridge our storage implementations with LangGraph's requirements
+- Developed a factory function that selects the appropriate checkpointer implementation
+- Created a test script to verify all checkpointer operations
+- Configured environment variables to load from the root `.env` file
+- Removed redundant `.env` file from the backend directory
 
-  - Staged all recent changes.
-  - Committed changes with message `fix(llm): Handle null input in message truncation and adjust test` (Ref: Task #14.3).
-  - Successfully pushed the `feature/code-cleanup-typescript` branch to the remote repository.
+## Next Steps
 
-- **Task #11 (State Management Alignment): Completed**
+1. **Complete the LangGraph implementation**:
 
-  - Aligned `ProposalState` interface in `apps/backend/state/proposal.state.ts` with architectural specs.
-  - Implemented necessary type definitions (`LoadingStatus`, `ProcessingStatus`, etc.).
-  - Defined `ProposalStateAnnotation` using `Annotation.Root` and custom reducers.
-  - Added `lastValueReducer`, `createdAtReducer`, `lastUpdatedAtReducer` helper functions.
-  - Implemented and enhanced Zod schema (`ProposalStateSchema`) for runtime validation, particularly for the `sections` map.
-  - Committed changes: `feat(state): align ProposalState with spec, add reducers & Zod schema (Task #11)`
+   - Finish the proposal agent graph structure
+   - Implement node functions for research generation, section planning, content generation, etc.
+   - Create the conditional routing logic for HITL decision points
 
-- **Task #13 (Persistence Layer Refinement): Completed**
-  - Implemented `ICheckpointer` interface and `SupabaseCheckpointer` class.
-  - Defined database schema (`db-schema.sql`) for checkpoints and sessions.
-  - Implemented Row Level Security policies for data protection.
-  - Ensured TypeScript compatibility and error handling.
+2. **Develop comprehensive testing**:
 
-## Immediate Next Steps
+   - Unit tests for individual components
+   - Integration tests for graph execution
+   - End-to-end tests for full proposal generation
 
-- **Task #14.2 (Implement Routing Functions)**
-
-  - Develop the comprehensive routing system based on state and conditions.
-
-- **Task #14.4 (Implement Conditional Edges)**
-  - Define and implement the conditional edges within the graph based on evaluation results, etc.
-
-## Active Decisions & Considerations
-
-- **Code Stability:** Successfully pushed current feature branch, establishing a stable point before diving deeper into database schema changes.
-- **Task Focus:** Shifted focus to Task #14 (Graph Structure) now that Task #13 (Persistence) is complete.
-- **TypeScript Compatibility:** We've addressed issues with Set iteration that were causing TypeScript errors when targeting lower ECMAScript versions. Using `Array.from()` instead of the spread operator (`[...set]`) ensures maximum compatibility.
-- **Test-First Approach:** We're addressing test files first to ensure our implementation meets the specified interfaces, then fixing implementation files to match. This approach helps catch interface issues early.
+3. **Create the API layer**:
+   - Design RESTful endpoints for frontend interaction
+   - Implement authentication and authorization
+   - Add proper error handling and validation
 
 ## Important Patterns & Preferences
 
-- Adhere strictly to `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
-- Follow `REFACTOR.md` task order and dependencies.
-- Prioritize type safety (using Zod validation where explicit typing fails).
-- Maintain clear commit messages linked to tasks.
-- Keep files under 300 lines.
-- Ensure backward compatibility with various TypeScript/ECMAScript targets.
+- **Adapter Pattern**: We're using the adapter pattern for storage implementations to decouple our internal storage logic from LangGraph's interface requirements.
+- **Factory Pattern**: The checkpointer factory provides the appropriate implementation based on available configuration.
+- **Test-First Development**: We're writing tests before or alongside implementation to ensure robustness.
+- **Clear Interface Contracts**: We define explicit interfaces for all components to ensure proper implementation.
+- **Graceful Degradation**: Services provide fallbacks when ideal resources (like database credentials) are unavailable.
+- **Clear Error Messages**: We provide detailed error messages to aid debugging.
+
+## Current Learnings & Insights
+
+- LangGraph's `BaseCheckpointSaver` interface is focused on individual checkpoints without built-in support for multi-tenant isolation, so we need to handle this ourselves.
+- Providing graceful fallbacks to in-memory storage simplifies development and testing.
+- Environment variable management is simpler when consolidated in a single root `.env` file rather than having multiple files across the project.
+- Thread ID generation needs to include userId to ensure proper multi-tenant isolation.
+- The TypeScript module system requires careful management of imports and exports, especially when using ECMAScript modules.
+- Supabase integration requires both client-side and server-side authentication handling.
+
+## Open Questions & Decisions
+
+- Should we add database migrations for the checkpoints table creation, or rely on the setup script?
+- How should we handle stale checkpoints? Should we add a TTL or cleanup mechanism?
+- What's the most efficient way to serialize the state object for storage?
+- How should we handle errors during checkpointer operations in the graph execution flow?
