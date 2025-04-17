@@ -1,71 +1,52 @@
-import { NextRequest, NextResponse } from "next/server";
+import express from "express";
 import { z } from "zod";
-import { logger } from "../../lib/logger.js";
-import { OrchestratorService } from "../../services/orchestrator.service.js";
+import { Logger } from "../../lib/logger.js";
+import { getOrchestrator } from "../../services/orchestrator-factory.js";
+
+// Initialize logger
+const logger = Logger.getInstance();
+
+const router = express.Router();
 
 /**
- * Schema for validating the status request
+ * @description Get route to check if a proposal generation has been interrupted
+ * @param proposalId - The ID of the proposal to check
+ * @returns {Object} - Object indicating if the proposal generation is interrupted and the state if interrupted
  */
-const StatusRequestSchema = z.object({
-  threadId: z.string(),
-});
-
-/**
- * API handler for checking the status of HITL interrupts
- *
- * This endpoint provides detailed information about the current interrupt
- * status including the reason for interruption, content being evaluated,
- * and any evaluation results
- */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+router.get("/", async (req, res) => {
   try {
-    // Get the URL to extract parameters
-    const { searchParams } = new URL(request.url);
-    const threadId = searchParams.get("threadId");
+    // Validate proposalId
+    const querySchema = z.object({
+      proposalId: z.string().min(1, "ProposalId is required"),
+    });
 
-    if (!threadId) {
-      return NextResponse.json(
-        { error: "Missing required parameter: threadId" },
-        { status: 400 }
-      );
-    }
-
-    logger.info(`Checking interrupt status for thread ${threadId}`);
-
-    // Create OrchestratorService instance
-    const orchestratorService = new OrchestratorService();
-
-    // Check if the thread is currently interrupted
-    const isInterrupted = await orchestratorService.detectInterrupt(threadId);
-
-    if (!isInterrupted) {
-      logger.info(`No active interrupt found for thread ${threadId}`);
-      return NextResponse.json({
-        interrupted: false,
-        message: "No active interrupt found for this thread",
+    const result = querySchema.safeParse(req.query);
+    if (!result.success) {
+      logger.error("Invalid proposalId in interrupt status request", {
+        error: result.error.issues,
+      });
+      return res.status(400).json({
+        error: "Invalid request parameters",
+        details: result.error.issues,
       });
     }
 
-    // Get detailed interrupt information
-    const interruptDetails =
-      await orchestratorService.getInterruptDetails(threadId);
+    const { proposalId } = result.data;
+    logger.info("Checking interrupt status for proposal", { proposalId });
 
-    logger.info(
-      `Retrieved interrupt details for thread ${threadId}: ${interruptDetails?.reason}`
-    );
+    // Get the orchestrator
+    const orchestrator = getOrchestrator(proposalId);
 
-    // Return the interrupt details
-    return NextResponse.json({
-      interrupted: true,
-      details: interruptDetails,
-    });
+    // Get the interrupt status and return it directly - the test expects this exact format
+    const status = await orchestrator.getInterruptStatus(proposalId);
+    return res.status(200).json(status);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Error checking interrupt status: ${errorMessage}`);
-
-    return NextResponse.json(
-      { error: `Failed to check interrupt status: ${errorMessage}` },
-      { status: 500 }
-    );
+    logger.error("Failed to check interrupt status", { error });
+    return res.status(500).json({
+      error: "Failed to check interrupt status",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
   }
-}
+});
+
+export default router;

@@ -1,69 +1,57 @@
-import { NextRequest, NextResponse } from "next/server";
+import express from "express";
 import { z } from "zod";
-import { logger } from "../../lib/logger.js";
-import { OrchestratorService } from "../../services/orchestrator.service.js";
+import { Logger } from "../../lib/logger.js";
+import { getOrchestrator } from "../../services/orchestrator-factory.js";
 
-/**
- * Schema for validating the resume request
- */
-const ResumeRequestSchema = z.object({
-  threadId: z.string(),
+// Initialize logger
+const logger = Logger.getInstance();
+
+const router = express.Router();
+
+// Input validation schema for POST endpoint
+const resumeSchema = z.object({
+  proposalId: z.string().min(1, "ProposalId is required"),
 });
 
 /**
- * API handler for resuming graph execution after feedback has been processed
- *
- * This endpoint instructs the graph to resume processing after a HITL interrupt
- * has been addressed with user feedback
+ * @description Post route to resume proposal generation after feedback submission
+ * @param proposalId - The ID of the proposal to resume
+ * @returns {Object} - Object indicating resume status
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+router.post("/", async (req, res) => {
   try {
-    // Parse the JSON request
-    const body = await request.json();
-
-    // Validate the request against the schema
-    const validationResult = ResumeRequestSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      logger.error(
-        `Invalid resume request: ${JSON.stringify(validationResult.error.format())}`
-      );
-      return NextResponse.json(
-        {
-          error: "Invalid resume request",
-          details: validationResult.error.format(),
-        },
-        { status: 400 }
-      );
+    // Validate request body
+    const result = resumeSchema.safeParse(req.body);
+    if (!result.success) {
+      logger.error("Invalid request to resume proposal", {
+        error: result.error.issues,
+      });
+      return res.status(400).json({
+        error: "Invalid request",
+        details: result.error.issues,
+      });
     }
 
-    // Extract validated data
-    const { threadId } = validationResult.data;
+    const { proposalId } = result.data;
+    logger.info("Resuming proposal generation", { proposalId });
 
-    logger.info(
-      `Resuming graph execution for thread ${threadId} after feedback`
-    );
+    // Get orchestrator and resume execution
+    const orchestrator = getOrchestrator(proposalId);
+    const resumeStatus = await orchestrator.resumeAfterFeedback(proposalId);
 
-    // Create OrchestratorService instance
-    const orchestratorService = new OrchestratorService();
-
-    // Resume the graph execution
-    await orchestratorService.resumeAfterFeedback(threadId);
-
-    logger.info(`Successfully resumed graph execution for thread ${threadId}`);
-
-    // Return success response
-    return NextResponse.json({
+    // Return response in the format expected by tests
+    return res.status(200).json({
       success: true,
-      message: "Graph execution resumed successfully",
+      message: "Execution resumed successfully",
+      resumeStatus,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Error resuming graph execution: ${errorMessage}`);
-
-    return NextResponse.json(
-      { error: `Failed to resume graph execution: ${errorMessage}` },
-      { status: 500 }
-    );
+    logger.error("Failed to resume proposal generation", { error });
+    return res.status(500).json({
+      error: "Failed to resume proposal generation",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
   }
-}
+});
+
+export default router;
