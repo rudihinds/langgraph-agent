@@ -46,6 +46,9 @@ The primary focus is shifting to **Task 16.2: Implement Requirement Analysis (`s
 
 ## 5. Learnings & Project Insights
 
+- **Vitest Import Paths:** Resolved test import issues. The current working pattern seems to be:
+  - Use `@` path aliases (defined in `tsconfig.json`) **without** the `.js` extension for imports from aliased directories (e.g., `import { Logger } from "@/lib/logger";`).
+  - Use direct relative paths **with** the `.js` extension for imports within the same feature area (e.g., `import { createSolutionSoughtAgent } from "../agents.js";`).
 - **Spec-Driven Testing:** Creating a clear spec (`spec_16.2.md`) provides a solid foundation for writing targeted and effective tests.
 - **Architecture Pivot Verification:** Necessary to confirm compatibility of prior work (`deepResearchNode`) with new architectural patterns before proceeding.
 - **Core Functionality Gap:** Implementation of nodes/services remains the critical path.
