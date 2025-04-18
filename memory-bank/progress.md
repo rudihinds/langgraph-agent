@@ -1,208 +1,38 @@
 # Project Progress
 
-Last Modified: August 22, 2023
+## Current Status (as of 2024-07-26)
 
-## Completed Work
-
-1. **Project Setup & Initial Architecture**
-
-   - ✅ Created mono-repo structure with proper package management
-   - ✅ Established directory structure for backend and frontend components
-   - ✅ Set up basic configuration and environment handling
-
-2. **State Management**
-
-   - ✅ Defined `OverallProposalState` interface with all required fields
-   - ✅ Implemented Zod schemas for state validation
-   - ✅ Created appropriate LangGraph annotations for state
-   - ✅ Implemented custom reducers for complex state updates
-   - ✅ Created `interruptStatusReducer` for HITL state management with tests passing
-
-3. **Conditional Logic**
-
-   - ✅ Implemented `routeAfterResearchEvaluation` function
-   - ✅ Implemented `routeAfterSolutionEvaluation` function
-   - ✅ Implemented `determineNextSection` function
-   - ✅ Implemented `routeAfterSectionEvaluation` function
-   - ✅ Implemented `routeAfterStaleContentChoice` function with passing tests
-
-4. **Checkpointer Implementation**
-
-   - ✅ Set up Postgres tables for state persistence
-   - ✅ Configured BaseCheckpointSaver implementation
-   - ✅ Implemented thread_id-based state lookup and retrieval
-
-5. **HITL Implementation - Part 1**
-   - ✅ State structure and interface (Task 14.3.1)
-   - ✅ Schema validation with passing tests
-   - ✅ Routing logic for stale content with passing tests
-   - ✅ Graph configuration for interrupts (Task 14.3.2)
-   - ✅ Implemented all evaluation nodes with HITL interrupt capabilities
-   - ✅ OrchestratorService implementation for interrupt detection and handling (Task 3.1)
-   - ✅ Comprehensive tests for interrupt detection and handling
-
-## In Progress
-
-1. **HITL Implementation - Part 2**
-   - 🔄 User feedback submission and processing (Task 3.2)
-   - 🔄 Graph resumption after feedback (Task 3.3)
-   - 🔄 Feedback processing nodes (Task 4.x)
-   - 🔄 API endpoints (Task 6.x)
-
-## Up Next
-
-1. **Complete HITL Implementation**
-
-   - Implement user feedback submission in OrchestratorService
-   - Add graph resumption logic
-   - Create feedback processing nodes
-   - Build API endpoints for frontend interaction
-   - Add timeout handling
-   - Complete end-to-end tests
-
-2. **Frontend Integration**
-   - User interface for interrupt handling
-   - Real-time status updates
-   - Feedback submission form
-
-## Known Issues
-
-- None currently
-
-## Change Log
-
-### 2023-06-XX - v0.1.0
-
-- Initial project setup
-
-### 2023-06-XX - v0.2.0
-
-- State management implementation
-
-### 2023-06-XX - v0.3.0
-
-- Checkpointer implementation
-
-### 2023-06-XX - v0.4.0
-
-- HITL State structure and validation implementation
-- HITL Conditional routing implementation
-- HITL Evaluation nodes with interrupt capabilities
-- OrchestratorService with interrupt detection and handling
+The project is currently focused on implementing and verifying the core nodes of the `ProposalGenerationGraph`, following the TDD approach where applicable and ensuring alignment with the defined architecture (`AGENT_ARCHITECTURE.md`, `AGENT_BASESPEC.md`).
 
 ## What Works
 
-### Architecture
+- **Task 16.1: Document Loader Node (`documentLoaderNode`)**: Implementation complete and **unit tests passing**. Retrieves documents from Supabase, handles temporary files, parses content based on MIME type, and updates state. Integration tests are planned.
+- **Core Architecture Defined**: `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md` provide a solid foundation.
+- **State Management (`OverallProposalState`)**: Defined, including necessary fields for research, solution analysis, and section data.
+- **Persistence Setup (`SupabaseCheckpointer`)**: Implementation exists, although integration testing is pending.
+- **Vitest Testing Setup**: Core configuration is functional, mocking patterns for common scenarios (Node built-ins, ES modules) identified and documented in `activeContext.md`.
 
-- The overall architecture is established and follows the design specified in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
-- The agent framework is set up with LangGraph for the state management and graph execution.
-- Express.js backend is implemented for API endpoints.
+## What's Next / To Be Built
 
-### Core Components
-
-- The basic proposal generation graph is implemented with nodes and edges.
-- State management using the LangGraph state annotations and checkpointer is working.
-- OrchestratorService has been implemented to coordinate the proposal generation process.
-
-### Human-In-The-Loop (HITL) Workflow
-
-- The HITL workflow has been implemented with proper interrupt, feedback, and resume mechanisms.
-- API endpoints are in place for interrupt status checking, feedback submission, and resuming after feedback.
-- Tests have been created to verify the HITL functionality.
-- Fixed issues with the `submitFeedback` method signature and parameter handling.
-- Updated API endpoints to correctly instantiate the OrchestratorService with the required parameters.
-- Fixed feedback processing to apply the correct status updates based on feedback type.
-
-### Testing
-
-- Unit tests for most components are in place.
-- Integration tests for the HITL workflow are implemented.
-
-## What's Left to Build
-
-### HITL Refinement
-
-- Address remaining type errors in the OrchestratorService.
-- Add more comprehensive tests for edge cases in the HITL workflow.
-- Improve error handling in API endpoints.
-
-### Frontend Integration
-
-- Connect the frontend components to the HITL API endpoints.
-- Implement UI components for submitting feedback.
-- Add real-time status updates.
-
-### Documentation
-
-- Document all API endpoints in detail.
-- Provide examples of request/response formats.
-- Create diagrams illustrating the HITL workflow.
-
-### Performance Optimizations
-
-- Monitor state size growth during HITL cycles.
-- Implement caching for repeated LLM calls.
-- Optimize large proposal state handling.
-
-## Current Status
-
-The core HITL workflow is implemented and the tests are starting to pass. The issue with the `submitFeedback` method signature and feedback processing has been fixed.
+1.  **Task 16.2: Requirement Analysis Node (`solutionSoughtNode`)**: Specification created (`spec_16.2.md`). Next steps involve reviewing existing code, writing tests based on the spec, and refining the implementation.
+2.  **Task 16.1 Integration Tests**: Implement planned integration tests for `documentLoaderNode`.
+3.  **Task 16.3: Evaluation Node (`evaluateSolutionNode`)**: Implement node to evaluate the output of `solutionSoughtNode`, likely involving HITL.
+4.  **Remaining Graph Nodes**: Implement `connectionPairsNode`, `evaluateConnectionsNode`, `sectionManagerNode`, section generators, and section evaluators.
+5.  **Orchestrator Service**: Develop the core logic for managing sessions, dependencies, and HITL flows.
+6.  **Editor Agent Service**: Implement the service responsible for handling revisions.
+7.  **API Layer**: Build out API endpoints for UI interaction.
+8.  **UI**: Develop the frontend application.
 
 ## Known Issues
 
-- There are still some type errors in the OrchestratorService implementation that need to be addressed.
-- Some API endpoints may not be properly tested.
-- The integration between the frontend and HITL API endpoints needs to be completed.
-- Error handling could be improved in some areas.
+- **`progress.md` Update Failures**: Previous attempts to update this file via automated edits failed. Monitoring required.
+- **Full E2E Flow Untested**: The complete workflow from start to finish, including persistence and HITL, has not been tested.
 
 ## Evolution of Project Decisions
 
-### Original Plan
+- **Architecture Pivot**: Moved to a Hybrid Orchestrated Pattern with a coded Orchestrator Service managing the LangGraph and Editor Agent.
+- **Persistence**: Confirmed use of `@langgraph/checkpoint-postgres` (or Supabase equivalent).
+- **TDD Emphasis**: Reinforced the value of TDD for developing graph nodes, starting with `documentLoaderNode`.
+- **Specification First**: Adopted approach of creating detailed specs (e.g., `spec_16.2.md`) before intensive coding/testing for subsequent nodes.
 
-- Initially planned to use LangChain for the agent implementation.
-- Considered using a different state management approach.
-
-### Current Direction
-
-- Using LangGraph for state management and graph execution.
-- Implementing a robust HITL workflow for better proposal quality.
-- Focusing on proper state transitions and immutable updates for consistency.
-
-### Future Considerations
-
-- May need to optimize state serialization for large proposals.
-- Considering implementing more sophisticated feedback mechanisms.
-- Exploring options for more fine-grained control over the proposal generation process.
-
-## HITL Implementation (Task 14.3)
-
-✅ **Completed:**
-
-- Implemented the core HITL workflow in the OrchestratorService:
-  - Interrupt detection and status reporting via `getInterruptStatus`
-  - Feedback processing via `submitFeedback` (approve, revise, regenerate)
-  - Resumption after feedback via `resumeAfterFeedback`
-- Refactored API endpoints to use Express.js patterns:
-  - `/rfp/interrupt-status` to check for interruptions
-  - `/rfp/feedback` to submit user feedback
-  - `/rfp/resume` to continue generation after feedback
-- Implemented factory pattern with `getOrchestrator` for consistent service instantiation
-- Created unit and integration tests for the HITL workflow
-- Added detailed test status report with fixes in dependency order
-- Standardized method signatures and error handling across the implementation
-
-⏳ **In Progress:**
-
-- Fixing remaining test issues:
-  - Package dependencies (supertest)
-  - Type definitions for BaseCheckpointSaver
-  - Module resolution in tests
-  - Test mock updates
-
-⬜ **To Do:**
-
-- Enhance test coverage for edge cases (concurrent operations, error handling)
-- Improve documentation for API endpoints and testing approach
-- Add performance testing for large state objects and checkpoint operations
-
-The HITL implementation now ensures that users can review, modify, and approve content during the proposal generation process, with the system handling all necessary state transitions and dependency management.
+_This document tracks the overall progress and known state of the project._
