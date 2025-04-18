@@ -72,6 +72,16 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Support interrupt metadata
 - [x] Proper updating of `interruptStatus` object
 
+## Content Extractors
+
+- [x] Create dedicated file for content extractors
+- [x] Implement research content extractor
+- [x] Implement solution content extractor
+- [x] Implement connection pairs content extractor
+- [x] Implement section content extractors
+- [x] Create section extractor factory function for generating section-specific extractors
+- [x] Create tests for all content extractors
+
 ## Specific Node Implementations
 
 ### Research Evaluation Node
@@ -79,28 +89,28 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Create using the factory pattern
 - [ ] Create specialized prompt for research evaluation
 - [x] Add research-specific criteria configuration
-- [ ] Implement research-specific content extraction
+- [x] Implement research-specific content extraction
 
 ### Solution Evaluation Node
 
 - [ ] Create using the factory pattern
 - [ ] Create specialized prompt for solution evaluation
 - [x] Add solution-specific criteria configuration
-- [ ] Implement solution-specific content extraction
+- [x] Implement solution-specific content extraction
 
 ### Connection Pairs Evaluation Node
 
 - [x] Create using the factory pattern
 - [x] Create specialized prompt for connections evaluation
 - [x] Add connections-specific criteria configuration
-- [ ] Implement connections-specific content extraction
+- [x] Implement connections-specific content extraction
 
 ### Section Evaluation Nodes
 
 - [ ] Create factory-based implementations for each section type
 - [ ] Create specialized prompts for section evaluation
 - [x] Add section-specific criteria configurations
-- [ ] Implement section-specific content extractors
+- [x] Implement section-specific content extractors
 
 ## Graph Integration
 
@@ -140,6 +150,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Test timeout behavior
 - [x] Test HITL integration
 - [x] Fix mock implementation for custom validation to ensure proper handling of both boolean and object returns
+- [x] Test content extractors for various input scenarios
 
 ### Integration Tests
 
@@ -154,6 +165,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Add JSDoc comments to all functions
 - [x] Document evaluation node parameters
 - [x] Document state transitions
+- [x] Document content extractors
 
 ### User Documentation
 
@@ -172,7 +184,8 @@ This implementation plan outlines the tasks required to build the standardized e
 
 - [x] Fix type issues with `ResultValidator` to support both boolean and object returns
 - [x] Ensure proper error handling for unknown types
-- [ ] Complete specific content type implementations
+- [x] Implement content extractors for all evaluation types
+- [ ] Create factory-based evaluator node implementations
 - [ ] Finalize integration with Orchestrator Service
 
 ## Recent Progress
@@ -188,10 +201,18 @@ This implementation plan outlines the tasks required to build the standardized e
   - Connection pairs evaluation criteria
   - Problem statement evaluation criteria
   - Additional section-specific criteria
+- Implemented content extractors for all evaluation types:
+  - Created dedicated extractors.ts file for specialized extractors
+  - Implemented research content extractor with validation
+  - Implemented solution content extractor with validation
+  - Implemented connection pairs content extractor with pair-level validation
+  - Created a generic section content extractor with a factory function
+  - Added specialized extractors for each section type
+  - Created comprehensive tests for all extractors
 
 ## Next Steps
 
-1. Implement specific content extractors for each evaluation type
-2. Create specialized prompts for each content type
+1. Create specialized prompts for each content type
+2. Implement the remaining evaluation node factory implementations
 3. Integrate the evaluation nodes with the main graph
 4. Test the integration with the Orchestrator Service
