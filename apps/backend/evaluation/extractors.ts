@@ -210,3 +210,74 @@ export const extractTimelineContent = createSectionExtractor(
 export const extractConclusionContent = createSectionExtractor(
   SectionType.CONCLUSION
 );
+
+/**
+ * Extracts and validates content for funder-solution alignment evaluation
+ * This extractor combines solution content with research findings to evaluate
+ * how well the solution aligns with funder priorities
+ *
+ * @param state The overall proposal state
+ * @returns Object containing solution and research content or null if invalid/missing
+ */
+export function extractFunderSolutionAlignmentContent(
+  state: OverallProposalState
+): any {
+  // Check if required properties exist
+  if (
+    !state.solutionSoughtResults ||
+    Object.keys(state.solutionSoughtResults).length === 0 ||
+    !state.researchResults ||
+    Object.keys(state.researchResults).length === 0
+  ) {
+    return null;
+  }
+
+  try {
+    // At this point we know these properties exist and aren't undefined
+    // TypeScript doesn't recognize our null check above, so we need to use non-null assertion
+    const solutionResults = state.solutionSoughtResults!;
+    const researchResults = state.researchResults!;
+
+    // Basic validation of solution content
+    const solutionKeys = ["description", "keyComponents"];
+    const missingKeys = solutionKeys.filter((key) => !(key in solutionResults));
+
+    if (missingKeys.length > 0) {
+      console.warn(
+        `Solution content missing recommended keys for funder alignment evaluation: ${missingKeys.join(
+          ", "
+        )}`
+      );
+      // We still proceed as it's not a hard failure
+    }
+
+    // Check for funder-specific research to ensure proper evaluation
+    const funderResearchKeys = [
+      "Author/Organization Deep Dive",
+      "Structural & Contextual Analysis",
+    ];
+    const missingResearchKeys = funderResearchKeys.filter(
+      (key) => !(key in researchResults)
+    );
+
+    if (missingResearchKeys.length > 0) {
+      console.warn(
+        `Research results missing recommended funder-related sections: ${missingResearchKeys.join(
+          ", "
+        )}`
+      );
+      // We still proceed as it's not a hard failure
+    }
+
+    // Prepare the combined content structure
+    const content = {
+      solution: solutionResults,
+      research: researchResults,
+    };
+
+    return content;
+  } catch (error) {
+    console.error("Error extracting funder-solution alignment content:", error);
+    return null;
+  }
+}

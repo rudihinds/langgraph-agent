@@ -208,15 +208,27 @@ This implementation plan outlines the tasks required to build the standardized e
   - Implemented connection pairs content extractor with pair-level validation
   - Created a generic section content extractor with a factory function
   - Added specialized extractors for each section type
+  - Added funder-solution alignment content extractor for evaluating solution alignment with funder priorities
   - Created comprehensive tests for all extractors
 - Created all needed prompts for generation and evaluation:
   - Organized generation prompts in `/prompts/generation/` directory
   - Organized evaluation prompts in `/prompts/evaluation/` directory
   - Created specialized evaluation prompts for research, solution, and connection pairs
   - Implemented a flexible section evaluation template system with section-specific criteria areas
+  - Added funder-solution alignment evaluation prompt
 
 ## Next Steps
 
 1. Implement the remaining evaluation node factory implementations
 2. Integrate the evaluation nodes with the main graph
 3. Test the integration with the Orchestrator Service
+
+## Specialized Evaluations
+
+### Funder-Solution Alignment Evaluation
+
+- [x] Define criteria configuration in `config/evaluation/criteria/funder_solution_alignment.json`
+- [x] Create specialized prompt template in `prompts/evaluation/funderSolutionAlignment.ts`
+- [x] Implement content extractor that combines solution and research data in `evaluation/extractors.ts`
+- [x] Add tests for the funder-solution alignment content extractor
+- [ ] Create factory-based evaluation node implementation

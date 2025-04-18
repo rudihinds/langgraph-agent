@@ -7,6 +7,7 @@ import {
   createSectionExtractor,
   extractProblemStatementContent,
   extractMethodologyContent,
+  extractFunderSolutionAlignmentContent,
 } from "../extractors.js";
 import {
   OverallProposalState,
@@ -321,6 +322,111 @@ describe("Content Extractors", () => {
 
       const content = extractMethodologyContent(state);
       expect(content).toBe(mockContent);
+    });
+  });
+
+  describe("extractFunderSolutionAlignmentContent", () => {
+    it("should return null when missing research results", () => {
+      const state = createMockState({
+        solutionSoughtResults: {
+          description: "A solution",
+          keyComponents: ["Component A"],
+        },
+      });
+      const content = extractFunderSolutionAlignmentContent(state);
+      expect(content).toBeNull();
+    });
+
+    it("should return null when missing solution results", () => {
+      const state = createMockState({
+        researchResults: {
+          "Author/Organization Deep Dive": "Some research",
+        },
+      });
+      const content = extractFunderSolutionAlignmentContent(state);
+      expect(content).toBeNull();
+    });
+
+    it("should return null when both are empty objects", () => {
+      const state = createMockState({
+        researchResults: {},
+        solutionSoughtResults: {},
+      });
+      const content = extractFunderSolutionAlignmentContent(state);
+      expect(content).toBeNull();
+    });
+
+    it("should extract and combine solution and research content", () => {
+      const mockSolution = {
+        description: "A comprehensive solution",
+        keyComponents: ["Component A", "Component B"],
+      };
+
+      const mockResearch = {
+        "Author/Organization Deep Dive": {
+          "Company Background": "Organization history...",
+          "Key Individuals": "Leadership team...",
+        },
+        "Structural & Contextual Analysis": {
+          "RFP Tone & Style": "Formal and structured...",
+        },
+      };
+
+      const state = createMockState({
+        solutionSoughtResults: mockSolution,
+        researchResults: mockResearch,
+      });
+
+      const content = extractFunderSolutionAlignmentContent(state);
+
+      expect(content).toEqual({
+        solution: mockSolution,
+        research: mockResearch,
+      });
+    });
+
+    it("should extract content with warnings for missing recommended keys", () => {
+      // Mock console.warn to capture warnings
+      const originalWarn = console.warn;
+      const mockWarn = vi.fn();
+      console.warn = mockWarn;
+
+      try {
+        const mockSolution = {
+          // Missing description
+          keyComponents: ["Component A"],
+        };
+
+        const mockResearch = {
+          // Missing recommended research sections
+          "Other Section": "Content",
+        };
+
+        const state = createMockState({
+          solutionSoughtResults: mockSolution,
+          researchResults: mockResearch,
+        });
+
+        const content = extractFunderSolutionAlignmentContent(state);
+
+        // Should still extract the content despite missing keys
+        expect(content).toEqual({
+          solution: mockSolution,
+          research: mockResearch,
+        });
+
+        // Should have logged warnings
+        expect(mockWarn).toHaveBeenCalledTimes(2);
+        expect(mockWarn).toHaveBeenCalledWith(
+          expect.stringContaining("description")
+        );
+        expect(mockWarn).toHaveBeenCalledWith(
+          expect.stringContaining("Author/Organization Deep Dive")
+        );
+      } finally {
+        // Restore console.warn
+        console.warn = originalWarn;
+      }
     });
   });
 });
