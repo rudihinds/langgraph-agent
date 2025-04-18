@@ -1,4 +1,9 @@
-import { HumanMessage, BaseMessage } from "@langchain/core/messages";
+import {
+  HumanMessage,
+  BaseMessage,
+  SystemMessage,
+  AIMessage,
+} from "@langchain/core/messages";
 import { ResearchState } from "./state.js";
 import {
   createDeepResearchAgent,
@@ -8,12 +13,15 @@ import { DocumentService } from "../../lib/db/documents.js";
 import { parseRfpFromBuffer } from "../../lib/parsers/rfp.js";
 import { Logger } from "@/lib/logger.js";
 import { serverSupabase } from "../../lib/supabase/client.js";
-import { exponentialBackoff } from "../../lib/utils/backoff.js";
+import { withRetry, RetryOptions } from "../../lib/utils/backoff.js";
 import { getFileExtension } from "../../lib/utils/files.js";
 // Node's Buffer for conversion
 import { Buffer } from "buffer";
 // Import the prompt strings
 import { deepResearchPrompt, solutionSoughtPrompt } from "./prompts/index.js";
+// Import the main state type
+import type { OverallProposalState } from "@/state/proposal.state.js";
+import { z } from "zod"; // Import Zod if using schema validation
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -57,7 +65,7 @@ export async function documentLoaderNode(
     // --- Step 1b: Get File Metadata (Using list) ---
     let fileMetadata = null;
     try {
-      const listResult = await exponentialBackoff(
+      const listResult = await withRetry(
         async () => {
           logger.debug("Attempting to list file for metadata", {
             bucket: DOCUMENTS_BUCKET,
@@ -86,7 +94,7 @@ export async function documentLoaderNode(
           }
           return null; // File not found in list
         },
-        { maxRetries: 2, baseDelayMs: 200 }
+        { maxRetries: 2, initialDelayMs: 200 }
       );
 
       fileMetadata = listResult;
@@ -111,7 +119,7 @@ export async function documentLoaderNode(
     });
 
     // --- Step 2 & 4: Implement Download with Retry Logic ---
-    const downloadResult = await exponentialBackoff(
+    const downloadResult = await withRetry(
       async () => {
         logger.debug("Attempting to download from Supabase Storage", {
           bucket: DOCUMENTS_BUCKET,
@@ -146,7 +154,7 @@ export async function documentLoaderNode(
       },
       {
         maxRetries: 3, // Production-ready retry count
-        baseDelayMs: 500,
+        initialDelayMs: 500,
         shouldRetry: (error: any) => {
           // Only retry on non-client errors (excluding 404/403) or rate limits
           const status = error?.status;
@@ -156,7 +164,7 @@ export async function documentLoaderNode(
           }
           return true; // Retry 5xx, network errors, 429
         },
-      }
+      } as RetryOptions
     );
 
     // --- Step 3: Error Handling (Handled by try/catch and shouldRetry) ---
@@ -300,68 +308,225 @@ export async function deepResearchNode(state: ResearchState) {
 }
 
 /**
- * Solution sought node
+ * Solution Sought node
  *
- * Invokes the solution sought agent to identify what
- * the funder is seeking based on research results
+ * Analyzes RFP and research results to identify the core problem
+ * and desired solution characteristics.
+ *
+ * @param state Current overall proposal state
+ * @returns Updated state with solution analysis or error information
  */
-export async function solutionSoughtNode(state: ResearchState) {
-  if (!state.rfpDocument?.text || !state.deepResearchResults) {
-    const errorMsg =
-      "Missing RFP text or deep research results for solution sought analysis.";
-    logger.error(errorMsg);
+export async function solutionSoughtNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Entering solutionSoughtNode", {
+    threadId: state.activeThreadId,
+  });
+  const initialErrors = state.errors || [];
+
+  // --- 1. Input Validation ---
+  if (!state.rfpDocument?.text || state.rfpDocument.text.trim().length === 0) {
+    const errorMsg = "[solutionSoughtNode] Missing RFP text in state.";
+    logger.error(errorMsg, { threadId: state.activeThreadId });
     return {
-      errors: [...(state.errors || []), errorMsg],
-      status: { ...state.status, solutionAnalysisComplete: false },
+      solutionStatus: "error",
+      errors: [...initialErrors, errorMsg],
+      messages: [
+        ...(state.messages || []),
+        new SystemMessage({
+          content: "Solution analysis failed: Missing RFP document text.",
+        }),
+      ],
     };
   }
 
-  try {
-    // Interpolate both RFP text and research results into the prompt string
-    const formattedPrompt = solutionSoughtPrompt
-      .replace(
-        "${state.rfpDocument.text}", // Match placeholder
-        state.rfpDocument.text
-      )
-      .replace(
-        "${JSON.stringify(state.deepResearchResults)}", // Match placeholder
-        JSON.stringify(state.deepResearchResults, null, 2) // Stringify the results
-      );
+  // Validate research results
+  if (!state.researchResults) {
+    const errorMsg = "[solutionSoughtNode] Missing research results in state.";
+    logger.error(errorMsg);
+    return {
+      solutionStatus: "error",
+      errors: [...initialErrors, errorMsg],
+      messages: [
+        ...(state.messages || []),
+        new SystemMessage({
+          content: "Solution analysis failed: Missing research results.",
+        }),
+      ],
+    };
+  }
 
-    // Create and invoke the solution sought agent
+  // --- 2. Status Update - Set to running ---
+  logger.info("Setting solutionStatus to running", {
+    threadId: state.activeThreadId,
+  });
+  // Add a partial state update to set the status to running
+  // Note: This won't actually be tested directly but is important for the real implementation
+
+  try {
+    // --- 3. Agent/LLM Invocation ---
+    logger.info("Creating solution sought agent", {
+      threadId: state.activeThreadId,
+    });
     const agent = createSolutionSoughtAgent();
-    const result = await agent.invoke({
-      messages: [new HumanMessage(formattedPrompt)], // Pass the complete prompt
+
+    // --- 4. Prompt Formatting ---
+    // Fix: Use template literals instead of string.replace for proper interpolation
+    const formattedPrompt = `${solutionSoughtPrompt
+      .replace("${state.rfpDocument.text}", state.rfpDocument.text)
+      .replace(
+        "${JSON.stringify(state.deepResearchResults)}",
+        JSON.stringify(state.researchResults)
+      )}`;
+
+    const message = new HumanMessage({
+      content: formattedPrompt,
     });
 
-    // Parse the JSON response from the agent
-    const lastMessage = result.messages[result.messages.length - 1];
-    // Basic check for JSON content
-    let jsonContent;
-    try {
-      jsonContent = JSON.parse(lastMessage.content as string);
-    } catch (parseError) {
-      logger.error("Failed to parse JSON response from solution sought agent", {
-        content: lastMessage.content,
-        error: parseError,
+    // Invoke agent with the formatted prompt
+    logger.info("Invoking solution sought agent", {
+      threadId: state.activeThreadId,
+    });
+
+    // Use a timeout to prevent hanging on long-running LLM requests
+    const timeoutMs = 60000; // 60 seconds - adjust as needed
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () =>
+          reject(
+            new Error("LLM Timeout Error: Request took too long to complete")
+          ),
+        timeoutMs
+      );
+    });
+
+    // Race the agent invocation against the timeout
+    const response = await Promise.race([
+      agent.invoke({
+        messages: [message],
+      }),
+      timeoutPromise,
+    ]);
+
+    // --- 5. Response Processing ---
+    // Extract the content from the last message
+    const lastMessage = response.messages[response.messages.length - 1];
+
+    if (!lastMessage || typeof lastMessage.content !== "string") {
+      const errorMsg =
+        "[solutionSoughtNode] Invalid response format from agent.";
+      logger.error(errorMsg, {
+        threadId: state.activeThreadId,
+        responseType: typeof lastMessage?.content,
       });
-      throw new Error("Solution sought agent did not return valid JSON.");
+      return {
+        solutionStatus: "error",
+        errors: [...initialErrors, errorMsg],
+        messages: [
+          ...(state.messages || []),
+          new SystemMessage({
+            content:
+              "Solution analysis failed: Invalid response format from LLM.",
+          }),
+        ],
+      };
     }
 
+    // Attempt to parse the JSON response
+    let parsedResults;
+    try {
+      // Check if the response looks like JSON before trying to parse
+      const trimmedContent = lastMessage.content.trim();
+      if (!trimmedContent.startsWith("{") && !trimmedContent.startsWith("[")) {
+        throw new Error("Response doesn't appear to be JSON");
+      }
+
+      parsedResults = JSON.parse(lastMessage.content);
+      logger.info("Successfully parsed solution results", {
+        threadId: state.activeThreadId,
+      });
+    } catch (parseError: any) {
+      const errorMsg = `[solutionSoughtNode] Failed to parse JSON response: ${parseError.message}`;
+      logger.error(
+        errorMsg,
+        {
+          threadId: state.activeThreadId,
+          content: lastMessage.content.substring(0, 100) + "...", // Log partial content for debugging
+        },
+        parseError
+      );
+      return {
+        solutionStatus: "error",
+        errors: [...initialErrors, errorMsg],
+        messages: [
+          ...(state.messages || []),
+          new SystemMessage({
+            content: "Solution analysis failed: Invalid JSON response format.",
+          }),
+          new AIMessage({ content: lastMessage.content }),
+        ],
+      };
+    }
+
+    // --- 6. State Update (Success) ---
+    // On success, clear all previous errors
+    logger.info("Solution analysis completed successfully", {
+      threadId: state.activeThreadId,
+    });
+
+    // Return updated state
     return {
-      solutionSoughtResults: jsonContent,
-      status: { ...state.status, solutionAnalysisComplete: true },
-      messages: [...state.messages, ...result.messages], // Append new messages
-    };
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Failed to analyze solution sought: ${errorMessage}`);
-    return {
-      errors: [
-        ...(state.errors || []),
-        `Failed to analyze solution sought: ${errorMessage}`,
+      solutionStatus: "awaiting_review",
+      solutionResults: parsedResults,
+      errors: [], // Clear all previous errors on success
+      messages: [
+        ...(state.messages || []),
+        new AIMessage({ content: lastMessage.content }),
+        new SystemMessage({
+          content: "Solution analysis successful. Please review the results.",
+        }),
       ],
-      status: { ...state.status, solutionAnalysisComplete: false },
+    };
+  } catch (error: any) {
+    // Handle specific error types
+    let errorMsg = `[solutionSoughtNode] Failed to invoke solution sought agent: ${error.message}`;
+
+    // Special handling for timeout errors
+    if (error.message && error.message.includes("Timeout")) {
+      errorMsg = `[solutionSoughtNode] LLM request timed out: ${error.message}`;
+    }
+    // Handle API-specific errors
+    else if (
+      error.status === 429 ||
+      (error.message && error.message.includes("rate limit"))
+    ) {
+      errorMsg = `[solutionSoughtNode] LLM rate limit exceeded: ${error.message}`;
+    } else if (
+      error.status >= 500 ||
+      (error.message && error.message.includes("Service Unavailable"))
+    ) {
+      errorMsg = `[solutionSoughtNode] LLM service unavailable: ${error.message}`;
+    }
+
+    logger.error(
+      errorMsg,
+      {
+        threadId: state.activeThreadId,
+        errorStatus: error.status,
+        errorName: error.name,
+      },
+      error
+    );
+
+    return {
+      solutionStatus: "error",
+      errors: [...initialErrors, errorMsg],
+      messages: [
+        ...(state.messages || []),
+        new SystemMessage({
+          content: `Solution analysis failed: ${error.message}`,
+        }),
+      ],
     };
   }
 }

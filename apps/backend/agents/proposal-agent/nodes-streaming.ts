@@ -1,6 +1,6 @@
 /**
  * Streaming implementations of proposal agent nodes
- * 
+ *
  * This file provides streaming versions of the node functions used in the proposal agent
  * using the standard LangGraph/LangChain streaming mechanisms.
  */
@@ -8,16 +8,16 @@
 import { BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ProposalState } from "./state.js";
-import { 
-  createStreamingNode, 
-  createStreamingToolNode
+import {
+  createStreamingNode,
+  createStreamingToolNode,
 } from "../../lib/llm/streaming/streaming-node.js";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 
 // Create a Tavily search tool for research
 const searchTool = new TavilySearchResults({
   apiKey: process.env.TAVILY_API_KEY,
-  maxResults: 5
+  maxResults: 5,
 });
 
 /**
@@ -83,15 +83,46 @@ export const streamingSolutionSoughtNode = createStreamingNode<ProposalState>(
  * Create a streaming connection pairs node for the proposal agent
  */
 export const streamingConnectionPairsNode = createStreamingNode<ProposalState>(
-  `You are a strategic advisor who identifies alignment between applicants and funders.
-  Based on the available information, identify strong connections:
+  `You are a Connection Pairs Agent specializing in discovering compelling alignment opportunities between a funding organization and an applicant.
   
-  Please identify 5-7 specific connection pairs that align:
-  1. What the funder values
-  2. What the applicant can offer
+  Create meaningful alignments between the funder and applicant across thematic, strategic, cultural, and political dimensions.
   
-  Format your response with the heading "Connection Pairs:" followed by a numbered list,
-  where each item shows a specific alignment between funder priorities and applicant strengths.`,
+  Follow this process:
+  1. Research the funder organization - identify their values, approaches, priorities
+  2. Identify alignment opportunities - what they value, how they work, their priorities
+  3. Explore the applicant's capabilities - look for direct and conceptual matches
+  4. Document connection pairs with evidence and explanations
+  
+  Provide your output in JSON format:
+  {
+    "connection_pairs": [
+      {
+        "category": "Type of alignment (Values, Methodological, Strategic, etc.)",
+        "funder_element": {
+          "description": "Specific priority, value, or approach from the funder",
+          "evidence": "Direct quote or reference with source"
+        },
+        "applicant_element": {
+          "description": "Matching capability or approach from our organization",
+          "evidence": "Specific example or description with source"
+        },
+        "connection_explanation": "Clear explanation of why these elements align",
+        "evidence_quality": "Direct Match, Strong Conceptual Alignment, or Potential Alignment"
+      }
+    ],
+    "gap_areas": [
+      {
+        "funder_priority": "Important funder element with limited matching",
+        "suggested_approach": "How to address this gap in the proposal"
+      }
+    ],
+    "opportunity_areas": [
+      {
+        "applicant_strength": "Unique capability we offer",
+        "strategic_value": "Why this matters in the funder's context"
+      }
+    ]
+  }`,
   "gpt-4o",
   { temperature: 0.5 }
 );
@@ -159,11 +190,11 @@ export async function processHumanFeedback(
 ): Promise<{ messages: BaseMessage[]; userFeedback: string | undefined }> {
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
-  
+
   // Extract feedback from the last message
-  const userFeedback = 
+  const userFeedback =
     typeof lastMessage.content === "string" ? lastMessage.content : "";
-  
+
   return {
     messages,
     userFeedback: userFeedback || undefined,

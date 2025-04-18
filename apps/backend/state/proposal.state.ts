@@ -1,14 +1,22 @@
 /**
  * State definition for the proposal generation system
  * Based on the architecture specified in AGENT_ARCHITECTURE.md
+ * This file defines the OverallProposalState interface and associated types/annotations
+ *
+ * @module proposal.state
  */
+
+import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import { BaseMessage } from "@langchain/core/messages";
 import { z } from "zod";
-import {
-  Annotation,
-  messagesStateReducer,
-  StateDefinition,
-} from "@langchain/langgraph";
+import { OverallProposalStateAnnotation } from "./modules/annotations.js";
+
+// Re-export all types from modular files
+export * from "./modules/types.js";
+export * from "./modules/reducers.js";
+export * from "./modules/schemas.js";
+export * from "./modules/annotations.js";
+export * from "./modules/utils.js";
 
 /**
  * Status definitions for different components of the proposal state
@@ -34,6 +42,51 @@ export type SectionProcessingStatus =
   | "error"
   | "not_started"
   | "needs_revision";
+
+/**
+ * Interrupt-related type definitions for HITL capabilities
+ */
+export type InterruptReason =
+  | "EVALUATION_NEEDED"
+  | "CONTENT_REVIEW"
+  | "ERROR_OCCURRED";
+
+/**
+ * Types of feedback that can be provided by users
+ */
+export type FeedbackType = "approve" | "revise" | "regenerate";
+
+/**
+ * Data structure to track interrupt status
+ */
+interface InterruptStatus {
+  isInterrupted: boolean;
+  interruptionPoint: string | null;
+  feedback: {
+    type: FeedbackType | null;
+    content: string | null;
+    timestamp: string | null;
+  } | null;
+  processingStatus: "pending" | "processed" | "failed" | null;
+}
+
+export interface InterruptMetadata {
+  reason: InterruptReason;
+  nodeId: string;
+  timestamp: string;
+  contentReference?: string; // Section ID or content type being evaluated
+  evaluationResult?: any;
+}
+
+/**
+ * Interface for user feedback structure
+ */
+export interface UserFeedback {
+  type: FeedbackType;
+  comments?: string;
+  specificEdits?: Record<string, any>;
+  timestamp: string;
+}
 
 /**
  * Section types enumeration for typed section references
@@ -75,9 +128,8 @@ export interface SectionData {
 
 /**
  * Main state interface for the proposal generation system
- * Removed extends StateDefinition and index signature for potentially better type inference with Annotation.Root
  */
-export interface ProposalState {
+export interface OverallProposalState {
   // Document handling
   rfpDocument: {
     id: string;
@@ -105,6 +157,11 @@ export interface ProposalState {
   // Proposal sections
   sections: Map<SectionType, SectionData>;
   requiredSections: SectionType[];
+
+  // HITL Interrupt handling
+  interruptStatus: InterruptStatus;
+  interruptMetadata?: InterruptMetadata;
+  userFeedback?: UserFeedback;
 
   // Workflow tracking
   currentStep: string | null;
@@ -199,22 +256,15 @@ export function lastValueReducer<T>(
 
 /**
  * Stricter "last value wins" reducer for non-optional fields.
- * Throws an error if the new value is undefined, ensuring the field type is maintained.
- * Alternatively, could return a default value if preferred.
+ * Returns the current value if the new value is undefined, ensuring the field type is maintained.
  */
 export function lastValueWinsReducerStrict<T>(
-  _currentValue: T, // Expects current value to be non-undefined too
+  currentValue: T, // Expects current value to be non-undefined too
   newValue: T | undefined
 ): T {
   if (newValue === undefined) {
-    // Option 1: Throw error (safer to catch missing updates)
-    console.error(
-      "Error: lastValueWinsReducerStrict received undefined for a required field.",
-      { currentValue: _currentValue }
-    );
-    throw new Error("Reducer received undefined for a required field.");
-    // Option 2: Return current value (might hide issues)
-    // return _currentValue;
+    // Return current value when undefined is passed
+    return currentValue;
   }
   return newValue;
 }
@@ -235,10 +285,27 @@ export function lastUpdatedAtReducer(
   return newValue ?? new Date().toISOString(); // Use newValue if provided, otherwise current time
 }
 
+// Create a Zod schema for the feedback type
+const feedbackTypeSchema = z.enum(["approve", "revise", "regenerate"]);
+
+// Define the Zod schema for InterruptStatus
+const interruptStatusSchema = z.object({
+  isInterrupted: z.boolean(),
+  interruptionPoint: z.string().nullable(),
+  feedback: z
+    .object({
+      type: feedbackTypeSchema.nullable(),
+      content: z.string().nullable(),
+      timestamp: z.string().nullable(),
+    })
+    .nullable(),
+  processingStatus: z.enum(["pending", "processed", "failed"]).nullable(),
+});
+
 /**
  * Zod schema for validation of proposal state
  */
-const ProposalStateSchema = z.object({
+export const OverallProposalStateSchema = z.object({
   rfpDocument: z.object({
     id: z.string(),
     fileName: z.string().optional(),
@@ -369,6 +436,27 @@ const ProposalStateSchema = z.object({
       }
     ),
   requiredSections: z.array(z.nativeEnum(SectionType)),
+
+  // HITL interrupt validation
+  interruptStatus: interruptStatusSchema,
+  interruptMetadata: z
+    .object({
+      reason: z.enum(["EVALUATION_NEEDED", "CONTENT_REVIEW", "ERROR_OCCURRED"]),
+      nodeId: z.string(),
+      timestamp: z.string(),
+      contentReference: z.string().optional(),
+      evaluationResult: z.any().optional(),
+    })
+    .optional(),
+  userFeedback: z
+    .object({
+      type: feedbackTypeSchema,
+      comments: z.string().optional(),
+      specificEdits: z.record(z.any()).optional(),
+      timestamp: z.string(),
+    })
+    .optional(),
+
   currentStep: z.string().nullable(),
   activeThreadId: z.string(),
   messages: z.array(z.any()), // BaseMessage is complex to validate with Zod
@@ -397,7 +485,7 @@ export function createInitialProposalState(
   threadId: string,
   userId?: string,
   projectName?: string
-): ProposalState {
+): OverallProposalState {
   const timestamp = new Date().toISOString();
 
   return {
@@ -410,6 +498,15 @@ export function createInitialProposalState(
     connectionsStatus: "queued",
     sections: new Map(),
     requiredSections: [],
+
+    // Initial HITL interrupt state
+    interruptStatus: {
+      isInterrupted: false,
+      interruptionPoint: null,
+      feedback: null,
+      processingStatus: null,
+    },
+
     currentStep: null,
     activeThreadId: threadId,
     messages: [],
@@ -426,119 +523,12 @@ export function createInitialProposalState(
  * Validate state against schema
  * @returns The validated state or throws error if invalid
  */
-export function validateProposalState(state: ProposalState): ProposalState {
-  return ProposalStateSchema.parse(state);
+export function validateProposalState(
+  state: OverallProposalState
+): OverallProposalState {
+  return OverallProposalStateSchema.parse(state);
 }
 
-// Restore the Annotation definition
-/**
- * LangGraph State Annotation Definition
- * Maps the ProposalState interface fields to LangGraph annotations
- * and specifies custom reducers where necessary.
- */
-export const ProposalStateAnnotation = Annotation.Root<ProposalState>({
-  // Document handling: Use generic reducer, default to not_started
-  rfpDocument: Annotation<ProposalState["rfpDocument"]>({
-    reducer: lastValueReducer,
-    default: () => ({ id: "", status: "not_started" as LoadingStatus }),
-  }),
-
-  // Research phase: Use generic reducer, default undefined/queued
-  researchResults: Annotation<ProposalState["researchResults"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-  researchStatus: Annotation<ProposalState["researchStatus"]>({
-    reducer: lastValueWinsReducerStrict,
-    default: () => "queued" as ProcessingStatus,
-  }),
-  researchEvaluation: Annotation<ProposalState["researchEvaluation"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-
-  // Solution sought phase: Use generic reducer, default undefined/queued
-  solutionResults: Annotation<ProposalState["solutionResults"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-  solutionStatus: Annotation<ProposalState["solutionStatus"]>({
-    reducer: lastValueWinsReducerStrict,
-    default: () => "queued" as ProcessingStatus,
-  }),
-  solutionEvaluation: Annotation<ProposalState["solutionEvaluation"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-
-  // Connection pairs phase: Use generic reducer, default undefined/queued
-  connections: Annotation<ProposalState["connections"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-  connectionsStatus: Annotation<ProposalState["connectionsStatus"]>({
-    reducer: lastValueWinsReducerStrict,
-    default: () => "queued" as ProcessingStatus,
-  }),
-  connectionsEvaluation: Annotation<ProposalState["connectionsEvaluation"]>({
-    reducer: lastValueReducer,
-    default: () => null,
-  }),
-
-  // Proposal sections: Use specific reducer, default empty map
-  sections: Annotation<ProposalState["sections"]>({
-    reducer: sectionsReducer,
-    default: () => new Map<SectionType, SectionData>(),
-  }),
-  // Required sections: Use generic reducer, default empty array
-  requiredSections: Annotation<ProposalState["requiredSections"]>({
-    reducer: lastValueReducer,
-    default: () => [] as SectionType[],
-  }),
-
-  // Workflow tracking: Use generic reducer, default null/empty
-  currentStep: Annotation<ProposalState["currentStep"]>({
-    reducer: lastValueReducer,
-    default: () => null,
-  }),
-
-  activeThreadId: Annotation<ProposalState["activeThreadId"]>({
-    reducer: lastValueWinsReducerStrict,
-    default: () => "",
-  }),
-
-  // Communication and errors: Use specific reducers, default empty arrays
-  messages: Annotation<BaseMessage[]>({
-    // Keep Annotation for BaseMessage
-    reducer: messagesStateReducer, // Need to import this
-    default: () => [] as BaseMessage[],
-  }),
-  errors: Annotation<ProposalState["errors"]>({
-    reducer: errorsReducer,
-    default: () => [] as string[],
-  }),
-
-  // Metadata: Use generic reducer, default undefined/timestamps
-  projectName: Annotation<ProposalState["projectName"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-  userId: Annotation<ProposalState["userId"]>({
-    reducer: lastValueReducer,
-    default: () => undefined,
-  }),
-  createdAt: Annotation<ProposalState["createdAt"]>({
-    reducer: createdAtReducer,
-    default: () => new Date().toISOString(),
-  }),
-  lastUpdatedAt: Annotation<ProposalState["lastUpdatedAt"]>({
-    reducer: lastUpdatedAtReducer,
-    default: () => new Date().toISOString(),
-  }),
-
-  // Overall status: Use generic reducer, default queued
-  status: Annotation<ProposalState["status"]>({
-    reducer: lastValueWinsReducerStrict,
-    default: () => "queued" as ProcessingStatus,
-  }),
-});
+// Define a type for accessing the state based on the annotation
+export type AnnotatedOverallProposalState =
+  typeof OverallProposalStateAnnotation.State;

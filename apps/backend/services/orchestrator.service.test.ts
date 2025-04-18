@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { OrchestratorService } from "./orchestrator.service";
-import { OverallProposalState, SectionType } from "../state/modules/types";
+import { OrchestratorService } from "./orchestrator.service.js";
+import { OverallProposalState, SectionType } from "../state/modules/types.js";
 
 // Mock logger
 vi.mock("../lib/logger.js", () => {

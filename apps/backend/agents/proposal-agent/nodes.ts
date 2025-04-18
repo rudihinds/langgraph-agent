@@ -224,27 +224,34 @@ export async function connectionPairsNode(state: ProposalState): Promise<{
   const solutionSought = state.solutionSought;
   const funderInfo = state.funderInfo;
 
-  // Template for connection pairs prompt
-  const connectionTemplate = `
-  You are a strategic advisor who identifies alignment between applicants and funders.
-  Based on the following information, identify strong connections:
-  
-  Funder Information:
-  ${funderInfo || "No funder information provided."}
-  
-  Solution Sought:
-  ${solutionSought || "No solution information provided."}
-  
-  Please identify 5-7 specific connection pairs that align:
-  1. What the funder values
-  2. What the applicant can offer
-  
-  Format your response with the heading "Connection Pairs:" followed by a numbered list,
-  where each item shows a specific alignment between funder priorities and applicant strengths.
-  `;
+  // Import the prompt template from the prompts directory
+  const { connectionPairsPrompt } = require("./prompts");
 
-  const prompt = PromptTemplate.fromTemplate(connectionTemplate);
-  const formattedPrompt = await prompt.format({});
+  // Prepare data for template
+  const templateData = {
+    $json: {
+      researchJson: (state as any).deepResearchResults || {},
+      funder: funderInfo || "No funder information provided.",
+      applying_company: "Our Organization", // This should be replaced with actual applicant info when available
+    },
+    $: (key: string) => {
+      if (key === "solution_sought") {
+        return {
+          item: {
+            json: {
+              solution_sought:
+                solutionSought || "No solution information provided.",
+            },
+          },
+        };
+      }
+      return {};
+    },
+  };
+
+  // Create prompt using the template
+  const prompt = PromptTemplate.fromTemplate(connectionPairsPrompt);
+  const formattedPrompt = await prompt.format(templateData);
 
   // Add system message
   const systemMessage = new HumanMessage(formattedPrompt);
@@ -253,8 +260,23 @@ export async function connectionPairsNode(state: ProposalState): Promise<{
   // Get response from model
   const response = await model.invoke(connectionMessages);
 
-  // Extract connection pairs from response
-  const connectionPairs = extractConnectionPairs(response.content as string);
+  // Parse JSON response
+  let connectionPairs: string[] = [];
+  try {
+    // Try to parse as JSON first
+    const jsonResponse = JSON.parse(response.content as string);
+
+    if (jsonResponse.connection_pairs) {
+      // Transform the structured JSON into string format for backward compatibility
+      connectionPairs = jsonResponse.connection_pairs.map(
+        (pair: any) =>
+          `${pair.category}: ${pair.funder_element.description} aligns with ${pair.applicant_element.description} - ${pair.connection_explanation}`
+      );
+    }
+  } catch (error) {
+    // Fallback to regex extraction if JSON parsing fails
+    connectionPairs = extractConnectionPairs(response.content as string);
+  }
 
   // Return updated state
   return {

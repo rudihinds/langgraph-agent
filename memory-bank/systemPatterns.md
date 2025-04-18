@@ -579,3 +579,42 @@ _This document serves as a blueprint for the system, illustrating key architectu
   - API request/response bodies.
   - Structured outputs from LLMs/tools (e.g., evaluation results, research data).
   - Potentially parts of the `OverallProposalState` (though full state validation might be complex).
+
+## Document Loader Node Pattern
+
+The Document Loader Node is responsible for fetching RFP documents from Supabase storage and preparing them for parsing:
+
+1. **Storage Integration**
+
+   - Uses Supabase client to access the "proposal-documents" bucket
+   - Retrieves documents by ID, matching user permissions
+   - Handles various storage-related errors (not found, unauthorized, etc.)
+
+2. **Format Support**
+
+   - Supports PDF, DOCX, and TXT formats
+   - Determines format based on file extension or content-type metadata
+   - Streams document content for efficient processing
+
+3. **Error Handling**
+
+   - Implements comprehensive error handling for all potential failure points
+   - Updates state with detailed error information for user feedback
+   - Categorizes errors (not found, unauthorized, corrupted, etc.) for appropriate UI messaging
+
+4. **State Updates**
+   - Updates document status in the `OverallProposalState.rfpDocument` field
+   - Sets status to 'loading', 'loaded', or 'error' based on operation result
+   - Maintains content and metadata for successful loads
+   - Records error details for failed operations
+
+## Critical Implementation Paths
+
+The most critical implementation paths in this system are:
+
+1. **HITL Workflow**: The interrupt-feedback-resume cycle for human review
+2. **Document Processing**: Loading, parsing, and analyzing RFP documents
+3. **Section Generation**: Creating and evaluating proposal sections
+4. **State Persistence**: Saving and loading state via the checkpointer
+
+These paths require special attention for error handling, testing, and performance optimization.

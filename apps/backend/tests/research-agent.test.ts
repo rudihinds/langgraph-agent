@@ -1,74 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { researchAgent, createResearchGraph } from "../agents/research";
+import { describe, it, expect, vi, beforeEach } from "vitest"; // Removed unused beforeAll/afterAll
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
-import { MemorySaver } from "@langchain/langgraph/checkpoints";
+import { MemorySaver } from "@langchain/langgraph";
 import { ResearchState } from "../agents/research/state";
-import * as nodes from "../agents/research/nodes";
+import * as originalNodes from "../agents/research/nodes";
 
-// Mock the nodes module
-vi.mock("../agents/research/nodes", async () => {
-  const actual = await vi.importActual("../agents/research/nodes");
-  return {
-    ...actual,
-    documentLoader: vi.fn().mockImplementation(async (state: ResearchState) => {
-      return {
-        ...state,
-        document: {
-          id: "mock-doc-id",
-          content: "Mock RFP document content for testing",
-          title: "Mock RFP",
-        },
-        status: "RESEARCH_NEEDED",
-      };
-    }),
-    deepResearch: vi.fn().mockImplementation(async (state: ResearchState) => {
-      return {
-        ...state,
-        deepResearchResults: {
-          categories: {
-            organizationBackground: {
-              findings: "Mock findings about the organization",
-              relevanceScore: 8,
-            },
-            projectScope: {
-              findings: "Mock findings about the project scope",
-              relevanceScore: 9,
-            },
-            deliverables: {
-              findings: "Mock findings about deliverables",
-              relevanceScore: 10,
-            },
-            // Add other categories as needed with mock findings
-          },
-        },
-        status: "SOLUTION_NEEDED",
-      };
-    }),
-    solutionSought: vi.fn().mockImplementation(async (state: ResearchState) => {
-      return {
-        ...state,
-        solutionSoughtResults: {
-          primaryApproach: {
-            approach: "Primary approach mock description",
-            rationale: "Rationale for primary approach",
-            fitScore: 9,
-          },
-          secondaryApproaches: [
-            {
-              approach: "Secondary approach mock description",
-              rationale: "Rationale for secondary approach",
-              fitScore: 7,
-            },
-          ],
-        },
-        status: "COMPLETE",
-      };
-    }),
-  };
-});
-
-// Mock LLM and tools
+// Mock LLM static
 vi.mock("@langchain/openai", () => {
+  // ... (LLM mock)
   return {
     ChatOpenAI: vi.fn().mockImplementation(() => ({
       temperature: 0,
@@ -78,83 +16,187 @@ vi.mock("@langchain/openai", () => {
   };
 });
 
-describe("Research Agent Tests", () => {
-  beforeEach(() => {
+describe("Research Agent Integration Tests", () => {
+  // Renamed describe block
+  let researchAgent: any;
+  let createResearchGraph: any;
+  let mockedNodes: typeof originalNodes;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    // Mock the checkpointer module to export MemorySaver
+    vi.doMock("../../lib/persistence/supabase-checkpointer.js", () => {
+      return { SupabaseCheckpointer: MemorySaver };
+    });
+
+    // Mock Nodes for integration testing
+    vi.doMock("../agents/research/nodes", () => {
+      return {
+        documentLoaderNode: vi
+          .fn()
+          .mockImplementation(async (state: ResearchState) => {
+            // Mock minimal state update needed for flow
+            return {
+              rfpDocument: {
+                id: state.rfpDocument?.id || "mock-doc-id",
+                text: "Mock RFP content",
+                metadata: {},
+              },
+              status: { documentLoaded: true },
+            };
+          }),
+        deepResearchNode: vi
+          .fn()
+          .mockImplementation(async (state: ResearchState) => {
+            // Mock minimal state update needed for flow
+            return {
+              deepResearchResults: { mockKey: "mockResearchValue" },
+              status: { researchComplete: true },
+            };
+          }),
+        solutionSoughtNode: vi
+          .fn()
+          .mockImplementation(async (state: ResearchState) => {
+            // Only return the fields this node is responsible for updating
+            return {
+              solutionResults: { mockKey: "mockSolutionValue" },
+              status: { solutionAnalysisComplete: true }, // Let LangGraph handle merging this status
+            };
+          }),
+      };
+    });
+
+    // Dynamic Import
+    try {
+      const agentModule = await import("../agents/research/index.js");
+      researchAgent = agentModule.researchAgent;
+      createResearchGraph = agentModule.createResearchGraph;
+      mockedNodes = await import("../agents/research/nodes.js");
+    } catch (e) {
+      console.error("Dynamic import failed in beforeEach:", e);
+      throw e;
+    }
+
     vi.clearAllMocks();
   });
 
   describe("createResearchGraph", () => {
     it("creates a research graph with the correct nodes and edges", async () => {
-      // Create the research graph
+      expect(createResearchGraph).toBeDefined();
       const graph = createResearchGraph();
-      
-      // Verify the graph has the expected structure
       expect(graph).toBeDefined();
-      // These assertions would need to be adjusted based on what's exposed by the StateGraph
+      const compiledGraph = graph.compile({ checkpointer: new MemorySaver() });
+      expect(compiledGraph.nodes).toHaveProperty("documentLoader");
+      expect(compiledGraph.nodes).toHaveProperty("deepResearch");
+      // Check for solutionSoughtNode using the correct property name from the state file if different
+      expect(compiledGraph.nodes).toHaveProperty("solutionSought");
     });
   });
 
-  describe("researchAgent", () => {
-    it("processes an RFP document and returns complete research results", async () => {
-      // Test invoking the research agent
-      const result = await researchAgent.invoke({ 
-        documentId: "test-doc-123",
-        threadId: "test-thread-456"
+  describe("researchAgent.invoke Flow", () => {
+    // Renamed describe block
+
+    it("should successfully run the full graph flow with mocked nodes", async () => {
+      expect(researchAgent).toBeDefined();
+      const checkpointer = new MemorySaver();
+
+      const result = await researchAgent.invoke({
+        documentId: "test-doc-flow",
+        threadId: "test-thread-flow",
+        checkpointer: checkpointer,
       });
 
-      // Verify the result structure matches our expectations
-      expect(result).toHaveProperty("document");
+      // Verify final status based on the LAST mock node's update
+      expect(result.status?.solutionAnalysisComplete).toBe(true);
+      // Verify the presence of keys set by mocks (minimal check)
+      expect(result).toHaveProperty("rfpDocument");
       expect(result).toHaveProperty("deepResearchResults");
-      expect(result).toHaveProperty("solutionSoughtResults");
-      expect(result.status).toBe("COMPLETE");
-      
-      // Verify each node was called once
-      expect(nodes.documentLoader).toHaveBeenCalledTimes(1);
-      expect(nodes.deepResearch).toHaveBeenCalledTimes(1);
-      expect(nodes.solutionSought).toHaveBeenCalledTimes(1);
+      // Check the property set by the solutionSoughtNode mock
+      console.log(
+        "Result object before final assertion:",
+        JSON.stringify(result, null, 2)
+      );
+      expect(result).toHaveProperty("solutionResults");
+      expect(result.solutionResults).toHaveProperty(
+        "mockKey",
+        "mockSolutionValue"
+      ); // Example check on mock data
+
+      // Verify each mock node was called
+      expect(mockedNodes.documentLoaderNode).toHaveBeenCalledTimes(1);
+      expect(mockedNodes.deepResearchNode).toHaveBeenCalledTimes(1);
+      // Use the correct property name from the mock definition
+      expect(mockedNodes.solutionSoughtNode).toHaveBeenCalledTimes(1);
     });
 
-    it("handles a thread ID for persistence", async () => {
-      // Test with a specific thread ID
-      const threadId = "existing-thread-789";
-      
-      // Mock the checkpointer to simulate a non-existent thread
-      const mockCheckpointer = new MemorySaver();
-      vi.spyOn(mockCheckpointer, "get").mockResolvedValue(null);
-      
-      const result = await researchAgent.invoke({ 
-        documentId: "test-doc-123",
-        threadId
+    it("should handle persistence across invocations with MemorySaver", async () => {
+      const threadId = "persist-thread-flow";
+      const checkpointer = new MemorySaver();
+
+      // First invocation
+      await researchAgent.invoke({
+        documentId: "persist-doc-1",
+        threadId,
+        checkpointer: checkpointer,
       });
 
-      // Verify results are as expected
-      expect(result).toHaveProperty("document");
-      expect(result.status).toBe("COMPLETE");
-    });
-    
-    it("handles errors during processing", async () => {
-      // Mock an error in one of the nodes
-      vi.mocked(nodes.deepResearch).mockRejectedValueOnce(new Error("Research API failed"));
-      
-      // We expect the agent to handle the error and return an error state
-      try {
-        await researchAgent.invoke({ documentId: "test-doc-123" });
-        // If it doesn't throw, the test should fail
-        expect(true).toBe(false);
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain("Research API failed");
-      }
-    });
-    
-    it("processes an RFP document with empty optional parameters", async () => {
-      // Test invoking with only required parameters
-      const result = await researchAgent.invoke({ 
-        documentId: "test-doc-123"
+      // Second invocation
+      const result = await researchAgent.invoke({
+        documentId: "persist-doc-2",
+        threadId,
+        checkpointer: checkpointer,
       });
 
-      // Verify the result is complete
-      expect(result.status).toBe("COMPLETE");
+      // Check final status
+      expect(result.status?.solutionAnalysisComplete).toBe(true);
+      // Check calls across BOTH invocations
+      expect(mockedNodes.documentLoaderNode).toHaveBeenCalledTimes(2);
+      expect(mockedNodes.deepResearchNode).toHaveBeenCalledTimes(2);
+      // Use the correct property name from the mock definition
+      expect(mockedNodes.solutionSoughtNode).toHaveBeenCalledTimes(2);
+    });
+
+    it("should propagate errors correctly when a node fails", async () => {
+      // Reset modules and setup mocks, making deepResearchNode reject
+      vi.resetModules();
+      vi.doMock("../../lib/persistence/supabase-checkpointer.js", () => ({
+        SupabaseCheckpointer: MemorySaver,
+      }));
+      vi.doMock("../agents/research/nodes", () => {
+        return {
+          documentLoaderNode: vi.fn().mockResolvedValue({
+            rfpDocument: { id: "error-doc", text: "Doc content", metadata: {} },
+            status: { documentLoaded: true },
+          }),
+          deepResearchNode: vi
+            .fn()
+            .mockRejectedValue(new Error("Mock Node Failure")),
+          // Use correct property name from the mock definition
+          solutionSoughtNode: vi.fn().mockResolvedValue({}),
+        };
+      });
+
+      // Dynamic Import
+      const agentModule = await import("../agents/research/index.js");
+      researchAgent = agentModule.researchAgent;
+      mockedNodes = await import("../agents/research/nodes.js");
+
+      const checkpointer = new MemorySaver();
+
+      // Expect invoke to throw the error from the node
+      await expect(
+        researchAgent.invoke({
+          documentId: "error-doc-propagate",
+          checkpointer: checkpointer,
+        })
+      ).rejects.toThrow("Mock Node Failure");
+
+      // Verify only nodes up to the failure were called
+      expect(mockedNodes.documentLoaderNode).toHaveBeenCalledTimes(1);
+      expect(mockedNodes.deepResearchNode).toHaveBeenCalledTimes(1);
+      // Use the correct property name from the mock definition
+      expect(mockedNodes.solutionSoughtNode).not.toHaveBeenCalled();
     });
   });
 });

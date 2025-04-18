@@ -10,7 +10,7 @@
  * - Managing proposal state persistence via the Checkpointer
  */
 
-import { StateGraph } from "@langchain/langgraph";
+import { StateGraph, CompiledStateGraph } from "@langchain/langgraph";
 import {
   OverallProposalState,
   InterruptStatus,
@@ -23,6 +23,7 @@ import {
 import { FeedbackType } from "../lib/types/feedback.js";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger, LogLevel } from "../lib/logger.js";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Details about an interrupt that can be provided to the UI
@@ -36,28 +37,35 @@ export interface InterruptDetails {
 }
 
 /**
+ * Type definition for any form of LangGraph state graph, compiled or not
+ */
+export type AnyStateGraph<T = OverallProposalState> =
+  | StateGraph<T, T, Partial<T>, "__start__">
+  | CompiledStateGraph<T, Partial<T>, "__start__">;
+
+/**
  * OrchestratorService class
  * Implements the Orchestrator pattern described in AGENT_BASESPEC.md
  */
 export class OrchestratorService {
-  private graph: StateGraph<OverallProposalState>;
+  private graph: AnyStateGraph;
   private checkpointer: BaseCheckpointSaver;
   private logger: Logger;
 
   /**
    * Creates a new OrchestratorService
    *
-   * @param graph The ProposalGenerationGraph instance
+   * @param graph The ProposalGenerationGraph instance (compiled or uncompiled)
    * @param checkpointer The checkpointer for state persistence
    */
-  constructor(
-    graph: StateGraph<OverallProposalState>,
-    checkpointer: BaseCheckpointSaver
-  ) {
+  constructor(graph: AnyStateGraph, checkpointer: BaseCheckpointSaver) {
     this.graph = graph;
     this.checkpointer = checkpointer;
     this.logger = Logger.getInstance();
-    this.logger.setLogLevel(LogLevel.INFO);
+    // Check if setLogLevel exists before calling (for tests where Logger might be mocked)
+    if (typeof this.logger.setLogLevel === "function") {
+      this.logger.setLogLevel(LogLevel.INFO);
+    }
   }
 
   /**
@@ -194,14 +202,27 @@ export class OrchestratorService {
   /**
    * Submits user feedback during an interrupt for review of content
    *
-   * @param threadId The thread ID of the interrupted proposal
-   * @param feedback User feedback object containing type, comments, etc.
-   * @returns Updated state with the feedback incorporated
+   * @param threadId The thread ID for the proposal
+   * @param feedback Feedback submission object
+   * @returns Status of the feedback submission
    */
   async submitFeedback(
     threadId: string,
-    feedback: UserFeedback
-  ): Promise<OverallProposalState> {
+    feedback: {
+      type: FeedbackType;
+      comments?: string;
+      timestamp: string;
+      contentReference?: string;
+      specificEdits?: Record<string, unknown>;
+    }
+  ): Promise<{ success: boolean; message: string; status?: string }> {
+    const {
+      type: feedbackType,
+      comments,
+      timestamp,
+      contentReference,
+    } = feedback;
+
     // Get the current state
     const state = await this.getState(threadId);
 
@@ -210,10 +231,14 @@ export class OrchestratorService {
       throw new Error("Cannot submit feedback when no interrupt is active");
     }
 
-    // Validate feedback type
-    if (!["approve", "revise", "regenerate"].includes(feedback.type)) {
-      throw new Error(`Invalid feedback type: ${feedback.type}`);
-    }
+    // Create user feedback object
+    const userFeedback: UserFeedback = {
+      type: feedbackType,
+      comments: comments || null,
+      timestamp: timestamp || new Date().toISOString(),
+      contentReference:
+        contentReference || state.interruptMetadata?.contentReference || null,
+    };
 
     // Create updated state with feedback
     const updatedState: OverallProposalState = {
@@ -221,23 +246,32 @@ export class OrchestratorService {
       interruptStatus: {
         ...state.interruptStatus,
         feedback: {
-          type: feedback.type,
-          content: feedback.comments || null,
-          timestamp: feedback.timestamp || new Date().toISOString(),
+          type: feedbackType,
+          content: comments || null,
+          timestamp: userFeedback.timestamp,
         },
         processingStatus: "pending",
       },
-      userFeedback: feedback,
+      userFeedback: userFeedback,
     };
 
     // Persist the updated state
     await this.checkpointer.put(threadId, updatedState);
     this.logger.info(
-      `User feedback (${feedback.type}) submitted for thread ${threadId}`
+      `User feedback (${feedbackType}) submitted for thread ${threadId}`
     );
 
     // Prepare state based on feedback type
-    return this.prepareFeedbackForProcessing(threadId, feedback.type);
+    const preparedState = await this.prepareFeedbackForProcessing(
+      threadId,
+      feedbackType
+    );
+
+    return {
+      success: true,
+      message: `Feedback (${feedbackType}) processed successfully`,
+      status: preparedState.interruptStatus.processingStatus,
+    };
   }
 
   /**
@@ -259,7 +293,7 @@ export class OrchestratorService {
     const contentRef = state.interruptMetadata?.contentReference;
 
     switch (feedbackType) {
-      case "approve":
+      case FeedbackType.APPROVE:
         // Mark the relevant content as approved
         updatedState = this.updateContentStatus(
           updatedState,
@@ -268,16 +302,16 @@ export class OrchestratorService {
         );
         break;
 
-      case "revise":
+      case FeedbackType.REVISE:
         // Mark the content for revision
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          "needs_revision"
+          "edited"
         );
         break;
 
-      case "regenerate":
+      case FeedbackType.REGENERATE:
         // Mark the content as stale to trigger regeneration
         updatedState = this.updateContentStatus(
           updatedState,
@@ -354,12 +388,14 @@ export class OrchestratorService {
   /**
    * Resume the graph execution after feedback has been processed
    *
-   * @param threadId The thread ID of the interrupted proposal
-   * @returns Promise that resolves when the graph resumes successfully
+   * @param proposalId The ID of the proposal to resume
+   * @returns Status object with information about the resume operation
    */
-  async resumeAfterFeedback(threadId: string): Promise<void> {
+  async resumeAfterFeedback(
+    proposalId: string
+  ): Promise<{ success: boolean; message: string; status?: string }> {
     // Get the current state
-    const state = await this.getState(threadId);
+    const state = await this.getState(proposalId);
 
     // Validate the state has feedback that needs processing
     if (!state?.userFeedback) {
@@ -383,31 +419,59 @@ export class OrchestratorService {
     };
 
     // Persist the updated state
-    await this.checkpointer.put(threadId, updatedState);
-    this.logger.info(`Resuming graph after feedback for thread ${threadId}`);
+    await this.checkpointer.put(proposalId, updatedState);
+    this.logger.info(`Resuming graph after feedback for thread ${proposalId}`);
 
     try {
       // Resume the graph execution
-      await this.graph.resume(threadId);
-      this.logger.info(`Graph resumed successfully for thread ${threadId}`);
+      await this.graph.resume(proposalId);
+      this.logger.info(`Graph resumed successfully for thread ${proposalId}`);
+
+      // Get the latest state after resumption
+      const latestState = await this.getState(proposalId);
+
+      return {
+        success: true,
+        message: "Graph execution resumed successfully",
+        status: latestState.status,
+      };
     } catch (error) {
       this.logger.error(`Error resuming graph: ${error}`);
+      throw new Error(`Failed to resume graph execution: ${error}`);
+    }
+  }
 
-      // Update state to indicate failure
-      const errorState: OverallProposalState = {
-        ...updatedState,
-        interruptStatus: {
-          ...updatedState.interruptStatus,
-          processingStatus: "failed",
-        },
-        errors: [
-          ...(updatedState.errors || []),
-          `Failed to resume graph: ${error}`,
-        ],
+  /**
+   * Gets the interrupt status for a specific proposal
+   *
+   * @param proposalId The ID of the proposal to check
+   * @returns Status object with interrupt details
+   */
+  async getInterruptStatus(
+    proposalId: string
+  ): Promise<{ interrupted: boolean; interruptData?: InterruptDetails }> {
+    try {
+      // Get current state
+      const state = await this.getState(proposalId);
+
+      // Check for interrupts
+      const isInterrupted = state?.interruptStatus?.isInterrupted || false;
+
+      // If there's no interrupt, return early
+      if (!isInterrupted) {
+        return { interrupted: false };
+      }
+
+      // Get detailed interrupt information
+      const interruptData = await this.getInterruptDetails(proposalId);
+
+      return {
+        interrupted: true,
+        interruptData: interruptData || undefined,
       };
-
-      await this.checkpointer.put(threadId, errorState);
-      throw error;
+    } catch (error) {
+      this.logger.error(`Error checking interrupt status: ${error}`);
+      throw new Error(`Failed to check interrupt status: ${error}`);
     }
   }
 }

@@ -1,10 +1,13 @@
 /**
  * Conditional routing functions for the proposal generation graph
- * 
+ *
  * These functions determine the next node in the graph based on the current state.
  * They implement the control flow logic for the proposal generation process.
  */
-import { ProposalState, SectionType } from "../../state/proposal.state.js";
+import {
+  OverallProposalState as ProposalState,
+  SectionType,
+} from "../../state/modules/types.js";
 
 /**
  * Determines the next step based on the overall state
@@ -14,7 +17,7 @@ export function determineNextStep(state: ProposalState): string {
   if (state.errors.length > 0) {
     return "error";
   }
-  
+
   if (state.status === "stale") {
     // Route to appropriate regeneration node based on what's stale
     // This would be expanded based on which sections can be marked stale
@@ -23,7 +26,7 @@ export function determineNextStep(state: ProposalState): string {
     // Default to section manager if specific stale section can't be determined
     return "sectionManager";
   }
-  
+
   // Default route if no specific condition is met
   return "documentLoader";
 }
@@ -38,14 +41,17 @@ export function routeAfterResearchEvaluation(state: ProposalState): string {
   if (state.researchStatus === "approved") {
     return "solution";
   }
-  
+
   // If research needs revision, go back to research
   if (state.researchStatus === "needs_revision") {
     return "revise";
   }
-  
+
   // Default case - this shouldn't happen if state is properly managed
-  console.warn("Unexpected state in routeAfterResearchEvaluation:", state.researchStatus);
+  console.warn(
+    "Unexpected state in routeAfterResearchEvaluation:",
+    state.researchStatus
+  );
   return "revise";
 }
 
@@ -59,14 +65,17 @@ export function routeAfterSolutionEvaluation(state: ProposalState): string {
   if (state.solutionStatus === "approved") {
     return "connections";
   }
-  
+
   // If solution needs revision, go back to solution generation
   if (state.solutionStatus === "needs_revision") {
     return "revise";
   }
-  
+
   // Default case
-  console.warn("Unexpected state in routeAfterSolutionEvaluation:", state.solutionStatus);
+  console.warn(
+    "Unexpected state in routeAfterSolutionEvaluation:",
+    state.solutionStatus
+  );
   return "revise";
 }
 
@@ -80,14 +89,17 @@ export function routeAfterConnectionsEvaluation(state: ProposalState): string {
   if (state.connectionsStatus === "approved") {
     return "sections";
   }
-  
+
   // If connections need revision, go back to connection generation
   if (state.connectionsStatus === "needs_revision") {
     return "revise";
   }
-  
+
   // Default case
-  console.warn("Unexpected state in routeAfterConnectionsEvaluation:", state.connectionsStatus);
+  console.warn(
+    "Unexpected state in routeAfterConnectionsEvaluation:",
+    state.connectionsStatus
+  );
   return "revise";
 }
 
@@ -99,25 +111,27 @@ export function routeAfterConnectionsEvaluation(state: ProposalState): string {
 export function routeSectionGeneration(state: ProposalState): string {
   // Get the ordered list of sections to generate
   const sectionOrder: SectionType[] = [
-    "problem_statement", 
-    "methodology", 
-    "budget", 
-    "timeline", 
-    "conclusion"
+    "problem_statement",
+    "methodology",
+    "budget",
+    "timeline",
+    "conclusion",
   ];
-  
+
   // Find the first section that needs generation
   for (const sectionType of sectionOrder) {
     const sectionState = state.sections.get(sectionType);
-    
+
     // If this section doesn't exist or needs generation/regeneration
-    if (!sectionState || 
-        sectionState.status === "not_started" || 
-        sectionState.status === "stale") {
+    if (
+      !sectionState ||
+      sectionState.status === "not_started" ||
+      sectionState.status === "stale"
+    ) {
       return sectionType;
     }
   }
-  
+
   // If all sections are complete, we're done
   return "complete";
 }
@@ -130,12 +144,12 @@ export function routeSectionGeneration(state: ProposalState): string {
 export function routeAfterSectionEvaluation(sectionType: SectionType) {
   return (state: ProposalState): string => {
     const sectionState = state.sections.get(sectionType);
-    
+
     // If section needs revision, route back to generation
     if (sectionState && sectionState.status === "needs_revision") {
       return "revise";
     }
-    
+
     // Otherwise, move to the next section
     return "next";
   };
@@ -147,5 +161,5 @@ export default {
   routeAfterSolutionEvaluation,
   routeAfterConnectionsEvaluation,
   routeSectionGeneration,
-  routeAfterSectionEvaluation
+  routeAfterSectionEvaluation,
 };

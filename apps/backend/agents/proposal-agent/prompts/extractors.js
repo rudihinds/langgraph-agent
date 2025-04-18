@@ -31,6 +31,26 @@ export function extractSolutionSought(text) {
  * @returns {string[]} Array of connection pairs
  */
 export function extractConnectionPairs(text) {
+  // First try to parse as JSON
+  try {
+    // Check if text contains a JSON object
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const jsonData = JSON.parse(jsonMatch[0]);
+      
+      // If JSON contains connection_pairs array
+      if (jsonData.connection_pairs && Array.isArray(jsonData.connection_pairs)) {
+        return jsonData.connection_pairs.map(pair => 
+          `${pair.category}: ${pair.funder_element.description} aligns with ${pair.applicant_element.description} - ${pair.connection_explanation}`
+        );
+      }
+    }
+  } catch (error) {
+    // JSON parsing failed, continue with regex approach
+    console.log("JSON parsing failed, using regex fallback");
+  }
+  
+  // Fallback to original regex approach
   const connectionText = text.match(/connection pairs:(.*?)(?=\n\n|\n$|$)/is);
   if (!connectionText) return [];
 

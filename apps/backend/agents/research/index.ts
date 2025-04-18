@@ -9,6 +9,7 @@ import {
 } from "./nodes.js";
 import { pruneMessageHistory } from "../../lib/state/messages.js";
 import { Logger } from "@/lib/logger.js";
+import { BaseCheckpointSaver } from "@langchain/langgraph";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -78,6 +79,7 @@ export const createResearchGraph = () => {
 interface ResearchAgentInput {
   documentId: string;
   threadId?: string; // Optional threadId for resuming
+  checkpointer?: BaseCheckpointSaver; // Optional checkpointer instance
 }
 
 /**
@@ -90,33 +92,43 @@ export const researchAgent = {
   /**
    * Invoke the research agent to analyze an RFP document
    *
-   * @param input - Contains document ID and optional thread ID for persistence
+   * @param input - Contains document ID, optional thread ID, and optional checkpointer
    * @returns The final state of the research agent
    */
   invoke: async (input: ResearchAgentInput): Promise<ResearchState> => {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    let checkpointerToUse: BaseCheckpointSaver;
 
-    if (!supabaseUrl || !supabaseKey) {
-      logger.error(
-        "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable is not set."
-      );
-      throw new Error("Supabase connection details are missing.");
+    // Use provided checkpointer or create SupabaseCheckpointer
+    if (input.checkpointer) {
+      logger.debug("Using provided checkpointer instance.");
+      checkpointerToUse = input.checkpointer;
+    } else {
+      logger.debug("Creating new SupabaseCheckpointer instance.");
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        logger.error(
+          "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable is not set."
+        );
+        throw new Error("Supabase connection details are missing.");
+      }
+
+      checkpointerToUse = new SupabaseCheckpointer({
+        supabaseUrl,
+        supabaseKey,
+        // TODO: Replace hardcoded userIdGetter/proposalIdGetter with actual context passing
+        userIdGetter: async () => "research-agent-user",
+        proposalIdGetter: async () => input.documentId,
+      });
     }
-
-    const checkpointer = new SupabaseCheckpointer({
-      supabaseUrl,
-      supabaseKey,
-      userIdGetter: async () => "research-agent-user",
-      proposalIdGetter: async () => input.documentId,
-    });
 
     try {
       const graph = createResearchGraph();
 
       // Compile the graph with the checkpointer instance
       const compiledGraph = graph.compile({
-        checkpointer,
+        checkpointer: checkpointerToUse, // Use the determined checkpointer
       });
 
       // Initial state setup
@@ -151,8 +163,6 @@ export const researchAgent = {
       });
 
       // Invoke the graph with initial state and config
-      // Ensure the invoke signature matches the compiled graph expectations
-      // The first argument is the initial state or input, the second is the config
       const finalState = await compiledGraph.invoke(
         initialState as ResearchState,
         config
@@ -169,7 +179,6 @@ export const researchAgent = {
         documentId: input.documentId,
         threadId: input.threadId,
       });
-      // Re-throw or handle appropriately
       throw error;
     }
   },

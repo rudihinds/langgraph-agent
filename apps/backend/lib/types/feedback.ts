@@ -9,21 +9,66 @@
  */
 
 /**
- * Types of feedback that can be provided by users during HITL interrupts
+ * Types of feedback that can be provided by users
  */
 export enum FeedbackType {
-  /**
-   * Content is approved as-is and can proceed to the next stage
-   */
   APPROVE = "approve",
-
-  /**
-   * Content needs revision but not complete regeneration
-   */
   REVISE = "revise",
+  REGENERATE = "regenerate",
+}
+
+/**
+ * Possible content types that can receive feedback
+ */
+export enum ContentType {
+  SECTION = "section",
+  RESEARCH = "research",
+  ENTIRE_PROPOSAL = "entireProposal",
+  EVALUATION = "evaluation",
+}
+
+/**
+ * Feedback submission interface
+ */
+export interface FeedbackSubmission {
+  proposalId: string;
+  feedbackType: FeedbackType;
+  contentRef?: string;
+  comment?: string;
+}
+
+/**
+ * Feedback status response interface
+ */
+export interface FeedbackStatus {
+  success: boolean;
+  message: string;
+  contentRef?: string;
+  processingStatus?: string;
+  error?: string;
+}
+
+/**
+ * Feedback data structure submitted by users during HITL interrupts
+ */
+export interface UserFeedback {
+  /**
+   * The type of feedback provided
+   */
+  type: FeedbackType;
 
   /**
-   * Content should be completely regenerated
+   * Optional comments provided with the feedback
    */
-  REGENERATE = "regenerate",
+  comments?: string;
+
+  /**
+   * Timestamp when the feedback was submitted
+   */
+  timestamp: string;
+
+  /**
+   * Optional specific edits for revision feedback
+   */
+  specificEdits?: Record<string, unknown>;
 }

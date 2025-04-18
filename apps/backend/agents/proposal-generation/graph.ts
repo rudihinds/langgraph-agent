@@ -1,13 +1,21 @@
 /**
  * ProposalGenerationGraph Implementation
- * 
+ *
  * This module defines the main state graph for proposal generation according to
  * the architecture specifications in AGENT_ARCHITECTURE.md and AGENT_BASESPEC.md.
  */
-import { StateGraph } from "@langchain/langgraph";
-import { HumanMessage } from "@langchain/core/messages";
+import { BaseMessage } from "@langchain/core/messages";
+import {
+  StateGraph,
+  START,
+  END,
+  messagesStateReducer,
+} from "@langchain/langgraph";
+import {
+  OverallProposalState as ProposalState,
+  ProposalStateAnnotation,
+} from "../../state/modules/annotations.js";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { ProposalState, ProposalStateAnnotation } from "../../state/proposal.state.js";
 
 // Import node functions
 import {
@@ -60,14 +68,14 @@ export function createProposalGenerationGraph() {
   graph.addNode("connectionPairs", connectionPairsNode);
   graph.addNode("evaluateConnections", evaluateConnectionsNode);
   graph.addNode("sectionManager", sectionManagerNode);
-  
+
   // Section generator nodes
   graph.addNode("generateProblemStatement", generateProblemStatementNode);
   graph.addNode("generateMethodology", generateMethodologyNode);
   graph.addNode("generateBudget", generateBudgetNode);
   graph.addNode("generateTimeline", generateTimelineNode);
   graph.addNode("generateConclusion", generateConclusionNode);
-  
+
   // Section evaluator nodes
   graph.addNode("evaluateProblemStatement", evaluateProblemStatementNode);
   graph.addNode("evaluateMethodology", evaluateMethodologyNode);
@@ -82,28 +90,20 @@ export function createProposalGenerationGraph() {
   // Document loading -> Research
   graph.addEdge("documentLoader", "deepResearch");
   graph.addEdge("deepResearch", "evaluateResearch");
-  
+
   // Research evaluation -> Solution (conditional based on evaluation)
-  graph.addConditionalEdges(
-    "evaluateResearch",
-    routeAfterResearchEvaluation,
-    {
-      solution: "solutionSought",
-      revise: "deepResearch",
-    }
-  );
-  
+  graph.addConditionalEdges("evaluateResearch", routeAfterResearchEvaluation, {
+    solution: "solutionSought",
+    revise: "deepResearch",
+  });
+
   // Solution -> Connection Pairs (conditional based on evaluation)
   graph.addEdge("solutionSought", "evaluateSolution");
-  graph.addConditionalEdges(
-    "evaluateSolution",
-    routeAfterSolutionEvaluation,
-    {
-      connections: "connectionPairs",
-      revise: "solutionSought",
-    }
-  );
-  
+  graph.addConditionalEdges("evaluateSolution", routeAfterSolutionEvaluation, {
+    connections: "connectionPairs",
+    revise: "solutionSought",
+  });
+
   // Connection Pairs -> Section Manager (conditional based on evaluation)
   graph.addEdge("connectionPairs", "evaluateConnections");
   graph.addConditionalEdges(
@@ -114,28 +114,24 @@ export function createProposalGenerationGraph() {
       revise: "connectionPairs",
     }
   );
-  
+
   // Section Manager routes to the appropriate section generator
-  graph.addConditionalEdges(
-    "sectionManager",
-    routeSectionGeneration,
-    {
-      problem_statement: "generateProblemStatement",
-      methodology: "generateMethodology",
-      budget: "generateBudget",
-      timeline: "generateTimeline",
-      conclusion: "generateConclusion",
-      complete: "__end__",
-    }
-  );
-  
+  graph.addConditionalEdges("sectionManager", routeSectionGeneration, {
+    problem_statement: "generateProblemStatement",
+    methodology: "generateMethodology",
+    budget: "generateBudget",
+    timeline: "generateTimeline",
+    conclusion: "generateConclusion",
+    complete: "__end__",
+  });
+
   // Section generation -> Section evaluation
   graph.addEdge("generateProblemStatement", "evaluateProblemStatement");
   graph.addEdge("generateMethodology", "evaluateMethodology");
   graph.addEdge("generateBudget", "evaluateBudget");
   graph.addEdge("generateTimeline", "evaluateTimeline");
   graph.addEdge("generateConclusion", "evaluateConclusion");
-  
+
   // After evaluation, return to the section manager to determine next section
   graph.addConditionalEdges(
     "evaluateProblemStatement",
@@ -145,7 +141,7 @@ export function createProposalGenerationGraph() {
       revise: "generateProblemStatement",
     }
   );
-  
+
   graph.addConditionalEdges(
     "evaluateMethodology",
     routeAfterSectionEvaluation("methodology"),
@@ -154,7 +150,7 @@ export function createProposalGenerationGraph() {
       revise: "generateMethodology",
     }
   );
-  
+
   graph.addConditionalEdges(
     "evaluateBudget",
     routeAfterSectionEvaluation("budget"),
@@ -163,7 +159,7 @@ export function createProposalGenerationGraph() {
       revise: "generateBudget",
     }
   );
-  
+
   graph.addConditionalEdges(
     "evaluateTimeline",
     routeAfterSectionEvaluation("timeline"),
@@ -172,7 +168,7 @@ export function createProposalGenerationGraph() {
       revise: "generateTimeline",
     }
   );
-  
+
   graph.addConditionalEdges(
     "evaluateConclusion",
     routeAfterSectionEvaluation("conclusion"),
@@ -186,13 +182,13 @@ export function createProposalGenerationGraph() {
   // This enables user feedback/approval at critical points
   const interruptNodes = [
     "evaluateResearch",
-    "evaluateSolution", 
+    "evaluateSolution",
     "evaluateConnections",
     "evaluateProblemStatement",
     "evaluateMethodology",
     "evaluateBudget",
     "evaluateTimeline",
-    "evaluateConclusion"
+    "evaluateConclusion",
   ];
 
   // Compile the graph with HITL interrupts
@@ -205,14 +201,16 @@ export function createProposalGenerationGraph() {
  * Runs the proposal generation graph with initial state
  * This is mainly for testing; in production, the Orchestrator will manage graph execution
  */
-export async function runProposalGeneration(initialState: Partial<ProposalState>) {
+export async function runProposalGeneration(
+  initialState: Partial<ProposalState>
+) {
   const graph = createProposalGenerationGraph();
-  
+
   // Configure execution options
   const config: RunnableConfig = {
     recursionLimit: 100, // Prevent infinite loops
   };
-  
+
   try {
     // Run the graph with the initial state
     return await graph.invoke(initialState, config);

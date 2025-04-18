@@ -340,9 +340,9 @@ export function createProposalAgentWithCheckpointer(
   console.log("Creating proposal agent with checkpointer...");
 
   // Create the checkpointer with the userId if available, or default to test value
-  const checkpointer = createCheckpointer(
-    userId || process.env.TEST_USER_ID || "anonymous"
-  );
+  const checkpointer = createCheckpointer({
+    userId: userId || process.env.TEST_USER_ID || "anonymous",
+  });
 
   // Create the graph with the configured checkpointer
   return createProposalGenerationGraph(checkpointer);
