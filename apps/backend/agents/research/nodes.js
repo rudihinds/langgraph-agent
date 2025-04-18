@@ -25,17 +25,24 @@ function extractConnectionPairs(text) {
   return connections;
 }
 
+// Import core dependencies used across multiple nodes
+import { Logger } from "@/lib/logger.js";
+import {
+  SystemMessage,
+  HumanMessage,
+  AIMessage,
+} from "@langchain/core/messages";
+import {
+  createConnectionPairsAgent,
+  createConnectionEvaluationAgent,
+} from "./agents.js";
+
 /**
  * Connection pairs node that finds alignment between applicant and funder
  * @param {import("@/state/proposal.state.js").OverallProposalState} state Current proposal state
  * @returns {Promise<Partial<import("@/state/proposal.state.js").OverallProposalState>>} Updated state with connection pairs
  */
 export async function connectionPairsNode(state) {
-  // Import required modules dynamically
-  const { Logger } = await import("@/lib/logger.js");
-  const { SystemMessage, HumanMessage, AIMessage } = await import(
-    "@langchain/core/messages"
-  );
   Logger.info("Starting connection pairs analysis");
 
   // 1. Input Validation
@@ -85,7 +92,6 @@ export async function connectionPairsNode(state) {
   try {
     // 3. Prompt Preparation
     const { connectionPairsPrompt } = await import("./prompts/index.js");
-    const { createConnectionPairsAgent } = await import("./agents.js");
 
     // Get solution sought information
     const solutionData = state.solutionResults;
@@ -361,6 +367,329 @@ export async function connectionPairsNode(state) {
         ...(state.messages || []),
         new SystemMessage(`Connection pairs analysis failed: ${error.message}`),
       ],
+    };
+  }
+}
+
+/**
+ * Node to evaluate the connection pairs between funder and applicant priorities
+ * @param {import('@/state/proposal.state.js').OverallProposalState} state Current proposal state
+ * @returns {Promise<Partial<import('@/state/proposal.state.js').OverallProposalState>>} Updated state with connection evaluation
+ */
+export async function evaluateConnectionsNode(state) {
+  Logger.info("[evaluateConnectionsNode] Starting connection pairs evaluation");
+
+  // Create a copy of the messages array to avoid mutation
+  const messages = [...(state.messages || [])];
+
+  // ==================== Input Validation ====================
+  // Check if connections exist and are not empty
+  if (!state.connections || state.connections.length === 0) {
+    const errorMsg = "No connection pairs found to evaluate.";
+    Logger.error(`[evaluateConnectionsNode] ${errorMsg}`);
+
+    messages.push(
+      new SystemMessage({
+        content:
+          "Connection pairs evaluation failed: No connection pairs found.",
+      })
+    );
+
+    return {
+      connectionsStatus: "error",
+      errors: [...(state.errors || []), errorMsg],
+      messages,
+    };
+  }
+
+  // Check if connections are in the expected format
+  if (
+    state.connections.some(
+      (connection) =>
+        !connection ||
+        typeof connection !== "string" ||
+        connection.trim() === ""
+    )
+  ) {
+    const errorMsg = "Invalid connection pairs format.";
+    Logger.error(`[evaluateConnectionsNode] ${errorMsg}`);
+
+    messages.push(
+      new SystemMessage({
+        content:
+          "Connection pairs evaluation failed: Invalid connection pairs format.",
+      })
+    );
+
+    return {
+      connectionsStatus: "error",
+      errors: [...(state.errors || []), errorMsg],
+      messages,
+    };
+  }
+
+  // ==================== Initialize Agent ====================
+  try {
+    const agent = createConnectionEvaluationAgent();
+
+    // ==================== Prepare Evaluation Input ====================
+    const evaluationInput = {
+      connections: state.connections,
+      researchResults: state.researchResults,
+      solutionResults: state.solutionResults,
+    };
+
+    // Log evaluation start
+    Logger.info("[evaluateConnectionsNode] Invoking evaluation agent");
+
+    // ==================== Agent Invocation with Timeout Prevention ====================
+    let agentResponse;
+    try {
+      // Use Promise.race with a timeout to prevent hanging
+      const timeoutDuration = 60000; // 60 seconds
+
+      const agentPromise = agent.invoke(evaluationInput);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Connection evaluation timed out after 60 seconds"));
+        }, timeoutDuration);
+      });
+
+      agentResponse = await Promise.race([agentPromise, timeoutPromise]);
+    } catch (error) {
+      // Handle specific error types
+      let errorMessage =
+        "[evaluateConnectionsNode] Failed to evaluate connection pairs: ";
+
+      if (
+        error.message.includes("timeout") ||
+        error.message.includes("timed out")
+      ) {
+        errorMessage += "Operation timed out.";
+        Logger.error(`${errorMessage} ${error.message}`);
+      } else if (
+        error.message.includes("rate limit") ||
+        error.message.includes("quota")
+      ) {
+        errorMessage += "Rate limit exceeded.";
+        Logger.error(`${errorMessage} ${error.message}`);
+      } else {
+        errorMessage += `${error.message}`;
+        Logger.error(`${errorMessage}`, error);
+      }
+
+      messages.push(
+        new SystemMessage({
+          content: `Connection pairs evaluation failed: ${error.message}`,
+        })
+      );
+
+      return {
+        connectionsStatus: "error",
+        errors: [...(state.errors || []), errorMessage],
+        messages,
+      };
+    }
+
+    // ==================== Response Processing ====================
+    // Extract the last AI message
+    const lastMessage =
+      agentResponse.messages[agentResponse.messages.length - 1];
+    const responseContent = lastMessage.content;
+
+    // Attempt to parse the response as JSON
+    let evaluationResult;
+    try {
+      // First try parsing as JSON
+      evaluationResult = JSON.parse(responseContent);
+      Logger.info(
+        "[evaluateConnectionsNode] Successfully parsed evaluation JSON response"
+      );
+    } catch (error) {
+      // JSON parsing failed, try extracting information via regex
+      Logger.warn(
+        "[evaluateConnectionsNode] Falling back to regex extraction for non-JSON response"
+      );
+      try {
+        // Extract score
+        const scoreMatch = responseContent.match(/score:?\s*(\d+)/i);
+        const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 5;
+
+        // Extract pass/fail
+        const passMatch = responseContent.match(
+          /pass(?:ed)?:?\s*(yes|true|pass|no|false|fail)/i
+        );
+        const passed = passMatch
+          ? ["yes", "true", "pass"].includes(passMatch[1].toLowerCase())
+          : score >= 6;
+
+        // Extract feedback
+        const feedbackMatch = responseContent.match(/feedback:?\s*([^\n]+)/i);
+        const feedback = feedbackMatch
+          ? feedbackMatch[1].trim()
+          : "Evaluation completed with limited details available.";
+
+        // Extract strengths
+        const strengthsSection = responseContent.match(
+          /strengths?:?\s*([\s\S]*?)(?:weaknesses?:|suggestions?:|$)/i
+        );
+        const strengths = strengthsSection
+          ? strengthsSection[1]
+              .split(/[-*•]/)
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0)
+          : ["Strengths not clearly identified"];
+
+        // Extract weaknesses
+        const weaknessesSection = responseContent.match(
+          /weaknesses?:?\s*([\s\S]*?)(?:strengths?:|suggestions?:|$)/i
+        );
+        const weaknesses = weaknessesSection
+          ? weaknessesSection[1]
+              .split(/[-*•]/)
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0)
+          : ["Weaknesses not clearly identified"];
+
+        // Extract suggestions
+        const suggestionsSection = responseContent.match(
+          /suggestions?:?\s*([\s\S]*?)(?:strengths?:|weaknesses?:|$)/i
+        );
+        const suggestions = suggestionsSection
+          ? suggestionsSection[1]
+              .split(/[-*•]/)
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0)
+          : ["Suggestions not clearly identified"];
+
+        // Construct the evaluation result
+        evaluationResult = {
+          score,
+          passed,
+          feedback,
+          strengths:
+            strengths.length > 0
+              ? strengths
+              : ["Strengths not clearly identified"],
+          weaknesses:
+            weaknesses.length > 0
+              ? weaknesses
+              : ["Weaknesses not clearly identified"],
+          suggestions:
+            suggestions.length > 0
+              ? suggestions
+              : ["Improve specificity and evidence"],
+        };
+
+        Logger.info(
+          "[evaluateConnectionsNode] Successfully extracted evaluation data using regex"
+        );
+      } catch (extractionError) {
+        // Both JSON parsing and regex extraction failed
+        const errorMsg = "Failed to parse evaluation response.";
+        Logger.error(`[evaluateConnectionsNode] ${errorMsg}`, extractionError);
+
+        messages.push(
+          new SystemMessage({
+            content: `Connection pairs evaluation failed: ${errorMsg}`,
+          })
+        );
+
+        return {
+          connectionsStatus: "error",
+          errors: [...(state.errors || []), errorMsg],
+          messages,
+        };
+      }
+    }
+
+    // Validate the evaluation result has required fields
+    if (
+      !evaluationResult ||
+      typeof evaluationResult.score !== "number" ||
+      typeof evaluationResult.passed !== "boolean" ||
+      !evaluationResult.feedback ||
+      !Array.isArray(evaluationResult.strengths) ||
+      !Array.isArray(evaluationResult.weaknesses) ||
+      !Array.isArray(evaluationResult.suggestions)
+    ) {
+      const errorMsg = "Evaluation response missing required fields.";
+      Logger.warn(`[evaluateConnectionsNode] ${errorMsg}`, {
+        evaluationResult,
+      });
+
+      messages.push(
+        new SystemMessage({
+          content: `Connection pairs evaluation incomplete: ${errorMsg}`,
+        })
+      );
+
+      return {
+        connectionsStatus: "error",
+        errors: [...(state.errors || []), errorMsg],
+        messages,
+      };
+    }
+
+    // Log successful evaluation
+    Logger.info(
+      `[evaluateConnectionsNode] Successfully evaluated connection pairs (score: ${evaluationResult.score}, passed: ${evaluationResult.passed})`
+    );
+
+    // Add the evaluation result to messages
+    messages.push(
+      new SystemMessage({
+        content: `Connection pairs evaluated with score: ${evaluationResult.score}/10 (${evaluationResult.passed ? "PASS" : "FAIL"}).\nFeedback: ${evaluationResult.feedback}`,
+      })
+    );
+
+    // ==================== Prepare State Update ====================
+    // Set interrupt metadata and status for HITL interrupt
+    return {
+      connectionsEvaluation: evaluationResult,
+
+      // Set interrupt metadata to provide context for the UI
+      interruptMetadata: {
+        reason: "EVALUATION_NEEDED",
+        nodeId: "evaluateConnectionsNode",
+        timestamp: new Date().toISOString(),
+        contentReference: "connections",
+        evaluationResult: evaluationResult,
+      },
+
+      // Set interrupt status to signal user review needed
+      interruptStatus: {
+        isInterrupted: true,
+        interruptionPoint: "evaluateConnections",
+        feedback: null,
+        processingStatus: "pending",
+      },
+
+      // Update connections status
+      connectionsStatus: "awaiting_review",
+      status: "awaiting_review",
+
+      // Return accumulated messages
+      messages,
+
+      // Clear previous errors (if any)
+      errors: [],
+    };
+  } catch (error) {
+    // Handle unexpected errors
+    const errorMsg = `Unexpected error in connection pairs evaluation: ${error.message}`;
+    Logger.error(`[evaluateConnectionsNode] ${errorMsg}`, error);
+
+    messages.push(
+      new SystemMessage({
+        content: `Connection pairs evaluation failed: Unexpected error occurred.`,
+      })
+    );
+
+    return {
+      connectionsStatus: "error",
+      errors: [...(state.errors || []), errorMsg],
+      messages,
     };
   }
 }
