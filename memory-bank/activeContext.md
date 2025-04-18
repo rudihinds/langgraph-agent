@@ -1,83 +1,56 @@
 # Active Context
 
-## Current Focus: HITL Implementation
+## 1. Current Focus (as of 2024-07-26)
 
-The Human-In-The-Loop (HITL) implementation is now complete. Key components include:
+The primary focus is now squarely on **implementing the `documentLoaderNode`** (Task 16.1) according to the detailed plan derived from the TDD test suite. This involves:
 
-1. **Orchestrator Service**:
+- Writing the node function in `apps/backend/agents/proposal-generation/nodes/documentLoader.ts`.
+- Integrating with the Supabase client for file download.
+- Utilizing the `parseRfpFromBuffer` utility (or equivalent based on `UnstructuredLoader`).
+- Handling various success and error scenarios (file types, Supabase errors, parsing errors).
+- Correctly updating the `OverallProposalState` (`rfpDocument` status, content, metadata, errors).
+- Ensuring proper temporary file handling and cleanup.
 
-   - Implemented methods for handling interrupts (`getInterruptStatus`)
-   - Added feedback processing (`submitFeedback`)
-   - Created methods for resuming after feedback (`resumeAfterFeedback`)
-   - Standardized method signatures for consistency
+**Update (2024-07-26)**: The `documentLoaderNode` implementation has been written and all tests are now passing. Key learnings about Vitest mocking patterns have been documented to prevent similar issues in future tests.
 
-2. **API Endpoints**:
+Secondary focus remains on addressing the persistent issue preventing updates to `memory-bank/progress.md`.
 
-   - Refactored to follow Express.js patterns
-   - Implemented factory function (`getOrchestrator`) for consistent instantiation
-   - Added proper validation using Zod
-   - Fixed response structures across endpoints
+## 2. Recent Changes (Last 24-48 hours)
 
-3. **Testing Status**:
-   - Created unit tests for Orchestrator methods and API endpoints
-   - Implemented integration tests for the full HITL workflow
-   - Identified remaining issues in dependency order:
-     - Package dependencies (supertest)
-     - Type definitions
-     - Module resolution
-     - Test mock updates
+- **`documentLoaderNode` Implementation Complete**: Successfully implemented the node that retrieves RFP documents from Supabase, parses them based on MIME type, and updates the proposal state.
+- **Test Suite Fixed**: Resolved critical issues with Vitest mocking patterns for Node.js built-in modules (`fs`, `path`, `os`).
+- **Vitest Mocking Learnings**: Discovered and documented proper patterns for mocking modules with both default and named exports in Vitest.
+- **Integration Test Plan**: Developed a detailed plan for integration testing the `documentLoaderNode`.
+- **`progress.md` Update Failure:** Multiple attempts (including reapply) to update `progress.md` via file edits failed. The intended content was summarized in chat.
 
-The HITL implementation now allows for seamless user intervention during proposal generation:
+## 3. Next Steps (Immediate Priorities)
 
-- The system pauses after evaluation nodes
-- Users can review and provide feedback
-- The system processes feedback and continues generation
-- All state transitions are tracked properly
+1. **Implement Document Parser Node**: Begin work on the next node in the document processing pipeline (Task 16.2).
+2. **Complete Integration Tests**: Implement the planned integration tests for `documentLoaderNode` to verify end-to-end functionality.
+3. **Requirement Analysis Node**: Prepare for implementing the requirement analysis functionality.
+4. **(If `progress.md` update fails again) Document Issue:** Log the persistent `progress.md` update failure as a known issue requiring investigation.
 
-Next steps include fixing the remaining test issues, enhancing test coverage for edge cases, improving documentation, and implementing performance testing.
+## 4. Active Decisions & Considerations
 
-## Recent Changes
+- **TDD for Nodes:** Reinforce the decision to use TDD for subsequent node implementations.
+- **Error Handling:** Prioritize robust error handling within node implementations.
+- **State Management:** Ensure nodes correctly update `OverallProposalState`.
+- **Vitest Mocking Patterns:** Apply consistent patterns for mocking Node.js built-in modules and ES modules:
+  - Use `vi.hoisted()` to create mock functions that can be referenced in `vi.mock()` calls
+  - Properly mock both default and named exports for ES modules
+  - For Node.js built-in modules like `fs`, ensure proper mocking of nested properties (e.g., `fs.promises`)
+  - Pay special attention to the structure of mocked modules to match import patterns
+- **`progress.md` Issue:** Need to investigate _why_ the file edits are failing for this specific file. Permissions? Locking? Tooling bug?
 
-### HITL Workflow Implementation
+## 5. Learnings & Project Insights
 
-- Fixed the `OrchestratorService.submitFeedback` method signature to match the test expectations. It now takes two parameters: `threadId` and a feedback object.
-- Updated the feedback API endpoint to pass the correct parameters to the `submitFeedback` method.
-- Fixed the `prepareFeedbackForProcessing` method to use the FeedbackType enum and apply the correct status updates:
-  - "approved" status for approval feedback
-  - "edited" status for revision feedback
-  - "stale" status for regeneration feedback
-- Restored the `resumeAfterFeedback` method to properly handle graph resumption after feedback processing
-- Restored the `getInterruptStatus` method that was missing
-- Fixed API endpoints to properly instantiate the OrchestratorService with the required graph and checkpointer parameters
+- **Core Functionality Gap:** Implementation of nodes/services is the critical path.
+- **TDD Value:** Test suite provides a clear implementation roadmap.
+- **Tool Reliability:** Encountered potential inconsistency with file editing tools for `progress.md`.
+- **Vitest Mocking Challenges**: Several key insights about Vitest mocking:
+  - ES Modules require special handling: When mocking modules with both default and named exports, you must provide both in the mock factory.
+  - Hoisting matters: Use `vi.hoisted()` for creating mock functions that need to be referenced in `vi.mock()` calls.
+  - Node.js built-ins structure: When mocking Node.js modules like `fs`, the structure must match the import pattern (e.g., `fs.promises.writeFile`).
+  - Mock objects must match import structure: If code imports `x` from module and then uses `x.y.z()`, your mock must support that exact structure.
 
-### API Endpoint Fixes
-
-- Updated all API endpoints to use the `createProposalAgentWithCheckpointer` function to create a properly configured graph instance
-- Ensured that the OrchestratorService is instantiated with both the graph and its checkpointer
-- Alignment of parameter names between the API, service methods, and test expectations
-
-## Next Steps
-
-- Address remaining type errors in the OrchestratorService
-- Implement any missing edge cases in the HITL workflow
-- Add more comprehensive tests for the feedback handling
-
-## Active Decisions and Considerations
-
-- We need to ensure that the status transitions in response to feedback are properly handled
-- The HITL workflow should be resilient to errors and unexpected states
-- API endpoints need to be consistent in how they create and use the OrchestratorService
-
-## Important Patterns and Preferences
-
-- The OrchestratorService is central to the HITL workflow, coordinating between the graph, checkpointer, and user feedback
-- Feedback handling should follow a consistent pattern:
-  1. Detect interrupt → Get interrupt details → Process feedback → Resume graph
-  2. Status transitions should be explicit and predictable
-  3. State updates should be immutable
-
-## Learnings and Project Insights
-
-- The HITL workflow requires careful coordination between multiple components
-- Tests are essential for verifying that the workflow behaves as expected under different feedback scenarios
-- Type safety is important, especially for complex state objects like OverallProposalState
+_This document reflects the immediate working context, recent activities, and near-term goals. It should be updated frequently._
