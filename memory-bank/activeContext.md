@@ -32,36 +32,50 @@ Task 16.5: Implement the `sectionManagerNode` - This node will organize the docu
    - Created detailed error handling patterns consistent with other nodes
    - Updated implementation plan to reflect the completed implementation
 
-3. Documented the standardized evaluation pattern:
-   - Created `evaluation_pattern_documentation.md` with comprehensive details on the evaluation approach
-   - Defined a reusable pattern for all evaluation nodes in the system
-   - Specified the standardized `EvaluationResult` interface and HITL interrupt metadata
-   - Outlined requirements for `OverallProposalState` updates to support the pattern
-   - Aligned the approach with industry best practices for AI system evaluation
+3. Fixed the `evaluationCriteria.test.ts` tests:
+   - Corrected mock implementations for filesystem operations
+   - Properly implemented `pathResolve` mocks using `vi.hoisted()`
+   - Fixed file path handling to correctly work with the "config/evaluation/criteria" pattern
+   - Updated expectations in the test to match actual implementation behavior
+   - Successfully resolved all 12 tests in the evaluation criteria test file
 
 ## Next Steps
 
-1. Begin implementation of `sectionManagerNode` (Task 16.5):
+1. Focus on fixing the `contentExtractors.test.ts` tests:
+
+   - Analyze failures related to content extraction functionality
+   - Create a phased approach to fixing the tests
+   - Properly mock any dependencies using the patterns established in `evaluationCriteria.test.ts`
+   - Fix implementation issues with content extractors for various section types
+   - Apply Vitest best practices for mocking and resetting between tests
+
+2. Continue with remaining evaluation tests:
+
+   - `evaluationNodeFactory.test.ts` - Tests for factory functionality
+   - `errorHandling.test.ts` - Tests for error conditions
+   - `stateManagement.test.ts` - Tests for state compatibility
+
+3. Begin implementation of `sectionManagerNode` (Task 16.5):
 
    - Create specification document (`spec_16.5.md`)
    - Develop comprehensive test suite following TDD approach
    - Implement node functionality for section organization and management
    - Ensure proper integration with the main graph
 
-2. Update `OverallProposalState` to fully support the standardized evaluation pattern:
+4. Update `OverallProposalState` to fully support the standardized evaluation pattern:
 
    - Add standardized HITL interruption fields (`interruptStatus` and `interruptMetadata`)
    - Ensure evaluation result fields exist for all content types
    - Add proper typing for evaluation status transitions
    - Update the `SectionData` interface with consistent evaluation fields
 
-3. Create evaluation configuration files:
+5. Create evaluation configuration files:
 
    - Implement criteria configuration for each content type
    - Develop standardized evaluation prompts
    - Ensure consistent scoring mechanisms
 
-4. Continue following the TDD approach:
+6. Continue following the TDD approach:
    - Write tests first to establish expected behavior
    - Implement functionality to pass the tests
    - Refactor while maintaining test coverage
@@ -136,15 +150,14 @@ We maintain consistent naming conventions:
 
 ## Current Focus
 
-Working on implementing and testing the evaluation framework for proposal sections. The framework provides standardized patterns for evaluating content across different sections of the proposal, with consistent state management and human-in-the-loop integration.
+Working on fixing the evaluation framework test suite using TDD principles. We've successfully fixed `evaluationCriteria.test.ts` and are now moving on to `contentExtractors.test.ts`, focusing on ensuring content extractors can properly access and validate content from the state object.
 
 ## Recent Changes
 
-- Implemented `EvaluationNodeFactory` class and supporting components
-- Created content extractors for different section types
-- Developed evaluation criteria JSON files
-- Fixed mocking issues in test files
-- Added comprehensive tests for the evaluation framework components
+- Fixed `evaluationCriteria.test.ts` with proper mocking patterns
+- Successfully implemented correct file path handling with the "config/evaluation/criteria" pattern
+- Added proper mocking techniques using `vi.hoisted()` to ensure mocks are defined before use
+- Updated tests to have the correct expectations for file paths and criteria loading
 
 ## Vitest Testing Learnings
 
@@ -235,11 +248,12 @@ We've uncovered several important learnings about effective Vitest testing:
 
 ## Next Steps
 
-1. Update implementation plan with comprehensive test coverage requirements
-2. Implement test suite that verifies compatibility with actual state structure
-3. Add tests for error handling scenarios
-4. Integrate evaluation nodes with the main proposal generation graph
-5. Apply the Vitest testing learnings to future test implementations
+1. Run `contentExtractors.test.ts` to identify failures
+2. Create a phased plan to fix the content extractor tests
+3. Implement fixes following established mocking patterns
+4. Verify content extractors properly handle various state structures
+5. Continue with remaining evaluation framework tests
+6. Update implementation plan with comprehensive test coverage requirements
 
 ## Important Patterns and Preferences
 
@@ -260,5 +274,356 @@ Most difficult aspects of the testing process:
 - Balancing comprehensive testing with maintainable test files
 - Properly handling hoisting in Vitest to avoid reference errors
 - Managing type compatibility between test state objects and production state interfaces
+
+## Comprehensive Guide to Vitest Testing
+
+Based on our recent experience with fixing evaluation framework tests, we've compiled a comprehensive guide to Vitest testing best practices that will be valuable for all future testing efforts:
+
+### 1. Module Mocking Strategy
+
+#### Basic Module Mocking
+
+```typescript
+// Define mocks using vi.hoisted to avoid reference errors
+const mocks = vi.hoisted(() => ({
+  someFunction: vi.fn().mockReturnValue("mocked result"),
+  anotherFunction: vi.fn().mockResolvedValue({ data: "async result" }),
+}));
+
+// Mock the module - this is automatically hoisted to the top
+vi.mock("../path/to/module", () => ({
+  someFunction: mocks.someFunction,
+  anotherFunction: mocks.anotherFunction,
+}));
+```
+
+#### Mocking ES Modules with Default Exports
+
+```typescript
+// Must include both default and named exports
+const moduleMock = vi.hoisted(() => ({
+  default: {
+    mainFunction: vi.fn(),
+    helperFunction: vi.fn(),
+  },
+  namedExport1: vi.fn(),
+  namedExport2: vi.fn(),
+}));
+
+vi.mock("../module-with-default", () => moduleMock);
+```
+
+#### Testing-Only Modules
+
+For testing-specific mocks that don't exist in the real codebase:
+
+```typescript
+// Define a test-only mock module
+const testUtilsMock = vi.hoisted(() => ({
+  testHelper: vi.fn(),
+}));
+
+// Add to global scope for test
+globalThis.testUtils = testUtilsMock;
+```
+
+### 2. File System and Path Mocking
+
+File system mocking is particularly error-prone. Use these consistent patterns:
+
+```typescript
+// Path module - always mock both default export and named exports
+const pathMock = vi.hoisted(() => ({
+  resolve: vi.fn((...segments) => segments.join("/")),
+  join: vi.fn((...segments) => segments.join("/")),
+  dirname: vi.fn((p) => p.split("/").slice(0, -1).join("/")),
+  default: {
+    resolve: vi.fn((...segments) => segments.join("/")),
+    join: vi.fn((...segments) => segments.join("/")),
+    dirname: vi.fn((p) => p.split("/").slice(0, -1).join("/")),
+  },
+}));
+
+vi.mock("path", () => pathMock);
+
+// FS module - mock both promises and callback APIs
+const fsMock = vi.hoisted(() => ({
+  promises: {
+    readFile: vi.fn(),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    access: vi.fn().mockResolvedValue(undefined),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+  },
+  readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  existsSync: vi.fn().mockReturnValue(true),
+}));
+
+vi.mock("fs", () => fsMock);
+```
+
+### 3. Dynamic Mock Behavior
+
+Use control variables to adjust mock behavior between tests:
+
+```typescript
+// Control variable pattern
+let fileExists = true;
+let fileContent = '{"valid": "json"}';
+
+const fsMock = vi.hoisted(() => ({
+  promises: {
+    access: vi.fn().mockImplementation(() => {
+      if (!fileExists) throw new Error("File not found");
+      return Promise.resolve();
+    }),
+    readFile: vi.fn().mockImplementation(() => {
+      if (!fileExists) throw new Error("File not found");
+      return Promise.resolve(fileContent);
+    }),
+  },
+}));
+
+// Reset control variables before each test
+beforeEach(() => {
+  fileExists = true;
+  fileContent = '{"valid": "json"}';
+  vi.clearAllMocks();
+});
+
+// In specific tests
+it("handles missing files", async () => {
+  fileExists = false;
+  // Test expects error to be handled
+});
+
+it("handles malformed JSON", async () => {
+  fileContent = "{ invalid json";
+  // Test expects parsing error to be handled
+});
+```
+
+### 4. TypeScript Integration
+
+TypeScript and Vitest require special care to ensure type safety:
+
+```typescript
+// Type the mock functions and return values
+type MockReadFileFunc = (path: string) => Promise<string>;
+type MockCalculateScoreFunc = (
+  criteria: Criterion[],
+  scores: Record<string, number>
+) => number;
+
+// Explicitly type the mock object
+const mocks = {
+  readFile: vi.fn<[string], Promise<string>>(),
+  calculateScore: vi.fn<[Criterion[], Record<string, number>], number>(),
+};
+
+// Implement with proper types
+mocks.readFile.mockImplementation((path: string): Promise<string> => {
+  // Implementation
+  return Promise.resolve("content");
+});
+
+mocks.calculateScore.mockImplementation(
+  (criteria: Criterion[], scores: Record<string, number>): number => {
+    // Implementation
+    return 0.75;
+  }
+);
+```
+
+### 5. Test Organization
+
+Structure tests for maintainability:
+
+```typescript
+describe("ComponentName", () => {
+  // Common setup
+  beforeEach(() => {
+    // Reset mocks, set up test environment
+  });
+
+  describe("Functionality Group 1", () => {
+    it("handles the happy path", () => {
+      // Test normal operation
+    });
+
+    it("handles edge case 1", () => {
+      // Test specific edge case
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("handles missing inputs", () => {
+      // Test error condition
+    });
+
+    it("handles API failures", () => {
+      // Test error condition
+    });
+  });
+});
+```
+
+### 6. State Verification
+
+Test complex state transformations thoroughly:
+
+```typescript
+it("properly updates state with evaluation results", async () => {
+  // Arrange: Create initial state
+  const initialState = {
+    evaluationStatus: "running",
+    evaluationResults: null,
+    messages: [],
+    errors: [],
+  };
+
+  // Act: Call function under test
+  const updatedState = await evaluateNode(initialState);
+
+  // Assert: Check all relevant state changes
+  expect(updatedState.evaluationStatus).toBe("awaiting_review");
+  expect(updatedState.evaluationResults).not.toBeNull();
+  expect(updatedState.evaluationResults?.passed).toBe(true);
+  expect(updatedState.evaluationResults?.score).toBeGreaterThanOrEqual(0.7);
+  expect(updatedState.messages.length).toBeGreaterThan(0);
+  expect(updatedState.errors.length).toBe(0);
+});
+```
+
+### 7. Testing Asynchronous Code
+
+Properly handle async testing:
+
+```typescript
+it("properly handles async operations", async () => {
+  // Use .mockResolvedValue for Promises
+  mockApiCall.mockResolvedValue({ data: "result" });
+
+  // Test async function
+  const result = await asyncFunction();
+
+  // Assertions
+  expect(result).toBeDefined();
+
+  // Verify Promise chain completion
+  expect(mockApiCall).toHaveBeenCalledTimes(1);
+});
+
+it("handles async errors correctly", async () => {
+  // Use .mockRejectedValue for Promise rejections
+  mockApiCall.mockRejectedValue(new Error("API failed"));
+
+  // Test with expect-throws for async functions
+  await expect(asyncFunction()).rejects.toThrow("API failed");
+
+  // Or test error handling behavior
+  const result = await asyncFunctionWithErrorHandling();
+  expect(result.error).toBeDefined();
+  expect(result.error.message).toContain("API failed");
+});
+```
+
+### 8. Complex Mock Implementation
+
+For mocks with complex behavior:
+
+```typescript
+// Mock with conditional behavior
+mocks.validateContent.mockImplementation((content, validators) => {
+  // Handle different content types
+  if (!content) {
+    return { valid: false, errors: ["Content is required"] };
+  }
+
+  // Handle different validator types
+  if (validators.includes("json")) {
+    try {
+      JSON.parse(content);
+      return { valid: true };
+    } catch (e) {
+      return { valid: false, errors: ["Invalid JSON"] };
+    }
+  }
+
+  // Default behavior
+  return { valid: true };
+});
+```
+
+### 9. Mocking Global Objects
+
+When you need to mock global objects:
+
+```typescript
+// Process, console, etc.
+const originalProcess = { ...process };
+const originalConsole = { ...console };
+
+beforeEach(() => {
+  // Use Object.defineProperty to mock globals
+  Object.defineProperty(global, "process", {
+    value: {
+      ...process,
+      cwd: vi.fn().mockReturnValue("/test/path"),
+      env: { ...process.env, NODE_ENV: "test" },
+    },
+  });
+
+  Object.defineProperty(global, "console", {
+    value: {
+      ...console,
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
+  });
+});
+
+afterEach(() => {
+  // Restore original globals
+  Object.defineProperty(global, "process", {
+    value: originalProcess,
+  });
+
+  Object.defineProperty(global, "console", {
+    value: originalConsole,
+  });
+});
+```
+
+### 10. Testing Best Practices
+
+1. **Testing Hierarchy**:
+
+   - Write unit tests for individual functions, components, and nodes
+   - Write integration tests for workflows and interactions between components
+   - Focus on behavior, not implementation details
+
+2. **Test Isolation**:
+
+   - Each test should be independent - reset state between tests
+   - Avoid test order dependencies
+   - Use beforeEach to set up a clean test environment
+
+3. **Comprehensive Test Coverage**:
+
+   - Test happy paths (normal operation)
+   - Test boundary conditions (min/max values, empty arrays, etc.)
+   - Test error paths (missing inputs, API failures, etc.)
+   - Test performance considerations (timeouts, rate limits)
+   - Test edge cases specific to your domain (unusual input formats, etc.)
+
+4. **Test Readability**:
+   - Use descriptive test names that explain the behavior being tested
+   - Follow the Arrange-Act-Assert pattern for clarity
+   - Include comments for complex test logic
+   - Group related tests with describe blocks
+
+By following these patterns and practices, we can maintain high-quality tests across the codebase, ensuring robustness and reliability of our implementation.
 
 _This document reflects the immediate working context, recent activities, and near-term goals. It should be updated frequently._
