@@ -165,95 +165,170 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Fix mock implementation for custom validation to ensure proper handling of both boolean and object returns
 - [x] Test content extractors for various input scenarios
 
+### Vitest Testing Best Practices
+
+#### Module Mocking
+
+- [x] Use `vi.hoisted()` for all mock definitions to avoid reference errors
+- [x] Ensure path mocks include both named exports and default export
+- [x] Reset mocks in `beforeEach`/`afterEach` hooks to ensure clean test state
+- [x] For modules with default exports, mock both default and named exports
+- [x] Use control variables to adjust mock behavior between different test cases
+- [x] Properly structure fs/path mocks to simulate file system operations
+
+#### TypeScript Integration
+
+- [x] Create proper test state interfaces that match actual state structure
+- [x] Use type assertions strategically to satisfy TypeScript without compromising test value
+- [x] Import actual state types from source files when possible
+- [x] For partial test states, use `as` type assertions to cast to required interface types
+- [x] Use explicit indexing notation for accessing properties on test objects (e.g., `state.sections['research']`)
+- [x] Define comprehensive interfaces for test objects that mirror production interfaces
+
+#### Test Organization
+
+- [x] Split tests into logical components with focused test files
+- [x] Use nested `describe` blocks for better test organization
+- [x] Create setup/teardown routines with `beforeEach`/`afterEach`
+- [x] Use descriptive test names that specify behavior, not implementation
+- [x] Organize tests from simple to complex scenarios
+
 ### Comprehensive Test Coverage
 
 #### State Structure Tests
 
-- [ ] Create proper mock state objects that match `OverallProposalState` interface
+- [x] Create proper mock state objects that match `OverallProposalState` interface
 
-  - [ ] Include all required fields (sections, statuses, messages, errors)
-  - [ ] Mirror the exact structure of nested fields (e.g., `sections[sectionId].content`)
-  - [ ] Use correct field types to catch type mismatch issues
-  - [ ] Test with complete state and minimal valid state
+  - [x] Include all required fields (sections, statuses, messages, errors)
+  - [x] Mirror the exact structure of nested fields (e.g., `sections[sectionId].content`)
+  - [x] Use correct field types to catch type mismatch issues
+  - [x] Test with complete state and minimal valid state
 
-- [ ] Verify state field access
+- [x] Verify state field access
 
-  - [ ] Test content extractors can access specific state fields
-  - [ ] Test compatibility with nested state properties
-  - [ ] Verify correct handling of optional fields
+  - [x] Test content extractors can access specific state fields
+  - [x] Test compatibility with nested state properties
+  - [x] Verify correct handling of optional fields
 
-- [ ] Validate state updates
-  - [ ] Test that nodes properly update status fields
-  - [ ] Verify result fields are populated correctly
-  - [ ] Confirm error messages are added to the correct fields
-  - [ ] Test that interrupt flags are properly set
-  - [ ] Verify interrupt metadata format and content
+- [x] Validate state updates
+  - [x] Test that nodes properly update status fields
+  - [x] Verify result fields are populated correctly
+  - [x] Confirm error messages are added to the correct fields
+  - [x] Test that interrupt flags are properly set
+  - [x] Verify interrupt metadata format and content
 
 #### Core Processing Tests
 
-- [ ] Test with actual criteria files
+- [x] Test with actual criteria files
 
-  - [ ] Load criteria files from `/config/evaluation/criteria/`
-  - [ ] Test all content types (research, solution, sections)
-  - [ ] Verify error handling when criteria file is missing
-  - [ ] Test fallback to default criteria
+  - [x] Load criteria files from `/config/evaluation/criteria/`
+  - [x] Test all content types (research, solution, sections)
+  - [x] Verify error handling when criteria file is missing
+  - [x] Test fallback to default criteria
 
-- [ ] Verify content extraction
+- [x] Verify content extraction
 
-  - [ ] Test extractors with different state structures
-  - [ ] Verify handling of empty/missing content
-  - [ ] Test extraction of structured content (JSON)
-  - [ ] Test extraction of text content
+  - [x] Test extractors with different state structures
+  - [x] Verify handling of empty/missing content
+  - [x] Test extraction of structured content (JSON)
+  - [x] Test extraction of text content
 
-- [ ] Test evaluation process
+- [x] Test evaluation process
 
-  - [ ] Verify status transitions
-  - [ ] Test score calculations based on criteria weights
-  - [ ] Verify pass/fail determination based on thresholds
-  - [ ] Test application of critical criteria rules
+  - [x] Verify status transitions
+  - [x] Test score calculations based on criteria weights
+  - [x] Verify pass/fail determination based on thresholds
+  - [x] Test application of critical criteria rules
 
-- [ ] Test HITL integration
-  - [ ] Verify interrupt flag is set
-  - [ ] Test interrupt metadata structure
-  - [ ] Test metadata includes correct content references
-  - [ ] Verify available actions match expected options
+- [x] Test HITL integration
+  - [x] Verify interrupt flag is set
+  - [x] Test interrupt metadata structure
+  - [x] Test metadata includes correct content references
+  - [x] Verify available actions match expected options
 
 #### Error Handling Tests
 
-- [ ] Test missing content scenarios
+- [x] Test missing content scenarios
 
-  - [ ] Verify error handling when content is empty
-  - [ ] Test error handling when content field is missing
-  - [ ] Verify error handling when content is malformed
-  - [ ] Test custom validation error handling
+  - [x] Verify error handling when content is empty
+  - [x] Test error handling when content field is missing
+  - [x] Verify error handling when content is malformed
+  - [x] Test custom validation error handling
 
-- [ ] Test LLM interaction errors
+- [x] Test LLM interaction errors
 
-  - [ ] Test handling of timeout errors
-  - [ ] Verify error handling for API failures
-  - [ ] Test handling of malformed LLM responses
-  - [ ] Verify recovery from transient errors
+  - [x] Test handling of timeout errors
+  - [x] Verify error handling for API failures
+  - [x] Test handling of malformed LLM responses
+  - [x] Verify recovery from transient errors
 
-- [ ] Test error reporting and propagation
-  - [ ] Verify errors are added to state.errors array
-  - [ ] Test error message format and content
-  - [ ] Verify error status is set correctly
-  - [ ] Test error information is available to the Orchestrator
+- [x] Test error reporting and propagation
+  - [x] Verify errors are added to state.errors array
+  - [x] Test error message format and content
+  - [x] Verify error status is set correctly
+  - [x] Test error information is available to the Orchestrator
 
 ### Test File Structure
 
-- [ ] Split tests across multiple files to improve maintainability:
-  - [ ] `evaluationNodeFactory.test.ts` - Tests for the factory functionality
-  - [ ] `contentExtractors.test.ts` - Tests for content extraction functions
-  - [ ] `evaluationCriteria.test.ts` - Tests for criteria loading and validation
-  - [ ] `stateManagement.test.ts` - Tests for state compatibility and updates
-  - [ ] `errorHandling.test.ts` - Tests for error conditions and recovery
+- [x] Split tests across multiple files to improve maintainability:
+  - [x] `evaluationNodeFactory.test.ts` - Tests for the factory functionality
+  - [x] `contentExtractors.test.ts` - Tests for content extraction functions
+  - [x] `evaluationCriteria.test.ts` - Tests for criteria loading and validation
+  - [x] `stateManagement.test.ts` - Tests for state compatibility and updates
+  - [x] `errorHandling.test.ts` - Tests for error conditions and recovery
 
 ### Integration Tests
 
 - [ ] Test node interaction with LangGraph
 - [ ] Test full evaluation workflows
 - [ ] Test Orchestrator integration
+
+### Test Mocking Guidelines
+
+- [x] Follow these mocking patterns for consistent test implementation:
+
+  - [x] Use `vi.hoisted()` for all mock definitions to avoid reference errors
+  - [x] For file system operations, mock both path and fs modules comprehensively
+  - [x] For path module, include both default export and named exports in mock
+  - [x] Use control variables (e.g., `mockShouldFail = true/false`) to control mock behavior between tests
+  - [x] Reset all mocks and control variables in `beforeEach`/`afterEach` hooks
+  - [x] For complex return values, explicitly type the mock implementation
+  - [x] Use `mockImplementation()` over `mockReturnValue()` for conditional logic in mocks
+
+- [x] Standard mock patterns to use:
+
+  ```typescript
+  // Path module mocking
+  const pathMock = vi.hoisted(() => ({
+    resolve: vi.fn(),
+    default: { resolve: vi.fn() },
+  }));
+  vi.mock("path", () => pathMock);
+
+  // FS module mocking
+  const fsMock = vi.hoisted(() => ({
+    promises: {
+      access: vi.fn(),
+      readFile: vi.fn(),
+    },
+  }));
+  vi.mock("fs", () => fsMock);
+
+  // Testing module with control variables
+  let mockShouldFail = false;
+  const moduleMock = vi.hoisted(() => ({
+    someFunction: vi.fn().mockImplementation(() => {
+      if (mockShouldFail) throw new Error("Test error");
+      return "success";
+    }),
+  }));
+  vi.mock("./module-path", () => moduleMock);
+
+  beforeEach(() => {
+    mockShouldFail = false;
+    vi.clearAllMocks();
+  });
+  ```
 
 ## Documentation
 
@@ -328,8 +403,10 @@ This implementation plan outlines the tasks required to build the standardized e
    - Add visualizations for evaluation results
    - Create responsive UI for evaluation workflow
 
-4. **Add comprehensive testing**:
-   - Create integration tests for the full evaluation workflow
-   - Test the graph with evaluation nodes
-   - Verify checkpoint persistence of evaluation results
-   - Test HITL evaluation review process
+4. **Apply testing best practices to remaining tests**:
+   - Implement proper module mocking with `vi.hoisted()`
+   - Create proper test state interfaces that match production types
+   - Use the standardized mock patterns for fs, path, and custom modules
+   - Split large test files into focused, maintainable components
+   - Add explicit type assertions where necessary to maintain type safety
+   - Ensure test organization follows the established patterns
