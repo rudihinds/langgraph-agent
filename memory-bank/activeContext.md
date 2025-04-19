@@ -144,6 +144,7 @@ Working on implementing and testing the evaluation framework for proposal sectio
 - Created content extractors for different section types
 - Developed evaluation criteria JSON files
 - Fixed mocking issues in test files
+- Added comprehensive tests for the evaluation framework components
 
 ## Vitest Testing Learnings
 
@@ -155,13 +156,23 @@ We've uncovered several important learnings about effective Vitest testing:
    - Use `vi.hoisted(() => { return {...} })` to define mocks before they're used in `vi.mock()`
    - When mocking a module with default export, include both `default: {...}` and individual exports
    - ES modules require different mocking approaches than CommonJS modules
+   - Always mock path module with both named exports and default export:
+     ```typescript
+     const pathMock = vi.hoisted(() => ({
+       resolve: vi.fn(),
+       default: { resolve: vi.fn() },
+     }));
+     vi.mock("path", () => pathMock);
+     ```
 
-2. **TypeScript Type Safety**:
+2. **TypeScript Type Safety in Tests**:
 
    - Create test state interfaces that properly match the actual state structure
    - Use type assertions where necessary to satisfy TypeScript without compromising test value
    - Define proper interfaces for test states that match production state structures
    - Import actual state types from the source files when possible
+   - For partial test states, consider using type assertions to cast `TestState as OverallProposalState` where needed
+   - When targeting specific fields, use explicit indexing notation (e.g., `state.sections['research']`) to avoid type errors
 
 3. **Mocking Best Practices**:
 
@@ -169,13 +180,58 @@ We've uncovered several important learnings about effective Vitest testing:
    - Reset mocks before/after each test to ensure clean state
    - For path module, ensure both `default.resolve` and `resolve` are mocked
    - Implement mock behavior that matches the expected behavior of production code
+   - Use control variables to adjust mock behavior between tests:
+
+     ```typescript
+     let mockShouldFail = false;
+     const myMock = vi.hoisted(() => ({
+       someFunction: vi.fn().mockImplementation(() => {
+         if (mockShouldFail) throw new Error("Test error");
+         return "success";
+       }),
+     }));
+
+     beforeEach(() => {
+       mockShouldFail = false;
+     });
+     ```
 
 4. **Testing Implementation Challenges**:
+
    - Test files can get long - consider splitting into multiple files (e.g., factory tests, content extractor tests)
    - Ensure tests verify actual behavior, not just that mocks were called
    - Test both happy paths and error handling
    - Verify that state transformations are handled correctly
    - Ensure proper error propagation from nested functions
+   - For complex node functions, test the individual components separately before testing the node as a whole
+
+5. **Vitest-specific Patterns**:
+
+   - Use `vi.hoisted()` for defining mocks to avoid reference errors
+   - Understand hoisting behavior: `vi.mock()` calls are automatically hoisted but the mock implementations need to be defined using `vi.hoisted()`
+   - Use `beforeEach` and `afterEach` to reset mock state between tests
+   - Structure tests with nested `describe` blocks for better organization
+   - Use `vi.spyOn` for functions that need to be monitored but not completely mocked
+   - For Node.js built-ins like `fs` and `path`, create comprehensive mocks that mimic the module's behavior
+   - When dealing with complex return types from functions, explicitly type the mock implementations
+
+6. **File System and Path Mocking**:
+   - Always use `vi.hoisted()` for fs/path mocks to ensure they're defined before use
+   - For `fs` module, mock both the promises API and the callback API if both are used
+   - For `path` module, ensure the mock includes both the named exports and the default export
+   - When mocking file existence checks, use control variables to simulate different file system states:
+     ```typescript
+     let fileExists = true;
+     const fsMock = vi.hoisted(() => ({
+       promises: {
+         access: vi.fn().mockImplementation(() => {
+           if (!fileExists) throw new Error("File not found");
+           return Promise.resolve();
+         }),
+         readFile: vi.fn().mockResolvedValue("file content"),
+       },
+     }));
+     ```
 
 ## Next Steps
 
@@ -183,6 +239,7 @@ We've uncovered several important learnings about effective Vitest testing:
 2. Implement test suite that verifies compatibility with actual state structure
 3. Add tests for error handling scenarios
 4. Integrate evaluation nodes with the main proposal generation graph
+5. Apply the Vitest testing learnings to future test implementations
 
 ## Important Patterns and Preferences
 
@@ -190,6 +247,8 @@ We've uncovered several important learnings about effective Vitest testing:
 - Create proper test state objects that match the actual state structure
 - Test both successful and error cases
 - Verify state transformations and error propagation
+- Use `vi.hoisted()` consistently for all mock definitions
+- Reset mock state between tests using `beforeEach` and `afterEach` hooks
 
 ## Learning and Insights
 
@@ -199,5 +258,7 @@ Most difficult aspects of the testing process:
 - Ensuring tests don't just verify mocks but actual behavior
 - Creating test states that properly reflect production state structure
 - Balancing comprehensive testing with maintainable test files
+- Properly handling hoisting in Vitest to avoid reference errors
+- Managing type compatibility between test state objects and production state interfaces
 
 _This document reflects the immediate working context, recent activities, and near-term goals. It should be updated frequently._
