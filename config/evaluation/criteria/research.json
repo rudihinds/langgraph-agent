@@ -1,0 +1,69 @@
+{
+  "criteria": [
+    {
+      "id": "relevance",
+      "name": "Relevance",
+      "description": "Research directly addresses the problem statement and RFP requirements.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "depth",
+      "name": "Depth",
+      "description": "Research provides substantive insights beyond surface-level information.",
+      "weight": 3,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "accuracy",
+      "name": "Accuracy",
+      "description": "Research findings are factually accurate and correctly represent current knowledge.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "comprehensiveness",
+      "name": "Comprehensiveness",
+      "description": "Research covers all key aspects of the problem domain without major gaps.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "currentness",
+      "name": "Currentness",
+      "description": "Research reflects recent developments, trends, and state-of-the-art approaches.",
+      "weight": 2,
+      "passThreshold": 0.6
+    },
+    {
+      "id": "objectivity",
+      "name": "Objectivity",
+      "description": "Research presents balanced information without bias toward particular solutions.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "organization",
+      "name": "Organization",
+      "description": "Research is well-structured, logically organized, and easy to follow.",
+      "weight": 1,
+      "passThreshold": 0.6
+    },
+    {
+      "id": "insightfulness",
+      "name": "Insightfulness",
+      "description": "Research offers meaningful insights that reveal non-obvious implications for solution development.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "sourceDiversity",
+      "name": "Source Diversity",
+      "description": "Research draws from a diverse range of credible sources and perspectives.",
+      "weight": 1,
+      "passThreshold": 0.6
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the research content against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

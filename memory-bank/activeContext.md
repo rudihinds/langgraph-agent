@@ -32,50 +32,38 @@ Task 16.5: Implement the `sectionManagerNode` - This node will organize the docu
    - Created detailed error handling patterns consistent with other nodes
    - Updated implementation plan to reflect the completed implementation
 
-3. Fixed the `evaluationCriteria.test.ts` tests:
-   - Corrected mock implementations for filesystem operations
-   - Properly implemented `pathResolve` mocks using `vi.hoisted()`
-   - Fixed file path handling to correctly work with the "config/evaluation/criteria" pattern
-   - Updated expectations in the test to match actual implementation behavior
-   - Successfully resolved all 12 tests in the evaluation criteria test file
+3. Made significant progress on fixing the evaluation framework tests:
+   - Fixed `evaluationCriteria.test.ts` tests with proper mocking patterns ✅
+   - Fixed `errorHandling.test.ts` tests with appropriate assertions ✅
+   - Fixed `extractors.test.ts` tests with correct mock implementations ✅
+   - Fixed `contentExtractors.test.ts` tests with proper state handling ✅
+   - Made progress on `factory.test.ts` (tests pass but has TypeScript linter errors) 🔄
+   - Identified issues in `stateManagement.test.ts` (missing function mocks) 🔄
 
 ## Next Steps
 
-1. Focus on fixing the `contentExtractors.test.ts` tests:
+1. Focus on fixing the remaining evaluation test files:
 
-   - Analyze failures related to content extraction functionality
-   - Create a phased approach to fixing the tests
-   - Properly mock any dependencies using the patterns established in `evaluationCriteria.test.ts`
-   - Fix implementation issues with content extractors for various section types
-   - Apply Vitest best practices for mocking and resetting between tests
+   - Fix `stateManagement.test.ts` by properly mocking factory methods and content extractors
+   - Fix TypeScript linter errors in `factory.test.ts`
+   - Complete any remaining evaluation framework test files
+   - Update implementation plan with comprehensive test coverage status
+   - Begin implementation of `sectionManagerNode` (Task 16.5)
 
-2. Continue with remaining evaluation tests:
-
-   - `evaluationNodeFactory.test.ts` - Tests for factory functionality
-   - `errorHandling.test.ts` - Tests for error conditions
-   - `stateManagement.test.ts` - Tests for state compatibility
-
-3. Begin implementation of `sectionManagerNode` (Task 16.5):
-
-   - Create specification document (`spec_16.5.md`)
-   - Develop comprehensive test suite following TDD approach
-   - Implement node functionality for section organization and management
-   - Ensure proper integration with the main graph
-
-4. Update `OverallProposalState` to fully support the standardized evaluation pattern:
+2. Update `OverallProposalState` to fully support the standardized evaluation pattern:
 
    - Add standardized HITL interruption fields (`interruptStatus` and `interruptMetadata`)
    - Ensure evaluation result fields exist for all content types
    - Add proper typing for evaluation status transitions
    - Update the `SectionData` interface with consistent evaluation fields
 
-5. Create evaluation configuration files:
+3. Create evaluation configuration files:
 
    - Implement criteria configuration for each content type
    - Develop standardized evaluation prompts
    - Ensure consistent scoring mechanisms
 
-6. Continue following the TDD approach:
+4. Continue following the TDD approach:
    - Write tests first to establish expected behavior
    - Implement functionality to pass the tests
    - Refactor while maintaining test coverage
@@ -150,14 +138,24 @@ We maintain consistent naming conventions:
 
 ## Current Focus
 
-Working on fixing the evaluation framework test suite using TDD principles. We've successfully fixed `evaluationCriteria.test.ts` and are now moving on to `contentExtractors.test.ts`, focusing on ensuring content extractors can properly access and validate content from the state object.
+Working on fixing the remaining evaluation framework test files. We've made significant progress with four files now passing, and two files still requiring fixes:
+
+1. **stateManagement.test.ts** (8/9 tests failing):
+
+   - Issues with mock implementation for factory methods like `createResearchEvaluationNode()`
+   - Missing proper content extractors for section types like 'problem_statement'
+   - Functions returning "is not a function" errors, showing they're not properly mocked
+
+2. **factory.test.ts** (tests pass but has linter errors):
+   - TypeScript typing issues with `Mock<any, any>` vs `Mock<any, any, any>`
+   - Potential null/undefined handling issues with `overrides` parameter in mocks
 
 ## Recent Changes
 
-- Fixed `evaluationCriteria.test.ts` with proper mocking patterns
-- Successfully implemented correct file path handling with the "config/evaluation/criteria" pattern
-- Added proper mocking techniques using `vi.hoisted()` to ensure mocks are defined before use
-- Updated tests to have the correct expectations for file paths and criteria loading
+- Successfully fixed and verified passing tests for `evaluationCriteria.test.ts`, `errorHandling.test.ts`, `extractors.test.ts`, and `contentExtractors.test.ts`
+- Fixed mock implementations for filesystem operations
+- Implemented proper mock patterns for the factory implementation
+- Corrected assertion patterns for error handling tests
 
 ## Vitest Testing Learnings
 
@@ -246,14 +244,24 @@ We've uncovered several important learnings about effective Vitest testing:
      }));
      ```
 
+## Current Test Status
+
+| Test File                    | Status | Issues                                        |
+| ---------------------------- | ------ | --------------------------------------------- |
+| `evaluationCriteria.test.ts` | ✅     | Fixed and passing                             |
+| `errorHandling.test.ts`      | ✅     | Fixed and passing                             |
+| `extractors.test.ts`         | ✅     | Fixed and passing                             |
+| `contentExtractors.test.ts`  | ✅     | Fixed and passing                             |
+| `factory.test.ts`            | 🔄     | Tests pass but linter errors need fixing      |
+| `stateManagement.test.ts`    | ❌     | 8/9 tests failing, mock implementation issues |
+
 ## Next Steps
 
-1. Run `contentExtractors.test.ts` to identify failures
-2. Create a phased plan to fix the content extractor tests
-3. Implement fixes following established mocking patterns
-4. Verify content extractors properly handle various state structures
-5. Continue with remaining evaluation framework tests
-6. Update implementation plan with comprehensive test coverage requirements
+1. Fix `stateManagement.test.ts` by properly mocking factory methods and content extractors
+2. Fix TypeScript linter errors in `factory.test.ts`
+3. Complete any remaining evaluation framework test files
+4. Update implementation plan with comprehensive test coverage status
+5. Begin implementation of `sectionManagerNode` (Task 16.5)
 
 ## Important Patterns and Preferences
 
@@ -625,5 +633,63 @@ afterEach(() => {
    - Group related tests with describe blocks
 
 By following these patterns and practices, we can maintain high-quality tests across the codebase, ensuring robustness and reliability of our implementation.
+
+## Recent Vitest Testing Insights (Evaluation Framework)
+
+During our recent work on fixing the evaluation framework tests, we discovered several important patterns:
+
+### Error Message Testing Patterns
+
+- Tests expecting error messages should check for string contents rather than object structures:
+
+  ```typescript
+  // Better approach:
+  expect(result.errors[0]).toBe("research: empty content");
+
+  // Instead of:
+  expect(result.errors[0]).toEqual({ type: "EMPTY_CONTENT", message: "..." });
+  ```
+
+- For partial string matching, use `toContain()` or string includes:
+  ```typescript
+  expect(result.errors[0]).toContain("validation error");
+  ```
+
+### TypeScript Null/Undefined Handling
+
+- Use null coalescing for arrays that might be undefined in assertions:
+  ```typescript
+  expect(result.errors || []).toEqual([]);
+  ```
+- Use optional chaining for deep object property access in tests:
+  ```typescript
+  expect(result.sections?.research?.status).toBe("error");
+  ```
+- When checking deep nested properties that might not exist, use safe patterns:
+  ```typescript
+  expect(result.sections?.research?.evaluationResult?.errors?.[0]).toContain(
+    "empty content"
+  );
+  ```
+
+### Mocking Error Conditions
+
+- When testing error handling, use simple mock implementations that return null or throw errors:
+  ```typescript
+  mocks.extractContent.mockReturnValueOnce(null);
+  ```
+- For testing validation failures, configure mocks to return appropriate errors:
+  ```typescript
+  mockValidator.mockReturnValueOnce({
+    success: false,
+    error: "validation error: malformed content",
+  });
+  ```
+
+### State Preparation for Error Tests
+
+- Create dedicated test states for error scenarios with predictable structures
+- Include minimal valid structure to focus on the specific error case being tested
+- Reset mocks between tests to prevent unintended interference
 
 _This document reflects the immediate working context, recent activities, and near-term goals. It should be updated frequently._

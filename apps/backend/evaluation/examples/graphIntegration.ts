@@ -14,6 +14,7 @@ import {
 } from "../../state/proposal.state.js";
 import { EvaluationNodeFactory } from "../factory.js";
 import { createSectionEvaluationNodes } from "./sectionEvaluationNodes.js";
+import { Logger, LogLevel } from "../../lib/logger.js";
 
 // Define type for conditional routing function
 type ConditionFunction = (state: OverallProposalState) => string;
@@ -123,16 +124,23 @@ export function setupEvaluationGraph() {
     >{
       invoke: async (state: OverallProposalState) => {
         // Example of section generation logic
+        // Create a copy of the sections map
+        const sections =
+          state.sections instanceof Map ? new Map(state.sections) : new Map();
+
+        // Get existing section data if any
+        const existingSection = sections.get(sectionType as SectionType) || {};
+
+        // Update the section
+        sections.set(sectionType as SectionType, {
+          ...existingSection,
+          status: "generated" as ProcessingStatus,
+          // Content would be set here
+        });
+
         return {
           ...state,
-          sections: {
-            ...state.sections,
-            [sectionType]: {
-              ...state.sections?.[sectionType],
-              status: "generated" as ProcessingStatus,
-              // Content would be set here
-            },
-          },
+          sections,
         };
       },
     });
@@ -146,18 +154,26 @@ export function setupEvaluationGraph() {
     >{
       invoke: async (state: OverallProposalState) => {
         // Example of section regeneration logic, using feedback from evaluation
-        const evaluation = state.sections?.[sectionType]?.evaluation;
+        if (!state.sections || !(state.sections instanceof Map)) {
+          return state;
+        }
+
+        const section = state.sections.get(sectionType as SectionType);
+        const evaluation = section?.evaluation;
+
+        // Create a copy of the sections map
+        const sections = new Map(state.sections);
+
+        // Update the section
+        sections.set(sectionType as SectionType, {
+          ...section,
+          status: "regenerating" as ProcessingStatus,
+          // Would use evaluation feedback to improve regeneration
+        });
 
         return {
           ...state,
-          sections: {
-            ...state.sections,
-            [sectionType]: {
-              ...state.sections?.[sectionType],
-              status: "regenerating" as ProcessingStatus,
-              // Would use evaluation feedback to improve regeneration
-            },
-          },
+          sections,
         };
       },
     });
@@ -173,7 +189,8 @@ export function setupEvaluationGraph() {
     // Check if research is interrupted for human review
     if (
       state.interruptStatus?.isInterrupted &&
-      state.interruptStatus.processingStatus === "awaiting_review" &&
+      state.interruptStatus.processingStatus ===
+        ProcessingStatus.AWAITING_REVIEW &&
       state.interruptMetadata?.contentReference === "research"
     ) {
       return "waitForHumanInput"; // Route to a node that waits for human input
@@ -203,7 +220,8 @@ export function setupEvaluationGraph() {
     // Similar pattern to research evaluation routing
     if (
       state.interruptStatus?.isInterrupted &&
-      state.interruptStatus.processingStatus === "awaiting_review" &&
+      state.interruptStatus.processingStatus ===
+        ProcessingStatus.AWAITING_REVIEW &&
       state.interruptMetadata?.contentReference === "solution"
     ) {
       return "waitForHumanInput";
@@ -225,7 +243,8 @@ export function setupEvaluationGraph() {
   ) => {
     if (
       state.interruptStatus?.isInterrupted &&
-      state.interruptStatus.processingStatus === "awaiting_review" &&
+      state.interruptStatus.processingStatus ===
+        ProcessingStatus.AWAITING_REVIEW &&
       state.interruptMetadata?.contentReference === "funder_solution_alignment"
     ) {
       return "waitForHumanInput";
@@ -253,7 +272,8 @@ export function setupEvaluationGraph() {
   ) => {
     if (
       state.interruptStatus?.isInterrupted &&
-      state.interruptStatus.processingStatus === "awaiting_review" &&
+      state.interruptStatus.processingStatus ===
+        ProcessingStatus.AWAITING_REVIEW &&
       state.interruptMetadata?.contentReference === "connection_pairs"
     ) {
       return "waitForHumanInput";
@@ -282,20 +302,26 @@ export function setupEvaluationGraph() {
   ) => {
     if (
       state.interruptStatus?.isInterrupted &&
-      state.interruptStatus.processingStatus === "awaiting_review" &&
+      state.interruptStatus.processingStatus ===
+        ProcessingStatus.AWAITING_REVIEW &&
       state.interruptMetadata?.contentReference ===
         SectionType.PROBLEM_STATEMENT
     ) {
       return "waitForHumanInput";
     }
 
-    const evaluation =
-      state.sections?.[SectionType.PROBLEM_STATEMENT]?.evaluation;
+    // Check the evaluation result in the section
+    if (!state.sections || !(state.sections instanceof Map)) {
+      return "error";
+    }
+
+    const section = state.sections.get(SectionType.PROBLEM_STATEMENT);
+    const evaluation = section?.evaluation;
 
     if (evaluation?.passed) {
-      return "generateMethodology"; // Move to next section
+      return "generateMethodology";
     } else {
-      return "regenerateProblemStatement"; // Regenerate this section
+      return "regenerateProblemStatement";
     }
   };
 
@@ -389,4 +415,46 @@ export async function exampleResumeAfterHumanEvaluation(
   // 3. Resume the graph with the updated state
   // Note: This assumes the graph has been checkpointed with the threadId
   return await graph.resume(threadId, updatedState);
+}
+
+// Mock function for testing interrupt condition
+export function shouldInterruptSolution(
+  state: OverallProposalState,
+  config?: any
+): boolean {
+  // Check if interrupt is active and pending feedback
+  return (
+    state.interruptStatus.isInterrupted &&
+    state.interruptStatus.processingStatus ===
+      ProcessingStatus.AWAITING_REVIEW &&
+    state.interruptMetadata?.contentReference === "solution"
+  );
+}
+
+// Mock function for testing interrupt condition
+export function shouldInterruptConnections(
+  state: OverallProposalState,
+  config?: any
+): boolean {
+  // Check if interrupt is active and pending feedback
+  return (
+    state.interruptStatus.isInterrupted &&
+    state.interruptStatus.processingStatus ===
+      ProcessingStatus.AWAITING_REVIEW &&
+    state.interruptMetadata?.contentReference === "connection_pairs"
+  );
+}
+
+// Mock function for testing interrupt condition
+export function shouldInterruptSection(
+  state: OverallProposalState,
+  sectionType: SectionType
+): boolean {
+  // Check if interrupt is active and pending feedback
+  return (
+    state.interruptStatus.isInterrupted &&
+    state.interruptStatus.processingStatus ===
+      ProcessingStatus.AWAITING_REVIEW &&
+    state.interruptMetadata?.contentReference === sectionType
+  );
 }

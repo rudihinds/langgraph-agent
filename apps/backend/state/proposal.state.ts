@@ -21,27 +21,17 @@ export * from "./modules/utils.js";
 /**
  * Status definitions for different components of the proposal state
  */
-type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
-type ProcessingStatus =
+export type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
+export type ProcessingStatus =
   | "queued"
   | "running"
+  | "evaluating"
   | "awaiting_review"
   | "approved"
   | "edited"
   | "stale"
   | "complete"
-  | "error"
-  | "needs_revision";
-export type SectionProcessingStatus =
-  | "queued"
-  | "generating"
-  | "awaiting_review"
-  | "approved"
-  | "edited"
-  | "stale"
-  | "error"
-  | "not_started"
-  | "needs_revision";
+  | "error";
 
 /**
  * Interrupt-related type definitions for HITL capabilities
@@ -102,16 +92,17 @@ export enum SectionType {
 /**
  * Evaluation result structure for quality checks
  */
-interface EvaluationResult {
-  score: number;
+export interface EvaluationResult {
   passed: boolean;
+  timestamp: string;
+  evaluator: "ai" | "human" | string;
+  overallScore: number;
+  scores: Record<string, number>;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
   feedback: string;
-  categories?: {
-    [category: string]: {
-      score: number;
-      feedback: string;
-    };
-  };
+  rawResponse?: any;
 }
 
 /**
@@ -119,11 +110,10 @@ interface EvaluationResult {
  */
 export interface SectionData {
   id: string;
-  title?: string;
   content: string;
-  status: SectionProcessingStatus;
+  status: ProcessingStatus;
   evaluation?: EvaluationResult | null;
-  lastUpdated: string;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -145,18 +135,18 @@ export interface OverallProposalState {
   researchEvaluation?: EvaluationResult | null;
 
   // Solution sought phase
-  solutionResults?: Record<string, any>;
-  solutionStatus: ProcessingStatus;
-  solutionEvaluation?: EvaluationResult | null;
+  solutionSoughtResults?: Record<string, any>;
+  solutionSoughtStatus: ProcessingStatus;
+  solutionSoughtEvaluation?: EvaluationResult | null;
 
   // Connection pairs phase
-  connections?: any[];
-  connectionsStatus: ProcessingStatus;
-  connectionsEvaluation?: EvaluationResult | null;
+  connectionPairs?: any[];
+  connectionPairsStatus: ProcessingStatus;
+  connectionPairsEvaluation?: EvaluationResult | null;
 
   // Proposal sections
-  sections: Map<SectionType, SectionData>;
-  requiredSections: SectionType[];
+  sections: { [sectionId: string]: SectionData | undefined };
+  requiredSections: string[];
 
   // HITL Interrupt handling
   interruptStatus: InterruptStatus;
@@ -341,8 +331,8 @@ export const OverallProposalStateSchema = z.object({
     })
     .nullable()
     .optional(),
-  solutionResults: z.record(z.any()).optional(),
-  solutionStatus: z.enum([
+  solutionSoughtResults: z.record(z.any()).optional(),
+  solutionSoughtStatus: z.enum([
     "queued",
     "running",
     "awaiting_review",
@@ -353,7 +343,7 @@ export const OverallProposalStateSchema = z.object({
     "error",
     "needs_revision",
   ]),
-  solutionEvaluation: z
+  solutionSoughtEvaluation: z
     .object({
       score: z.number(),
       passed: z.boolean(),
@@ -369,8 +359,8 @@ export const OverallProposalStateSchema = z.object({
     })
     .nullable()
     .optional(),
-  connections: z.array(z.any()).optional(),
-  connectionsStatus: z.enum([
+  connectionPairs: z.array(z.any()).optional(),
+  connectionPairsStatus: z.enum([
     "queued",
     "running",
     "awaiting_review",
@@ -381,7 +371,7 @@ export const OverallProposalStateSchema = z.object({
     "error",
     "needs_revision",
   ]),
-  connectionsEvaluation: z
+  connectionPairsEvaluation: z
     .object({
       score: z.number(),
       passed: z.boolean(),
@@ -494,8 +484,8 @@ export function createInitialProposalState(
       status: "not_started",
     },
     researchStatus: "queued",
-    solutionStatus: "queued",
-    connectionsStatus: "queued",
+    solutionSoughtStatus: "queued",
+    connectionPairsStatus: "queued",
     sections: new Map(),
     requiredSections: [],
 

@@ -1,3 +1,4 @@
+import path from "path";
 import {
   EvaluationNodeOptions,
   EvaluationNodeFunction,
@@ -23,20 +24,20 @@ export interface EvaluationNodeFactoryOptions {
  * Encapsulates configuration and logic for generating evaluation node functions.
  */
 export class EvaluationNodeFactory {
-  private readonly temperature: number;
-  private readonly criteriaDirPath: string;
-  private readonly modelName: string;
-  private readonly defaultTimeoutSeconds: number;
+  private temperature: number;
+  private criteriaDirPath: string;
+  private modelName: string;
+  private defaultTimeoutSeconds: number;
 
   /**
    * Creates an instance of EvaluationNodeFactory.
    * @param options Configuration options for the factory.
    */
   constructor(options: EvaluationNodeFactoryOptions = {}) {
-    this.temperature = options.temperature ?? 0; // Default to 0 for deterministic eval
-    this.criteriaDirPath = options.criteriaDirPath ?? ""; // Empty string - path is handled by loadCriteriaConfiguration
-    this.modelName = options.modelName ?? "gpt-4o-2024-05-13"; // Specify default model
-    this.defaultTimeoutSeconds = options.defaultTimeoutSeconds ?? 60; // Default 60s timeout
+    this.temperature = options.temperature ?? 0;
+    this.criteriaDirPath = options.criteriaDirPath ?? "";
+    this.modelName = options.modelName ?? "gpt-4o-2024-05-13";
+    this.defaultTimeoutSeconds = options.defaultTimeoutSeconds ?? 60;
   }
 
   /**
@@ -55,9 +56,14 @@ export class EvaluationNodeFactory {
     overrides: Partial<EvaluationNodeOptions> = {}
   ): EvaluationNodeFunction {
     const criteriaFileName = `${contentType}.json`;
-    const defaultCriteriaPath = this.criteriaDirPath
-      ? `${this.criteriaDirPath}/${criteriaFileName}`
-      : criteriaFileName;
+
+    // If criteriaPath is directly provided in overrides, use it
+    // Otherwise, construct path only if criteriaDirPath is provided
+    const defaultCriteriaPath =
+      overrides.criteriaPath ??
+      (this.criteriaDirPath
+        ? path.resolve(process.cwd(), this.criteriaDirPath, criteriaFileName)
+        : criteriaFileName);
 
     // Combine factory defaults with specific overrides
     const nodeOptions: EvaluationNodeOptions = {
@@ -67,7 +73,7 @@ export class EvaluationNodeFactory {
       resultField: overrides.resultField!, // Needs to be provided in overrides
       statusField: overrides.statusField!, // Needs to be provided in overrides
       // Use factory defaults, overridden by specific options
-      criteriaPath: overrides.criteriaPath ?? defaultCriteriaPath,
+      criteriaPath: defaultCriteriaPath,
       modelName: overrides.modelName ?? this.modelName,
       timeoutSeconds: overrides.timeoutSeconds ?? this.defaultTimeoutSeconds,
       passingThreshold: overrides.passingThreshold, // Allow override, default handled within createEvaluationNode

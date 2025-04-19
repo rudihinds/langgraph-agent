@@ -1,0 +1,72 @@
+---
+description: Guidelines for proper import paths and patterns in the LangGraph Agent project
+globs: apps/backend/**/*.ts, apps/backend/**/*.tsx
+alwaysApply: true
+---
+
+# TypeScript Import Path Guidelines
+
+- **Always use `.js` extensions in imports, even for TypeScript files**
+  - Required by ESM + TypeScript with moduleResolution: NodeNext
+  - ```typescript
+    // ✅ DO: Use .js extensions
+    import { foo } from './bar.js';
+    import { baz } from '@/state/modules/types.js';
+    
+    // ❌ DON'T: Omit extensions or use .ts
+    import { foo } from './bar';
+    import { foo } from './bar.ts';
+    ```
+
+- **Use path aliases instead of complex relative paths**
+  - Prevents errors from miscounting parent directory levels
+  - ```typescript
+    // ✅ DO: Use path aliases
+    import { createProposalGenerationGraph } from '@/proposal-generation/graph.js';
+    
+    // ❌ DON'T: Use deep relative paths
+    import { createProposalGenerationGraph } from '../../../agents/proposal-generation/graph.js';
+    ```
+  - Available aliases:
+    - `@/lib/*` - Utilities and shared code
+    - `@/state/*` - State definitions and reducers
+    - `@/agents/*` - Agent implementations
+    - `@/tools/*` - Tool implementations
+    - `@/services/*` - Service implementations
+    - `@/api/*` - API routes and handlers
+    - `@/prompts/*` - Prompt templates
+    - `@/tests/*` - Test utilities
+    - `@/config/*` - Configuration files
+    - `@/utils/*` - Utility functions
+    - `@/types/*` - Type definitions
+    - `@/proposal-generation/*` - Proposal generation agent
+    - `@/evaluation/*` - Evaluation agent
+    - `@/orchestrator/*` - Orchestrator agent
+
+- **Use the paths utility for consistent imports**
+  - Centralizes import path definitions
+  - ```typescript
+    // ✅ DO: Import from paths utility
+    import { STATE, AGENTS, LANGGRAPH } from '@/utils/paths.js';
+    
+    // Then use the constants
+    import { OverallProposalState } from STATE.TYPES;
+    import { createProposalGenerationGraph } from AGENTS.PROPOSAL_GENERATION.GRAPH;
+    ```
+
+- **Ensure correct vitest mock paths**
+  - Mock using the exact same path as the import
+  - ```typescript
+    // Mock must match import path exactly
+    import { fn } from '../graph.js';
+    vi.mock('../graph.js', () => ({
+      createProposalGenerationGraph: vi.fn()
+    }));
+    ```
+
+- **Common import error debugging**
+  - Check for `.js` extension in imports
+  - Verify path alias is in both tsconfig.json and vitest.config.ts
+  - Try using absolute paths with `@/` prefix
+  - Confirm the file exists at the imported path
+  - Avoid duplicate named imports across files 

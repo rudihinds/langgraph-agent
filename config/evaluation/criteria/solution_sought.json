@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "insightfulness",
+      "name": "Insightfulness",
+      "description": "The analysis demonstrates deep insights into the funder's implicit needs beyond what's explicitly stated.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "evidenceBased",
+      "name": "Evidence-Based Interpretation",
+      "description": "The analysis is well-supported by specific evidence from the RFP document.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "comprehensiveness",
+      "name": "Comprehensiveness",
+      "description": "The analysis covers all significant aspects of what the funder is seeking without major omissions.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "prioritization",
+      "name": "Prioritization",
+      "description": "The analysis effectively prioritizes the funder's requirements by importance.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "fundingContextAwareness",
+      "name": "Funding Context Awareness",
+      "description": "The analysis demonstrates understanding of the broader context, goals, and constraints of the funding entity.",
+      "weight": 3,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "unstatedNeedsIdentification",
+      "name": "Unstated Needs Identification",
+      "description": "The analysis identifies important unstated needs or assumptions that will influence proposal success.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "The analysis clearly articulates the funder's sought solution without ambiguity.",
+      "weight": 2,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "objectivity",
+      "name": "Objectivity",
+      "description": "The analysis maintains objectivity without projecting assumptions or biases.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "strategicAlignment",
+      "name": "Strategic Alignment",
+      "description": "The analysis identifies alignment opportunities between the funder's goals and the proposal's direction.",
+      "weight": 3,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "competitionAwareness",
+      "name": "Competition Awareness",
+      "description": "The analysis demonstrates awareness of what might differentiate a successful proposal from others.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the solution_sought analysis against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

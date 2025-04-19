@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "directCorrespondence",
+      "name": "Direct Correspondence",
+      "description": "Each problem statement has a clearly corresponding solution that directly addresses it.",
+      "weight": 3,
+      "passThreshold": 0.9
+    },
+    {
+      "id": "completeness",
+      "name": "Completeness",
+      "description": "All identified problems have corresponding solutions, with no problems left unaddressed.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity of Connection",
+      "description": "The connection between each problem and its solution is explicitly stated and easy to understand.",
+      "weight": 2,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "logicalFlow",
+      "name": "Logical Flow",
+      "description": "The progression from problem to solution follows a logical sequence and rationale.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "effectivenessMatch",
+      "name": "Effectiveness Match",
+      "description": "The proposed solutions are proportional and appropriate to the scale and severity of the problems.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "precisionMapping",
+      "name": "Precision Mapping",
+      "description": "Solutions address the specific aspects and nuances of each problem statement.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "coherence",
+      "name": "Coherence",
+      "description": "The connections between problems and solutions form a coherent overall narrative.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "relevance",
+      "name": "Relevance",
+      "description": "The connections focus on the most relevant aspects of the problems and solutions.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "rootCauseOrientation",
+      "name": "Root Cause Orientation",
+      "description": "Solutions address root causes identified in the problem statements, not just symptoms.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "traceability",
+      "name": "Traceability",
+      "description": "Each connection can be traced back to research findings and client requirements.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.8,
+  "evaluationInstructions": "Evaluate the connection pairs against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

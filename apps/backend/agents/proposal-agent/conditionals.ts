@@ -13,6 +13,10 @@ import {
 import { Logger, LogLevel } from "../../lib/logger.js";
 import { FeedbackType } from "../../lib/types/feedback.js";
 import { OverallProposalState as ProposalState } from "../../state/modules/types.js";
+import {
+  ProcessingStatus,
+  SectionStatus,
+} from "../../state/modules/constants.js";
 
 // Create logger for conditionals module
 const logger = Logger.getInstance();
@@ -154,7 +158,7 @@ export function determineNextSection(
 
     return dependencies.every((dependency) => {
       const dependencySection = state.sections.get(dependency);
-      return dependencySection?.status === "approved";
+      return dependencySection?.status === SectionStatus.APPROVED;
     });
   };
 
@@ -165,8 +169,8 @@ export function determineNextSection(
     // Filter sections that are queued or not_started
     state.sections.forEach((sectionData, sectionType) => {
       if (
-        sectionData.status === "queued" ||
-        sectionData.status === "not_started"
+        sectionData.status === SectionStatus.QUEUED ||
+        sectionData.status === SectionStatus.NOT_STARTED
       ) {
         queuedSections.push(sectionType);
       }
@@ -192,7 +196,10 @@ export function determineNextSection(
     // Check if all sections are approved or completed
     state.sections.forEach((section) => {
       const status = section.status;
-      if (status !== "approved" && status !== "edited") {
+      if (
+        status !== SectionStatus.APPROVED &&
+        status !== SectionStatus.EDITED
+      ) {
         allSectionsCompleted = false;
       }
     });
@@ -228,12 +235,40 @@ export function determineNextSection(
  */
 function getSectionDependencies(section: SectionType): SectionType[] {
   // Define section dependencies based on proposal structure
+  // This should match the dependency map in config/dependencies.json or DependencyService
   const dependencies: Record<SectionType, SectionType[]> = {
     [SectionType.PROBLEM_STATEMENT]: [],
-    [SectionType.METHODOLOGY]: [],
-    [SectionType.BUDGET]: [SectionType.METHODOLOGY],
-    [SectionType.TIMELINE]: [SectionType.METHODOLOGY, SectionType.BUDGET],
-    [SectionType.CONCLUSION]: [SectionType.TIMELINE, SectionType.BUDGET],
+    [SectionType.METHODOLOGY]: [SectionType.PROBLEM_STATEMENT],
+    [SectionType.SOLUTION]: [
+      SectionType.PROBLEM_STATEMENT,
+      SectionType.METHODOLOGY,
+    ], // Added SOLUTION
+    [SectionType.OUTCOMES]: [SectionType.SOLUTION], // Added OUTCOMES
+    [SectionType.BUDGET]: [SectionType.METHODOLOGY, SectionType.SOLUTION], // Added SOLUTION dependency
+    [SectionType.TIMELINE]: [
+      SectionType.METHODOLOGY,
+      SectionType.BUDGET,
+      SectionType.SOLUTION,
+    ], // Added SOLUTION dependency
+    [SectionType.TEAM]: [SectionType.METHODOLOGY, SectionType.SOLUTION], // Added TEAM and SOLUTION dependency
+    [SectionType.EVALUATION_PLAN]: [SectionType.SOLUTION, SectionType.OUTCOMES], // Added EVALUATION_PLAN and OUTCOMES dependency
+    [SectionType.SUSTAINABILITY]: [
+      SectionType.SOLUTION,
+      SectionType.BUDGET,
+      SectionType.TIMELINE,
+    ], // Added SUSTAINABILITY and SOLUTION dependency
+    [SectionType.RISKS]: [
+      SectionType.SOLUTION,
+      SectionType.TIMELINE,
+      SectionType.TEAM,
+    ], // Added RISKS and TEAM dependency
+    [SectionType.CONCLUSION]: [
+      SectionType.PROBLEM_STATEMENT,
+      SectionType.SOLUTION,
+      SectionType.OUTCOMES,
+      SectionType.BUDGET,
+      SectionType.TIMELINE,
+    ], // Added missing dependencies
   };
 
   return dependencies[section] || [];
@@ -297,28 +332,24 @@ export function routeAfterSectionEvaluation(
 export function routeAfterStaleContentChoice(
   state: OverallProposalState
 ): "regenerateStaleContent" | "useExistingContent" | "handleError" {
-  logger.info("Routing after stale content choice");
+  logger.info("Routing based on stale content choice");
 
-  if (
-    !state.interruptStatus ||
-    !state.interruptStatus.feedback ||
-    !state.interruptStatus.feedback.type
-  ) {
-    logger.error("No stale content choice found in state");
+  if (!state.interruptStatus?.feedback) {
+    logger.error("Missing feedback for stale content decision");
     return "handleError";
   }
 
-  const choice = state.interruptStatus.feedback.type;
-  logger.info(`User's stale content choice: ${choice}`);
+  const feedbackType = state.interruptStatus.feedback.type;
+  const targetNode = state.interruptStatus.interruptionPoint;
 
-  if (choice === "regenerate") {
+  if (feedbackType === FeedbackType.REGENERATE) {
     logger.info("User chose to regenerate stale content");
     return "regenerateStaleContent";
-  } else if (choice === "approve") {
-    logger.info("User chose to use existing content");
+  } else if (feedbackType === FeedbackType.APPROVE) {
+    logger.info("User chose to keep existing stale content");
     return "useExistingContent";
   } else {
-    logger.error(`Invalid stale content choice: ${choice}`);
+    logger.error(`Unsupported feedback type for stale choice: ${feedbackType}`);
     return "handleError";
   }
 }
@@ -330,96 +361,62 @@ export function routeAfterStaleContentChoice(
  * @returns The next node to route to
  */
 export function routeAfterFeedbackProcessing(state: ProposalState): string {
-  const logger = console;
-  logger.info("Routing after feedback processing");
+  logger.info("Routing after processing human feedback");
 
-  // Check for errors
-  if (state.errors && state.errors.length > 0) {
-    const lastError = state.errors[state.errors.length - 1];
-    logger.error(`Error in feedback processing: ${lastError}`);
-    return "handleError";
+  if (!state.interruptStatus?.feedback?.type) {
+    logger.warn("No feedback type found, determining next general step");
+    return determineNextSection(state);
   }
 
-  // Route based on content reference and its status
+  const feedbackType = state.interruptStatus.feedback.type;
+  const interruptionPoint = state.interruptStatus.interruptionPoint;
   const contentRef = state.interruptMetadata?.contentReference;
 
-  if (!contentRef) {
-    logger.error("No content reference found for routing after feedback");
-    return "handleError";
-  }
+  logger.info(
+    `Feedback type: ${feedbackType}, Interruption point: ${interruptionPoint}, Content ref: ${contentRef}`
+  );
 
-  // Research routing
+  let statusToCheck: ProcessingStatus | SectionStatus | undefined;
   if (contentRef === "research") {
-    if (state.researchStatus === "stale") {
-      logger.info("Regenerating research after feedback");
-      return "research";
-    } else if (state.researchStatus === "approved") {
-      logger.info("Moving to solution sought after research approval");
-      return "solutionSought";
-    } else if (state.researchStatus === "edited") {
-      logger.info("Regenerating research with edits");
-      return "research";
-    }
+    statusToCheck = state.researchStatus;
+  } else if (contentRef === "solution") {
+    statusToCheck = state.solutionStatus;
+  } else if (contentRef === "connections") {
+    statusToCheck = state.connectionsStatus;
+  } else if (contentRef && state.sections.has(contentRef as SectionType)) {
+    statusToCheck = state.sections.get(contentRef as SectionType)?.status;
   }
 
-  // Solution routing
-  else if (contentRef === "solution") {
-    if (state.solutionStatus === "stale") {
-      logger.info("Regenerating solution after feedback");
-      return "solutionSought";
-    } else if (state.solutionStatus === "approved") {
-      logger.info("Moving to section planning after solution approval");
-      return "planSections";
-    } else if (state.solutionStatus === "edited") {
-      logger.info("Regenerating solution with edits");
-      return "solutionSought";
-    }
+  if (
+    statusToCheck === ProcessingStatus.STALE ||
+    statusToCheck === SectionStatus.STALE
+  ) {
+    logger.info(
+      `Content ${contentRef} is stale, routing to handle stale choice`
+    );
+    return "handle_stale_choice";
   }
 
-  // Connections routing
-  else if (contentRef === "connections") {
-    if (state.connectionsStatus === "stale") {
-      // Need to implement connections regeneration
-      logger.info("Regenerating connections after feedback");
-      return "generateConnections"; // This node needs to be implemented
-    } else if (state.connectionsStatus === "approved") {
-      logger.info("Moving to next section after connections approval");
-      return "determineNextSection";
-    } else if (state.connectionsStatus === "edited") {
-      // Need to implement connections editing
-      logger.info("Regenerating connections with edits");
-      return "generateConnections"; // This node needs to be implemented
-    }
+  if (
+    statusToCheck === ProcessingStatus.APPROVED ||
+    statusToCheck === SectionStatus.APPROVED
+  ) {
+    logger.info(`Content ${contentRef} approved, determining next step`);
+    return determineNextSection(state);
   }
 
-  // Section routing (when contentRef is a section ID)
-  else {
-    // Try to parse the contentRef as a SectionType
-    try {
-      const sectionType = contentRef as SectionType;
-      if (state.sections.has(sectionType)) {
-        const section = state.sections.get(sectionType);
-
-        if (section && section.status === "stale") {
-          logger.info(`Regenerating section ${contentRef} after feedback`);
-          // Set current section before regenerating
-          return "generateSection";
-        } else if (section && section.status === "approved") {
-          logger.info(`Moving to next section after ${contentRef} approval`);
-          return "determineNextSection";
-        } else if (section && section.status === "edited") {
-          logger.info(`Regenerating section ${contentRef} with edits`);
-          return "generateSection";
-        }
-      }
-    } catch (e) {
-      logger.error(`Invalid section reference: ${contentRef}`);
-    }
+  if (
+    statusToCheck === ProcessingStatus.EDITED ||
+    statusToCheck === SectionStatus.EDITED
+  ) {
+    logger.info(`Content ${contentRef} was edited, determining next step`);
+    return determineNextSection(state);
   }
 
-  // Fallback
-  logger.error(`Unexpected state after feedback processing for ${contentRef}`);
-  return "handleError";
+  logger.warn(
+    "Could not determine specific route after feedback, using default"
+  );
+  return determineNextSection(state);
 }
 
 /**
@@ -428,19 +425,25 @@ export function routeAfterFeedbackProcessing(state: ProposalState): string {
  * @param state Current proposal state
  * @returns The name of the next node to transition to
  */
-export function routeAfterResearchReview(state: ProposalState): string {
-  const logger = console;
-  logger.info("Routing after research review");
+export function routeAfterResearchReview(state: OverallProposalState): string {
+  if (!state.researchStatus) {
+    console.error("Research status not found in state for routing.");
+    return "error";
+  }
 
-  if (state.researchStatus === "approved") {
-    return "processFeedback";
-  } else if (
-    state.researchStatus === "stale" ||
-    state.researchStatus === "edited"
-  ) {
-    return "processFeedback";
-  } else {
-    return "handleError";
+  switch (state.researchStatus) {
+    case ProcessingStatus.APPROVED:
+      return "continue"; // Research approved, proceed
+    case ProcessingStatus.STALE:
+      return "stale"; // Research marked stale, regenerate
+    case ProcessingStatus.EDITED: // Assuming EDITED implies approved after modification
+      return "continue";
+    default:
+      // Any other status (e.g., NEEDS_REVISION, ERROR, etc.) implies feedback/review is needed
+      console.warn(
+        `Unexpected research status for routing: ${state.researchStatus}, routing to feedback.`
+      );
+      return "awaiting_feedback";
   }
 }
 
@@ -450,19 +453,25 @@ export function routeAfterResearchReview(state: ProposalState): string {
  * @param state Current proposal state
  * @returns The name of the next node to transition to
  */
-export function routeAfterSolutionReview(state: ProposalState): string {
-  const logger = console;
-  logger.info("Routing after solution review");
+export function routeAfterSolutionReview(state: OverallProposalState): string {
+  if (!state.solutionStatus) {
+    console.error("Solution status not found in state for routing.");
+    return "error";
+  }
 
-  if (state.solutionStatus === "approved") {
-    return "processFeedback";
-  } else if (
-    state.solutionStatus === "stale" ||
-    state.solutionStatus === "edited"
-  ) {
-    return "processFeedback";
-  } else {
-    return "handleError";
+  switch (state.solutionStatus) {
+    case ProcessingStatus.APPROVED:
+      return "continue"; // Solution approved, proceed
+    case ProcessingStatus.STALE:
+      return "stale"; // Solution marked stale, regenerate
+    case ProcessingStatus.EDITED:
+      return "continue"; // Assuming EDITED implies approved after modification
+    default:
+      // Any other status implies feedback/review is needed
+      console.warn(
+        `Unexpected solution status for routing: ${state.solutionStatus}, routing to feedback.`
+      );
+      return "awaiting_feedback";
   }
 }
 
@@ -486,34 +495,53 @@ export function routeAfterSectionFeedback(state: ProposalState): string {
  * @param state Current proposal state
  * @returns The name of the next node to transition to
  */
-export function routeFinalizeProposal(state: ProposalState): string {
-  const logger = console;
-  logger.info("Routing after finalize proposal");
+export function routeFinalizeProposal(state: OverallProposalState): string {
+  const allApprovedOrEdited = Array.from(state.sections.values()).every(
+    (section) =>
+      section.status === SectionStatus.APPROVED ||
+      section.status === SectionStatus.EDITED
+  );
 
-  // Check if there are any sections left to generate
-  if (state.requiredSections && state.requiredSections.length > 0) {
-    let allSectionsComplete = true;
+  if (allApprovedOrEdited) {
+    return "finalize";
+  } else {
+    // Find the first section data not approved/edited
+    const nextSectionData = Array.from(state.sections.values()).find(
+      (section) =>
+        section.status !== SectionStatus.APPROVED &&
+        section.status !== SectionStatus.EDITED
+    );
 
-    for (const sectionType of state.requiredSections) {
-      if (state.sections.has(sectionType)) {
-        const section = state.sections.get(sectionType);
-        if (section && section.status !== "approved") {
-          allSectionsComplete = false;
+    if (nextSectionData) {
+      // Find the corresponding section type (key) for the found section data
+      let nextSectionType: string | undefined;
+      for (const [key, value] of state.sections.entries()) {
+        if (value === nextSectionData) {
+          nextSectionType = key;
           break;
         }
-      } else {
-        allSectionsComplete = false;
-        break;
       }
-    }
 
-    if (allSectionsComplete) {
-      return "completeProposal";
+      if (nextSectionType) {
+        console.log(
+          `Not all sections approved/edited. Next section: ${nextSectionType}, Status: ${nextSectionData.status}`
+        );
+      } else {
+        // This should not happen if nextSectionData was found in the map's values
+        console.warn(
+          "Could not find section type for the next section data in routeFinalizeProposal."
+        );
+      }
+
+      // You might want more specific routing based on the nextSectionData.status here,
+      // e.g., if it's 'queued' or 'generating', route to wait/monitor,
+      // if it's 'stale', route to regenerate, if 'error', route to error handler.
+      // For now, routing to 'continue' to imply moving to the next processing step.
+      return "continue";
     } else {
-      return "determineNextSection";
+      // This case shouldn't technically be reachable if not allApprovedOrEdited is true
+      console.warn("Could not determine next step in routeFinalizeProposal.");
+      return "error";
     }
-  } else {
-    // If no sections defined yet, go back to planning
-    return "determineNextSection";
   }
 }

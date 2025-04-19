@@ -144,20 +144,30 @@ export const EvaluationCriteriaSchema = z.object({
         id: z.string(),
         name: z.string(),
         description: z.string(),
-        weight: z.number().min(0).max(1),
-        isCritical: z.boolean(),
+        weight: z.number(),
+        isCritical: z.boolean().optional().default(false),
         passingThreshold: z.number().min(0).max(1),
-        scoringGuidelines: z.object({
-          excellent: z.string(),
-          good: z.string(),
-          adequate: z.string(),
-          poor: z.string(),
-          inadequate: z.string(),
-        }),
+        scoringGuidelines: z
+          .object({
+            excellent: z.string(),
+            good: z.string(),
+            adequate: z.string(),
+            poor: z.string(),
+            inadequate: z.string(),
+          })
+          .optional()
+          .default({
+            excellent: "Excellent",
+            good: "Good",
+            adequate: "Adequate",
+            poor: "Poor",
+            inadequate: "Inadequate",
+          }),
       })
     )
     .min(1),
   passingThreshold: z.number().min(0).max(1),
+  evaluationInstructions: z.string().optional(),
 });
 
 /**

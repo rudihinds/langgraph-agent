@@ -1,0 +1,130 @@
+{
+  "id": "funder_solution_alignment",
+  "name": "Funder-Solution Alignment Criteria",
+  "version": "1.0.0",
+  "description": "Criteria for evaluating how well a proposed solution aligns with and demonstrates understanding of funder priorities",
+  "criteria": [
+    {
+      "id": "mission_alignment",
+      "name": "Mission Alignment",
+      "description": "How well the solution connects to and advances the funder's core mission and values",
+      "weight": 0.2,
+      "isCritical": true,
+      "passingThreshold": 0.7,
+      "scoringGuidelines": {
+        "excellent": "Solution directly advances multiple core aspects of the funder's mission with explicit connections",
+        "good": "Solution clearly supports the funder's mission with some explicit connections",
+        "adequate": "Solution generally aligns with the funder's mission",
+        "poor": "Solution has limited connection to the funder's mission",
+        "inadequate": "Solution fails to demonstrate any meaningful alignment with the funder's mission"
+      }
+    },
+    {
+      "id": "priority_targeting",
+      "name": "Priority Targeting",
+      "description": "How precisely the solution addresses the funder's stated priority areas and focus topics",
+      "weight": 0.15,
+      "isCritical": true,
+      "passingThreshold": 0.6,
+      "scoringGuidelines": {
+        "excellent": "Solution directly targets multiple high-priority areas with precision",
+        "good": "Solution addresses clear priority areas with good specificity",
+        "adequate": "Solution generally addresses priority areas",
+        "poor": "Solution touches on priority areas only tangentially",
+        "inadequate": "Solution misses or misinterprets priority areas"
+      }
+    },
+    {
+      "id": "approach_compatibility",
+      "name": "Approach Compatibility",
+      "description": "How well the solution's methodology aligns with the funder's preferred implementation approaches",
+      "weight": 0.15,
+      "isCritical": false,
+      "passingThreshold": 0.6,
+      "scoringGuidelines": {
+        "excellent": "Solution employs approaches that perfectly match the funder's demonstrated preferences",
+        "good": "Solution uses approaches that align well with funder's preferences",
+        "adequate": "Solution's approaches are generally compatible with funder preferences",
+        "poor": "Solution uses approaches somewhat at odds with funder preferences",
+        "inadequate": "Solution employs approaches contrary to funder preferences"
+      }
+    },
+    {
+      "id": "value_resonance",
+      "name": "Value Resonance",
+      "description": "How effectively the solution reflects and resonates with the funder's core values and ethos",
+      "weight": 0.1,
+      "isCritical": false,
+      "passingThreshold": 0.5,
+      "scoringGuidelines": {
+        "excellent": "Solution embodies multiple core values of the funder with authentic alignment",
+        "good": "Solution reflects several values important to the funder",
+        "adequate": "Solution is generally consistent with funder values",
+        "poor": "Solution has limited reflection of funder values",
+        "inadequate": "Solution contradicts or ignores funder values"
+      }
+    },
+    {
+      "id": "language_mirroring",
+      "name": "Language Mirroring",
+      "description": "How effectively the solution uses terminology, framing, and tone that resonates with the funder",
+      "weight": 0.1,
+      "isCritical": false,
+      "passingThreshold": 0.5,
+      "scoringGuidelines": {
+        "excellent": "Solution consistently uses language that mirrors the funder's communication style",
+        "good": "Solution frequently incorporates funder-resonant language",
+        "adequate": "Solution occasionally uses language that matches funder style",
+        "poor": "Solution rarely uses language that resonates with funder",
+        "inadequate": "Solution uses language that conflicts with funder's style"
+      }
+    },
+    {
+      "id": "strategic_fit",
+      "name": "Strategic Fit",
+      "description": "How well the solution complements the funder's broader strategy and portfolio",
+      "weight": 0.1,
+      "isCritical": false,
+      "passingThreshold": 0.5,
+      "scoringGuidelines": {
+        "excellent": "Solution perfectly complements and enhances the funder's existing portfolio",
+        "good": "Solution fits well within the funder's strategy and portfolio",
+        "adequate": "Solution generally aligns with the funder's strategic direction",
+        "poor": "Solution has limited strategic fit with funder portfolio",
+        "inadequate": "Solution conflicts with or duplicates existing funder initiatives"
+      }
+    },
+    {
+      "id": "impact_measurement",
+      "name": "Impact Measurement Alignment",
+      "description": "How well the solution's proposed outcomes and metrics align with the funder's approach to measuring impact",
+      "weight": 0.1,
+      "isCritical": false,
+      "passingThreshold": 0.5,
+      "scoringGuidelines": {
+        "excellent": "Solution proposes metrics and outcomes that perfectly match funder's evaluation approaches",
+        "good": "Solution includes metrics well-aligned with funder's evaluation preferences",
+        "adequate": "Solution offers reasonably aligned outcome measures",
+        "poor": "Solution presents metrics with limited alignment to funder preferences",
+        "inadequate": "Solution fails to consider funder's approach to measuring impact"
+      }
+    },
+    {
+      "id": "risk_alignment",
+      "name": "Risk Appetite Alignment",
+      "description": "How well the solution's level of innovation and risk matches the funder's appetite for innovation versus proven approaches",
+      "weight": 0.1,
+      "isCritical": false,
+      "passingThreshold": 0.5,
+      "scoringGuidelines": {
+        "excellent": "Solution perfectly calibrates innovation and risk to match funder's preferences",
+        "good": "Solution's risk/innovation level aligns well with funder's appetite",
+        "adequate": "Solution demonstrates reasonable alignment with funder's risk preferences",
+        "poor": "Solution's risk/innovation level somewhat misaligned with funder preferences",
+        "inadequate": "Solution completely misreads funder's appetite for innovation versus proven approaches"
+      }
+    }
+  ],
+  "passingThreshold": 0.65,
+  "evaluationInstructions": "Evaluate how well the solution demonstrates understanding of and alignment with funder priorities by assessing each criterion on a scale from 0 to 1. Focus on both explicit statements and implicit understanding of what the funder is looking for. For each criterion, examine how the solution leverages research insights to align with funder expectations. Calculate the overall score as a weighted average of all criteria scores. The solution passes if the overall score meets or exceeds the passing threshold AND all critical criteria meet their individual passing thresholds."
+}

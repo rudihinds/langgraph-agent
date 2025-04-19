@@ -1,0 +1,40 @@
+{
+  "id": "solution-criteria",
+  "name": "Solution Evaluation Criteria",
+  "version": "1.0.0",
+  "passingThreshold": 0.75,
+  "criteria": [
+    {
+      "id": "feasibility",
+      "name": "Feasibility",
+      "description": "The solution is realistic and implementable within the constraints",
+      "weight": 0.25,
+      "isCritical": true,
+      "passingThreshold": 0.7
+    },
+    {
+      "id": "innovation",
+      "name": "Innovation",
+      "description": "The solution demonstrates innovative approaches to the problem",
+      "weight": 0.2,
+      "isCritical": false,
+      "passingThreshold": 0.6
+    },
+    {
+      "id": "alignment",
+      "name": "Alignment",
+      "description": "The solution aligns with client requirements and objectives",
+      "weight": 0.3,
+      "isCritical": true,
+      "passingThreshold": 0.8
+    },
+    {
+      "id": "valueProposition",
+      "name": "Value Proposition",
+      "description": "The solution clearly articulates its value and benefits",
+      "weight": 0.25,
+      "isCritical": true,
+      "passingThreshold": 0.7
+    }
+  ]
+}

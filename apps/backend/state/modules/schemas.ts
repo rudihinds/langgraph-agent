@@ -8,12 +8,14 @@ import {
   ProcessingStatus,
   SectionProcessingStatus,
   InterruptReason,
-} from "./types.js";
+  FeedbackType,
+  InterruptProcessingStatus,
+} from "./constants.js";
 
 /**
  * Create a Zod schema for the feedback type
  */
-export const feedbackTypeSchema = z.enum(["approve", "revise", "regenerate"]);
+export const feedbackTypeSchema = z.nativeEnum(FeedbackType);
 
 /**
  * Define the Zod schema for InterruptStatus
@@ -28,7 +30,7 @@ export const interruptStatusSchema = z.object({
       timestamp: z.string().nullable(),
     })
     .nullable(),
-  processingStatus: z.enum(["pending", "processed", "failed"]).nullable(),
+  processingStatus: z.nativeEnum(InterruptProcessingStatus).nullable(),
 });
 
 /**
@@ -65,17 +67,7 @@ export const sectionDataSchema = z.object({
   id: z.nativeEnum(SectionType),
   title: z.string().optional(),
   content: z.string(),
-  status: z.enum([
-    "queued",
-    "generating",
-    "awaiting_review",
-    "approved",
-    "edited",
-    "stale",
-    "error",
-    "not_started",
-    "needs_revision",
-  ]),
+  status: z.nativeEnum(SectionProcessingStatus),
   evaluation: evaluationResultSchema.nullable().optional(),
   lastUpdated: z.string(),
 });
@@ -88,7 +80,7 @@ export const rfpDocumentSchema = z.object({
   fileName: z.string().optional(),
   text: z.string().optional(),
   metadata: z.record(z.any()).optional(),
-  status: z.enum(["not_started", "loading", "loaded", "error"]),
+  status: z.nativeEnum(LoadingStatus),
 });
 
 /**
@@ -97,43 +89,13 @@ export const rfpDocumentSchema = z.object({
 export const OverallProposalStateSchema = z.object({
   rfpDocument: rfpDocumentSchema,
   researchResults: z.record(z.any()).optional(),
-  researchStatus: z.enum([
-    "queued",
-    "running",
-    "awaiting_review",
-    "approved",
-    "edited",
-    "stale",
-    "complete",
-    "error",
-    "needs_revision",
-  ]),
+  researchStatus: z.nativeEnum(ProcessingStatus),
   researchEvaluation: evaluationResultSchema.nullable().optional(),
   solutionResults: z.record(z.any()).optional(),
-  solutionStatus: z.enum([
-    "queued",
-    "running",
-    "awaiting_review",
-    "approved",
-    "edited",
-    "stale",
-    "complete",
-    "error",
-    "needs_revision",
-  ]),
+  solutionStatus: z.nativeEnum(ProcessingStatus),
   solutionEvaluation: evaluationResultSchema.nullable().optional(),
   connections: z.array(z.any()).optional(),
-  connectionsStatus: z.enum([
-    "queued",
-    "running",
-    "awaiting_review",
-    "approved",
-    "edited",
-    "stale",
-    "complete",
-    "error",
-    "needs_revision",
-  ]),
+  connectionsStatus: z.nativeEnum(ProcessingStatus),
   connectionsEvaluation: evaluationResultSchema.nullable().optional(),
 
   // We use a custom validation for the Map type since Zod doesn't have direct Map support
@@ -179,7 +141,7 @@ export const OverallProposalStateSchema = z.object({
   interruptStatus: interruptStatusSchema,
   interruptMetadata: z
     .object({
-      reason: z.enum(["EVALUATION_NEEDED", "CONTENT_REVIEW", "ERROR_OCCURRED"]),
+      reason: z.nativeEnum(InterruptReason),
       nodeId: z.string(),
       timestamp: z.string(),
       contentReference: z.string().optional(),
@@ -196,15 +158,5 @@ export const OverallProposalStateSchema = z.object({
   userId: z.string().optional(),
   createdAt: z.string(),
   lastUpdatedAt: z.string(),
-  status: z.enum([
-    "queued",
-    "running",
-    "awaiting_review",
-    "approved",
-    "edited",
-    "stale",
-    "complete",
-    "error",
-    "needs_revision",
-  ]),
+  status: z.nativeEnum(ProcessingStatus),
 });

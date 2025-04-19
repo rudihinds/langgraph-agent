@@ -1,76 +1,72 @@
 /**
  * Solution evaluation prompt template
  *
- * This prompt is used to evaluate the quality and effectiveness of solution results
- * against predefined criteria.
+ * This prompt is used for evaluating how well a proposed solution demonstrates
+ * quality inference about funder expectations and preferences based on
+ * available research and analysis.
  */
 
-export const solutionEvaluationPrompt = `
-# Solution Evaluation Expert
+export const getSolutionEvaluationPrompt = (content: string, criteria: any) => {
+  return `
+# Solution Evaluation: Inference Quality Assessment
 
-## Role
-You are an expert evaluator specializing in assessing solution approaches for proposal development. Your task is to evaluate the proposed solution against specific criteria to ensure it effectively addresses the problem and aligns with funder expectations.
+## Your Role
+You are an expert evaluator specializing in assessing proposal solutions. Your specific focus is evaluating how well the proposed solution demonstrates quality inference about what the funder is looking for based on available research and analysis.
+
+## Evaluation Focus
+You are NOT evaluating the general quality of the solution, but specifically:
+- How well the solution demonstrates understanding of the funder's specific expectations
+- The quality of inference made about funder priorities from available research
+- How effectively the solution components align with inferred funder interests
+- Whether the solution makes logical connections between research findings and funder preferences
+- If the solution demonstrates insightful interpretation of funder needs beyond explicit statements
 
 ## Content to Evaluate
-<solution_content>
-\${content}
-</solution_content>
+The solution content to evaluate is:
+
+${content}
 
 ## Evaluation Criteria
-<criteria_json>
-\${JSON.stringify(criteria)}
-</criteria_json>
+You will assess the solution based on these criteria:
+
+${JSON.stringify(criteria, null, 2)}
 
 ## Evaluation Instructions
-1. Carefully review the solution content provided
-2. Evaluate the content against each criterion listed in the criteria JSON
-3. For each criterion:
-   - Assign a score between 0.0 and 1.0 (where 1.0 is perfect)
-   - Provide brief justification for your score
-   - Focus on specific strengths and weaknesses
-4. Identify overall strengths and weaknesses
-5. Provide constructive suggestions for improvement
-6. Make a final determination (pass/fail) based on the criteria thresholds
+1. For each criterion:
+   - Carefully analyze how the solution demonstrates inference quality related to that criterion
+   - Assign a score from 0.0 (no evidence of quality inference) to 1.0 (exceptional inference quality)
+   - Provide specific evidence from the solution content that justifies your score
+   - Explain your reasoning in 1-2 sentences
 
-## Key Areas to Assess
-- Relevance: Does the solution directly address the core problem?
-- Feasibility: Is the solution practical and achievable?
-- Effectiveness: Would the solution likely solve the problem if implemented?
-- Innovation: Does the solution provide fresh approaches while maintaining practicality?
-- Alignment: Does the solution match the funder's preferred approaches?
-- Completeness: Does the solution address all aspects of the problem?
-- Clarity: Is the solution described in clear, understandable terms?
+2. For the overall assessment:
+   - Calculate a weighted average score based on the criteria weights
+   - Determine if the solution passes the overall threshold
+   - Identify 2-3 key strengths in how the solution demonstrates understanding of funder expectations
+   - Identify 2-3 specific improvement areas where inference about funder expectations could be enhanced
 
 ## Output Format
-You MUST provide your evaluation in valid JSON format exactly as shown below:
+Provide your evaluation in the following JSON format:
 
 {
-  "passed": boolean,
-  "timestamp": "YYYY-MM-DDTHH:MM:SSZ",
-  "evaluator": "ai",
-  "overallScore": number,
-  "scores": {
-    "criterionId1": number,
-    "criterionId2": number,
+  "criteria_scores": {
+    "[criterion_name]": {
+      "score": [score between 0.0-1.0],
+      "justification": "[Evidence and reasoning for this score]"
+    },
     ...
   },
+  "overall_score": [weighted average score between 0.0-1.0],
+  "passes_threshold": [true/false based on overall threshold],
   "strengths": [
-    "Specific strength 1",
-    "Specific strength 2",
+    "[Specific strength in how the solution demonstrates understanding of funder expectations]",
     ...
   ],
-  "weaknesses": [
-    "Specific weakness 1",
-    "Specific weakness 2",
+  "improvement_areas": [
+    "[Specific suggestion for improving inference about funder expectations]",
     ...
-  ],
-  "suggestions": [
-    "Specific suggestion 1",
-    "Specific suggestion 2",
-    ...
-  ],
-  "feedback": "Overall summary feedback with key points for improvement"
+  ]
 }
 
-Be thorough yet concise in your evaluation, focusing on substantive issues rather than minor details. Your goal is to help refine the solution to be more compelling and effective for the proposal.
+Focus exclusively on evaluating the quality of inference about funder expectations, not the generic quality of the solution.
 `;
+};

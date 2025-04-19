@@ -70,31 +70,45 @@ Be thorough yet concise in your evaluation, focusing on substantive issues rathe
 `;
 
 /**
- * Problem Statement evaluation key areas
+ * Key areas to assess in a problem statement section
  */
 export const problemStatementKeyAreas = `
-- Clarity: Is the problem clearly defined and easy to understand?
-- Relevance: Does the problem directly relate to the funder's interests and priorities?
-- Evidence: Is the problem substantiated with compelling data and examples?
-- Scope: Is the problem appropriately sized for the proposed intervention?
-- Urgency: Is the need for addressing this problem now effectively conveyed?
-- Context: Is the problem presented within its broader systemic context?
-- Impact: Is the significance and impact of the problem clearly articulated?
-- Solvability: Is the problem presented as serious but addressable?
+- **Clarity**: Is the problem clearly defined and easy to understand?
+- **Relevance**: Is the problem relevant to the funder's priorities and interests?
+- **Evidence**: Is the problem supported by data, research, or other evidence?
+- **Scope**: Is the scope of the problem appropriately defined (neither too broad nor too narrow)?
+- **Urgency**: Is the urgency or importance of addressing the problem effectively conveyed?
+- **Context**: Is sufficient background information provided to understand the problem's origins and context?
+- **Impact**: Is the impact of the problem on stakeholders clearly articulated?
+- **Solvability**: Does the problem statement suggest the problem is solvable within the proposed project scope?
 `;
 
 /**
- * Methodology evaluation key areas
+ * Key areas to assess in a solution section
+ */
+export const solutionKeyAreas = `
+- **Alignment with Funder Priorities**: Does the solution directly address what the funder is looking for based on the research and solution sought analysis?
+- **Responsiveness**: Does the solution directly respond to the identified problem?
+- **Innovation**: Does the solution offer innovative or fresh approaches while remaining feasible?
+- **Feasibility**: Is the solution realistic and achievable given the constraints and resources?
+- **Completeness**: Does the solution address all key aspects of the problem?
+- **Scalability**: Does the solution have potential for growth or broader impact?
+- **Evidence-Based**: Is the solution grounded in evidence, best practices, or proven approaches?
+- **Impact**: Does the solution clearly articulate the expected outcomes and benefits?
+`;
+
+/**
+ * Key areas to assess in a methodology section
  */
 export const methodologyKeyAreas = `
-- Clarity: Are the methods clearly described and logically organized?
-- Feasibility: Is the approach realistic and achievable?
-- Appropriateness: Do the methods directly address the stated problem?
-- Innovation: Does the approach incorporate innovative yet practical elements?
-- Completeness: Does the methodology address all aspects of the problem?
-- Specificity: Are the methods described in sufficient detail?
-- Evidence-Based: Is the approach grounded in best practices or proven methods?
-- Risk Management: Are potential challenges acknowledged with contingency plans?
+- **Clarity**: Are the methods and approaches clearly described?
+- **Feasibility**: Are the proposed methods realistic and achievable?
+- **Appropriateness**: Are the methods appropriate for addressing the stated problem and achieving the desired outcomes?
+- **Innovation**: Does the methodology incorporate innovative approaches where beneficial?
+- **Completeness**: Does the methodology address all necessary aspects of implementing the solution?
+- **Specificity**: Are specific activities, processes, and tools identified?
+- **Evidence-Based Practices**: Are the methods grounded in research, best practices, or proven approaches?
+- **Risk Management**: Are potential challenges identified with appropriate mitigation strategies?
 `;
 
 /**
@@ -140,40 +154,36 @@ export const conclusionKeyAreas = `
 `;
 
 /**
- * Helper function to get the evaluation prompt for a specific section type
- * @param sectionType The type of section to evaluate
- * @returns The evaluation prompt for the specified section
+ * Get the evaluation prompt for a specific section type by injecting the appropriate key areas
  */
 export function getSectionEvaluationPrompt(sectionType: string): string {
-  let keyAreasToAssess = "";
+  let keyAreas: string;
 
-  switch (sectionType.toLowerCase()) {
-    case "problem statement":
-      keyAreasToAssess = problemStatementKeyAreas;
+  switch (sectionType) {
+    case "problem_statement":
+      keyAreas = problemStatementKeyAreas;
+      break;
+    case "solution":
+      keyAreas = solutionKeyAreas;
       break;
     case "methodology":
-      keyAreasToAssess = methodologyKeyAreas;
+      keyAreas = methodologyKeyAreas;
       break;
     case "budget":
-      keyAreasToAssess = budgetKeyAreas;
+      keyAreas = budgetKeyAreas;
       break;
     case "timeline":
-      keyAreasToAssess = timelineKeyAreas;
+      keyAreas = timelineKeyAreas;
       break;
     case "conclusion":
-      keyAreasToAssess = conclusionKeyAreas;
+      keyAreas = conclusionKeyAreas;
       break;
     default:
-      keyAreasToAssess = `
-      - Clarity: Is the content clear and easy to understand?
-      - Relevance: Does the content directly support the proposal's purpose?
-      - Completeness: Does the content address all necessary aspects?
-      - Quality: Is the content well-written and professionally presented?
-      - Alignment: Does the content align with funder expectations?
-      `;
+      keyAreas = `- **Relevance**: Is the content relevant to this section's purpose?
+- **Completeness**: Does the section cover all necessary elements?
+- **Clarity**: Is the content clear and easy to understand?
+- **Coherence**: Does the section flow logically and connect well with other sections?`;
   }
 
-  return sectionEvaluationPrompt
-    .replace(/\$\{sectionType\}/g, sectionType)
-    .replace(/\$\{keyAreasToAssess\}/g, keyAreasToAssess);
+  return sectionEvaluationPrompt.replace("${KEY_AREAS_TO_ASSESS}", keyAreas);
 }

@@ -131,11 +131,39 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Provide example of conditional routing implementation
 - [ ] Integrate with actual proposal generation graph
 
+#### Implementation Tasks
+
+1. **Create Integration Utilities**:
+
+   - [ ] Implement `routeAfterEvaluation` conditional function in `apps/backend/agents/proposal_generation/conditionals.ts`
+   - [ ] Create `addEvaluationNode` helper function in `apps/backend/agents/proposal_generation/evaluation_integration.ts`
+   - [ ] Write tests for conditional routing function
+   - [ ] Write tests for node registration helper
+
+2. **Update Graph Definition**:
+   - [ ] Modify `apps/backend/agents/proposal_generation/graph.ts` to use evaluation node integration
+   - [ ] Add evaluation nodes for each content type (research, solution, connections, sections)
+   - [ ] Configure proper interrupt points for all evaluation nodes
+   - [ ] Add conditional edges for handling evaluation results
+
 ### HITL Configuration
 
 - [x] Create example of evaluation nodes as interrupt points
 - [x] Provide example implementation of interrupt handlers
 - [ ] Integrate with actual Orchestrator implementation
+
+#### Implementation Tasks
+
+1. **Configure HITL in Graph**:
+
+   - [ ] Update `graph.compiler.interruptAfter()` configuration to include all evaluation nodes
+   - [ ] Create tests to verify interrupt configuration
+   - [ ] Implement proper interrupt metadata structure for evaluations
+
+2. **HITL User Interface Integration**:
+   - [ ] Define UI component requirements for displaying evaluation results
+   - [ ] Specify available actions for different evaluation statuses
+   - [ ] Document UI state management for interrupt handling
 
 ## Orchestrator Integration
 
@@ -146,10 +174,46 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Show state transition logic for evaluation results
 - [ ] Integrate with actual Orchestrator Service
 
+#### Implementation Tasks
+
+1. **Implement Orchestrator Methods**:
+
+   - [ ] Create `handleEvaluationFeedback` method in `OrchestratorService`
+   - [ ] Implement logic for processing approval, revision, and edit actions
+   - [ ] Add state transition handling for evaluation results
+   - [ ] Add tests for all feedback handling paths
+
+2. **API Integration**:
+   - [ ] Define API routes for handling evaluation feedback
+   - [ ] Implement request validation for evaluation feedback
+   - [ ] Create handlers for connecting API to Orchestrator
+
 ### Dependency Management
 
 - [ ] Integrate with dependency tracking system
 - [ ] Implement stale marking for dependent sections
+
+#### Implementation Tasks
+
+1. **Dependency Tracking**:
+
+   - [ ] Implement `markDependentSectionsAsStale` in `OrchestratorService`
+   - [ ] Create utility to load dependency map from configuration
+   - [ ] Add tests for dependency tracking logic
+   - [ ] Implement helper for detecting affected sections
+
+2. **Stale Content Management**:
+
+   - [ ] Create `handleStaleDecision` method in `OrchestratorService`
+   - [ ] Implement "keep" vs. "regenerate" logic
+   - [ ] Add support for regeneration guidance in messages
+   - [ ] Update graph to use regeneration guidance when available
+
+3. **Generator Node Updates**:
+   - [ ] Modify all generator nodes to check for guidance in `state.messages`
+   - [ ] Implement guidance parsing and incorporation
+   - [ ] Add tests for regeneration with guidance
+   - [ ] Ensure guidance is removed from messages after use
 
 ## Testing
 
@@ -271,17 +335,36 @@ This implementation plan outlines the tasks required to build the standardized e
 ### Test File Structure
 
 - [x] Split tests across multiple files to improve maintainability:
-  - [x] `evaluationNodeFactory.test.ts` - Tests for the factory functionality
-  - [x] `contentExtractors.test.ts` - Tests for content extraction functions
-  - [x] `evaluationCriteria.test.ts` - Tests for criteria loading and validation
-  - [x] `stateManagement.test.ts` - Tests for state compatibility and updates
-  - [x] `errorHandling.test.ts` - Tests for error conditions and recovery
+  - [x] `evaluationCriteria.test.ts` - Tests for criteria loading and validation ✅ **(COMPLETED)**
+  - [x] `contentExtractors.test.ts` - Tests for content extraction functions ✅ **(COMPLETED)**
+  - [x] `evaluationNodeFactory.test.ts` - Tests for the factory functionality ✅ **(COMPLETED)**
+  - [x] `stateManagement.test.ts` - Tests for state compatibility and updates ✅ **(COMPLETED)**
+  - [x] `errorHandling.test.ts` - Tests for error conditions and recovery ✅ **(COMPLETED)**
+  - [x] `extractors.test.ts` - Tests for content extractors ✅ **(COMPLETED)**
+  - [x] `factory.test.ts` - Tests for factory implementation ✅ **(COMPLETED)**
+  - [x] `evaluationFramework.test.ts` - Tests for core framework components ✅ **(COMPLETED)**
+  - [x] `evaluationNodeEnhancements.test.ts` - Tests for enhanced node functionality ✅ **(COMPLETED)**
 
 ### Integration Tests
 
 - [ ] Test node interaction with LangGraph
 - [ ] Test full evaluation workflows
 - [ ] Test Orchestrator integration
+
+#### Integration Test Implementation
+
+1. **Graph Integration Tests**:
+
+   - [ ] Create test for registering evaluation nodes within the graph
+   - [ ] Test conditional routing based on evaluation results
+   - [ ] Verify proper state updates through node execution
+   - [ ] Test interrupt point configuration
+
+2. **Orchestrator Integration Tests**:
+   - [ ] Test evaluation feedback processing
+   - [ ] Test dependency tracking with evaluation-based edits
+   - [ ] Verify stale section handling
+   - [ ] Test regeneration with guidance
 
 ### Test Mocking Guidelines
 
@@ -345,6 +428,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [ ] Create configuration guide for custom criteria
 - [ ] Document evaluation prompt customization
 - [ ] Add examples for all evaluation scenarios
+- [ ] Create architecture diagrams for integration workflow
 
 ## Performance Optimization
 
@@ -364,49 +448,43 @@ This implementation plan outlines the tasks required to build the standardized e
 
 ## Recent Progress
 
-- Completed implementation of `EvaluationNodeFactory` class:
-  - Created factory methods for all evaluation types (research, solution, connection pairs)
-  - Implemented section-specific evaluation node creation with the `createSectionEvaluationNode` method
-  - Added funder-solution alignment evaluation node creation
-  - Fixed criteria path handling to properly resolve JSON files
-  - Added tests for factory functionality
-- Created example implementations demonstrating how to integrate evaluation nodes:
-  - Created `sectionEvaluationNodes.ts` showing how to create evaluation nodes for different section types
-  - Created `graphIntegration.ts` demonstrating how to integrate evaluation nodes into the main graph
-  - Provided examples of conditional routing based on evaluation results
-  - Demonstrated how to handle human-in-the-loop evaluation interactions
-- Completed all content extractors:
-  - Implemented funder-solution alignment content extractor
-  - Created section-specific extractors for problem statement, methodology, budget, timeline, and conclusion
-  - Added support for custom validation and preprocessing in extractors
+- All 9 evaluation test files are now passing:
 
-## Next Steps
+  - `evaluationCriteria.test.ts` - 13 tests passed
+  - `evaluationNodeFactory.test.ts` - 7 tests passed
+  - `evaluationFramework.test.ts` - 12 tests passed
+  - `stateManagement.test.ts` - 9 tests passed
+  - `evaluationNodeEnhancements.test.ts` - 10 tests passed
+  - `contentExtractors.test.ts` - 17 tests passed
+  - `extractors.test.ts` - 36 tests passed
+  - `factory.test.ts` - 10 tests passed
+  - `errorHandling.test.ts` - 20 tests passed
+  - Total: 134 tests passing across 9 test files
 
-1. **Integrate with actual proposal generation graph**:
+- Fixed all testing issues:
+  - Addressed mock implementation issues with proper `vi.hoisted()` usage
+  - Resolved TypeScript typing issues for factory and state mocks
+  - Fixed path module mocking to include both named exports and default export
+  - Implemented proper state structure for test objects
 
-   - Apply the patterns from the example implementations to the actual graph
-   - Add evaluation nodes at appropriate points in the content generation flow
-   - Implement conditional routing based on evaluation results
-   - Configure interrupt handling for human review
+## Current Focus and Next Steps
 
-2. **Integrate with actual Orchestrator Service**:
+1. **Graph Integration Development**:
 
-   - Implement the resume-after-evaluation pattern in the Orchestrator
-   - Add support for human feedback processing
-   - Implement state updates based on evaluation results
-   - Add dependency tracking for sections that fail evaluation
+   - Implement conditional routing function (`routeAfterEvaluation`)
+   - Create node registration helper (`addEvaluationNode`)
+   - Update main graph to integrate evaluation nodes
+   - Configure HITL interrupt points
 
-3. **Implement UI components for evaluation results**:
+2. **Orchestrator Integration Development**:
 
-   - Create components to display evaluation scores and feedback
-   - Implement feedback collection forms for human evaluation
-   - Add visualizations for evaluation results
-   - Create responsive UI for evaluation workflow
+   - Implement evaluation feedback handling
+   - Create dependency tracking system
+   - Add support for regeneration guidance
+   - Update generator nodes to use guidance from messages
 
-4. **Apply testing best practices to remaining tests**:
-   - Implement proper module mocking with `vi.hoisted()`
-   - Create proper test state interfaces that match production types
-   - Use the standardized mock patterns for fs, path, and custom modules
-   - Split large test files into focused, maintainable components
-   - Add explicit type assertions where necessary to maintain type safety
-   - Ensure test organization follows the established patterns
+3. **Final Testing and Documentation**:
+   - Create integration tests for graph interaction
+   - Test full workflows with evaluation, feedback, and regeneration
+   - Complete user documentation for evaluation configuration
+   - Create architecture diagrams showing the evaluation flow

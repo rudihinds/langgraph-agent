@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "The problem statement clearly defines the issues that need to be addressed without ambiguity.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "relevance",
+      "name": "Relevance",
+      "description": "The identified problems are directly relevant to the client's needs and business context.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "specificity",
+      "name": "Specificity",
+      "description": "The problem statement contains specific details rather than vague generalities.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "comprehensiveness",
+      "name": "Comprehensiveness",
+      "description": "The problem statement captures all significant aspects of the problem without major omissions.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "rootCause",
+      "name": "Root Cause Identification",
+      "description": "The problem statement identifies underlying causes, not just symptoms.",
+      "weight": 3,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "researchBased",
+      "name": "Research Foundation",
+      "description": "The problem statement is well-supported by the research findings.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "prioritization",
+      "name": "Prioritization",
+      "description": "The problem statement effectively prioritizes issues based on impact and importance.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "actionability",
+      "name": "Actionability",
+      "description": "The problem is framed in a way that enables solution development and action.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "stakeholderPerspective",
+      "name": "Stakeholder Perspective",
+      "description": "The problem statement considers the perspectives of all key stakeholders.",
+      "weight": 2,
+      "passThreshold": 0.6
+    },
+    {
+      "id": "neutrality",
+      "name": "Neutrality",
+      "description": "The problem statement avoids premature solution bias and remains solution-neutral.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the problem statement against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

@@ -312,7 +312,7 @@
       "id": 16,
       "title": "Refactor Node Functions for Document Processing and Analysis",
       "description": "Create or update node functions for document processing, requirement analysis, and section generation to align with architecture and work within the updated graph structure.",
-      "status": "in-progress",
+      "status": "done",
       "dependencies": [],
       "priority": "high",
       "details": "This task involves refactoring three key types of node functions to ensure compatibility with the new architecture and graph structure:\n\n1. Document Processing Nodes:\n   - Implement nodes that parse and extract information from input documents\n   - Create standardized document representation objects\n   - Add validation for input document formats and content\n   - Ensure nodes emit properly structured events for downstream consumption\n\n2. Requirement Analysis Nodes:\n   - Refactor analysis functions to work with the updated graph routing\n   - Implement nodes that extract, categorize, and prioritize requirements\n   - Create functions to identify dependencies between requirements\n   - Ensure analysis results are persisted correctly via the enhanced Supabase layer\n\n3. Section Generation Nodes:\n   - Update section generation logic to align with the new architecture\n   - Implement content templating with variable substitution\n   - Create functions for generating section outlines based on requirements\n   - Add support for Human-In-The-Loop interrupts during generation\n\nAll nodes should:\n- Follow a consistent interface pattern with standardized input/output contracts\n- Include proper error handling and logging\n- Support asynchronous operation and emit appropriate events\n- Integrate with the OrchestratorService for workflow management\n- Be properly typed with TypeScript interfaces\n- Include JSDoc documentation for all public methods and interfaces",
@@ -335,7 +335,7 @@
             1
           ],
           "details": "Implementation steps:\n1. Refactor analysis functions to work with the updated graph routing\n2. Implement requirement extraction logic using NLP techniques\n3. Create categorization system for different requirement types\n4. Develop prioritization logic based on requirement importance\n5. Implement dependency identification between requirements\n6. Ensure analysis results are persisted correctly via the enhanced Supabase layer\n7. Add comprehensive error handling and recovery mechanisms\n8. Implement logging for tracking analysis process and outcomes\n\nTesting approach:\n- Create unit tests for requirement extraction with various document types\n- Test categorization logic with different requirement formats\n- Verify prioritization with complex requirement sets\n- Test persistence of analysis results in the database\n- Create integration tests with upstream document processing nodes",
-          "status": "pending",
+          "status": "done",
           "parentTaskId": 16
         },
         {
@@ -361,18 +361,6 @@
           "details": "Implementation steps:\n1. Design test fixture system for sample documents and expected outputs\n2. Create unit test suite for each node function\n3. Implement integration tests for node sequences\n4. Develop end-to-end workflow tests that exercise all node types\n5. Add performance benchmarking for typical workloads\n6. Create stress tests for large documents and complex requirements\n7. Implement CI pipeline integration for automated testing\n8. Add test reporting and visualization\n\nTesting approach:\n- Verify all tests run successfully in isolation\n- Test the complete node sequence with realistic documents\n- Measure and track performance metrics\n- Validate test coverage across all node functions\n- Ensure all edge cases and error conditions are covered",
           "status": "done",
           "parentTaskId": 16
-        },
-        {
-          "id": 5,
-          "title": "Implement Evaluation Nodes for Content Quality Assessment",
-          "description": "Create reusable evaluation node function and specialized evaluation nodes for each content type (research, solution, connections, and sections) that assess content quality before human review.",
-          "details": "Implementation steps:\n1. Design a reusable core evaluation function that can be used by all evaluation nodes\n2. Create a criteria loading system to fetch evaluation criteria from configuration files\n3. Implement specialized evaluation nodes for different content types:\n   - evaluateResearchNode\n   - evaluateSolutionNode\n   - evaluateConnectionsNode\n   - evaluateSectionNode (configurable for each section type)\n4. Add standardized EvaluationResult interface with pass/fail status, scores, and comments\n5. Implement schema validation for evaluation outputs\n6. Ensure proper state updates for evaluation status in the OverallProposalState\n7. Add detailed logging for evaluation reasoning and decisions\n8. Integrate with the HITL interruption flow after evaluation is complete\n\nTesting approach:\n- Create unit tests for the core evaluation function\n- Test each specialized evaluation node with mock criteria and content\n- Verify handling of edge cases (empty content, missing criteria)\n- Test integration with the HITL system\n- Create fixtures with sample content and expected evaluation results",
-          "status": "pending",
-          "dependencies": [
-            1,
-            2
-          ],
-          "parentTaskId": 16
         }
       ]
     },
@@ -388,6 +376,99 @@
     },
     {
       "id": 17,
+      "title": "Implement Standardized Evaluation Framework",
+      "description": "Create a robust evaluation system with consistent patterns across all content types in the proposal generation system.",
+      "status": "pending",
+      "dependencies": [
+        16
+      ],
+      "priority": "high",
+      "details": "This task involves creating a comprehensive evaluation framework that standardizes how content is evaluated throughout the proposal generation system. The key components include:\n\n1. **Base Evaluation Node Factory**: Create a reusable pattern for evaluation nodes that can be consistently applied to all content types.\n    - Implement a factory function that generates specialized evaluation nodes\n    - Standardize input/output interfaces\n    - Create consistent state update patterns\n\n2. **Evaluation Result Interface**: Design a structured interface for evaluation results.\n    - Define standard score ranges (1-5 or 1-10)\n    - Create categories for different quality aspects\n    - Implement consistent pass/fail criteria\n    - Design clear feedback format\n\n3. **Configuration System**: Create JSON-based configuration for evaluation criteria.\n    - Implement loaders for criteria files\n    - Create schema validation for criteria\n    - Support weighted scoring\n    - Enable customization per proposal type\n\n4. **Human-in-the-Loop Integration**: Integrate with LangGraph's interrupt capabilities.\n    - Implement consistent interrupt points after evaluations\n    - Create standard feedback incorporation mechanisms\n    - Design UI hooks for human review workflow\n    - Support approval, revision, and regeneration paths\n\n5. **Specific Evaluation Nodes**: Create specialized evaluation nodes for each content type.\n    - Research evaluation node\n    - Solution evaluation node\n    - Connection pairs evaluation node\n    - Section evaluation nodes (for each section type)\n\n6. **Conditional Routing**: Implement consistent routing logic based on evaluation results.\n    - Create routing functions for pass/fail scenarios\n    - Implement state update patterns for different outcomes\n    - Support multi-path workflows based on evaluation quality\n\n7. **Documentation & Testing**: Create comprehensive documentation of the evaluation framework.\n    - Document evaluation patterns and best practices\n    - Create test cases for each evaluation node type\n    - Implement mocks for LLM responses in tests\n    - Verify interrupt behavior in testing",
+      "testStrategy": "Testing for this task will involve several components:\n\n1. **Unit Testing**:\n   - Create tests for the base evaluation node factory with mock inputs\n   - Test evaluation result interfaces for proper score calculations\n   - Verify criteria loading from configuration files\n   - Test each specific evaluation node independently\n\n2. **Error Handling Verification**:\n   - Test handling of invalid inputs\n   - Verify error propagation through the system\n   - Test timeout and API error scenarios\n   - Validate fallback behaviors\n\n3. **Integration Testing**:\n   - Test evaluation nodes within the full graph\n   - Verify interrupt behavior with simulated user feedback\n   - Test conditional routing based on evaluation results\n   - Validate state transitions across multiple nodes\n\n4. **Content Testing**:\n   - Create realistic content samples of various quality levels\n   - Verify evaluation correctly identifies quality issues\n   - Test with edge cases (empty content, minimal content, excessive content)\n   - Validate scoring consistency across similar content samples",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Design Evaluation Result Interface",
+          "description": "Create a standardized interface for evaluation results that includes scoring, criteria assessment, and feedback formatting.",
+          "details": "Implementation steps:\n1. Define the `EvaluationResult` interface with the following properties:\n   - `passed`: Boolean indicating overall pass/fail status\n   - `scores`: Map of criteria to numeric scores (1-5 or 1-10 scale)\n   - `feedback`: Structured feedback with strengths and areas for improvement\n   - `suggestedChanges`: Specific actionable suggestions\n   - `timestamp`: When the evaluation was performed\n   - `evaluator`: Source of the evaluation (AI or human reviewer ID)\n\n2. Create a Zod schema for validation of evaluation results\n\n3. Implement helper functions:\n   - `calculateOverallScore(scores)`: Calculates weighted average\n   - `determinePassFail(scores, thresholds)`: Determines if evaluation passed based on configurable thresholds\n   - `formatFeedback(evaluation)`: Creates human-readable feedback summary\n\n4. Add TypeScript typing and JSDoc documentation for all components\n\n5. Create sample/mock evaluation results for testing\n\nThe implementation should focus on making the interface reusable across all content types while providing enough specificity to be useful for specialized evaluation scenarios.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 17
+        },
+        {
+          "id": 2,
+          "title": "Implement Evaluation Criteria Configuration System",
+          "description": "Create a JSON-based configuration system for defining evaluation criteria, including loaders, validation, and weighted scoring.",
+          "details": "Implementation steps:\n1. Design JSON schema for evaluation criteria configuration:\n   - Define structure for criteria definitions with ids, descriptions, weights, and thresholds\n   - Support for required vs. optional criteria\n   - Include metadata fields for criteria categories (e.g., content, structure, alignment)\n   - Define scoring ranges and descriptors for each level\n\n2. Create configuration loaders:\n   - Implement `loadCriteriaConfig(contentType)` function to load appropriate criteria JSON\n   - Add caching mechanism for loaded configurations\n   - Implement validation using Zod schemas\n   - Create fallback to default criteria when specialized configs aren't available\n\n3. Implement support for weighted scoring:\n   - Create functions to calculate weighted scores across criteria\n   - Implement thresholds for pass/fail determination\n   - Support for critical criteria that must pass regardless of overall score\n\n4. Enable customization per proposal type:\n   - Create a registry of content-type specific configurations\n   - Implement inheritance/extension mechanism for specializing criteria\n   - Support runtime configuration overrides\n\n5. Create example configuration files:\n   - Base criteria applicable to all content\n   - Research evaluation criteria\n   - Solution sought criteria\n   - Connection pairs criteria\n   - Section-specific criteria (problem statement, methodology, etc.)\n\nThe implementation should balance flexibility with consistency, allowing for specialized evaluation while maintaining a standardized approach across the system.",
+          "status": "done",
+          "dependencies": [
+            1
+          ],
+          "parentTaskId": 17
+        },
+        {
+          "id": 3,
+          "title": "Create Base Evaluation Node Factory",
+          "description": "Implement a factory function that generates specialized evaluation nodes with consistent interfaces and behavior.",
+          "details": "Implementation steps:\n1. Design the base evaluation node interface:\n   - Define standard input/output contract\n   - Create consistent state update patterns\n   - Define error handling approach\n   - Support for interrupt signaling\n\n2. Implement the factory function:\n   - Create `createEvaluationNode(options)` factory that returns a node function\n   - Support configuration options:\n     - contentType: Type of content being evaluated (research, solution, section, etc.)\n     - criteriaPath: Optional path to custom criteria configuration\n     - evaluationModel: LLM model to use for evaluation\n     - customPrompt: Optional specialized prompt template\n     - interruptBehavior: Configuration for HITL interrupts\n     - customValidator: Optional specialized validation logic\n\n3. Implement core evaluation logic:\n   - Content validation before evaluation\n   - Criteria loading for the specific content type\n   - Prompt construction with content and criteria\n   - LLM invocation with appropriate parameters\n   - Response parsing and validation\n   - State updates with evaluation results\n   - Error handling with appropriate state updates\n\n4. Add support for different evaluation strategies:\n   - Criteria-based scoring\n   - Comparative evaluation (if reference examples available)\n   - Multi-step evaluation for complex content\n   - Self-consistency checking\n\n5. Implement consistent LLM prompt templates:\n   - Create base evaluation prompt template\n   - Add instructions for structured scoring\n   - Include examples of good/bad content with ratings\n   - Support for specialized evaluation instructions\n\n6. Create testing utilities:\n   - Mock LLM responses for testing\n   - Validation helpers for evaluation results\n   - Test fixtures for various content types\n\nThe implementation should prioritize consistency across all evaluation nodes while allowing for necessary specialization based on content types.",
+          "status": "done",
+          "dependencies": [
+            1,
+            2
+          ],
+          "parentTaskId": 17
+        },
+        {
+          "id": 4,
+          "title": "Implement Human-in-the-Loop Integration",
+          "description": "Integrate the evaluation framework with LangGraph's interrupt capabilities and create mechanisms for handling user feedback.",
+          "details": "Implementation steps:\n1. Define the interrupt integration approach:\n   - Identify appropriate interrupt points after evaluation nodes\n   - Define the interrupt data structure to include evaluation results\n   - Create consistent interrupt triggering logic\n   - Implement state preservation during interrupts\n\n2. Implement feedback incorporation mechanisms:\n   - Create structure for user feedback on evaluations\n   - Design override capability for human reviewers to adjust scores\n   - Implement approval/rejection/revision tracking\n   - Add support for comments and suggested changes\n   - Create history tracking for feedback iterations\n\n3. Configure LangGraph interrupt points:\n   - Update graph definition to include interrupts after evaluation nodes\n   - Create handlers for interrupt events\n   - Implement resumption logic for after user feedback\n   - Add timeout handling for interrupted states\n\n4. Implement UI hooks for review workflow:\n   - Define API endpoints for evaluation review\n   - Create standard response format for UI consumption\n   - Implement webhook/callback mechanisms for async notification\n   - Support real-time updates if using WebSockets\n\n5. Support approval, revision, and regeneration paths:\n   - Implement branching logic based on user feedback type\n   - Create state updates for different feedback scenarios\n   - Support direct editing of evaluated content\n   - Implement regeneration requests with incorporated feedback\n   - Maintain evaluation history across regenerations\n\n6. Create comprehensive error handling:\n   - Handle network interruptions during feedback submission\n   - Implement timeout recovery\n   - Add validation for malformed feedback\n   - Create fallback options for failed interrupt/resume cycles\n\nThe implementation should follow the established LangGraph patterns for human-in-the-loop interactions while providing the specialized functionality needed for evaluation feedback.",
+          "status": "pending",
+          "dependencies": [
+            3
+          ],
+          "parentTaskId": 17
+        },
+        {
+          "id": 5,
+          "title": "Implement Specific Evaluation Nodes",
+          "description": "Create specialized evaluation nodes for each content type using the base evaluation factory and appropriate criteria.",
+          "details": "Implementation steps:\n1. Implement research evaluation node:\n   - Use the base evaluation factory with research-specific configuration\n   - Create custom prompt extensions for research quality assessment\n   - Implement specialized validation logic for research content\n   - Create criteria configuration file for research evaluation\n   - Develop tests with realistic research content\n\n2. Implement solution evaluation node:\n   - Use the base evaluation factory with solution-specific configuration\n   - Create custom prompt extensions for solution quality assessment\n   - Implement specialized validation for solution content structure\n   - Create criteria configuration file for solution evaluation\n   - Develop tests with various solution qualities\n\n3. Implement connection pairs evaluation node:\n   - Use the base evaluation factory with connection-specific configuration\n   - Create custom prompt extensions for assessing connection relevance and strength\n   - Implement specialized validation for connection pair structures\n   - Create criteria configuration file for connection evaluation\n   - Develop tests with various connection qualities\n\n4. Implement section evaluation nodes:\n   - Create factory configuration for each section type:\n     - Problem statement\n     - Methodology\n     - Budget\n     - Timeline\n     - Team qualifications\n     - Other section types as needed\n   - Implement section-specific criteria configurations\n   - Create specialized prompts for each section type\n   - Develop validation logic for section-specific structures\n   - Create comprehensive test suite for section evaluations\n\n5. Ensure consistent integration with HITL:\n   - Configure interrupt points for each evaluation node\n   - Create appropriate UI hooks for specialized content review\n   - Implement content-specific feedback processing\n\n6. Create common utility functions:\n   - Content extractors for each type\n   - Specialized scoring algorithms where needed\n   - Content-specific validation helpers\n\nEach implementation should leverage the base evaluation framework while adding the necessary specialization for content-specific evaluation needs.",
+          "status": "pending",
+          "dependencies": [
+            3,
+            4
+          ],
+          "parentTaskId": 17
+        },
+        {
+          "id": 6,
+          "title": "Implement Conditional Routing Based on Evaluation Results",
+          "description": "Create routing logic that determines the next steps in the workflow based on evaluation outcomes.",
+          "details": "Implementation steps:\n1. Design routing function architecture:\n   - Create standard routing function signatures\n   - Define expected routing outcomes (continue, revise, regenerate, etc.)\n   - Implement state inspection for evaluation results\n   - Define routing decision criteria\n\n2. Implement pass/fail routing functions:\n   - Create `routeAfterEvaluation(state)` function that examines evaluation results\n   - Implement logic to route to different nodes based on pass/fail status\n   - Add support for threshold configuration\n   - Implement handling for critical failures\n   - Create routing for different severity levels\n\n3. Implement state update patterns:\n   - Create consistent state updates for different routing outcomes\n   - Implement status field updates based on routing decisions\n   - Add metadata for tracking routing history\n   - Create event emission for significant routing decisions\n\n4. Support multi-path workflows:\n   - Implement branching logic for different quality levels\n   - Create fast-track routing for high-quality content\n   - Implement remediation paths for different types of quality issues\n   - Add support for hybrid paths (partial approvals)\n\n5. Integrate with LangGraph:\n   - Update graph definition to include conditional edges\n   - Register routing functions with the graph\n   - Implement proper edge connections based on routing outcomes\n   - Ensure proper interaction with HITL interrupt points\n\n6. Implement routing analytics:\n   - Add logging for routing decisions\n   - Create tracking for routing patterns\n   - Implement visualization helpers for workflow paths\n   - Add metrics for routing effectiveness\n\n7. Create comprehensive tests:\n   - Test routing with various evaluation outcomes\n   - Verify edge traversal in the graph\n   - Test with mock state objects\n   - Validate interaction with HITL\n\nThe implementation should ensure that content flows through the appropriate paths based on quality assessment while maintaining visibility and control over the process.",
+          "status": "pending",
+          "dependencies": [
+            4,
+            5
+          ],
+          "parentTaskId": 17
+        },
+        {
+          "id": 7,
+          "title": "Create Documentation and Comprehensive Tests",
+          "description": "Develop detailed documentation for the evaluation framework and implement comprehensive tests for all components.",
+          "details": "Implementation steps:\n1. Create framework documentation:\n   - Write detailed README.md for the evaluation framework\n   - Document the overall architecture and design decisions\n   - Create usage examples for each major component\n   - Document configuration options and customization approaches\n   - Add diagrams for visual clarity (component interaction, state flow)\n   - Create troubleshooting guide for common issues\n\n2. Implement code-level documentation:\n   - Add comprehensive JSDoc comments to all interfaces and functions\n   - Create inline documentation for complex logic\n   - Document state update patterns and side effects\n   - Add type annotations with detailed descriptions\n   - Document error handling strategies\n\n3. Create pattern documentation:\n   - Document evaluation patterns and best practices\n   - Create guidelines for creating new evaluation criteria\n   - Document HITL integration patterns\n   - Create examples of custom evaluator implementations\n   - Document routing patterns for different scenarios\n\n4. Implement unit tests:\n   - Create tests for each evaluation node type\n   - Test evaluation result interfaces and helper functions\n   - Test criteria configuration loading and validation\n   - Test routing functions with various inputs\n   - Implement test coverage reporting\n\n5. Implement integration tests:\n   - Test evaluation nodes within the full graph\n   - Test HITL interrupts and workflow resumption\n   - Test state persistence during evaluation\n   - Verify proper interaction between components\n   - Test with realistic proposal content\n\n6. Create test fixtures and utilities:\n   - Create mock LLM responses for testing\n   - Generate sample content for each content type\n   - Create evaluation result fixtures\n   - Implement test helpers for state manipulation\n   - Create visualization tools for test results\n\n7. Implement validation tests:\n   - Verify consistency across evaluation implementations\n   - Test boundary conditions and edge cases\n   - Validate error handling\n   - Test performance with large content\n   - Verify compatibility with the overall system architecture\n\nComprehensive documentation and testing are essential for ensuring the evaluation framework is maintainable, extensible, and robust in production use.",
+          "status": "pending",
+          "dependencies": [
+            5,
+            6
+          ],
+          "parentTaskId": 17
+        }
+      ]
+    },
+    {
+      "id": 19,
       "title": "Implement Human-in-the-Loop (HITL) Capabilities",
       "description": "Create a comprehensive implementation of Human-in-the-Loop interrupts, feedback processing, and workflow resumption that aligns with architecture requirements.",
       "status": "done",
@@ -437,18 +518,6 @@
           "parentTaskId": 17
         }
       ]
-    },
-    {
-      "id": 19,
-      "title": "Fix API Endpoint Test Failures",
-      "description": "Address the test failures in HITL-related API endpoints by ensuring proper dependency installation, type compatibility, and test-implementation alignment.",
-      "status": "done",
-      "dependencies": [
-        17
-      ],
-      "priority": "high",
-      "details": "This task involves fixing the test failures for the following API endpoints:\n\n1. **Interrupt Status API** (`interrupt-status.ts`):\n   - Ensure the implementation matches test expectations for the method signature and return format\n   - Fix type issues between the test mocks and implementation\n   - Verify proper error handling and response formatting\n\n2. **Feedback API** (`feedback.ts`):\n   - Confirm the implementation properly handles all feedback types (approve, revise, regenerate)\n   - Fix response format to match test expectations (using `{ success: true }`)\n   - Ensure proper validation and error handling\n\n3. **Resume API** (`resume.ts`):\n   - Update the implementation to use `resumeAfterFeedback` method correctly\n   - Fix response format to match test expectations\n   - Ensure proper error handling and state verification\n\n4. **Common Issues**:\n   - Install missing `supertest` dependency with `npm install supertest --save-dev`\n   - Fix type casting issues in the orchestrator factory and service\n   - Update mock configurations to match current implementation\n\nAll implementations should align with the established factory pattern using `getOrchestrator` rather than direct instantiation of the `OrchestratorService`.",
-      "testStrategy": "Test all endpoints using the following approach:\n\n1. **Unit Tests**:\n   - Verify each endpoint returns the correct status codes for valid and invalid inputs\n   - Ensure proper error handling for edge cases\n   - Validate response formats match expectations in all scenarios\n\n2. **Mock Testing**:\n   - Configure proper mocks for `getOrchestrator` to return the expected interface\n   - Verify correct parameters are passed to orchestrator methods\n   - Test response formatting/transformation\n\n3. **Integration Tests**:\n   - Test the complete HITL flow from interrupt to feedback to resume\n   - Verify state transitions during the process\n   - Test all feedback types\n\nUse specific assertions to verify exact response structures and properties as expected by the frontend."
     },
     {
       "id": 20,

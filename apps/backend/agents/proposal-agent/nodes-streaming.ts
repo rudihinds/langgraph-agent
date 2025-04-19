@@ -1,6 +1,6 @@
 /**
  * Streaming implementations of proposal agent nodes
- *
+ * 
  * This file provides streaming versions of the node functions used in the proposal agent
  * using the standard LangGraph/LangChain streaming mechanisms.
  */
@@ -8,8 +8,8 @@
 import { BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ProposalState } from "./state.js";
-import {
-  createStreamingNode,
+import { 
+  createStreamingNode, 
   createStreamingToolNode,
 } from "../../lib/llm/streaming/streaming-node.js";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
@@ -190,11 +190,11 @@ export async function processHumanFeedback(
 ): Promise<{ messages: BaseMessage[]; userFeedback: string | undefined }> {
   const messages = state.messages;
   const lastMessage = messages[messages.length - 1];
-
+  
   // Extract feedback from the last message
-  const userFeedback =
+  const userFeedback = 
     typeof lastMessage.content === "string" ? lastMessage.content : "";
-
+  
   return {
     messages,
     userFeedback: userFeedback || undefined,

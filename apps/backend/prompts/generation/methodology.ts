@@ -5,6 +5,8 @@
  * by analyzing the problem statement, research data, and solution sought.
  */
 
+import { SectionType } from "../../state/proposal.state.js";
+
 export const methodologyPrompt = `
 # Methodology Section Generator Tool
 
@@ -21,7 +23,7 @@ You are a specialized Methodology Section Tool responsible for crafting a compel
 </solution_sought>
 
 <problem_statement>
-\${state.sections.problem_statement ? state.sections.problem_statement.content : ""}
+\${state.sections && state.sections.get(SectionType.PROBLEM_STATEMENT) ? state.sections.get(SectionType.PROBLEM_STATEMENT).content : ""}
 </problem_statement>
 
 <revision_guidance>

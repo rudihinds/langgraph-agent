@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "comprehensiveness",
+      "name": "Comprehensiveness",
+      "description": "The budget accounts for all necessary costs and expenditures without significant omissions.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "accuracy",
+      "name": "Accuracy",
+      "description": "Cost estimates are realistic and based on current market rates and project requirements.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "transparency",
+      "name": "Transparency",
+      "description": "The budget clearly breaks down costs with sufficient detail to understand allocation.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "alignment",
+      "name": "Alignment with Scope",
+      "description": "The budget accurately reflects the scope and requirements of the project.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "costEffectiveness",
+      "name": "Cost Effectiveness",
+      "description": "The budget demonstrates good value for money and efficient resource allocation.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "contingency",
+      "name": "Contingency Planning",
+      "description": "The budget includes appropriate contingency funds for unforeseen circumstances.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "justification",
+      "name": "Cost Justification",
+      "description": "Major cost items are justified with clear rationales for their inclusion and amount.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "phasing",
+      "name": "Budget Phasing",
+      "description": "The budget is appropriately phased or distributed across project timeline and milestones.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "flexibility",
+      "name": "Flexibility",
+      "description": "The budget includes provisions for adjustments based on changing requirements.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "roi",
+      "name": "ROI Consideration",
+      "description": "The budget demonstrates consideration of return on investment or value delivered.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the budget against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

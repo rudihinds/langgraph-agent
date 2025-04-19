@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "realism",
+      "name": "Realism",
+      "description": "The timeline is achievable and realistic given the project scope and complexity.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "The timeline is clearly presented with well-defined phases, milestones, and deadlines.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "completeness",
+      "name": "Completeness",
+      "description": "The timeline includes all necessary project activities without significant omissions.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "sequencing",
+      "name": "Logical Sequencing",
+      "description": "Activities are logically sequenced with appropriate dependencies and relationships.",
+      "weight": 3,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "milestones",
+      "name": "Milestone Definition",
+      "description": "Key milestones are clearly identified and appropriately distributed throughout the timeline.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "contingency",
+      "name": "Contingency Planning",
+      "description": "The timeline includes buffer periods or contingency plans for potential delays.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "resourceConsideration",
+      "name": "Resource Consideration",
+      "description": "The timeline accounts for resource availability and constraints.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "criticalPath",
+      "name": "Critical Path Awareness",
+      "description": "The timeline identifies or accounts for the critical path of project activities.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "clientAlignment",
+      "name": "Client Alignment",
+      "description": "The timeline aligns with client expectations, deadlines, and business cycles.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "detail",
+      "name": "Appropriate Detail",
+      "description": "The timeline provides the right level of detail - neither too granular nor too high-level.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the timeline against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

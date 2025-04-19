@@ -5,6 +5,8 @@
  * by analyzing the methodology, problem statement, and solution sought.
  */
 
+import { SectionType } from "../../state/proposal.state.js";
+
 export const budgetPrompt = `
 # Budget Section Generator Tool
 
@@ -13,11 +15,11 @@ You are a specialized Budget Section Tool responsible for crafting a realistic, 
 
 ## Input Data
 <problem_statement>
-\${state.sections.problem_statement ? state.sections.problem_statement.content : ""}
+\${state.sections && state.sections.get(SectionType.PROBLEM_STATEMENT) ? state.sections.get(SectionType.PROBLEM_STATEMENT).content : ""}
 </problem_statement>
 
 <methodology>
-\${state.sections.methodology ? state.sections.methodology.content : ""}
+\${state.sections && state.sections.get(SectionType.METHODOLOGY) ? state.sections.get(SectionType.METHODOLOGY).content : ""}
 </methodology>
 
 <solution_sought>

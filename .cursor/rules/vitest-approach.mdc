@@ -1,0 +1,422 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Vitest Test-Driven Development Approach
+
+## Understanding Vitest Mock Hoisting
+
+Vitest's `vi.mock()` is [hoisted](mdc:https:/vitest.dev/api/vi.html#vi-mock) to the top of the file during execution, which means it runs before any imports or test definitions. This can lead to unexpected behavior when trying to dynamically update mocks within test functions.
+
+### 🚫 Incorrect usage:
+
+```typescript
+import { readFile } from 'fs/promises';
+import { mockFunction } from './mockUtils';
+
+vi.mock('fs/promises');
+
+describe('My Test Suite', () => {
+  it('should read a file', async () => {
+    // ❌ This won't work as expected because vi.mock is hoisted
+    // and runs before this line
+    (readFile as Mock).mockResolvedValue('mocked content');
+    
+    const result = await myFunction();
+    expect(result).toBe('mocked content');
+  });
+});
+```
+
+### ✅ Correct usage:
+
+```typescript
+import { readFile } from 'fs/promises';
+import { mockFunction } from './mockUtils';
+
+// Assign mocked implementations before vi.mock using vi.hoisted
+const mockedReadFile = vi.hoisted(() => {
+  return {
+    readFile: vi.fn().mockResolvedValue('mocked content')
+  };
+});
+
+// Then use the mock
+vi.mock('fs/promises', () => {
+  return mockedReadFile;
+});
+
+describe('My Test Suite', () => {
+  it('should read a file', async () => {
+    // Now we can reference our hoisted mock implementation
+    const result = await myFunction();
+    expect(result).toBe('mocked content');
+    
+    // And we can also change it for specific tests
+    mockedReadFile.readFile.mockResolvedValueOnce('different content');
+  });
+});
+```
+
+## Structuring Tests for Resilience
+
+Focus on testing behavior, not implementation details. This makes tests less brittle when implementation changes.
+
+### Behavior-focused tests:
+
+```typescript
+// ✅ Good: Tests the outcome, not how it's achieved
+it('evaluates content and returns a score', async () => {
+  // Setup with minimal assumptions about internals
+  const content = "Example content";
+  
+  // Call the function under test
+  const result = await evaluateContent(content);
+  
+  // Verify expected behavior
+  expect(result).toHaveProperty('score');
+  expect(typeof result.score).toBe('number');
+  expect(result.score).toBeGreaterThanOrEqual(0);
+  expect(result.score).toBeLessThanOrEqual(10);
+});
+```
+
+### Implementation-focused tests:
+
+```typescript
+// 🚫 Brittle: Tests implementation details
+it('calls the LLM with specific prompt', async () => {
+  // Setup
+  const content = "Example content";
+  const spy = vi.spyOn(llmClient, 'call');
+  
+  // Call the function under test
+  await evaluateContent(content);
+  
+  // Verification assumes specific implementation
+  expect(spy).toHaveBeenCalledWith({
+    messages: [{ role: 'system', content: expect.stringContaining('evaluate') }]
+  });
+});
+```
+
+## TDD Workflow - Key Steps
+
+1. **Write a failing test first** that describes the expected behavior
+2. **Run the test** to verify it fails (Red)
+3. **Implement the minimal code** to make the test pass
+4. **Run the test** to verify it passes (Green)
+5. **Refactor** the code while ensuring tests still pass
+6. **Repeat** for the next feature/requirement
+
+### Example TDD Workflow:
+
+```typescript
+// 1. Write failing test
+describe('calculateOverallScore', () => {
+  it('calculates weighted average of scores', () => {
+    const scores = {
+      'clarity': 7,
+      'completeness': 8,
+      'relevance': 9
+    };
+    
+    const weights = {
+      'clarity': 0.3,
+      'completeness': 0.4,
+      'relevance': 0.3
+    };
+    
+    const result = calculateOverallScore(scores, weights);
+    
+    // Expected: (7*0.3 + 8*0.4 + 9*0.3) = 8
+    expect(result).toBe(8);
+  });
+});
+
+// 2. Minimal implementation to make it pass
+function calculateOverallScore(scores, weights) {
+  let totalScore = 0;
+  let totalWeight = 0;
+  
+  for (const criterion in scores) {
+    const score = scores[criterion];
+    const weight = weights[criterion];
+    
+    totalScore += score * weight;
+    totalWeight += weight;
+  }
+  
+  return totalScore / totalWeight;
+}
+```
+
+## Mocking External Dependencies
+
+### Mocking File System Access:
+
+```typescript
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+// Create hoisted mocks
+const mockFs = vi.hoisted(() => ({
+  access: vi.fn(),
+  readFile: vi.fn()
+}));
+
+const mockPath = vi.hoisted(() => ({
+  resolve: vi.fn((...args) => args.join('/'))
+}));
+
+// Apply mocks
+vi.mock('fs/promises', () => mockFs);
+vi.mock('path', () => mockPath);
+
+describe('loadConfiguration', () => {
+  it('loads configuration from file', async () => {
+    // Setup mock behavior
+    mockFs.readFile.mockResolvedValue(JSON.stringify({ key: 'value' }));
+    
+    // Call the function
+    const config = await loadConfiguration('config.json');
+    
+    // Verify expected behavior
+    expect(config).toEqual({ key: 'value' });
+    expect(mockFs.readFile).toHaveBeenCalledWith(expect.any(String), 'utf8');
+  });
+  
+  it('returns default configuration when file not found', async () => {
+    // Setup mock to throw ENOENT error
+    const error = new Error('File not found');
+    error.code = 'ENOENT';
+    mockFs.readFile.mockRejectedValue(error);
+    
+    // Call the function
+    const config = await loadConfiguration('config.json');
+    
+    // Verify it returns default config
+    expect(config).toEqual(DEFAULT_CONFIG);
+  });
+});
+```
+
+### Mocking LLM/API Calls:
+
+```typescript
+import { ChatOpenAI } from 'langchain/chat_models/openai';
+
+// Create hoisted mock
+const mockChatOpenAI = vi.hoisted(() => ({
+  invoke: vi.fn()
+}));
+
+// Apply mock
+vi.mock('langchain/chat_models/openai', () => ({
+  ChatOpenAI: vi.fn(() => mockChatOpenAI)
+}));
+
+describe('evaluateContent', () => {
+  it('processes LLM response correctly', async () => {
+    // Setup mock response
+    mockChatOpenAI.invoke.mockResolvedValue({
+      content: JSON.stringify({
+        scores: { clarity: 8, relevance: 9 },
+        feedback: "Good work"
+      })
+    });
+    
+    // Call function
+    const result = await evaluateContent("Test content");
+    
+    // Verify behavior
+    expect(result.scores.clarity).toBe(8);
+    expect(result.feedback).toBe("Good work");
+  });
+  
+  it('handles malformed LLM responses', async () => {
+    // Setup invalid JSON response
+    mockChatOpenAI.invoke.mockResolvedValue({
+      content: "Not valid JSON"
+    });
+    
+    // Verify it handles the error gracefully
+    const result = await evaluateContent("Test content");
+    expect(result.error).toBeDefined();
+  });
+});
+```
+
+## Understanding What to Test
+
+Focus on testing:
+
+1. **Core business logic** - calculations, transformations, validations
+2. **Edge cases** - empty inputs, unexpected values, boundary conditions
+3. **Error handling** - how the system responds to failures
+4. **Integration points** - interfaces between components
+
+Avoid testing:
+1. Implementation details that might change
+2. Framework code (Next.js, React, etc.)
+3. Third-party libraries (they should have their own tests)
+
+## Effective Test Assertions
+
+### Balance specificity and resilience:
+
+```typescript
+// ✅ Good: Tests essential properties without over-specifying
+it('returns evaluation results with required fields', async () => {
+  const result = await evaluateSection("Test content");
+  
+  // Check structure and types without exact matching
+  expect(result).toHaveProperty('scores');
+  expect(result).toHaveProperty('feedback');
+  expect(typeof result.overallScore).toBe('number');
+  
+  // Verify score ranges but not exact values
+  Object.values(result.scores).forEach(score => {
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(10);
+  });
+});
+```
+
+### Test multiple valid outcomes:
+
+```typescript
+it('handles evaluation node execution', async () => {
+  const state = { content: "Test content" };
+  const result = await executeEvaluationNode(state);
+  
+  // Check for either successful evaluation or handled error
+  if (result.evaluationResult) {
+    // Success path
+    expect(result.evaluationResult).toHaveProperty('scores');
+    expect(result.evaluationResult).toHaveProperty('feedback');
+  } else if (result.error) {
+    // Error path
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result.errorHandled).toBe(true);
+  } else {
+    // Neither happened - actual test failure
+    throw new Error("Expected either evaluationResult or error to be defined");
+  }
+});
+```
+
+## Testing Different Scenarios
+
+### Happy Path:
+
+```typescript
+it('successfully evaluates content when all systems work', async () => {
+  // Setup successful dependencies
+  mockLLM.invoke.mockResolvedValue({ content: '{"score": 8, "feedback": "Good"}' });
+  
+  const result = await evaluateContent("Test content");
+  
+  expect(result.score).toBe(8);
+  expect(result.feedback).toBe("Good");
+  expect(result.error).toBeUndefined();
+});
+```
+
+### Error Handling:
+
+```typescript
+it('handles LLM errors gracefully', async () => {
+  // Setup LLM to throw error
+  mockLLM.invoke.mockRejectedValue(new Error("API error"));
+  
+  const result = await evaluateContent("Test content");
+  
+  expect(result.error).toBeDefined();
+  expect(result.error.message).toContain("API error");
+  expect(result.fallbackUsed).toBe(true);
+});
+```
+
+### Edge Cases:
+
+```typescript
+it('handles empty content', async () => {
+  const result = await evaluateContent("");
+  
+  expect(result.validationError).toBeDefined();
+});
+
+it('processes content at maximum size limit', async () => {
+  const longContent = "A".repeat(10000);
+  const result = await evaluateContent(longContent);
+  
+  expect(result.truncated).toBe(true);
+  expect(result.score).toBeDefined();
+});
+```
+
+## Test Organization
+
+Organize tests to reflect the structure of your application:
+
+```typescript
+describe('Evaluation Framework', () => {
+  describe('Core Components', () => {
+    // Tests for fundamental building blocks
+    
+    describe('loadCriteriaConfiguration', () => {
+      // Tests for config loading
+    });
+    
+    describe('calculateOverallScore', () => {
+      // Tests for score calculation
+    });
+  });
+  
+  describe('Node Functions', () => {
+    // Tests for LangGraph nodes
+    
+    describe('createEvaluationNode', () => {
+      // Tests for node creation
+    });
+    
+    describe('executeEvaluationNode', () => {
+      // Tests for node execution
+    });
+  });
+  
+  describe('Integration', () => {
+    // Tests for components working together
+  });
+});
+```
+
+## Debugging Test Failures
+
+When tests fail, use these strategies:
+
+1. **Inspect failure details** - Read the error message and stack trace
+2. **Use console logs** - Add temporary `console.log` statements
+3. **Check mock behaviors** - Verify mock implementations and return values
+4. **Isolate the test** - Run just the failing test with `it.only()`
+5. **Step through code** - Use debugger to step through the function
+
+## Continuous Improvement
+
+- **Review tests regularly** - Update them as requirements change
+- **Maintain test quality** - Tests should be readable and maintainable
+- **Measure coverage** - Use `vitest --coverage` to identify gaps
+- **Refactor tests** - Apply DRY principles to test code too
+
+## Best Practices Summary
+
+1. **Understand hoisting** - Use `vi.hoisted()` for dynamic mocks
+2. **Focus on behavior** - Test outcomes, not implementation details
+3. **Write tests first** - Follow the TDD workflow for better design
+4. **Mock dependencies** - But mock at the right level of abstraction
+5. **Test error handling** - Ensure the system degrades gracefully
+6. **Balance specificity** - Make assertions that won't break with minor changes
+7. **Organize logically** - Structure tests to match system architecture
+8. **Continuously improve** - Refactor tests as you refactor code

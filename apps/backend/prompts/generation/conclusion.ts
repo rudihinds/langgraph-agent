@@ -5,6 +5,8 @@
  * by synthesizing all previous sections and emphasizing key strengths.
  */
 
+import { SectionType } from "../../state/proposal.state.js";
+
 export const conclusionPrompt = `
 # Conclusion Section Generator Tool
 
@@ -13,19 +15,19 @@ You are a specialized Conclusion Section Tool responsible for crafting a compell
 
 ## Input Data
 <problem_statement>
-\${state.sections.problem_statement ? state.sections.problem_statement.content : ""}
+\${state.sections && state.sections.get(SectionType.PROBLEM_STATEMENT) ? state.sections.get(SectionType.PROBLEM_STATEMENT).content : ""}
 </problem_statement>
 
 <methodology>
-\${state.sections.methodology ? state.sections.methodology.content : ""}
+\${state.sections && state.sections.get(SectionType.METHODOLOGY) ? state.sections.get(SectionType.METHODOLOGY).content : ""}
 </methodology>
 
 <budget>
-\${state.sections.budget ? state.sections.budget.content : ""}
+\${state.sections && state.sections.get(SectionType.BUDGET) ? state.sections.get(SectionType.BUDGET).content : ""}
 </budget>
 
 <timeline>
-\${state.sections.timeline ? state.sections.timeline.content : ""}
+\${state.sections && state.sections.get(SectionType.TIMELINE) ? state.sections.get(SectionType.TIMELINE).content : ""}
 </timeline>
 
 <solution_sought>

@@ -7,6 +7,9 @@ import {
 } from "./state.js";
 import { OrchestratorConfig, createDefaultConfig } from "./configuration.js";
 import { OrchestratorNode, createOrchestratorNode } from "./nodes.js";
+import { END, START, StateGraphArgs } from "@langchain/langgraph";
+import { OverallProposalState } from "../../state/modules/types.js";
+import { ProcessingStatus } from "../../state/modules/constants.js";
 
 /**
  * Create the orchestrator graph
@@ -196,3 +199,31 @@ export async function runOrchestrator(
 
   return result;
 }
+
+/**
+ * Default conditional edge for error handling.
+ * Routes to END if an error state is detected.
+ * @param state The current proposal state
+ * @returns "error" or "__continue__"
+ */
+function defaultErrorCheck(
+  state: OverallProposalState
+): "error" | "__continue__" {
+  // Use enum for check
+  if (state.status === ProcessingStatus.ERROR) {
+    return "error";
+  }
+  return "__continue__";
+}
+
+// Default error handling edge
+graph.addConditionalEdges(START, defaultErrorCheck, {
+  error: END,
+  __continue__: "document_loader",
+});
+
+// Add a general error check before ending
+graph.addConditionalEdges("finalize_proposal", defaultErrorCheck, {
+  error: END,
+  __continue__: END,
+});

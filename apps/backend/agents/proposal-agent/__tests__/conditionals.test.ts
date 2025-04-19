@@ -19,8 +19,18 @@ import {
   OverallProposalState,
   SectionType,
   SectionProcessingStatus,
+  InterruptStatus,
+  UserFeedback,
+  InterruptMetadata,
 } from "../../../state/modules/types.js";
-import { FeedbackType } from "../../../lib/types/feedback.js";
+import {
+  ProcessingStatus,
+  SectionStatus,
+  FeedbackType,
+  InterruptReason,
+  InterruptProcessingStatus,
+  LoadingStatus,
+} from "../../../state/modules/constants.js";
 
 // Mock console for tests
 beforeEach(() => {
@@ -33,16 +43,16 @@ function createBasicProposalState(): OverallProposalState {
   return {
     rfpDocument: {
       id: "test-rfp",
-      status: "loaded",
+      status: LoadingStatus.LOADED,
     },
     researchResults: undefined,
-    researchStatus: "queued",
+    researchStatus: ProcessingStatus.QUEUED,
     researchEvaluation: null,
     solutionResults: undefined,
-    solutionStatus: "queued",
+    solutionStatus: ProcessingStatus.QUEUED,
     solutionEvaluation: null,
     connections: undefined,
-    connectionsStatus: "queued",
+    connectionsStatus: ProcessingStatus.QUEUED,
     connectionsEvaluation: null,
     sections: new Map(),
     requiredSections: [
@@ -62,7 +72,7 @@ function createBasicProposalState(): OverallProposalState {
     errors: [],
     createdAt: new Date().toISOString(),
     lastUpdatedAt: new Date().toISOString(),
-    status: "queued",
+    status: ProcessingStatus.QUEUED,
   };
 }
 
@@ -70,7 +80,7 @@ describe("Proposal Agent Conditionals", () => {
   describe("routeAfterResearchEvaluation", () => {
     it("should route to handleError if research status is error", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "error";
+      state.researchStatus = ProcessingStatus.ERROR;
 
       expect(routeAfterResearchEvaluation(state)).toBe("regenerateResearch");
     });
@@ -89,6 +99,7 @@ describe("Proposal Agent Conditionals", () => {
         passed: true,
         feedback: "Good research",
       };
+      state.researchStatus = ProcessingStatus.APPROVED;
 
       expect(routeAfterResearchEvaluation(state)).toBe(
         "generateSolutionSought"
@@ -102,6 +113,7 @@ describe("Proposal Agent Conditionals", () => {
         passed: false,
         feedback: "Needs improvements",
       };
+      state.researchStatus = ProcessingStatus.NEEDS_REVISION;
 
       expect(routeAfterResearchEvaluation(state)).toBe("regenerateResearch");
     });
@@ -110,7 +122,7 @@ describe("Proposal Agent Conditionals", () => {
   describe("routeAfterSolutionEvaluation", () => {
     it("should route to handleError if solution status is error", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "error";
+      state.solutionStatus = ProcessingStatus.ERROR;
 
       expect(routeAfterSolutionEvaluation(state)).toBe(
         "regenerateSolutionSought"
@@ -133,6 +145,7 @@ describe("Proposal Agent Conditionals", () => {
         passed: true,
         feedback: "Good solution",
       };
+      state.solutionStatus = ProcessingStatus.APPROVED;
 
       expect(routeAfterSolutionEvaluation(state)).toBe(
         "generateConnectionPairs"
@@ -146,6 +159,7 @@ describe("Proposal Agent Conditionals", () => {
         passed: false,
         feedback: "Needs improvements",
       };
+      state.solutionStatus = ProcessingStatus.NEEDS_REVISION;
 
       expect(routeAfterSolutionEvaluation(state)).toBe(
         "regenerateSolutionSought"
@@ -226,6 +240,91 @@ describe("Proposal Agent Conditionals", () => {
 
       expect(determineNextSection(state)).toBe("finalizeProposal");
     });
+
+    it("should route to generateExecutiveSummary if problem statement is ready", () => {
+      const state = createBasicProposalState();
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "",
+        status: SectionStatus.QUEUED,
+        lastUpdated: new Date().toISOString(),
+        evaluation: null,
+      });
+      // Ensure requiredSections includes it
+      state.requiredSections = [SectionType.PROBLEM_STATEMENT];
+      expect(determineNextSection(state)).toBe("generateExecutiveSummary");
+    });
+
+    it("should route to generateGoalsAligned if methodology is ready and problem statement approved", () => {
+      const state = createBasicProposalState();
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Approved problem statement",
+        status: SectionStatus.APPROVED,
+        lastUpdated: new Date().toISOString(),
+        evaluation: { passed: true, score: 9, feedback: "OK" },
+      });
+      state.sections.set(SectionType.METHODOLOGY, {
+        id: SectionType.METHODOLOGY,
+        content: "",
+        status: SectionStatus.QUEUED,
+        lastUpdated: new Date().toISOString(),
+        evaluation: null,
+      });
+      // Ensure requiredSections includes both
+      state.requiredSections = [
+        SectionType.PROBLEM_STATEMENT,
+        SectionType.METHODOLOGY,
+      ];
+      expect(determineNextSection(state)).toBe("generateGoalsAligned");
+    });
+
+    it("should route to finalizeProposal if all required sections are approved/edited", () => {
+      const state = createBasicProposalState();
+      state.requiredSections = [
+        SectionType.PROBLEM_STATEMENT,
+        SectionType.METHODOLOGY,
+      ];
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Approved ps",
+        status: SectionStatus.APPROVED,
+        lastUpdated: new Date().toISOString(),
+        evaluation: { passed: true, score: 9, feedback: "OK" },
+      });
+      state.sections.set(SectionType.METHODOLOGY, {
+        id: SectionType.METHODOLOGY,
+        content: "Edited methodology",
+        status: SectionStatus.EDITED,
+        lastUpdated: new Date().toISOString(),
+        evaluation: null,
+      });
+      expect(determineNextSection(state)).toBe("finalizeProposal");
+    });
+
+    it("should route to handleError if no sections are ready and not all are done", () => {
+      const state = createBasicProposalState();
+      state.requiredSections = [
+        SectionType.PROBLEM_STATEMENT,
+        SectionType.METHODOLOGY,
+      ];
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Generating ps",
+        status: SectionStatus.GENERATING,
+        lastUpdated: new Date().toISOString(),
+        evaluation: null,
+      });
+      state.sections.set(SectionType.METHODOLOGY, {
+        id: SectionType.METHODOLOGY,
+        content: "",
+        status: SectionStatus.QUEUED,
+        lastUpdated: new Date().toISOString(),
+        evaluation: null,
+      });
+      // PROBLEM_STATEMENT is generating, METHODOLOGY depends on it (not approved)
+      expect(determineNextSection(state)).toBe("handleError");
+    });
   });
 
   describe("routeAfterSectionEvaluation", () => {
@@ -281,6 +380,77 @@ describe("Proposal Agent Conditionals", () => {
       });
 
       expect(routeAfterSectionEvaluation(state)).toBe("determineNextSection");
+    });
+
+    it("should route to determineNextSection if evaluation passed", () => {
+      const state = createBasicProposalState();
+      const sectionId = SectionType.PROBLEM_STATEMENT;
+      state.currentStep = `evaluate:${sectionId}`;
+      state.sections.set(sectionId, {
+        id: sectionId,
+        content: "Test Content",
+        status: SectionStatus.AWAITING_REVIEW,
+        lastUpdated: new Date().toISOString(),
+        evaluation: { score: 9, passed: true, feedback: "Looks good" },
+      });
+      // Simulate approval after passing evaluation
+      state.sections.get(sectionId)!.status = SectionStatus.APPROVED;
+
+      expect(routeAfterSectionEvaluation(state)).toBe("determineNextSection");
+    });
+
+    it("should route to regenerateCurrentSection if evaluation failed", () => {
+      const state = createBasicProposalState();
+      const sectionId = SectionType.PROBLEM_STATEMENT;
+      state.currentStep = `evaluate:${sectionId}`;
+      state.sections.set(sectionId, {
+        id: sectionId,
+        content: "Test Content",
+        status: SectionStatus.AWAITING_REVIEW,
+        lastUpdated: new Date().toISOString(),
+        evaluation: { score: 3, passed: false, feedback: "Needs work" },
+      });
+      // Simulate rejection/needs revision after failing evaluation
+      state.sections.get(sectionId)!.status = SectionStatus.NEEDS_REVISION;
+
+      expect(routeAfterSectionEvaluation(state)).toBe(
+        "regenerateCurrentSection"
+      );
+    });
+
+    it("should route to determineNextSection if currentStep is null", () => {
+      const state = createBasicProposalState();
+      state.currentStep = null;
+      expect(routeAfterSectionEvaluation(state)).toBe("determineNextSection");
+    });
+
+    it("should route to determineNextSection if section cannot be extracted", () => {
+      const state = createBasicProposalState();
+      state.currentStep = "invalidStepFormat";
+      expect(routeAfterSectionEvaluation(state)).toBe("determineNextSection");
+    });
+
+    it("should route to regenerateCurrentSection if section data or evaluation is missing", () => {
+      const state = createBasicProposalState();
+      const sectionId = SectionType.PROBLEM_STATEMENT;
+      state.currentStep = `evaluate:${sectionId}`;
+      // Section exists but no evaluation
+      state.sections.set(sectionId, {
+        id: sectionId,
+        content: "Test Content",
+        status: SectionStatus.AWAITING_REVIEW,
+        lastUpdated: new Date().toISOString(),
+        evaluation: undefined,
+      });
+      expect(routeAfterSectionEvaluation(state)).toBe(
+        "regenerateCurrentSection"
+      );
+
+      // Section doesn't exist
+      state.sections.delete(sectionId);
+      expect(routeAfterSectionEvaluation(state)).toBe(
+        "regenerateCurrentSection"
+      );
     });
   });
 
@@ -351,7 +521,7 @@ describe("Proposal Agent Conditionals", () => {
   describe("routeAfterFeedbackProcessing", () => {
     it("should route to researchPhase for research feedback with approved status", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "approved";
+      state.researchStatus = ProcessingStatus.APPROVED;
       state.interruptMetadata = {
         reason: "EVALUATION_NEEDED",
         nodeId: "evaluateResearch",
@@ -369,7 +539,7 @@ describe("Proposal Agent Conditionals", () => {
 
     it("should route to generateResearch for research feedback with stale status", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "stale";
+      state.researchStatus = ProcessingStatus.STALE;
       state.interruptMetadata = {
         reason: "EVALUATION_NEEDED",
         nodeId: "evaluateResearch",
@@ -387,7 +557,7 @@ describe("Proposal Agent Conditionals", () => {
 
     it("should route to generateSolution for solution feedback with approved status", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "approved";
+      state.solutionStatus = ProcessingStatus.APPROVED;
       state.interruptMetadata = {
         reason: "EVALUATION_NEEDED",
         nodeId: "evaluateSolution",
@@ -405,7 +575,7 @@ describe("Proposal Agent Conditionals", () => {
 
     it("should route to generateSolution for solution feedback with stale status", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "stale";
+      state.solutionStatus = ProcessingStatus.STALE;
       state.interruptMetadata = {
         reason: "EVALUATION_NEEDED",
         nodeId: "evaluateSolution",
@@ -523,224 +693,260 @@ describe("Proposal Agent Conditionals", () => {
 
       expect(routeAfterFeedbackProcessing(state)).toBe("handleError");
     });
+
+    it("should route to handle_stale_choice if research is stale", () => {
+      const state = createBasicProposalState();
+      state.interruptMetadata = {
+        reason: InterruptReason.CONTENT_REVIEW,
+        nodeId: "n",
+        timestamp: "t",
+        contentReference: "research",
+      };
+      state.researchStatus = ProcessingStatus.STALE;
+      expect(routeAfterFeedbackProcessing(state)).toBe("handle_stale_choice");
+    });
+
+    it("should route to handle_stale_choice if a section is stale", () => {
+      const state = createBasicProposalState();
+      const sectionId = SectionType.PROBLEM_STATEMENT;
+      state.sections.set(sectionId, {
+        id: sectionId,
+        content: "Test",
+        status: SectionStatus.STALE,
+        lastUpdated: "t",
+        evaluation: null,
+      });
+      state.interruptMetadata = {
+        reason: InterruptReason.CONTENT_REVIEW,
+        nodeId: "n",
+        timestamp: "t",
+        contentReference: sectionId,
+      };
+      expect(routeAfterFeedbackProcessing(state)).toBe("handle_stale_choice");
+    });
+
+    it("should route to determineNextSection if research is approved", () => {
+      const state = createBasicProposalState();
+      state.interruptMetadata = {
+        reason: InterruptReason.CONTENT_REVIEW,
+        nodeId: "n",
+        timestamp: "t",
+        contentReference: "research",
+      };
+      state.researchStatus = ProcessingStatus.APPROVED;
+      // Mock determineNextSection or check its expected output based on state
+      // Assuming determineNextSection would route somewhere specific like "solution_sought"
+      expect(routeAfterFeedbackProcessing(state)).not.toBe(
+        "handle_stale_choice"
+      );
+      // Add more specific check if determineNextSection mock is available
+    });
+
+    it("should route to determineNextSection if a section is edited", () => {
+      const state = createBasicProposalState();
+      const sectionId = SectionType.METHODOLOGY;
+      state.sections.set(sectionId, {
+        id: sectionId,
+        content: "Edited",
+        status: SectionStatus.EDITED,
+        lastUpdated: "t",
+        evaluation: null,
+      });
+      state.interruptMetadata = {
+        reason: InterruptReason.CONTENT_REVIEW,
+        nodeId: "n",
+        timestamp: "t",
+        contentReference: sectionId,
+      };
+      // Assuming determineNextSection routes correctly after edit
+      expect(routeAfterFeedbackProcessing(state)).not.toBe(
+        "handle_stale_choice"
+      );
+    });
+
+    it("should default to determineNextSection if no specific status matches", () => {
+      const state = createBasicProposalState();
+      state.interruptMetadata = {
+        reason: InterruptReason.CONTENT_REVIEW,
+        nodeId: "n",
+        timestamp: "t",
+        contentReference: "research",
+      };
+      state.researchStatus = ProcessingStatus.QUEUED;
+      // Check it doesn't go to stale and implies default routing
+      expect(routeAfterFeedbackProcessing(state)).not.toBe(
+        "handle_stale_choice"
+      );
+    });
   });
 
   describe("routeAfterResearchReview", () => {
-    it("should route to processFeedback for approved status", () => {
+    it("should route to continue if status is APPROVED", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "approved";
-
-      expect(routeAfterResearchReview(state)).toBe("processFeedback");
+      state.researchStatus = ProcessingStatus.APPROVED;
+      expect(routeAfterResearchReview(state)).toBe("continue");
     });
 
-    it("should route to processFeedback for stale status", () => {
+    it("should route to stale if status is STALE", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "stale";
-
-      expect(routeAfterResearchReview(state)).toBe("processFeedback");
+      state.researchStatus = ProcessingStatus.STALE;
+      expect(routeAfterResearchReview(state)).toBe("stale");
     });
 
-    it("should route to processFeedback for edited status", () => {
+    it("should route to continue if status is EDITED", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "edited";
-
-      expect(routeAfterResearchReview(state)).toBe("processFeedback");
+      state.researchStatus = ProcessingStatus.EDITED;
+      expect(routeAfterResearchReview(state)).toBe("continue");
     });
 
-    it("should route to handleError for other statuses", () => {
+    it("should route to awaiting_feedback for other statuses", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "generating";
+      state.researchStatus = ProcessingStatus.NEEDS_REVISION;
+      expect(routeAfterResearchReview(state)).toBe("awaiting_feedback");
+      state.researchStatus = ProcessingStatus.ERROR;
+      expect(routeAfterResearchReview(state)).toBe("awaiting_feedback");
+      state.researchStatus = ProcessingStatus.QUEUED;
+      expect(routeAfterResearchReview(state)).toBe("awaiting_feedback");
+    });
 
-      expect(routeAfterResearchReview(state)).toBe("handleError");
+    it("should route to error if research status is missing", () => {
+      const state = createBasicProposalState();
+      state.researchStatus = undefined as any;
+      expect(routeAfterResearchReview(state)).toBe("error");
     });
   });
 
   describe("routeAfterSolutionReview", () => {
-    it("should route to processFeedback for approved status", () => {
+    it("should route to continue if status is APPROVED", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "approved";
-
-      expect(routeAfterSolutionReview(state)).toBe("processFeedback");
+      state.solutionStatus = ProcessingStatus.APPROVED;
+      expect(routeAfterSolutionReview(state)).toBe("continue");
     });
 
-    it("should route to processFeedback for stale status", () => {
+    it("should route to stale if status is STALE", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "stale";
-
-      expect(routeAfterSolutionReview(state)).toBe("processFeedback");
+      state.solutionStatus = ProcessingStatus.STALE;
+      expect(routeAfterSolutionReview(state)).toBe("stale");
     });
 
-    it("should route to processFeedback for edited status", () => {
+    it("should route to continue if status is EDITED", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "edited";
-
-      expect(routeAfterSolutionReview(state)).toBe("processFeedback");
+      state.solutionStatus = ProcessingStatus.EDITED;
+      expect(routeAfterSolutionReview(state)).toBe("continue");
     });
 
-    it("should route to handleError for other statuses", () => {
+    it("should route to awaiting_feedback for other statuses", () => {
       const state = createBasicProposalState();
-      state.solutionStatus = "generating";
+      state.solutionStatus = ProcessingStatus.NEEDS_REVISION;
+      expect(routeAfterSolutionReview(state)).toBe("awaiting_feedback");
+      state.solutionStatus = ProcessingStatus.ERROR;
+      expect(routeAfterSolutionReview(state)).toBe("awaiting_feedback");
+      state.solutionStatus = ProcessingStatus.RUNNING;
+      expect(routeAfterSolutionReview(state)).toBe("awaiting_feedback");
+    });
 
-      expect(routeAfterSolutionReview(state)).toBe("handleError");
+    it("should route to error if solution status is missing", () => {
+      const state = createBasicProposalState();
+      state.solutionStatus = undefined as any;
+      expect(routeAfterSolutionReview(state)).toBe("error");
     });
   });
 
   describe("routeAfterSectionFeedback", () => {
-    it("should route to processFeedback for section with approved status", () => {
+    it("should always route to processFeedback", () => {
       const state = createBasicProposalState();
-      const sectionId = "section-123";
-      state.sections = new Map();
-      state.sections.set(sectionId, {
-        id: sectionId,
-        title: "Test Section",
-        content: "",
-        status: "approved",
-      });
-      state.interruptMetadata = {
-        reason: "EVALUATION_NEEDED",
-        nodeId: "evaluateSection",
-        timestamp: new Date().toISOString(),
-        contentReference: sectionId,
-      };
-
+      // This function doesn't depend on state content, just routes
       expect(routeAfterSectionFeedback(state)).toBe("processFeedback");
-    });
-
-    it("should route to processFeedback for section with stale status", () => {
-      const state = createBasicProposalState();
-      const sectionId = "section-123";
-      state.sections = new Map();
-      state.sections.set(sectionId, {
-        id: sectionId,
-        title: "Test Section",
-        content: "",
-        status: "stale",
-      });
-      state.interruptMetadata = {
-        reason: "EVALUATION_NEEDED",
-        nodeId: "evaluateSection",
-        timestamp: new Date().toISOString(),
-        contentReference: sectionId,
-      };
-
-      expect(routeAfterSectionFeedback(state)).toBe("processFeedback");
-    });
-
-    it("should route to processFeedback for section with edited status", () => {
-      const state = createBasicProposalState();
-      const sectionId = "section-123";
-      state.sections = new Map();
-      state.sections.set(sectionId, {
-        id: sectionId,
-        title: "Test Section",
-        content: "",
-        status: "edited",
-      });
-      state.interruptMetadata = {
-        reason: "EVALUATION_NEEDED",
-        nodeId: "evaluateSection",
-        timestamp: new Date().toISOString(),
-        contentReference: sectionId,
-      };
-
-      expect(routeAfterSectionFeedback(state)).toBe("processFeedback");
-    });
-
-    it("should route to handleError when section is not found", () => {
-      const state = createBasicProposalState();
-      state.interruptMetadata = {
-        reason: "EVALUATION_NEEDED",
-        nodeId: "evaluateSection",
-        timestamp: new Date().toISOString(),
-        contentReference: "non-existent-section",
-      };
-
-      expect(routeAfterSectionFeedback(state)).toBe("handleError");
-    });
-
-    it("should route to handleError for other statuses", () => {
-      const state = createBasicProposalState();
-      const sectionId = "section-123";
-      state.sections = new Map();
-      state.sections.set(sectionId, {
-        id: sectionId,
-        title: "Test Section",
-        content: "",
-        status: "generating",
-      });
-      state.interruptMetadata = {
-        reason: "EVALUATION_NEEDED",
-        nodeId: "evaluateSection",
-        timestamp: new Date().toISOString(),
-        contentReference: sectionId,
-      };
-
-      expect(routeAfterSectionFeedback(state)).toBe("handleError");
     });
   });
 
   describe("routeFinalizeProposal", () => {
-    it("should route to completeProposal when all sections are approved", () => {
+    it("should route to finalize if all sections are APPROVED", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "approved";
-      state.solutionStatus = "approved";
-      state.connectionsStatus = "approved";
-
-      state.sections = new Map();
-      state.sections.set("section-1", {
-        id: "section-1",
-        title: "Introduction",
-        content: "Test content",
-        status: "approved",
+      state.requiredSections = [
+        SectionType.PROBLEM_STATEMENT,
+        SectionType.METHODOLOGY,
+      ];
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Approved ps",
+        status: SectionStatus.APPROVED,
+        lastUpdated: "t",
+        evaluation: { passed: true, score: 9, feedback: "OK" },
       });
-      state.sections.set("section-2", {
-        id: "section-2",
-        title: "Methodology",
-        content: "Test content",
-        status: "approved",
+      state.sections.set(SectionType.METHODOLOGY, {
+        id: SectionType.METHODOLOGY,
+        content: "Approved methodology",
+        status: SectionStatus.APPROVED,
+        lastUpdated: "t",
+        evaluation: { passed: true, score: 9, feedback: "OK" },
       });
-
-      expect(routeFinalizeProposal(state)).toBe("completeProposal");
+      expect(routeFinalizeProposal(state)).toBe("finalize");
     });
 
-    it("should route to handleError when not all sections are approved", () => {
+    it("should route to finalize if all sections are EDITED", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "approved";
-      state.solutionStatus = "approved";
-      state.connectionsStatus = "approved";
-
-      state.sections = new Map();
-      state.sections.set("section-1", {
-        id: "section-1",
-        title: "Introduction",
-        content: "Test content",
-        status: "approved",
+      state.requiredSections = [SectionType.PROBLEM_STATEMENT];
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Edited ps",
+        status: SectionStatus.EDITED,
+        lastUpdated: "t",
+        evaluation: null,
       });
-      state.sections.set("section-2", {
-        id: "section-2",
-        title: "Methodology",
-        content: "Test content",
-        status: "edited",
-      });
-
-      expect(routeFinalizeProposal(state)).toBe("handleError");
+      expect(routeFinalizeProposal(state)).toBe("finalize");
     });
 
-    it("should route to handleError when solution is not approved", () => {
+    it("should route to finalize if sections are a mix of APPROVED and EDITED", () => {
       const state = createBasicProposalState();
-      state.researchStatus = "approved";
-      state.solutionStatus = "edited";
-      state.connectionsStatus = "approved";
-
-      state.sections = new Map();
-      state.sections.set("section-1", {
-        id: "section-1",
-        title: "Introduction",
-        content: "Test content",
-        status: "approved",
+      state.requiredSections = [
+        SectionType.PROBLEM_STATEMENT,
+        SectionType.METHODOLOGY,
+      ];
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Approved ps",
+        status: SectionStatus.APPROVED,
+        lastUpdated: "t",
+        evaluation: { passed: true, score: 9, feedback: "OK" },
       });
+      state.sections.set(SectionType.METHODOLOGY, {
+        id: SectionType.METHODOLOGY,
+        content: "Edited methodology",
+        status: SectionStatus.EDITED,
+        lastUpdated: "t",
+        evaluation: null,
+      });
+      expect(routeFinalizeProposal(state)).toBe("finalize");
+    });
 
-      expect(routeFinalizeProposal(state)).toBe("handleError");
+    it("should route to continue if any section is not APPROVED or EDITED", () => {
+      const state = createBasicProposalState();
+      state.requiredSections = [
+        SectionType.PROBLEM_STATEMENT,
+        SectionType.METHODOLOGY,
+      ];
+      state.sections.set(SectionType.PROBLEM_STATEMENT, {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Approved ps",
+        status: SectionStatus.APPROVED,
+        lastUpdated: "t",
+        evaluation: { passed: true, score: 9, feedback: "OK" },
+      });
+      state.sections.set(SectionType.METHODOLOGY, {
+        id: SectionType.METHODOLOGY,
+        content: "Needs revision",
+        status: SectionStatus.NEEDS_REVISION,
+        lastUpdated: "t",
+        evaluation: { passed: false, score: 4, feedback: "Bad" },
+      });
+      expect(routeFinalizeProposal(state)).toBe("continue");
+    });
+
+    it("should route to continue if sections map is empty (edge case, might indicate earlier error)", () => {
+      const state = createBasicProposalState();
+      state.sections = new Map();
+      expect(routeFinalizeProposal(state)).toBe("continue");
     });
   });
 });

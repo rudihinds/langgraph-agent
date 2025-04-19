@@ -5,48 +5,56 @@ This document outlines the refactoring plan to align the codebase with the archi
 ## Refactoring Tasks
 
 ### 1. State Management Alignment (Task #11)
+
 - Update the state interface to match the `OverallProposalState` definition
 - Implement comprehensive annotations and reducers
 - Create Zod schemas for validation
 - Ensure immutable state updates
 
 ### 2. Orchestrator Service Enhancement (Task #12)
+
 - Define comprehensive `OrchestratorService` with session management
 - Implement dependency tracking and management
 - Support non-sequential editing
 - Create methods for managing workflow state and user interactions
 
 ### 3. Persistence Layer Refinement (Task #13)
+
 - Enhance Supabase checkpointer implementation
 - Create proper database schema and migration scripts
 - Implement Row Level Security policies
 - Ensure proper error handling and retry logic
 
 ### 4. Graph Structure Refinement (Task #14)
+
 - Update `ProposalGenerationGraph` definition
 - Implement proper routing functions
 - Configure HITL interrupt points
 - Implement conditional edges based on evaluation results
 
 ### 5. Node Implementation (Task #15)
+
 - Create or update node functions for document processing
 - Implement requirement analysis nodes
 - Update section generation nodes
 - Ensure nodes work within the updated graph structure
 
 ### 6. Editor Agent Implementation (Task #16)
+
 - Create `EditorAgentService` for non-sequential edits
 - Implement section revision management
 - Maintain proposal consistency
 - Add dependency analysis capabilities
 
 ### 7. API Layer Enhancement (Pending)
+
 - Implement Express.js API endpoints
 - Add authentication middleware
 - Add validation for requests/responses
 - Implement error handling
 
 ### 8. Testing Implementation (Pending)
+
 - Add unit tests for all components
 - Add integration tests for key workflows
 - Test HITL interrupts and resumption

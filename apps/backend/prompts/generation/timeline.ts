@@ -5,6 +5,8 @@
  * by analyzing the methodology, budget, and problem statement.
  */
 
+import { SectionType } from "../../state/proposal.state.js";
+
 export const timelinePrompt = `
 # Timeline Section Generator Tool
 
@@ -13,15 +15,15 @@ You are a specialized Timeline Section Tool responsible for crafting a realistic
 
 ## Input Data
 <problem_statement>
-\${state.sections.problem_statement ? state.sections.problem_statement.content : ""}
+\${state.sections && state.sections.get(SectionType.PROBLEM_STATEMENT) ? state.sections.get(SectionType.PROBLEM_STATEMENT).content : ""}
 </problem_statement>
 
 <methodology>
-\${state.sections.methodology ? state.sections.methodology.content : ""}
+\${state.sections && state.sections.get(SectionType.METHODOLOGY) ? state.sections.get(SectionType.METHODOLOGY).content : ""}
 </methodology>
 
 <budget>
-\${state.sections.budget ? state.sections.budget.content : ""}
+\${state.sections && state.sections.get(SectionType.BUDGET) ? state.sections.get(SectionType.BUDGET).content : ""}
 </budget>
 
 <revision_guidance>

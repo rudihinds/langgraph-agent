@@ -24,6 +24,7 @@ import { FeedbackType } from "../lib/types/feedback.js";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger, LogLevel } from "../lib/logger.js";
 import { v4 as uuidv4 } from "uuid";
+import { SectionStatus, ProcessingStatus } from "@/state/modules/constants.js"; // Import enums
 
 /**
  * Details about an interrupt that can be provided to the UI
@@ -102,7 +103,7 @@ export class OrchestratorService {
     }
 
     // Verify expected state status
-    if (state.status !== "awaiting_review") {
+    if (state.status !== ProcessingStatus.AWAITING_REVIEW) {
       this.logger.warn(
         `Unexpected state status during interrupt: ${state.status}`
       );
@@ -298,7 +299,7 @@ export class OrchestratorService {
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          "approved"
+          SectionStatus.APPROVED
         );
         break;
 
@@ -307,7 +308,7 @@ export class OrchestratorService {
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          "edited"
+          SectionStatus.EDITED
         );
         break;
 
@@ -316,7 +317,7 @@ export class OrchestratorService {
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          "stale"
+          SectionStatus.STALE
         );
         break;
     }

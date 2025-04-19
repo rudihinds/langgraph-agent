@@ -11,6 +11,7 @@ import { z } from "zod";
 import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { FeedbackType } from "../../lib/types/feedback.js";
+import { SectionType, SectionStatus } from "../../state/modules/constants.js";
 
 // Initialize OpenAI chat model - later can be parameterized or moved to config
 const model = new ChatOpenAI({
@@ -660,8 +661,8 @@ export async function generateSectionNode(
     const section = state.sections.get(sectionType);
     if (
       !section ||
-      section.status === "not_started" ||
-      section.status === "error"
+      section.status === SectionStatus.NOT_STARTED ||
+      section.status === SectionStatus.ERROR
     ) {
       sectionToGenerate = sectionType;
       break;
@@ -1021,7 +1022,7 @@ export async function finalizeProposalNode(
 
   for (const sectionType of state.requiredSections) {
     const section = state.sections.get(sectionType);
-    if (!section || section.status !== "approved") {
+    if (!section || section.status !== SectionStatus.APPROVED) {
       allSectionsComplete = false;
       incompleteSections.push(sectionType);
     }
@@ -1185,16 +1186,24 @@ export async function processFeedbackNode(
           },
           interruptMetadata: undefined,
         };
-      } else if (contentRef && state.sections && state.sections[contentRef]) {
+      } else if (
+        contentRef &&
+        state.sections &&
+        state.sections.has(contentRef)
+      ) {
         // This is a section approval
+        const sectionsCopy = new Map(state.sections);
+        const section = sectionsCopy.get(contentRef);
+
+        if (section) {
+          sectionsCopy.set(contentRef, {
+            ...section,
+            status: "approved",
+          });
+        }
+
         return {
-          sections: {
-            ...state.sections,
-            [contentRef]: {
-              ...state.sections[contentRef],
-              status: "approved",
-            },
-          },
+          sections: sectionsCopy,
           interruptStatus: {
             isInterrupted: false,
             interruptionPoint: null,
@@ -1249,18 +1258,26 @@ export async function processFeedbackNode(
           },
           interruptMetadata: undefined,
         };
-      } else if (contentRef && state.sections && state.sections[contentRef]) {
+      } else if (
+        contentRef &&
+        state.sections &&
+        state.sections.has(contentRef)
+      ) {
         // This is a section revision
+        const sectionsCopy = new Map(state.sections);
+        const section = sectionsCopy.get(contentRef);
+
+        if (section) {
+          sectionsCopy.set(contentRef, {
+            ...section,
+            status: "edited",
+            edits: specificEdits || {},
+            revisionInstructions: revisionInstructions,
+          });
+        }
+
         return {
-          sections: {
-            ...state.sections,
-            [contentRef]: {
-              ...state.sections[contentRef],
-              status: "edited",
-              edits: specificEdits || {},
-              revisionInstructions: revisionInstructions,
-            },
-          },
+          sections: sectionsCopy,
           interruptStatus: {
             isInterrupted: false,
             interruptionPoint: null,
@@ -1309,17 +1326,25 @@ export async function processFeedbackNode(
           },
           interruptMetadata: undefined,
         };
-      } else if (contentRef && state.sections && state.sections[contentRef]) {
+      } else if (
+        contentRef &&
+        state.sections &&
+        state.sections.has(contentRef)
+      ) {
         // This is a section regeneration
+        const sectionsCopy = new Map(state.sections);
+        const section = sectionsCopy.get(contentRef);
+
+        if (section) {
+          sectionsCopy.set(contentRef, {
+            ...section,
+            status: "stale",
+            content: "", // Clear content for regeneration
+          });
+        }
+
         return {
-          sections: {
-            ...state.sections,
-            [contentRef]: {
-              ...state.sections[contentRef],
-              status: "stale",
-              content: "", // Clear content for regeneration
-            },
-          },
+          sections: sectionsCopy,
           interruptStatus: {
             isInterrupted: false,
             interruptionPoint: null,

@@ -1,8 +1,9 @@
 /**
  * Utility functions for state management
  */
-import { OverallProposalStateSchema } from "./schemas";
-import { OverallProposalState, SectionType } from "./types";
+import { OverallProposalStateSchema } from "./schemas.js";
+import { OverallProposalState, SectionType, SectionData } from "./types.js";
+import { SectionStatus, ProcessingStatus, LoadingStatus } from "./constants.js";
 
 /**
  * Create a new initial state with default values
@@ -21,11 +22,11 @@ export function createInitialProposalState(
   return {
     rfpDocument: {
       id: "",
-      status: "not_started",
+      status: LoadingStatus.NOT_STARTED,
     },
-    researchStatus: "queued",
-    solutionStatus: "queued",
-    connectionsStatus: "queued",
+    researchStatus: ProcessingStatus.QUEUED,
+    solutionStatus: ProcessingStatus.QUEUED,
+    connectionsStatus: ProcessingStatus.QUEUED,
     sections: new Map(),
     requiredSections: [],
 
@@ -45,7 +46,7 @@ export function createInitialProposalState(
     projectName,
     createdAt: timestamp,
     lastUpdatedAt: timestamp,
-    status: "queued",
+    status: ProcessingStatus.QUEUED,
   };
 }
 
@@ -86,19 +87,37 @@ export function isSectionReady(
   state: OverallProposalState,
   sectionType: SectionType
 ): boolean {
-  // This is a placeholder implementation
-  // In a real implementation, this would check the dependency map
-  // and verify that all dependencies are in an approved state
-
-  // Define a simple dependency map
+  // Define the complete dependency map matching constants.ts and other usages
   const dependencies: Record<SectionType, SectionType[]> = {
     [SectionType.PROBLEM_STATEMENT]: [],
     [SectionType.METHODOLOGY]: [SectionType.PROBLEM_STATEMENT],
-    [SectionType.BUDGET]: [SectionType.METHODOLOGY],
-    [SectionType.TIMELINE]: [SectionType.METHODOLOGY],
-    [SectionType.CONCLUSION]: [
+    [SectionType.SOLUTION]: [
       SectionType.PROBLEM_STATEMENT,
       SectionType.METHODOLOGY,
+    ],
+    [SectionType.OUTCOMES]: [SectionType.SOLUTION],
+    [SectionType.BUDGET]: [SectionType.METHODOLOGY, SectionType.SOLUTION],
+    [SectionType.TIMELINE]: [
+      SectionType.METHODOLOGY,
+      SectionType.BUDGET,
+      SectionType.SOLUTION,
+    ],
+    [SectionType.TEAM]: [SectionType.METHODOLOGY, SectionType.SOLUTION],
+    [SectionType.EVALUATION_PLAN]: [SectionType.SOLUTION, SectionType.OUTCOMES],
+    [SectionType.SUSTAINABILITY]: [
+      SectionType.SOLUTION,
+      SectionType.BUDGET,
+      SectionType.TIMELINE,
+    ],
+    [SectionType.RISKS]: [
+      SectionType.SOLUTION,
+      SectionType.TIMELINE,
+      SectionType.TEAM,
+    ],
+    [SectionType.CONCLUSION]: [
+      SectionType.PROBLEM_STATEMENT,
+      SectionType.SOLUTION,
+      SectionType.OUTCOMES,
       SectionType.BUDGET,
       SectionType.TIMELINE,
     ],
@@ -111,12 +130,12 @@ export function isSectionReady(
     return true;
   }
 
-  // Check if all dependencies are in an approved state
-  return sectionDependencies.every((depType) => {
+  // Check if all dependencies are met (APPROVED)
+  const allDependenciesMet = sectionDependencies.every((depType) => {
     const depSection = state.sections.get(depType);
-    return (
-      depSection &&
-      (depSection.status === "approved" || depSection.status === "complete")
-    );
+    // Use enum for check - A dependency is met if it's APPROVED
+    return depSection && depSection.status === SectionStatus.APPROVED;
   });
+
+  return allDependenciesMet;
 }

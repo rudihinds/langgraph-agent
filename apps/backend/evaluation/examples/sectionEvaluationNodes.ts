@@ -106,7 +106,8 @@ export function exampleGraphIntegration() {
   graph.addConditionalEdges(
     'evaluateProblemStatement',
     (state) => {
-      const status = state.sections?.problemStatement?.status;
+      const section = state.sections?.get(SectionType.PROBLEM_STATEMENT);
+      const status = section?.status;
       if (status === 'approved') return 'generateMethodology';
       if (status === 'rejected') return 'regenerateProblemStatement';
       return 'waitForFeedback';
@@ -130,13 +131,15 @@ export function createCustomSectionEvaluator(): EvaluationNodeFunction {
     {
       contentExtractor: (state) => {
         // Custom extraction logic
-        const customContent = state.sections?.customSection?.content;
+        if (!state.sections) return null;
+        const customSection = state.sections.get("custom_section");
+        const customContent = customSection?.content;
         if (!customContent) return null;
 
         // Additional preprocessing if needed
         return {
           content: customContent,
-          metadata: state.sections?.customSection?.metadata,
+          metadata: customSection?.metadata,
           // Add any other context needed for evaluation
         };
       },
@@ -176,7 +179,11 @@ export function createComplexSectionEvaluators() {
       "methodology_approach", // Custom criteria file
       {
         contentExtractor: (state) => {
-          const methodology = state.sections?.methodology?.content;
+          if (!state.sections) return null;
+          const methodologySection = state.sections.get(
+            SectionType.METHODOLOGY
+          );
+          const methodology = methodologySection?.content;
           if (!methodology) return null;
 
           // Extract just the approach section using regex or parsing
@@ -194,7 +201,11 @@ export function createComplexSectionEvaluators() {
       "methodology_implementation", // Custom criteria file
       {
         contentExtractor: (state) => {
-          const methodology = state.sections?.methodology?.content;
+          if (!state.sections) return null;
+          const methodologySection = state.sections.get(
+            SectionType.METHODOLOGY
+          );
+          const methodology = methodologySection?.content;
           if (!methodology) return null;
 
           // Extract just the implementation section using regex or parsing

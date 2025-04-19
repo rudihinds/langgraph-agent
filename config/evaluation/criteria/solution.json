@@ -1,0 +1,90 @@
+{
+  "criteria": [
+    {
+      "id": "relevance",
+      "name": "Relevance",
+      "description": "The solution directly addresses the identified problems and client requirements.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "feasibility",
+      "name": "Feasibility",
+      "description": "The solution is technically, operationally, and financially viable within the constraints provided.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "comprehensiveness",
+      "name": "Comprehensiveness",
+      "description": "The solution addresses all major aspects of the problem space without significant gaps.",
+      "weight": 3,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "specificity",
+      "name": "Specificity",
+      "description": "The solution is detailed with concrete steps, components, or features rather than vague concepts.",
+      "weight": 2,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "effectiveness",
+      "name": "Effectiveness",
+      "description": "The solution is likely to achieve the desired outcomes and objectives when implemented.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "innovation",
+      "name": "Innovation",
+      "description": "The solution demonstrates creative thinking and offers advantages over standard approaches.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "scalability",
+      "name": "Scalability",
+      "description": "The solution can be scaled up or down to meet changing needs without redesign.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "researchAlignment",
+      "name": "Research Alignment",
+      "description": "The solution incorporates and is informed by the research findings.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "The solution is presented clearly with well-defined components and implementation path.",
+      "weight": 2,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "userFocus",
+      "name": "User Focus",
+      "description": "The solution prioritizes user needs and experience considerations.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "riskMitigation",
+      "name": "Risk Mitigation",
+      "description": "The solution identifies potential risks and includes strategies to address them.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "sustainability",
+      "name": "Sustainability",
+      "description": "The solution can be maintained and supported over time with reasonable resources.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.8,
+  "evaluationInstructions": "Evaluate the proposed solution against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

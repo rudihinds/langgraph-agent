@@ -2,44 +2,26 @@
  * Type definitions for the proposal generation system
  */
 import { BaseMessage } from "@langchain/core/messages";
+import {
+  LoadingStatus,
+  ProcessingStatus,
+  SectionStatus as SectionProcessingStatus,
+  FeedbackType,
+  InterruptReason,
+  SectionType,
+  InterruptProcessingStatus,
+} from "./constants.js";
 
 /**
  * Status definitions for different components of the proposal state
  */
-export type LoadingStatus = "not_started" | "loading" | "loaded" | "error";
-export type ProcessingStatus =
-  | "queued"
-  | "running"
-  | "awaiting_review"
-  | "approved"
-  | "edited"
-  | "stale"
-  | "complete"
-  | "error"
-  | "needs_revision";
-export type SectionProcessingStatus =
-  | "queued"
-  | "generating"
-  | "awaiting_review"
-  | "approved"
-  | "edited"
-  | "stale"
-  | "error"
-  | "not_started"
-  | "needs_revision";
+// These type exports maintain backward compatibility while we transition to enums
+export { LoadingStatus, ProcessingStatus, SectionProcessingStatus };
 
 /**
  * Interrupt-related type definitions for HITL capabilities
  */
-export type InterruptReason =
-  | "EVALUATION_NEEDED"
-  | "CONTENT_REVIEW"
-  | "ERROR_OCCURRED";
-
-/**
- * Types of feedback that can be provided by users
- */
-export type FeedbackType = "approve" | "revise" | "regenerate";
+export { InterruptReason, FeedbackType };
 
 /**
  * Data structure to track interrupt status
@@ -52,7 +34,7 @@ export interface InterruptStatus {
     content: string | null;
     timestamp: string | null;
   } | null;
-  processingStatus: "pending" | "processed" | "failed" | null;
+  processingStatus: InterruptProcessingStatus | null;
 }
 
 /**
@@ -79,13 +61,7 @@ export interface UserFeedback {
 /**
  * Section types enumeration for typed section references
  */
-export enum SectionType {
-  PROBLEM_STATEMENT = "problem_statement",
-  METHODOLOGY = "methodology",
-  BUDGET = "budget",
-  TIMELINE = "timeline",
-  CONCLUSION = "conclusion",
-}
+export { SectionType };
 
 /**
  * Evaluation result structure for quality checks

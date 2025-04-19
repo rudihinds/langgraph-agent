@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "appropriateness",
+      "name": "Appropriateness",
+      "description": "The methodology is well-suited to the specific problem context and requirements.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "The methodology is clearly articulated with well-defined processes and approaches.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "soundness",
+      "name": "Technical Soundness",
+      "description": "The methodology is based on established best practices and technical principles.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "justification",
+      "name": "Justification",
+      "description": "The rationale for selecting this methodology is well-argued and convincing.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "adaptability",
+      "name": "Adaptability",
+      "description": "The methodology includes provisions for adapting to changing requirements or unforeseen challenges.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "comprehensiveness",
+      "name": "Comprehensiveness",
+      "description": "The methodology addresses all key phases and aspects of the project without significant gaps.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "efficiency",
+      "name": "Efficiency",
+      "description": "The methodology promotes effective resource utilization and minimizes waste.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "consistency",
+      "name": "Internal Consistency",
+      "description": "The components of the methodology work together harmoniously without contradictions.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "clientAlignment",
+      "name": "Client Alignment",
+      "description": "The methodology aligns with the client's organizational culture, capabilities, and preferences.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "measurability",
+      "name": "Measurability",
+      "description": "The methodology includes clear metrics and checkpoints to assess progress and success.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the methodology against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}

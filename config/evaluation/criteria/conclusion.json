@@ -1,0 +1,76 @@
+{
+  "criteria": [
+    {
+      "id": "summarization",
+      "name": "Effective Summarization",
+      "description": "The conclusion effectively summarizes the key points from the entire proposal.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "valueProposition",
+      "name": "Value Proposition",
+      "description": "The conclusion clearly restates the unique value proposition offered by the proposed solution.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "alignmentWithRFP",
+      "name": "Alignment with RFP",
+      "description": "The conclusion demonstrates clear alignment with the original RFP requirements and objectives.",
+      "weight": 3,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "The conclusion is clearly written and easy to understand without technical jargon or ambiguity.",
+      "weight": 2,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "memorability",
+      "name": "Memorability",
+      "description": "The conclusion creates a memorable final impression that reinforces key selling points.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "coherence",
+      "name": "Coherence with Proposal",
+      "description": "The conclusion is coherent with the rest of the proposal, without introducing new information.",
+      "weight": 2,
+      "passThreshold": 0.8
+    },
+    {
+      "id": "callToAction",
+      "name": "Call to Action",
+      "description": "The conclusion includes an effective call to action or next steps for the client.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "confidence",
+      "name": "Confidence",
+      "description": "The conclusion conveys confidence in the proposal's ability to meet client needs.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "conciseness",
+      "name": "Conciseness",
+      "description": "The conclusion is appropriately concise while covering all essential elements.",
+      "weight": 2,
+      "passThreshold": 0.7
+    },
+    {
+      "id": "futureOrientation",
+      "name": "Future Orientation",
+      "description": "The conclusion addresses the future relationship or ongoing partnership possibilities.",
+      "weight": 2,
+      "passThreshold": 0.7
+    }
+  ],
+  "overallPassThreshold": 0.75,
+  "evaluationInstructions": "Evaluate the conclusion against each criterion. For each criterion, provide a score between 0.0 and 1.0, where 0.0 is completely failing to meet the criterion and 1.0 is perfectly meeting it. Provide specific feedback for scores below the pass threshold."
+}
