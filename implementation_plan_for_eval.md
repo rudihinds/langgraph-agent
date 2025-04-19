@@ -33,6 +33,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Create standardized prompt construction
 - [x] Support custom validation logic
 - [x] Fix type issues with `ResultValidator` to properly handle object and boolean returns
+- [x] Implement `EvaluationNodeFactory` class with factory methods for different evaluation types
 
 ## Node Execution Flow Implementation
 
@@ -61,7 +62,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Add appropriate interrupt metadata
 - [x] Include content reference in metadata
 - [x] Structure interrupt metadata according to `OverallProposalState` requirements
-- [ ] Support for resume processing (handled by Orchestrator)
+- [x] Support for resume processing (implemented in example integration)
 
 ### State Management
 
@@ -81,6 +82,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Implement section content extractors
 - [x] Create section extractor factory function for generating section-specific extractors
 - [x] Create tests for all content extractors
+- [x] Implement funder-solution alignment content extractor
 
 ## Specific Node Implementations
 
@@ -111,27 +113,38 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Create specialized prompts for section evaluation
 - [x] Add section-specific criteria configurations
 - [x] Implement section-specific content extractors
+- [x] Create example implementation for section evaluation node integration
+
+### Funder-Solution Alignment Evaluation Node
+
+- [x] Create using the factory pattern
+- [x] Create specialized prompt for funder-solution alignment evaluation
+- [x] Add funder-solution alignment criteria configuration
+- [x] Implement funder-solution alignment content extraction
 
 ## Graph Integration
 
 ### Node Registration
 
-- [ ] Add evaluation nodes to the graph
-- [ ] Connect with appropriate edges
-- [ ] Implement conditional routing
+- [x] Create example implementation of adding evaluation nodes to the graph
+- [x] Demonstrate connecting with appropriate edges
+- [x] Provide example of conditional routing implementation
+- [ ] Integrate with actual proposal generation graph
 
 ### HITL Configuration
 
-- [ ] Register evaluation nodes as interrupt points
-- [ ] Configure interrupt handlers
+- [x] Create example of evaluation nodes as interrupt points
+- [x] Provide example implementation of interrupt handlers
+- [ ] Integrate with actual Orchestrator implementation
 
 ## Orchestrator Integration
 
 ### Interrupt Handling
 
-- [ ] Update Orchestrator to process evaluation interrupts
-- [ ] Implement user feedback handling
-- [ ] Add state transition logic
+- [x] Create example implementation of processing evaluation interrupts
+- [x] Demonstrate user feedback handling implementation
+- [x] Show state transition logic for evaluation results
+- [ ] Integrate with actual Orchestrator Service
 
 ### Dependency Management
 
@@ -166,6 +179,7 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Document evaluation node parameters
 - [x] Document state transitions
 - [x] Document content extractors
+- [x] Create example implementations for section evaluation integration
 
 ### User Documentation
 
@@ -185,63 +199,53 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Fix type issues with `ResultValidator` to support both boolean and object returns
 - [x] Ensure proper error handling for unknown types
 - [x] Implement content extractors for all evaluation types
-- [ ] Create factory-based evaluator node implementations
-- [ ] Finalize integration with Orchestrator Service
+- [x] Create factory-based evaluator node implementations for all content types
+- [x] Create examples showing integration with graph and Orchestrator
+- [ ] Finalize integration with actual Orchestrator Service and proposal generation graph
 
 ## Recent Progress
 
-- Fixed core test issues in the evaluation framework and node implementation:
-  - Updated `ResultValidator` type to properly handle both boolean returns and object returns with valid/error properties
-  - Implemented proper error handling for unknown types throughout the codebase
-  - Fixed interrupt handling logic to ensure that `interruptStatus` and `interruptMetadata` are correctly set according to the `OverallProposalState` interface
-  - Tests are now passing, with only expected warnings about missing criteria files
-- Completed all criteria configuration JSON files for the different evaluation types:
-  - Research evaluation criteria
-  - Solution evaluation criteria
-  - Connection pairs evaluation criteria
-  - Problem statement evaluation criteria
-  - Additional section-specific criteria
-- Implemented content extractors for all evaluation types:
-  - Created dedicated extractors.ts file for specialized extractors
-  - Implemented research content extractor with validation
-  - Implemented solution content extractor with validation
-  - Implemented connection pairs content extractor with pair-level validation
-  - Created a generic section content extractor with a factory function
-  - Added specialized extractors for each section type
-  - Added funder-solution alignment content extractor for evaluating solution alignment with funder priorities
-  - Created comprehensive tests for all extractors
-- Created all needed prompts for generation and evaluation:
-  - Organized generation prompts in `/prompts/generation/` directory
-  - Organized evaluation prompts in `/prompts/evaluation/` directory
-  - Created specialized evaluation prompts for research, solution, and connection pairs
-  - Implemented a flexible section evaluation template system with section-specific criteria areas
-  - Added funder-solution alignment evaluation prompt
+- Completed implementation of `EvaluationNodeFactory` class:
+  - Created factory methods for all evaluation types (research, solution, connection pairs)
+  - Implemented section-specific evaluation node creation with the `createSectionEvaluationNode` method
+  - Added funder-solution alignment evaluation node creation
+  - Fixed criteria path handling to properly resolve JSON files
+  - Added tests for factory functionality
+- Created example implementations demonstrating how to integrate evaluation nodes:
+  - Created `sectionEvaluationNodes.ts` showing how to create evaluation nodes for different section types
+  - Created `graphIntegration.ts` demonstrating how to integrate evaluation nodes into the main graph
+  - Provided examples of conditional routing based on evaluation results
+  - Demonstrated how to handle human-in-the-loop evaluation interactions
+- Completed all content extractors:
+  - Implemented funder-solution alignment content extractor
+  - Created section-specific extractors for problem statement, methodology, budget, timeline, and conclusion
+  - Added support for custom validation and preprocessing in extractors
 
 ## Next Steps
 
-1. **Integrate evaluation nodes with the main graph**:
+1. **Integrate with actual proposal generation graph**:
 
-   - Add evaluation nodes to the proposal generation graph
-   - Create conditional edges for handling evaluation results
-   - Configure routing based on passing/failing evaluations
+   - Apply the patterns from the example implementations to the actual graph
+   - Add evaluation nodes at appropriate points in the content generation flow
+   - Implement conditional routing based on evaluation results
+   - Configure interrupt handling for human review
 
-2. **Test integration with Orchestrator Service**:
+2. **Integrate with actual Orchestrator Service**:
 
-   - Test full evaluation cycle with Orchestrator
+   - Implement the resume-after-evaluation pattern in the Orchestrator
+   - Add support for human feedback processing
+   - Implement state updates based on evaluation results
+   - Add dependency tracking for sections that fail evaluation
+
+3. **Implement UI components for evaluation results**:
+
+   - Create components to display evaluation scores and feedback
+   - Implement feedback collection forms for human evaluation
+   - Add visualizations for evaluation results
+   - Create responsive UI for evaluation workflow
+
+4. **Add comprehensive testing**:
+   - Create integration tests for the full evaluation workflow
+   - Test the graph with evaluation nodes
    - Verify checkpoint persistence of evaluation results
-   - Test HITL integration for evaluation review and feedback
-
-3. **Implement evaluation UX components**:
-   - Create evaluation summary component for the UI
-   - Implement score visualization
-   - Design feedback form for human evaluation
-
-## Specialized Evaluations
-
-### Funder-Solution Alignment Evaluation
-
-- [x] Define criteria configuration in `config/evaluation/criteria/funder_solution_alignment.json`
-- [x] Create specialized prompt template in `prompts/evaluation/funderSolutionAlignment.ts`
-- [x] Implement content extractor that combines solution and research data in `evaluation/extractors.ts`
-- [x] Add tests for the funder-solution alignment content extractor
-- [ ] Create factory-based evaluation node implementation
+   - Test HITL evaluation review process
