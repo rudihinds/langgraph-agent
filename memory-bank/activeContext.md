@@ -1,74 +1,203 @@
-# Active Context
+# Current Work Focus
 
-## Current Focus
+## Implementation of `ProposalGenerationGraph` Core Nodes
 
-We are implementing the `evaluateConnectionsNode` (Task 16.4) for the `ProposalGenerationGraph` system. This node follows the previously completed `connectionPairsNode` and is responsible for evaluating the quality and relevance of the generated connection pairs between funder priorities and applicant capabilities.
+We are currently implementing the core nodes of the `ProposalGenerationGraph` for the Proposal Generator Agent. The implementation follows the specifications outlined in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
 
-Following our established Test-Driven Development (TDD) approach, we have:
+### Current Status
 
-1. Created comprehensive tests for the node's functionality
-2. Implemented the node with thorough error handling and response processing
-3. Added support for both JSON and text-based responses with fallback mechanisms
+✅ Task 16.1: `documentLoaderNode` - Completed with passing unit tests
+✅ Task 16.2: `solutionSoughtNode` - Completed with passing unit tests
+✅ Task 16.3: `connectionPairsNode` - Completed with passing unit tests
+✅ Task 16.4: `evaluateConnectionsNode` - Completed with passing unit tests
+
+### Next Step
+
+Task 16.5: Implement the `sectionManagerNode` - This node will organize the document into sections, manage section statuses, and coordinate section generation.
 
 ## Recent Changes
 
-1. **Created test suite for `evaluateConnectionsNode`** with the following test categories:
+1. Completed the implementation of `connectionPairsNode` (Task 16.3):
 
-   - Input validation tests (missing connections, empty array, malformed data)
-   - Agent invocation tests (proper parameter passing, error handling)
-   - Response processing tests (JSON parsing, fallback text extraction)
-   - State management tests (interrupt metadata, status updates)
+   - Created comprehensive test suite covering input validation, agent invocation, response parsing, error handling, and state management
+   - Implemented dual-layer parsing approach (JSON primary, regex fallback) for resilient response handling
+   - Added detailed error classification and recovery mechanisms
+   - Updated implementation plan to reflect completed work
 
-2. **Implemented `createConnectionEvaluationAgent`** in `agents.js`:
+2. Completed the implementation of `evaluateConnectionsNode` (Task 16.4):
 
-   - Defined specific criteria for evaluating connection pairs (relevance, specificity, evidence, etc.)
-   - Structured output format with score, pass/fail status, feedback, strengths, weaknesses, and suggestions
-   - Configured with appropriate timeouts and error handling
+   - Developed comprehensive test suite for connection evaluation logic
+   - Implemented evaluation criteria based on relevance, alignment, and impact
+   - Added human-in-the-loop interruption point for connection review
+   - Created detailed error handling patterns consistent with other nodes
+   - Updated implementation plan to reflect the completed implementation
 
-3. **Implemented `evaluateConnectionsNode`** in `nodes.js` with the following features:
-   - Comprehensive input validation checking both existence and format of connections
-   - Timeout prevention using Promise.race with 60-second limit
-   - Flexible response processing that handles both JSON and text formats
-   - Detailed error handling with specific messaging for different error types
-   - Proper state management including interrupt setup for human review
+3. Documented the standardized evaluation pattern:
+   - Created `evaluation_pattern_documentation.md` with comprehensive details on the evaluation approach
+   - Defined a reusable pattern for all evaluation nodes in the system
+   - Specified the standardized `EvaluationResult` interface and HITL interrupt metadata
+   - Outlined requirements for `OverallProposalState` updates to support the pattern
+   - Aligned the approach with industry best practices for AI system evaluation
 
 ## Next Steps
 
-1. **Run tests** to verify the implementation works as expected:
+1. Begin implementation of `sectionManagerNode` (Task 16.5):
 
-   - Ensure all test cases pass
-   - Verify proper handling of edge cases
-   - Confirm error scenarios are handled gracefully
+   - Create specification document (`spec_16.5.md`)
+   - Develop comprehensive test suite following TDD approach
+   - Implement node functionality for section organization and management
+   - Ensure proper integration with the main graph
 
-2. **Integrate node into the main graph**:
+2. Update `OverallProposalState` to fully support the standardized evaluation pattern:
 
-   - Add the node to the graph
-   - Configure proper edges from `connectionPairsNode`
-   - Set up conditional routing based on evaluation results
-   - Configure HITL interrupt points
+   - Add standardized HITL interruption fields (`interruptStatus` and `interruptMetadata`)
+   - Ensure evaluation result fields exist for all content types
+   - Add proper typing for evaluation status transitions
+   - Update the `SectionData` interface with consistent evaluation fields
 
-3. **Update documentation** to reflect the new node and its role in the overall workflow.
+3. Create evaluation configuration files:
+
+   - Implement criteria configuration for each content type
+   - Develop standardized evaluation prompts
+   - Ensure consistent scoring mechanisms
+
+4. Continue following the TDD approach:
+   - Write tests first to establish expected behavior
+   - Implement functionality to pass the tests
+   - Refactor while maintaining test coverage
 
 ## Active Decisions & Considerations
 
-1. **Error Handling Consistency**: We've maintained the established pattern of error handling across nodes, with specific error types distinguished in logs and state.
+### Standardized Evaluation Pattern
 
-2. **Response Format Flexibility**: The evaluation node handles both JSON and text-based responses, with a fallback mechanism that uses regex extraction to parse non-JSON outputs.
+We have established a comprehensive evaluation pattern to be used across all evaluation nodes:
 
-3. **Human-in-the-Loop Integration**: The node is specifically designed to pause execution for human review, providing rich context (score, feedback, strengths, weaknesses) to help users make informed decisions.
+1. **Evaluation Result Structure**:
 
-4. **Evaluation Criteria**: We've defined specific criteria for connection pair quality, including relevance, specificity, evidence, completeness, and strategic alignment.
+   - Standardized interface with `passed`, `score`, `feedback`, `strengths`, `weaknesses`, and `suggestions`
+   - Detailed criteria-specific assessments with individual scores and comments
+   - Consistent scoring scale (1-10) with clear threshold for passing (≥7)
 
-5. **State Management**: The node follows the established pattern for state transitions, updating `connectionsStatus` appropriately and preserving messages.
+2. **HITL Integration**:
 
-## Insights & Learnings
+   - Standardized `interruptStatus` and `interruptMetadata` fields
+   - Consistent approach to pausing execution for human review
+   - Clear paths for approval or revision requests
 
-1. **TDD Benefits**: The Test-Driven Development approach continues to prove valuable, ensuring comprehensive test coverage before implementation.
+3. **State Management**:
+   - Consistent state transitions: queued → running → evaluating → awaiting_review → (approved/revised)
+   - Status field naming conventions
+   - Clear error propagation
 
-2. **Fallback Mechanisms**: Building robust fallback mechanisms for parsing different response formats adds significant reliability, especially for LLM-based systems where outputs may vary.
+### Test-Driven Development
 
-3. **Response Validation**: Thorough validation of response structures is essential for preventing downstream errors and ensuring consistent application behavior.
+We continue to follow TDD principles for all node implementations. This approach has proven effective in guiding the development process and ensuring robust implementations with comprehensive test coverage.
 
-4. **Error Classification**: Our approach of categorizing errors by type (timeout, rate limit, validation, etc.) provides more meaningful reporting and specific handling options.
+### Error Handling Patterns
+
+A consistent error handling pattern has emerged across node implementations:
+
+1. Early validation of required inputs
+2. Specific classification of different error types (missing input, LLM API errors, parsing errors)
+3. Custom error messages with node-specific prefixes
+4. State updates to reflect error conditions
+5. Preservation of raw responses for debugging
+
+### State Management
+
+The state management follows established patterns:
+
+1. Status transitions (queued → running → evaluating → awaiting_review/error)
+2. Immutable state updates
+3. Detailed message logging
+4. Clear error propagation
+
+### Naming Consistency
+
+We maintain consistent naming conventions:
+
+- Node functions: camelCase verb-noun format (e.g., `connectionPairsNode`, `evaluateConnectionsNode`)
+- Status fields: snake_case (e.g., `connectionsStatus`)
+- State fields: camelCase (e.g., `connections`, `solutionResults`)
+
+## Implementation Insights
+
+1. **Evaluation Result Structure**: The standardized `EvaluationResult` interface provides a consistent approach to quality assessment across all content types, enabling meaningful comparisons and setting clear quality thresholds.
+
+2. **HITL Integration**: The evaluation pattern establishes a framework for human-in-the-loop review at critical decision points, ensuring quality control while maintaining a consistent user experience.
+
+3. **Criteria Management**: Loading evaluation criteria from configuration files enables flexibility and adaptability while maintaining consistency in the evaluation approach.
+
+4. **Error Categorization**: We've established a consistent pattern for error categorization and handling across nodes, which should be maintained for future implementations.
+
+5. **State Transitions**: The consistent state transition pattern (queued → running → evaluating → awaiting_review/error) provides a clear lifecycle for each node's execution and should be maintained.
+
+## Active Context
+
+## Current Focus
+
+Working on implementing and testing the evaluation framework for proposal sections. The framework provides standardized patterns for evaluating content across different sections of the proposal, with consistent state management and human-in-the-loop integration.
+
+## Recent Changes
+
+- Implemented `EvaluationNodeFactory` class and supporting components
+- Created content extractors for different section types
+- Developed evaluation criteria JSON files
+- Fixed mocking issues in test files
+
+## Vitest Testing Learnings
+
+We've uncovered several important learnings about effective Vitest testing:
+
+1. **Proper Module Mocking**:
+
+   - `vi.mock()` is hoisted to the top of the file automatically
+   - Use `vi.hoisted(() => { return {...} })` to define mocks before they're used in `vi.mock()`
+   - When mocking a module with default export, include both `default: {...}` and individual exports
+   - ES modules require different mocking approaches than CommonJS modules
+
+2. **TypeScript Type Safety**:
+
+   - Create test state interfaces that properly match the actual state structure
+   - Use type assertions where necessary to satisfy TypeScript without compromising test value
+   - Define proper interfaces for test states that match production state structures
+   - Import actual state types from the source files when possible
+
+3. **Mocking Best Practices**:
+
+   - Keep mocks simple and focused on the specific needs of each test
+   - Reset mocks before/after each test to ensure clean state
+   - For path module, ensure both `default.resolve` and `resolve` are mocked
+   - Implement mock behavior that matches the expected behavior of production code
+
+4. **Testing Implementation Challenges**:
+   - Test files can get long - consider splitting into multiple files (e.g., factory tests, content extractor tests)
+   - Ensure tests verify actual behavior, not just that mocks were called
+   - Test both happy paths and error handling
+   - Verify that state transformations are handled correctly
+   - Ensure proper error propagation from nested functions
+
+## Next Steps
+
+1. Update implementation plan with comprehensive test coverage requirements
+2. Implement test suite that verifies compatibility with actual state structure
+3. Add tests for error handling scenarios
+4. Integrate evaluation nodes with the main proposal generation graph
+
+## Important Patterns and Preferences
+
+- Separate test files by logical component (factory, extractors, criteria loading)
+- Create proper test state objects that match the actual state structure
+- Test both successful and error cases
+- Verify state transformations and error propagation
+
+## Learning and Insights
+
+Most difficult aspects of the testing process:
+
+- Getting mocking right with TypeScript and ES modules
+- Ensuring tests don't just verify mocks but actual behavior
+- Creating test states that properly reflect production state structure
+- Balancing comprehensive testing with maintainable test files
 
 _This document reflects the immediate working context, recent activities, and near-term goals. It should be updated frequently._
