@@ -219,9 +219,22 @@ This implementation plan outlines the tasks required to build the standardized e
 
 ## Next Steps
 
-1. Implement the remaining evaluation node factory implementations
-2. Integrate the evaluation nodes with the main graph
-3. Test the integration with the Orchestrator Service
+1. **Integrate evaluation nodes with the main graph**:
+
+   - Add evaluation nodes to the proposal generation graph
+   - Create conditional edges for handling evaluation results
+   - Configure routing based on passing/failing evaluations
+
+2. **Test integration with Orchestrator Service**:
+
+   - Test full evaluation cycle with Orchestrator
+   - Verify checkpoint persistence of evaluation results
+   - Test HITL integration for evaluation review and feedback
+
+3. **Implement evaluation UX components**:
+   - Create evaluation summary component for the UI
+   - Implement score visualization
+   - Design feedback form for human evaluation
 
 ## Specialized Evaluations
 
