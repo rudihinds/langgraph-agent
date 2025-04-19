@@ -165,6 +165,90 @@ This implementation plan outlines the tasks required to build the standardized e
 - [x] Fix mock implementation for custom validation to ensure proper handling of both boolean and object returns
 - [x] Test content extractors for various input scenarios
 
+### Comprehensive Test Coverage
+
+#### State Structure Tests
+
+- [ ] Create proper mock state objects that match `OverallProposalState` interface
+
+  - [ ] Include all required fields (sections, statuses, messages, errors)
+  - [ ] Mirror the exact structure of nested fields (e.g., `sections[sectionId].content`)
+  - [ ] Use correct field types to catch type mismatch issues
+  - [ ] Test with complete state and minimal valid state
+
+- [ ] Verify state field access
+
+  - [ ] Test content extractors can access specific state fields
+  - [ ] Test compatibility with nested state properties
+  - [ ] Verify correct handling of optional fields
+
+- [ ] Validate state updates
+  - [ ] Test that nodes properly update status fields
+  - [ ] Verify result fields are populated correctly
+  - [ ] Confirm error messages are added to the correct fields
+  - [ ] Test that interrupt flags are properly set
+  - [ ] Verify interrupt metadata format and content
+
+#### Core Processing Tests
+
+- [ ] Test with actual criteria files
+
+  - [ ] Load criteria files from `/config/evaluation/criteria/`
+  - [ ] Test all content types (research, solution, sections)
+  - [ ] Verify error handling when criteria file is missing
+  - [ ] Test fallback to default criteria
+
+- [ ] Verify content extraction
+
+  - [ ] Test extractors with different state structures
+  - [ ] Verify handling of empty/missing content
+  - [ ] Test extraction of structured content (JSON)
+  - [ ] Test extraction of text content
+
+- [ ] Test evaluation process
+
+  - [ ] Verify status transitions
+  - [ ] Test score calculations based on criteria weights
+  - [ ] Verify pass/fail determination based on thresholds
+  - [ ] Test application of critical criteria rules
+
+- [ ] Test HITL integration
+  - [ ] Verify interrupt flag is set
+  - [ ] Test interrupt metadata structure
+  - [ ] Test metadata includes correct content references
+  - [ ] Verify available actions match expected options
+
+#### Error Handling Tests
+
+- [ ] Test missing content scenarios
+
+  - [ ] Verify error handling when content is empty
+  - [ ] Test error handling when content field is missing
+  - [ ] Verify error handling when content is malformed
+  - [ ] Test custom validation error handling
+
+- [ ] Test LLM interaction errors
+
+  - [ ] Test handling of timeout errors
+  - [ ] Verify error handling for API failures
+  - [ ] Test handling of malformed LLM responses
+  - [ ] Verify recovery from transient errors
+
+- [ ] Test error reporting and propagation
+  - [ ] Verify errors are added to state.errors array
+  - [ ] Test error message format and content
+  - [ ] Verify error status is set correctly
+  - [ ] Test error information is available to the Orchestrator
+
+### Test File Structure
+
+- [ ] Split tests across multiple files to improve maintainability:
+  - [ ] `evaluationNodeFactory.test.ts` - Tests for the factory functionality
+  - [ ] `contentExtractors.test.ts` - Tests for content extraction functions
+  - [ ] `evaluationCriteria.test.ts` - Tests for criteria loading and validation
+  - [ ] `stateManagement.test.ts` - Tests for state compatibility and updates
+  - [ ] `errorHandling.test.ts` - Tests for error conditions and recovery
+
 ### Integration Tests
 
 - [ ] Test node interaction with LangGraph
