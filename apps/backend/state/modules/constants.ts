@@ -56,10 +56,11 @@ export enum SectionType {
   ORGANIZATIONAL_CAPACITY = "organizational_capacity",
   SOLUTION = "solution",
   IMPLEMENTATION_PLAN = "implementation_plan",
-  EVALUATION_APPROACH = "evaluation_approach",
+  EVALUATION = "evaluation_approach",
   BUDGET = "budget",
   EXECUTIVE_SUMMARY = "executive_summary",
   CONCLUSION = "conclusion",
+  STAKEHOLDER_ANALYSIS = "stakeholder_analysis",
 }
 
 /**

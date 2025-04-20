@@ -38,7 +38,7 @@ function getSectionDependencies(sectionType: SectionType): SectionType[] {
       SectionType.SOLUTION,
       SectionType.IMPLEMENTATION_PLAN,
     ],
-    [SectionType.EVALUATION_APPROACH]: [
+    [SectionType.EVALUATION]: [
       SectionType.SOLUTION,
       SectionType.IMPLEMENTATION_PLAN,
     ],
@@ -71,6 +71,8 @@ function determineRequiredSections(state: OverallProposalState): SectionType[] {
     SectionType.BUDGET,
     SectionType.IMPLEMENTATION_PLAN,
     SectionType.CONCLUSION,
+    SectionType.EVALUATION,
+    SectionType.EXECUTIVE_SUMMARY,
   ];
 
   // Check for research results to determine if additional sections are needed
@@ -79,13 +81,10 @@ function determineRequiredSections(state: OverallProposalState): SectionType[] {
     const researchData = state.researchResults;
 
     // Add optional sections based on research findings (demonstration logic)
-    if (researchData.requiresEvaluation) {
-      standardSections.push(SectionType.EVALUATION_APPROACH);
+    if (researchData.requiresStakeholderAnalysis) {
+      standardSections.push(SectionType.STAKEHOLDER_ANALYSIS);
     }
   }
-
-  // Executive summary is typically included in all proposals
-  standardSections.push(SectionType.EXECUTIVE_SUMMARY);
 
   return standardSections;
 }
@@ -118,7 +117,7 @@ function getSectionTitle(sectionType: SectionType): string {
     [SectionType.ORGANIZATIONAL_CAPACITY]: "Organizational Capacity",
     [SectionType.SOLUTION]: "Proposed Solution",
     [SectionType.IMPLEMENTATION_PLAN]: "Implementation Plan",
-    [SectionType.EVALUATION_APPROACH]: "Evaluation Approach",
+    [SectionType.EVALUATION]: "Evaluation Approach",
     [SectionType.BUDGET]: "Budget and Cost Breakdown",
     [SectionType.CONCLUSION]: "Conclusion",
     [SectionType.EXECUTIVE_SUMMARY]: "Executive Summary",
