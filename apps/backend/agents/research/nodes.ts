@@ -1,33 +1,45 @@
+/**
+ * Research Agent Nodes
+ *
+ * This file contains the node implementations for the research phase of proposal generation:
+ * - documentLoaderNode: Loads and parses RFP documents
+ * - researchNode: Performs deep research analysis on the RFP document
+ * - solutionSoughtNode: Identifies the solution being sought by the funder
+ * - connectionPairsNode: Identifies connections between funder priorities and applicant capabilities
+ */
+
 import {
   HumanMessage,
   BaseMessage,
   SystemMessage,
   AIMessage,
 } from "@langchain/core/messages";
-import { ResearchState } from "./state.js";
+import { Logger } from "../../lib/logger.js";
+import { parseRfpFromBuffer } from "../../lib/parsers/rfp.js";
+import {
+  listFilesWithRetry,
+  downloadFileWithRetry,
+} from "../../lib/supabase/supabase-runnable.js";
+import { getFileExtension } from "../../lib/utils/files.js";
 import {
   createDeepResearchAgent,
   createSolutionSoughtAgent,
 } from "./agents.js";
-import { DocumentService } from "../../lib/db/documents.js";
-import { parseRfpFromBuffer } from "../../lib/parsers/rfp.js";
-import { Logger } from "@/lib/logger.js";
-import { serverSupabase } from "../../lib/supabase/client.js";
-import { withRetry, RetryOptions } from "../../lib/utils/backoff.js";
-import { getFileExtension } from "../../lib/utils/files.js";
-// Node's Buffer for conversion
 import { Buffer } from "buffer";
+
+// Import state and type definitions
+import {
+  OverallProposalState,
+  ProcessingStatus,
+  LoadingStatus,
+  InterruptReason,
+} from "../../state/proposal.state.js";
+
 // Import the prompt strings
 import { deepResearchPrompt, solutionSoughtPrompt } from "./prompts/index.js";
-// Import the main state type
-import type { OverallProposalState } from "@/state/proposal.state.js";
-import { z } from "zod"; // Import Zod if using schema validation
 
 // Initialize logger
 const logger = Logger.getInstance();
-
-// Storage bucket name
-const DOCUMENTS_BUCKET = "proposal-documents";
 
 /**
  * Document loader node
@@ -35,212 +47,151 @@ const DOCUMENTS_BUCKET = "proposal-documents";
  * Retrieves a document from Supabase storage by ID, parses it,
  * and updates the state with its content or any errors encountered.
  *
- * @param state Current research state
- * @returns Updated state with document content or error information
+ * @param state Current proposal state
+ * @returns Updated partial state with document content or error information
  */
 export async function documentLoaderNode(
-  state: ResearchState
-): Promise<Partial<ResearchState>> {
-  const documentId = state.rfpDocument?.id;
-  const initialErrors = state.errors || [];
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Starting document loader node", {
+    threadId: state.activeThreadId,
+  });
 
+  // Validate document ID exists in state
+  const documentId = state.rfpDocument?.id;
   if (!documentId) {
-    const errorMsg = "Document ID not provided in state.rfpDocument.id";
-    logger.error(errorMsg);
+    logger.warn("No document ID found in state", {
+      threadId: state.activeThreadId,
+    });
     return {
-      errors: [...initialErrors, errorMsg],
-      status: {
-        ...state.status,
-        documentLoaded: false,
+      errors: [
+        ...state.errors,
+        "No document ID found in state, cannot load document",
+      ],
+      rfpDocument: {
+        ...state.rfpDocument,
+        status: LoadingStatus.ERROR,
       },
     };
   }
 
-  logger.info("Starting document load", { documentId });
-
-  const documentPath = `documents/${documentId}.pdf`;
-  logger.debug(`Constructed document path: ${documentPath}`);
+  // Update status to loading
+  logger.info(`Loading document with ID: ${documentId}`, {
+    threadId: state.activeThreadId,
+  });
 
   try {
-    // --- Step 1b: Get File Metadata (Using list) ---
-    let fileMetadata = null;
-    try {
-      const listResult = await withRetry(
-        async () => {
-          logger.debug("Attempting to list file for metadata", {
-            bucket: DOCUMENTS_BUCKET,
-            pathPrefix: documentPath,
-          });
-          // Use list() with the full path as prefix to get info for a single file
-          const { data, error } = await serverSupabase.storage
-            .from(DOCUMENTS_BUCKET)
-            .list(`documents/`, {
-              // List directory containing the file
-              limit: 1, // Only need one result
-              offset: 0,
-              search: `${documentId}.pdf`, // Search for the specific file name
-            });
+    // Update state to indicate loading has started
+    const bucketName = "documents";
 
-          if (error) {
-            logger.warn("Failed to list file for metadata", {
-              documentId,
-              error: error.message,
-            });
-            return null; // Allow proceeding, rely on extension
-          }
-          // Check if the specific file was found in the list
-          if (data && data.length > 0 && data[0].name === `${documentId}.pdf`) {
-            return data[0]; // Return the metadata of the found file
-          }
-          return null; // File not found in list
-        },
-        { maxRetries: 2, initialDelayMs: 200 }
-      );
-
-      fileMetadata = listResult;
-    } catch (listError: any) {
-      logger.warn("Listing file for metadata failed after retries", {
-        documentId,
-        error: listError.message,
-      });
-      fileMetadata = null;
-    }
-
-    // Determine file type (Metadata MIME type > Extension > Default 'txt')
-    // Supabase list() returns metadata object with mimetype
-    const mimeType = fileMetadata?.metadata?.mimetype;
-    const extension = getFileExtension(documentPath);
-    const fileType = mimeType || extension || "txt";
-    logger.debug("Determined file type", {
-      documentId,
-      mimeType,
-      extension,
-      finalType: fileType,
+    // List files to get metadata
+    const fileObjects = await listFilesWithRetry.invoke({
+      bucketName,
+      path: "",
     });
 
-    // --- Step 2 & 4: Implement Download with Retry Logic ---
-    const downloadResult = await withRetry(
-      async () => {
-        logger.debug("Attempting to download from Supabase Storage", {
-          bucket: DOCUMENTS_BUCKET,
-          path: documentPath,
-        });
-        // Use the pre-configured server client
-        const { data, error } = await serverSupabase.storage
-          .from(DOCUMENTS_BUCKET)
-          .download(documentPath);
-
-        // Check for Supabase-specific errors *before* throwing
-        if (error) {
-          logger.warn("Supabase download error occurred", {
-            documentId,
-            code: error.name,
-            message: error.message,
-            status: (error as any).status,
-          });
-          // Throw the error to trigger retry or failure based on shouldRetry
-          const augmentedError = new Error(error.message);
-          (augmentedError as any).status = (error as any).status || 500; // Add status if available
-          throw augmentedError;
-        }
-        if (!data) {
-          // Should ideally be caught by error, but handle explicitly if Supabase returns null data without error
-          logger.error("Supabase download returned null data without error", {
-            documentId,
-          });
-          throw new Error("Downloaded data is null.");
-        }
-        return data; // Return the ArrayBuffer on success
-      },
-      {
-        maxRetries: 3, // Production-ready retry count
-        initialDelayMs: 500,
-        shouldRetry: (error: any) => {
-          // Only retry on non-client errors (excluding 404/403) or rate limits
-          const status = error?.status;
-          if (status) {
-            if (status === 404 || status === 403) return false; // Don't retry these
-            if (status >= 400 && status < 500 && status !== 429) return false; // Don't retry other 4xx except 429
-          }
-          return true; // Retry 5xx, network errors, 429
-        },
-      } as RetryOptions
-    );
-
-    // --- Step 3: Error Handling (Handled by try/catch and shouldRetry) ---
-    // If we get here, download (with retries) was successful
-    const documentBuffer = await downloadResult.arrayBuffer();
-    logger.info("Document downloaded successfully", {
-      documentId,
-      size: documentBuffer.byteLength,
-    });
-
-    // --- Step 5: Integrate with Document Parser ---
-    let parsedData;
-    try {
-      // Convert ArrayBuffer to Node.js Buffer before parsing
-      const nodeBuffer = Buffer.from(documentBuffer);
-      parsedData = await parseRfpFromBuffer(
-        nodeBuffer, // Pass the Node.js Buffer
-        fileType,
-        documentPath
-      );
-      logger.info("Document parsed successfully", { documentId });
-    } catch (parseError: any) {
-      logger.error("Failed to parse document", {
-        documentId,
-        error: parseError.message,
+    // Find the file that matches the document_id
+    const file = fileObjects.find((f) => f.name.includes(documentId));
+    if (!file) {
+      logger.error(`File not found for document: ${documentId}`, {
+        threadId: state.activeThreadId,
       });
       return {
-        errors: [...initialErrors, `Parsing error: ${parseError.message}`],
-        status: { ...state.status, documentLoaded: false },
+        errors: [...state.errors, `File not found for document: ${documentId}`],
+        rfpDocument: {
+          ...state.rfpDocument,
+          status: LoadingStatus.ERROR,
+        },
       };
     }
 
-    // --- Step 6: Update State on Success ---
+    const documentPath = file.name;
+    logger.info(`Found document at path: ${documentPath}`, {
+      threadId: state.activeThreadId,
+    });
+
+    // Download the file
+    logger.info(`Downloading document from path: ${documentPath}`, {
+      threadId: state.activeThreadId,
+    });
+    const fileBlob = await downloadFileWithRetry.invoke({
+      bucketName,
+      path: documentPath,
+    });
+
+    // Determine file type by extension
+    const fileExtension = getFileExtension(documentPath);
+
+    // Parse the document based on file type
+    logger.info(`Parsing document with extension: ${fileExtension}`, {
+      threadId: state.activeThreadId,
+    });
+
+    // Convert Blob to Buffer for parsing
+    const arrayBuffer = await fileBlob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Use the correct parsing function
+    const parsedDocument = await parseRfpFromBuffer(
+      buffer,
+      fileExtension,
+      documentPath
+    );
+
+    // Update state with document content and metadata
+    logger.info(`Successfully parsed document`, {
+      threadId: state.activeThreadId,
+    });
+
     return {
       rfpDocument: {
-        ...state.rfpDocument,
-        text: parsedData.text,
-        metadata: {
-          ...(state.rfpDocument.metadata || {}),
-          ...(fileMetadata?.metadata || {}), // Metadata from Supabase list()
-          ...(parsedData.metadata || {}), // Metadata from parser
-          // Add size from buffer as a fallback/override
-          size: documentBuffer.byteLength,
-        },
+        id: documentId,
+        fileName: documentPath,
+        text: parsedDocument.text,
+        metadata: parsedDocument.metadata || {},
+        status: LoadingStatus.LOADED,
       },
-      status: {
-        ...state.status,
-        documentLoaded: true,
-      },
-      errors: initialErrors,
+      messages: [
+        ...state.messages,
+        new SystemMessage({
+          content: `Document "${documentPath}" successfully loaded and parsed.`,
+        }),
+      ],
     };
   } catch (error: any) {
-    // Catch errors from download (after retries) or other unexpected issues
-    const status = error?.status;
-    let specificErrorMessage =
-      error.message || "Unknown error during document loading";
+    logger.error(`Error loading document: ${error.message}`, {
+      error,
+      threadId: state.activeThreadId,
+    });
 
-    if (status === 404) {
-      specificErrorMessage = `Document not found at path: ${documentPath}`;
-    } else if (status === 403) {
-      specificErrorMessage = `Permission denied for document: ${documentPath}`;
-    } else if (error.message.includes("NetworkError")) {
-      // Example check
-      specificErrorMessage = `Network error while fetching document: ${documentPath}`;
+    // Handle specific error cases
+    if (error.statusCode === 404) {
+      return {
+        errors: [...state.errors, `File not found for document: ${documentId}`],
+        rfpDocument: {
+          ...state.rfpDocument,
+          status: LoadingStatus.ERROR,
+        },
+      };
+    } else if (error.statusCode === 403) {
+      return {
+        errors: [
+          ...state.errors,
+          `Permission denied when trying to access document: ${documentId}`,
+        ],
+        rfpDocument: {
+          ...state.rfpDocument,
+          status: LoadingStatus.ERROR,
+        },
+      };
     }
 
-    logger.error("Document loading failed definitively", {
-      documentId,
-      error: specificErrorMessage,
-      status,
-    });
+    // Generic error handling
     return {
-      errors: [...initialErrors, specificErrorMessage],
-      status: {
-        ...state.status,
-        documentLoaded: false,
+      errors: [...state.errors, `Error loading document: ${error.message}`],
+      rfpDocument: {
+        ...state.rfpDocument,
+        status: LoadingStatus.ERROR,
       },
     };
   }
@@ -251,58 +202,135 @@ export async function documentLoaderNode(
  *
  * Invokes the deep research agent to analyze RFP documents
  * and extract structured information
+ *
+ * @param state Current proposal state
+ * @returns Updated partial state with research results or error information
  */
-export async function deepResearchNode(state: ResearchState) {
+export async function researchNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Starting research node", { threadId: state.activeThreadId });
+
   if (!state.rfpDocument?.text) {
-    const errorMsg = "RFP document text is missing in state for deep research.";
-    logger.error(errorMsg);
+    const errorMsg = "RFP document text is missing in state for research.";
+    logger.error(errorMsg, { threadId: state.activeThreadId });
     return {
-      errors: [...(state.errors || []), errorMsg],
-      status: { ...state.status, researchComplete: false },
+      errors: [...state.errors, errorMsg],
+      researchStatus: ProcessingStatus.ERROR,
+      messages: [
+        ...state.messages,
+        new SystemMessage({
+          content: "Research failed: Missing RFP document text.",
+        }),
+      ],
     };
   }
 
+  // Update status to running
+  logger.info("Setting research status to running", {
+    threadId: state.activeThreadId,
+  });
+
   try {
-    // Interpolate the RFP text into the prompt string
+    // Interpolate the RFP text into the prompt template
     const formattedPrompt = deepResearchPrompt.replace(
-      "${state.rfpDocument.text}", // Ensure this exact placeholder matches the one in prompts/index.ts
+      "${state.rfpDocument.text}",
       state.rfpDocument.text
     );
 
-    // Create and invoke the deep research agent with the formatted prompt
+    // Create and invoke the deep research agent
+    logger.info("Creating research agent", { threadId: state.activeThreadId });
     const agent = createDeepResearchAgent();
+
+    logger.info("Invoking research agent", { threadId: state.activeThreadId });
     const result = await agent.invoke({
-      messages: [new HumanMessage(formattedPrompt)], // Pass the complete prompt
+      messages: [new HumanMessage(formattedPrompt)],
     });
 
     // Parse the JSON response from the agent
     const lastMessage = result.messages[result.messages.length - 1];
+
     // Basic check for JSON content
     let jsonContent;
     try {
-      jsonContent = JSON.parse(lastMessage.content as string);
-    } catch (parseError) {
-      logger.error("Failed to parse JSON response from deep research agent", {
+      const content = lastMessage.content as string;
+      // Check if the response looks like JSON
+      const trimmedContent = content.trim();
+      if (!trimmedContent.startsWith("{") && !trimmedContent.startsWith("[")) {
+        throw new Error("Response doesn't appear to be JSON");
+      }
+
+      jsonContent = JSON.parse(content);
+      logger.info("Successfully parsed research results", {
+        threadId: state.activeThreadId,
+      });
+    } catch (parseError: any) {
+      logger.error("Failed to parse JSON response from research agent", {
         content: lastMessage.content,
         error: parseError,
+        threadId: state.activeThreadId,
       });
-      throw new Error("Deep research agent did not return valid JSON.");
+      return {
+        researchStatus: ProcessingStatus.ERROR,
+        errors: [
+          ...state.errors,
+          `Failed to parse research results: ${parseError.message}`,
+        ],
+        messages: [
+          ...state.messages,
+          new SystemMessage({
+            content: "Research failed: Invalid JSON response format.",
+          }),
+          // Include the problematic message for debugging
+          new AIMessage({ content: lastMessage.content as string }),
+        ],
+      };
     }
 
+    // Return updated state with research results
+    logger.info("Research completed successfully", {
+      threadId: state.activeThreadId,
+    });
     return {
-      deepResearchResults: jsonContent,
-      status: { ...state.status, researchComplete: true },
-      messages: [...state.messages, ...result.messages], // Append new messages
-    };
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Failed to perform deep research: ${errorMessage}`);
-    return {
-      errors: [
-        ...(state.errors || []),
-        `Failed to perform deep research: ${errorMessage}`,
+      researchResults: jsonContent,
+      researchStatus: ProcessingStatus.AWAITING_REVIEW,
+      messages: [
+        ...state.messages,
+        ...result.messages,
+        new SystemMessage({
+          content: "Research analysis completed. Please review the results.",
+        }),
       ],
-      status: { ...state.status, researchComplete: false },
+      // Set interrupt metadata for HITL review
+      interruptMetadata: {
+        reason: InterruptReason.EVALUATION_NEEDED,
+        nodeId: "researchNode",
+        timestamp: new Date().toISOString(),
+        contentReference: "research",
+      },
+      interruptStatus: {
+        isInterrupted: true,
+        interruptionPoint: "research",
+        feedback: null,
+        processingStatus: null,
+      },
+    };
+  } catch (error: any) {
+    // Handle error cases
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to perform research: ${errorMessage}`, {
+      threadId: state.activeThreadId,
+    });
+
+    return {
+      researchStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, `Failed to perform research: ${errorMessage}`],
+      messages: [
+        ...state.messages,
+        new SystemMessage({
+          content: `Research failed: ${errorMessage}`,
+        }),
+      ],
     };
   }
 }
@@ -313,7 +341,7 @@ export async function deepResearchNode(state: ResearchState) {
  * Analyzes RFP and research results to identify the core problem
  * and desired solution characteristics.
  *
- * @param state Current overall proposal state
+ * @param state Current proposal state
  * @returns Updated state with solution analysis or error information
  */
 export async function solutionSoughtNode(
@@ -322,17 +350,16 @@ export async function solutionSoughtNode(
   logger.info("Entering solutionSoughtNode", {
     threadId: state.activeThreadId,
   });
-  const initialErrors = state.errors || [];
 
-  // --- 1. Input Validation ---
-  if (!state.rfpDocument?.text || state.rfpDocument.text.trim().length === 0) {
+  // Input Validation
+  if (!state.rfpDocument?.text) {
     const errorMsg = "[solutionSoughtNode] Missing RFP text in state.";
     logger.error(errorMsg, { threadId: state.activeThreadId });
     return {
-      solutionStatus: "error",
-      errors: [...initialErrors, errorMsg],
+      solutionStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, errorMsg],
       messages: [
-        ...(state.messages || []),
+        ...state.messages,
         new SystemMessage({
           content: "Solution analysis failed: Missing RFP document text.",
         }),
@@ -343,12 +370,12 @@ export async function solutionSoughtNode(
   // Validate research results
   if (!state.researchResults) {
     const errorMsg = "[solutionSoughtNode] Missing research results in state.";
-    logger.error(errorMsg);
+    logger.error(errorMsg, { threadId: state.activeThreadId });
     return {
-      solutionStatus: "error",
-      errors: [...initialErrors, errorMsg],
+      solutionStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, errorMsg],
       messages: [
-        ...(state.messages || []),
+        ...state.messages,
         new SystemMessage({
           content: "Solution analysis failed: Missing research results.",
         }),
@@ -356,32 +383,27 @@ export async function solutionSoughtNode(
     };
   }
 
-  // --- 2. Status Update - Set to running ---
+  // Update status to running
   logger.info("Setting solutionStatus to running", {
     threadId: state.activeThreadId,
   });
-  // Add a partial state update to set the status to running
-  // Note: This won't actually be tested directly but is important for the real implementation
 
   try {
-    // --- 3. Agent/LLM Invocation ---
+    // Create solution sought agent
     logger.info("Creating solution sought agent", {
       threadId: state.activeThreadId,
     });
     const agent = createSolutionSoughtAgent();
 
-    // --- 4. Prompt Formatting ---
-    // Fix: Use template literals instead of string.replace for proper interpolation
-    const formattedPrompt = `${solutionSoughtPrompt
+    // Format prompt with RFP text and research results
+    const formattedPrompt = solutionSoughtPrompt
       .replace("${state.rfpDocument.text}", state.rfpDocument.text)
       .replace(
         "${JSON.stringify(state.deepResearchResults)}",
         JSON.stringify(state.researchResults)
-      )}`;
+      );
 
-    const message = new HumanMessage({
-      content: formattedPrompt,
-    });
+    const message = new HumanMessage({ content: formattedPrompt });
 
     // Invoke agent with the formatted prompt
     logger.info("Invoking solution sought agent", {
@@ -389,7 +411,7 @@ export async function solutionSoughtNode(
     });
 
     // Use a timeout to prevent hanging on long-running LLM requests
-    const timeoutMs = 60000; // 60 seconds - adjust as needed
+    const timeoutMs = 60000; // 60 seconds
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(
         () =>
@@ -402,13 +424,10 @@ export async function solutionSoughtNode(
 
     // Race the agent invocation against the timeout
     const response = await Promise.race([
-      agent.invoke({
-        messages: [message],
-      }),
+      agent.invoke({ messages: [message] }),
       timeoutPromise,
     ]);
 
-    // --- 5. Response Processing ---
     // Extract the content from the last message
     const lastMessage = response.messages[response.messages.length - 1];
 
@@ -420,10 +439,10 @@ export async function solutionSoughtNode(
         responseType: typeof lastMessage?.content,
       });
       return {
-        solutionStatus: "error",
-        errors: [...initialErrors, errorMsg],
+        solutionStatus: ProcessingStatus.ERROR,
+        errors: [...state.errors, errorMsg],
         messages: [
-          ...(state.messages || []),
+          ...state.messages,
           new SystemMessage({
             content:
               "Solution analysis failed: Invalid response format from LLM.",
@@ -455,11 +474,12 @@ export async function solutionSoughtNode(
         },
         parseError
       );
+
       return {
-        solutionStatus: "error",
-        errors: [...initialErrors, errorMsg],
+        solutionStatus: ProcessingStatus.ERROR,
+        errors: [...state.errors, errorMsg],
         messages: [
-          ...(state.messages || []),
+          ...state.messages,
           new SystemMessage({
             content: "Solution analysis failed: Invalid JSON response format.",
           }),
@@ -468,24 +488,34 @@ export async function solutionSoughtNode(
       };
     }
 
-    // --- 6. State Update (Success) ---
-    // On success, clear all previous errors
+    // Return updated state with solution results
     logger.info("Solution analysis completed successfully", {
       threadId: state.activeThreadId,
     });
 
-    // Return updated state
     return {
-      solutionStatus: "awaiting_review",
+      solutionStatus: ProcessingStatus.AWAITING_REVIEW,
       solutionResults: parsedResults,
-      errors: [], // Clear all previous errors on success
       messages: [
-        ...(state.messages || []),
+        ...state.messages,
         new AIMessage({ content: lastMessage.content }),
         new SystemMessage({
           content: "Solution analysis successful. Please review the results.",
         }),
       ],
+      // Set interrupt metadata for HITL review
+      interruptMetadata: {
+        reason: InterruptReason.EVALUATION_NEEDED,
+        nodeId: "solutionSoughtNode",
+        timestamp: new Date().toISOString(),
+        contentReference: "solution",
+      },
+      interruptStatus: {
+        isInterrupted: true,
+        interruptionPoint: "solution",
+        feedback: null,
+        processingStatus: null,
+      },
     };
   } catch (error: any) {
     // Handle specific error types
@@ -519,14 +549,177 @@ export async function solutionSoughtNode(
     );
 
     return {
-      solutionStatus: "error",
-      errors: [...initialErrors, errorMsg],
+      solutionStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, errorMsg],
       messages: [
-        ...(state.messages || []),
+        ...state.messages,
         new SystemMessage({
           content: `Solution analysis failed: ${error.message}`,
         }),
       ],
     };
   }
+}
+
+/**
+ * Connection Pairs node
+ *
+ * Identifies connections between funder priorities and applicant capabilities
+ * based on the research and solution analysis.
+ *
+ * @param state Current proposal state
+ * @returns Updated state with connection pairs or error information
+ */
+export async function connectionPairsNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Entering connectionPairsNode", {
+    threadId: state.activeThreadId,
+  });
+
+  // Input validation
+  if (!state.solutionResults) {
+    const errorMsg = "[connectionPairsNode] Missing solution results in state.";
+    logger.error(errorMsg, { threadId: state.activeThreadId });
+    return {
+      connectionsStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, errorMsg],
+      messages: [
+        ...state.messages,
+        new SystemMessage({
+          content:
+            "Connection pairs analysis failed: Missing solution results.",
+        }),
+      ],
+    };
+  }
+
+  // For now, we'll simulate the connection pairs analysis
+  // In a real implementation, this would call a dedicated agent
+
+  // Mock response - replace with actual implementation
+  const mockConnections = [
+    {
+      funderPriority: "Evidence-based approaches",
+      applicantCapability:
+        "Research-backed methodology with 5 published studies",
+      strength: "High",
+      evidence:
+        "Our team has published 5 peer-reviewed studies on our approach",
+    },
+    {
+      funderPriority: "Community engagement",
+      applicantCapability:
+        "Established partnerships with 12 community organizations",
+      strength: "Medium",
+      evidence: "We have formal MOUs with 12 local organizations",
+    },
+    {
+      funderPriority: "Sustainable impact",
+      applicantCapability:
+        "Self-funding model established in 3 previous projects",
+      strength: "High",
+      evidence: "Previous projects achieved sustainability within 18 months",
+    },
+  ];
+
+  logger.info("Connection pairs analysis completed", {
+    threadId: state.activeThreadId,
+  });
+
+  return {
+    connections: mockConnections,
+    connectionsStatus: ProcessingStatus.AWAITING_REVIEW,
+    messages: [
+      ...state.messages,
+      new SystemMessage({
+        content:
+          "Connection pairs analysis completed. Please review the results.",
+      }),
+    ],
+    // Set interrupt metadata for HITL review
+    interruptMetadata: {
+      reason: InterruptReason.EVALUATION_NEEDED,
+      nodeId: "connectionPairsNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "connections",
+    },
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "connections",
+      feedback: null,
+      processingStatus: null,
+    },
+  };
+}
+
+/**
+ * Evaluate Research node
+ *
+ * Performs evaluation of research results to ensure quality
+ * and provides feedback for improvement if needed.
+ *
+ * @param state Current proposal state
+ * @returns Updated state with evaluation results
+ */
+export async function evaluateResearchNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Evaluating research results", {
+    threadId: state.activeThreadId,
+  });
+
+  if (!state.researchResults) {
+    logger.warn("No research results found to evaluate.", {
+      threadId: state.activeThreadId,
+    });
+    return {
+      researchStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, "No research results found to evaluate."],
+    };
+  }
+
+  // In a real implementation, this would call a model to evaluate the research
+  // Here we're returning a placeholder evaluation
+
+  const evaluation = {
+    score: 8.5,
+    passed: true,
+    feedback:
+      "The research analysis is comprehensive and insightful, covering key aspects of the RFP.",
+    categories: {
+      comprehensiveness: {
+        score: 9,
+        feedback: "Excellent coverage of all required areas.",
+      },
+      accuracy: {
+        score: 8,
+        feedback: "Generally accurate with minor improvements possible.",
+      },
+      actionability: {
+        score: 8.5,
+        feedback: "Insights are highly actionable for proposal development.",
+      },
+    },
+  };
+
+  // Set interrupt metadata to provide context for the UI
+  return {
+    researchEvaluation: evaluation,
+    interruptMetadata: {
+      reason: InterruptReason.EVALUATION_NEEDED,
+      nodeId: "evaluateResearchNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "research",
+      evaluationResult: evaluation,
+    },
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "evaluateResearch",
+      feedback: null,
+      processingStatus: null,
+    },
+    // Always set research status to awaiting_review for consistency
+    researchStatus: ProcessingStatus.AWAITING_REVIEW,
+  };
 }
