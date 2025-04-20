@@ -4,64 +4,75 @@
 
 We are currently implementing the core nodes of the `ProposalGenerationGraph` for the Proposal Generator Agent. The implementation follows the specifications outlined in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
 
-### Current Status
+### Completed: Research Phase
 
-✅ Task 16.1: `documentLoaderNode` - Completed with passing unit tests
-✅ Task 16.2: `solutionSoughtNode` - Completed with passing unit tests
-✅ Task 16.3: `connectionPairsNode` - Completed with passing unit tests
-✅ Task 16.4: `evaluateConnectionsNode` - Completed with passing unit tests
+✅ Task 16.1: `documentLoaderNode` - Document retrieval from Supabase storage
+✅ Task 16.2: `researchNode` - Deep research analysis of RFP documents
+✅ Task 16.3: `solutionSoughtNode` - Identification of solution requirements
+✅ Task 16.4: `connectionPairsNode` - Mapping funder priorities to capabilities
+✅ Task 16.5: `evaluateResearchNode` - Research quality evaluation with HITL review
+✅ Task 16.6: `evaluateSolutionNode` - Solution analysis evaluation with HITL review
+✅ Task 16.7: `evaluateConnectionsNode` - Connection pairs evaluation with HITL review
 
-### Next Step
+### Next Focus: Section Generation Phase
 
-Task 16.5: Implement the `sectionManagerNode` - This node will organize the document into sections, manage section statuses, and coordinate section generation.
+Task 17.1: Implement the `sectionManagerNode` - This node will organize the document into sections, manage section statuses, and coordinate section generation.
+
+Task 17.2: Implement the `generateProblemStatementNode` - This node will generate the problem statement section based on research and solution analysis.
+
+Task 17.3: Implement the `generateMethodologyNode` - This node will generate the methodology section based on solution and connection analysis.
+
+Task 17.4: Implement the `generateBudgetNode` - This node will generate the budget section aligned with methodology.
+
+Task 17.5: Implement the `generateTimelineNode` - This node will generate the timeline section aligned with methodology and budget.
+
+Task 17.6: Implement the `generateConclusionNode` - This node will generate the conclusion section summarizing the proposal.
 
 ## Recent Changes
 
-1. Completed the implementation of `connectionPairsNode` (Task 16.3):
+1. Completed the research phase implementation:
 
-   - Created comprehensive test suite covering input validation, agent invocation, response parsing, error handling, and state management
-   - Implemented dual-layer parsing approach (JSON primary, regex fallback) for resilient response handling
-   - Added detailed error classification and recovery mechanisms
-   - Updated implementation plan to reflect completed work
+   - Implemented all research-related nodes including document loading, deep research, solution analysis, and connection pairs
+   - Added standardized evaluation nodes for research outputs with human-in-the-loop (HITL) review integration
+   - Established consistent error handling and state management patterns across all nodes
+   - Updated the testing suite to cover all research phase nodes
 
-2. Completed the implementation of `evaluateConnectionsNode` (Task 16.4):
+2. Established the evaluation node pattern:
 
-   - Developed comprehensive test suite for connection evaluation logic
-   - Implemented evaluation criteria based on relevance, alignment, and impact
-   - Added human-in-the-loop interruption point for connection review
-   - Created detailed error handling patterns consistent with other nodes
-   - Updated implementation plan to reflect the completed implementation
+   - Created standardized evaluation result structure with overall scores and detailed criteria
+   - Implemented consistent HITL interruption points for human review
+   - Defined clear state transitions for the evaluation workflow (queued → running → evaluating → awaiting_review → approved/revised)
+   - Added support for handling user feedback in the orchestration layer
 
-3. Made significant progress on fixing the evaluation framework tests:
-   - Fixed `evaluationCriteria.test.ts` tests with proper mocking patterns ✅
-   - Fixed `errorHandling.test.ts` tests with appropriate assertions ✅
-   - Fixed `extractors.test.ts` tests with correct mock implementations ✅
-   - Fixed `contentExtractors.test.ts` tests with proper state handling ✅
-   - Made progress on `factory.test.ts` (tests pass but has TypeScript linter errors) 🔄
-   - Identified issues in `stateManagement.test.ts` (missing function mocks) 🔄
+3. Enhanced error handling strategies:
+   - Implemented early validation of required inputs
+   - Created specific error classification for different failure scenarios
+   - Added custom error messages with node-specific prefixes
+   - Ensured proper state updates to reflect error conditions
+   - Preserved raw responses for debugging purposes
 
 ## Next Steps
 
-1. Focus on fixing the remaining evaluation test files:
+1. Focus on implementing the section generation phase:
 
-   - Fix `stateManagement.test.ts` by properly mocking factory methods and content extractors
-   - Fix TypeScript linter errors in `factory.test.ts`
-   - Complete any remaining evaluation framework test files
-   - Update implementation plan with comprehensive test coverage status
-   - Begin implementation of `sectionManagerNode` (Task 16.5)
+   - Start with `sectionManagerNode` (Task 17.1) to coordinate section generation
+   - Follow with individual section generation nodes (Problem Statement, Methodology, Budget, Timeline, Conclusion)
+   - Implement evaluation nodes for each section following the established pattern
+   - Create section-specific evaluation criteria
 
-2. Update `OverallProposalState` to fully support the standardized evaluation pattern:
+2. Update `OverallProposalState` interface to fully support the section generation phase:
 
-   - Add standardized HITL interruption fields (`interruptStatus` and `interruptMetadata`)
-   - Ensure evaluation result fields exist for all content types
-   - Add proper typing for evaluation status transitions
-   - Update the `SectionData` interface with consistent evaluation fields
+   - Add standardized section management fields
+   - Ensure proper typing for section status transitions
+   - Add fields for tracking section dependencies and relationships
+   - Update the `SectionData` interface with consistent fields for all sections
 
-3. Create evaluation configuration files:
+3. Develop detailed graph routing logic:
 
-   - Implement criteria configuration for each content type
-   - Develop standardized evaluation prompts
-   - Ensure consistent scoring mechanisms
+   - Implement conditional routing based on section dependencies
+   - Create a priority-based selection mechanism for the next section to generate
+   - Ensure proper handling of stale sections and regeneration requirements
+   - Add comprehensive error handling for the section generation flow
 
 4. Continue following the TDD approach:
    - Write tests first to establish expected behavior
@@ -90,6 +101,27 @@ We have established a comprehensive evaluation pattern to be used across all eva
    - Consistent state transitions: queued → running → evaluating → awaiting_review → (approved/revised)
    - Status field naming conventions
    - Clear error propagation
+
+### Section Generation Strategy
+
+For the upcoming section generation phase, we will implement the following strategy:
+
+1. **Dependency-Based Generation**:
+
+   - Sections will be generated in order based on their dependencies
+   - The `sectionManagerNode` will determine the next section to generate
+   - Section dependencies will be tracked in a configuration file
+
+2. **Content Quality Assurance**:
+
+   - Each section will have a dedicated evaluation node
+   - Evaluation criteria will be section-specific
+   - Human review will be integrated at key points
+
+3. **Section Regeneration**:
+   - When a section is edited or regenerated, dependent sections will be marked as stale
+   - Users can choose to keep the stale sections or regenerate them
+   - Regeneration can include guidance from the user
 
 ### Test-Driven Development
 
@@ -133,6 +165,8 @@ We maintain consistent naming conventions:
 4. **Error Categorization**: We've established a consistent pattern for error categorization and handling across nodes, which should be maintained for future implementations.
 
 5. **State Transitions**: The consistent state transition pattern (queued → running → evaluating → awaiting_review/error) provides a clear lifecycle for each node's execution and should be maintained.
+
+6. **Section Management Design**: The section manager node design should focus on flexibility and extensibility to accommodate different section types and generation strategies. It should also handle dependencies between sections to ensure proper ordering of generation.
 
 ## Active Context
 
@@ -261,7 +295,7 @@ We've uncovered several important learnings about effective Vitest testing:
 2. Fix TypeScript linter errors in `factory.test.ts`
 3. Complete any remaining evaluation framework test files
 4. Update implementation plan with comprehensive test coverage status
-5. Begin implementation of `sectionManagerNode` (Task 16.5)
+5. Begin implementation of `sectionManagerNode` (Task 17.1)
 
 ## Important Patterns and Preferences
 
