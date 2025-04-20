@@ -1,0 +1,24 @@
+{
+  "problem_statement": [],
+  "organizational_capacity": [],
+  "solution": ["problem_statement"],
+  "implementation_plan": ["solution"],
+  "evaluation_approach": ["solution", "implementation_plan"],
+  "budget": ["solution", "implementation_plan"],
+  "executive_summary": [
+    "problem_statement",
+    "organizational_capacity",
+    "solution",
+    "implementation_plan",
+    "evaluation_approach",
+    "budget"
+  ],
+  "conclusion": [
+    "problem_statement",
+    "organizational_capacity",
+    "solution",
+    "implementation_plan",
+    "evaluation_approach",
+    "budget"
+  ]
+}

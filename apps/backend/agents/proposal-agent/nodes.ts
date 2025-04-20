@@ -12,12 +12,13 @@ import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { FeedbackType } from "../../lib/types/feedback.js";
 import { SectionType, SectionStatus } from "../../state/modules/constants.js";
+import { OverallProposalState } from "../../state/proposal.state.js";
 
-// Initialize OpenAI chat model - later can be parameterized or moved to config
+// Instantiates model at module scope - Apply .withRetry() here
 const model = new ChatOpenAI({
-  modelName: "gpt-4o",
-  temperature: 0.5,
-});
+  temperature: 0,
+  modelName: "gpt-4o", // or your preferred model
+}).withRetry({ stopAfterAttempt: 3 });
 
 /**
  * Orchestrator node that determines the next step in the workflow
@@ -283,98 +284,6 @@ export async function connectionPairsNode(state: ProposalState): Promise<{
   return {
     messages: [...messages, response],
     connectionPairs: connectionPairs,
-  };
-}
-
-/**
- * Section generator node that writes proposal sections
- * @param state Current proposal state
- * @returns Updated state with proposal section and messages
- */
-export async function sectionGeneratorNode(state: ProposalState): Promise<{
-  messages: BaseMessage[];
-  proposalSections: ProposalState["proposalSections"];
-  currentSection: string | undefined;
-}> {
-  const messages = state.messages;
-  const lastMessage = messages[messages.length - 1];
-  const sectionToGenerate = getSectionToGenerate(lastMessage.content as string);
-  const existingSections = state.proposalSections || [];
-
-  // Check if we already have this section
-  const existingSection = existingSections.find(
-    (s: ProposalState["proposalSections"][0]) =>
-      s.name.toLowerCase() === sectionToGenerate.toLowerCase()
-  );
-
-  // Template for section generation prompt
-  const sectionTemplate = `
-  You are a professional proposal writer.
-  
-  Write the "${sectionToGenerate}" section of a proposal based on:
-  
-  Funder Information:
-  ${state.funderInfo || "No funder information provided."}
-  
-  Solution Sought:
-  ${state.solutionSought || "No solution information provided."}
-  
-  Connection Pairs:
-  ${state.connectionPairs?.join("\n") || "No connection pairs identified."}
-  
-  Existing Sections:
-  ${
-    existingSections
-      .map(
-        (s: ProposalState["proposalSections"][0]) =>
-          `${s.name}: ${s.content.substring(0, 100)}...`
-      )
-      .join("\n") || "No sections written yet."
-  }
-  
-  Write a compelling, detailed, and well-structured section that addresses the funder's priorities.
-  Format your response as the complete section text without additional commentary.
-  `;
-
-  const prompt = PromptTemplate.fromTemplate(sectionTemplate);
-  const formattedPrompt = await prompt.format({});
-
-  // Add system message
-  const systemMessage = new HumanMessage(formattedPrompt);
-  const sectionMessages = [...messages, systemMessage];
-
-  // Get response from model
-  const response = await model.invoke(sectionMessages);
-
-  // Create or update the section
-  let updatedSections: typeof existingSections;
-  if (existingSection) {
-    updatedSections = existingSections.map(
-      (s: ProposalState["proposalSections"][0]) => {
-        if (s.name.toLowerCase() === sectionToGenerate.toLowerCase()) {
-          return {
-            ...s,
-            content: response.content as string,
-            status: "review" as const,
-          };
-        }
-        return s;
-      }
-    );
-  } else {
-    const newSection = {
-      name: sectionToGenerate,
-      content: response.content as string,
-      status: "review" as const,
-    };
-    updatedSections = [...existingSections, newSection];
-  }
-
-  // Return updated state
-  return {
-    messages: [...messages, response],
-    proposalSections: updatedSections,
-    currentSection: sectionToGenerate,
   };
 }
 

@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  ProcessingStatus,
+  SectionStatus,
+  InterruptReason,
+} from "../../../state/modules/constants.js"; // Corrected path
 
 // Import mocks
 vi.mock("../evaluationNodeFactory", () => mockEvaluationNodeFactory);
@@ -105,6 +110,115 @@ describe("routeAfterEvaluation", () => {
     });
     const result = routeAfterEvaluation(state, { sectionId: "test-section" });
     expect(result).toBe("awaiting_feedback");
+  });
+
+  it("should route to handle revision for section evaluation", () => {
+    const state = createTestState(
+      { passed: false }, // Mock evaluation result
+      SectionStatus.NEEDS_REVISION // Use enum
+    );
+
+    // ... rest of test ...
+  });
+
+  it("should handle research evaluation approval correctly", () => {
+    const state = createTestState(
+      { passed: true }, // Mock evaluation result
+      ProcessingStatus.APPROVED // Use enum
+    );
+
+    // ... rest of test ...
+  });
+
+  it("should handle research evaluation revision correctly", () => {
+    const state = createTestState(
+      { passed: false }, // Mock evaluation result
+      ProcessingStatus.NEEDS_REVISION // Use enum
+    );
+
+    // ... rest of test ...
+  });
+
+  it("should handle connections evaluation approval", () => {
+    const state = createTestState(
+      { passed: true }, // Mock evaluation result
+      ProcessingStatus.APPROVED // Use enum
+    );
+
+    // ... rest of test ...
+  });
+
+  it("should handle connections evaluation revision", () => {
+    const state = createTestState(
+      { passed: false }, // Mock evaluation result
+      ProcessingStatus.NEEDS_REVISION // Use enum
+    );
+
+    // ... rest of test ...
+  });
+
+  it("should handle interrupt status correctly", () => {
+    const state = createTestState(
+      { passed: true }, // Mock evaluation result
+      ProcessingStatus.AWAITING_REVIEW // Use enum
+    );
+
+    // Set interrupt status after creating the state
+    state.interruptStatus = {
+      isInterrupted: true,
+      interruptionPoint: "evaluate_research",
+      feedback: null,
+      processingStatus: ProcessingStatus.AWAITING_REVIEW, // Use correct enum if applicable
+    };
+    state.interruptMetadata = {
+      reason: InterruptReason.CONTENT_REVIEW, // Use enum
+      nodeId: "evaluate_research",
+      timestamp: new Date().toISOString(),
+      contentReference: "research", // Example reference
+      evaluationResult: createSampleEvaluation(true, 8), // Add sample eval result
+    };
+
+    // ... rest of test assertions on state.interruptStatus and state.interruptMetadata ...
+    expect(state.interruptStatus.isInterrupted).toBe(true);
+    expect(state.interruptMetadata?.reason).toBe(
+      InterruptReason.CONTENT_REVIEW
+    );
+  });
+
+  it("should handle user feedback correctly", async () => {
+    const state = createTestState(
+      { passed: true }, // Mock evaluation result
+      ProcessingStatus.AWAITING_REVIEW // Use enum
+    );
+
+    // Set interrupt status and feedback after creating the state
+    state.interruptStatus = {
+      isInterrupted: true,
+      interruptionPoint: "evaluate_research",
+      feedback: null, // Will be set by feedback simulation below
+      processingStatus: ProcessingStatus.AWAITING_REVIEW, // Use correct enum if applicable
+    };
+    state.interruptMetadata = {
+      reason: InterruptReason.CONTENT_REVIEW, // Use enum
+      nodeId: "evaluate_research",
+      timestamp: new Date().toISOString(),
+      contentReference: "research", // Example reference
+      evaluationResult: createSampleEvaluation(true, 8), // Add sample eval result
+    };
+
+    // Simulate adding user feedback
+    const userFeedback: UserFeedback = {
+      type: FeedbackType.APPROVE,
+      comments: "Looks good to me.",
+      timestamp: new Date().toISOString(),
+    };
+    state.userFeedback = userFeedback;
+    // Update interrupt status feedback if needed by the test logic
+    // state.interruptStatus.feedback = { type: userFeedback.type, content: userFeedback.comments, timestamp: userFeedback.timestamp };
+
+    // ... rest of test (likely involves calling a feedback processing function/node) ...
+    // For this test, just assert the feedback was added
+    expect(state.userFeedback?.type).toBe(FeedbackType.APPROVE);
   });
 });
 

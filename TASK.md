@@ -219,3 +219,38 @@
   - [ ] Set up error tracking and alerting
   - [ ] Configure performance monitoring
   - [ ] Add structured logging for debugging
+
+## To Be Done Later
+
+### Performance Optimization (Task 20)
+
+- [ ] Optimize HITL Performance and Implement Caching
+
+  - [ ] Implement Proposal Caching System
+    - [ ] Create a cache service class for storing and retrieving proposals
+    - [ ] Implement cache invalidation strategies (time-based expiry, LRU eviction)
+    - [ ] Add configuration options for cache size limits and TTL settings
+    - [ ] Modify proposal retrieval logic to check cache before database
+    - [ ] Implement background refresh for frequently accessed proposals
+    - [ ] Add cache hit/miss metrics collection
+  - [ ] Optimize Graph Instantiation Process
+    - [ ] Profile current graph instantiation to identify bottlenecks
+    - [ ] Implement lazy loading of graph components
+    - [ ] Create a graph instance pool to reuse instantiated graphs
+    - [ ] Optimize serialization/deserialization of graph definitions
+    - [ ] Implement incremental graph updates
+    - [ ] Add memory usage tracking for graph instances
+  - [ ] Improve State Serialization Efficiency
+    - [ ] Analyze current state serialization format to identify inefficiencies
+    - [ ] Implement compression for serialized state data
+    - [ ] Create a more compact serialization format
+    - [ ] Add versioning support for backward compatibility
+    - [ ] Implement differential state updates
+    - [ ] Optimize serialization/deserialization algorithms for performance
+  - [ ] Implement Performance Monitoring and Timeout Handling
+    - [ ] Define key performance metrics to track
+    - [ ] Implement metric collection throughout the HITL workflow
+    - [ ] Create a timeout management system for long-running operations
+    - [ ] Add graceful degradation paths for timed-out operations
+    - [ ] Implement dashboards or monitoring endpoints
+    - [ ] Add alerting for performance degradation

@@ -67,9 +67,7 @@ interface LLMOptions {
 /**
  * Create the default LLM based on environment and configuration
  */
-function createDefaultLLM(
-  options?: Partial<LLMOptions>
-): BaseLanguageModel {
+function createDefaultLLM(options?: Partial<LLMOptions>): BaseLanguageModel {
   const provider =
     options?.provider || (process.env.LLM_PROVIDER as LLMProvider) || "openai";
 
@@ -79,14 +77,14 @@ function createDefaultLLM(
         temperature: options?.temperature ?? 0.1,
         modelName: options?.model ?? "claude-3-5-sonnet-20240620",
         maxTokens: options?.maxTokens,
-      });
+      }).withRetry({ stopAfterAttempt: 3 });
     case "openai":
     default:
       return new ChatOpenAI({
         temperature: options?.temperature ?? 0.1,
         modelName: options?.model ?? "gpt-4o",
         maxTokens: options?.maxTokens,
-      });
+      }).withRetry({ stopAfterAttempt: 3 });
   }
 }
 

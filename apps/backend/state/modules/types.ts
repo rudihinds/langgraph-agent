@@ -86,8 +86,10 @@ export interface SectionData {
   title?: string;
   content: string;
   status: SectionProcessingStatus;
+  previousStatus?: SectionProcessingStatus;
   evaluation?: EvaluationResult | null;
   lastUpdated: string;
+  lastError?: string;
 }
 
 /**

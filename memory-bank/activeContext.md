@@ -14,118 +14,133 @@ We are currently implementing the core nodes of the `ProposalGenerationGraph` fo
 ✅ Task 16.6: `evaluateSolutionNode` - Solution analysis evaluation with HITL review
 ✅ Task 16.7: `evaluateConnectionsNode` - Connection pairs evaluation with HITL review
 
-### Next Focus: Section Generation Phase
+### Current Progress: Section Generation Phase
 
-Task 17.1: Implement the `sectionManagerNode` - This node will organize the document into sections, manage section statuses, and coordinate section generation.
+✅ Task 17.1: `sectionManagerNode` - Organization of document sections, management of section statuses, and coordination of section generation.
 
-Task 17.2: Implement the `generateProblemStatementNode` - This node will generate the problem statement section based on research and solution analysis.
+✅ Task 17.2: `problemStatementNode` - Generation of the problem statement section based on research and solution analysis.
 
-Task 17.3: Implement the `generateMethodologyNode` - This node will generate the methodology section based on solution and connection analysis.
+In Progress:
 
-Task 17.4: Implement the `generateBudgetNode` - This node will generate the budget section aligned with methodology.
+Task 17.3: Implement the `methodologyNode` - Generate the methodology section based on solution and connection analysis.
 
-Task 17.5: Implement the `generateTimelineNode` - This node will generate the timeline section aligned with methodology and budget.
+Task 17.4: Implement the `budgetNode` - Generate the budget section aligned with methodology.
 
-Task 17.6: Implement the `generateConclusionNode` - This node will generate the conclusion section summarizing the proposal.
+Task 17.5: Implement the `timelineNode` - Generate the timeline section aligned with methodology and budget.
+
+Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summarizing the proposal.
 
 ## Recent Changes
 
-1. Completed the research phase implementation:
+1. Completed the implementation of the section manager node:
 
-   - Implemented all research-related nodes including document loading, deep research, solution analysis, and connection pairs
-   - Added standardized evaluation nodes for research outputs with human-in-the-loop (HITL) review integration
-   - Established consistent error handling and state management patterns across all nodes
-   - Updated the testing suite to cover all research phase nodes
+   - Created a modular implementation in `nodes/section_manager.ts`
+   - Implemented dependency resolution for sections using topological sorting
+   - Added section prioritization based on dependencies
+   - Created comprehensive tests to verify functionality
+   - Added proper error handling and logging
 
-2. Established the evaluation node pattern:
+2. Completed the implementation of the problem statement node:
 
-   - Created standardized evaluation result structure with overall scores and detailed criteria
-   - Implemented consistent HITL interruption points for human review
-   - Defined clear state transitions for the evaluation workflow (queued → running → evaluating → awaiting_review → approved/revised)
-   - Added support for handling user feedback in the orchestration layer
+   - Created a comprehensive implementation in `nodes/problem_statement.ts`
+   - Integrated with LangChain for LLM-based section generation
+   - Used structured output parsing with Zod schema validation
+   - Implemented context window management for large inputs
+   - Added comprehensive error handling and test coverage
 
-3. Enhanced error handling strategies:
-   - Implemented early validation of required inputs
-   - Created specific error classification for different failure scenarios
-   - Added custom error messages with node-specific prefixes
-   - Ensured proper state updates to reflect error conditions
-   - Preserved raw responses for debugging purposes
+3. Updated node exports and references:
+   - Moved from monolithic implementation in nodes.js to modular files
+   - Updated exports to reference the new implementations
+   - Maintained backward compatibility with existing graph structure
 
 ## Next Steps
 
-1. Focus on implementing the section generation phase:
+1. Continue implementing the remaining section generation nodes:
 
-   - Start with `sectionManagerNode` (Task 17.1) to coordinate section generation
-   - Follow with individual section generation nodes (Problem Statement, Methodology, Budget, Timeline, Conclusion)
-   - Implement evaluation nodes for each section following the established pattern
+   - Start with methodology node (Task 17.3)
+   - Follow with budget, timeline, and conclusion nodes
+   - Implement section-specific evaluation nodes following established patterns
    - Create section-specific evaluation criteria
 
-2. Update `OverallProposalState` interface to fully support the section generation phase:
-
-   - Add standardized section management fields
-   - Ensure proper typing for section status transitions
-   - Add fields for tracking section dependencies and relationships
-   - Update the `SectionData` interface with consistent fields for all sections
-
-3. Develop detailed graph routing logic:
+2. Update graph routing logic to support section generation flow:
 
    - Implement conditional routing based on section dependencies
    - Create a priority-based selection mechanism for the next section to generate
    - Ensure proper handling of stale sections and regeneration requirements
    - Add comprehensive error handling for the section generation flow
 
-4. Continue following the TDD approach:
-   - Write tests first to establish expected behavior
-   - Implement functionality to pass the tests
-   - Refactor while maintaining test coverage
+3. Enhance HITL integration for section reviews:
+   - Implement section-specific feedback handling
+   - Add support for section regeneration with user guidance
+   - Create interfaces for section editing and regeneration
 
 ## Active Decisions & Considerations
 
-### Standardized Evaluation Pattern
+### Modular Node Implementation
 
-We have established a comprehensive evaluation pattern to be used across all evaluation nodes:
+We've adopted a more modular approach to node implementation:
 
-1. **Evaluation Result Structure**:
+1. **Directory Structure**:
 
-   - Standardized interface with `passed`, `score`, `feedback`, `strengths`, `weaknesses`, and `suggestions`
-   - Detailed criteria-specific assessments with individual scores and comments
-   - Consistent scoring scale (1-10) with clear threshold for passing (≥7)
+   - Each major node gets its own file in the `nodes/` directory
+   - Tests for each node are in `nodes/__tests__/` directory
+   - Common utilities and helpers remain in shared locations
 
-2. **HITL Integration**:
+2. **Export Pattern**:
 
-   - Standardized `interruptStatus` and `interruptMetadata` fields
-   - Consistent approach to pausing execution for human review
-   - Clear paths for approval or revision requests
+   - Export node functions from their individual files
+   - Re-export from the main nodes.js file for backward compatibility
+   - Use named exports to maintain clear function naming
 
-3. **State Management**:
-   - Consistent state transitions: queued → running → evaluating → awaiting_review → (approved/revised)
-   - Status field naming conventions
-   - Clear error propagation
+3. **Import Patterns**:
+   - Use `@/` path aliases for imports from shared directories
+   - Use relative imports for closely related files
 
-### Section Generation Strategy
+### Section Management Strategy
 
-For the upcoming section generation phase, we will implement the following strategy:
+The section management strategy has been implemented with the following approach:
 
-1. **Dependency-Based Generation**:
+1. **Section Types and Dependencies**:
 
-   - Sections will be generated in order based on their dependencies
-   - The `sectionManagerNode` will determine the next section to generate
-   - Section dependencies will be tracked in a configuration file
+   - Each section type is defined in the SectionType enum
+   - Dependencies between sections are defined in the section manager
+   - Topological sorting is used to determine generation order
 
-2. **Content Quality Assurance**:
+2. **Section Status Management**:
 
-   - Each section will have a dedicated evaluation node
-   - Evaluation criteria will be section-specific
-   - Human review will be integrated at key points
+   - Sections progress through states: QUEUED → RUNNING → READY_FOR_EVALUATION → AWAITING_REVIEW → APPROVED/EDITED/STALE
+   - Only sections that are QUEUED or STALE are regenerated
+   - Existing approved sections are preserved
 
-3. **Section Regeneration**:
-   - When a section is edited or regenerated, dependent sections will be marked as stale
-   - Users can choose to keep the stale sections or regenerate them
-   - Regeneration can include guidance from the user
+3. **Section Data Structure**:
+   - Each section has a standardized data structure
+   - Includes content, status, title, and metadata
+   - Timestamps for creation and updates
+   - Error tracking for failed generations
 
-### Test-Driven Development
+### LLM Integration Patterns
 
-We continue to follow TDD principles for all node implementations. This approach has proven effective in guiding the development process and ensuring robust implementations with comprehensive test coverage.
+For LLM-based section generation, we've established these patterns:
+
+1. **Prompt Design**:
+
+   - Clear, structured prompts with specific instructions
+   - Context provided from RFP, research, and connections
+   - Output format expectations clearly defined
+   - Examples where needed for complex formats
+
+2. **Output Parsing**:
+
+   - Zod schemas for structured validation
+   - Type-safe output extraction
+   - Error handling for malformed outputs
+   - Fallback strategies for parsing failures
+
+3. **Context Window Management**:
+   - Truncation of large inputs to fit context windows
+   - Prioritization of most relevant content
+   - Maintenance of key context even with truncation
+   - Logging of truncation for debugging
 
 ### Error Handling Patterns
 
@@ -150,39 +165,67 @@ The state management follows established patterns:
 
 We maintain consistent naming conventions:
 
-- Node functions: camelCase verb-noun format (e.g., `connectionPairsNode`, `evaluateConnectionsNode`)
+- Node functions: camelCase verb-noun format (e.g., `sectionManagerNode`, `problemStatementNode`)
 - Status fields: snake_case (e.g., `connectionsStatus`)
 - State fields: camelCase (e.g., `connections`, `solutionResults`)
+- File names: snake_case (e.g., `section_manager.ts`, `problem_statement.ts`)
 
 ## Implementation Insights
 
-1. **Evaluation Result Structure**: The standardized `EvaluationResult` interface provides a consistent approach to quality assessment across all content types, enabling meaningful comparisons and setting clear quality thresholds.
+1. **Modular Architecture Benefits**: Moving to a more modular architecture with dedicated files for each node has significantly improved:
 
-2. **HITL Integration**: The evaluation pattern establishes a framework for human-in-the-loop review at critical decision points, ensuring quality control while maintaining a consistent user experience.
+   - Code organization and readability
+   - Test isolation and specificity
+   - Maintainability and extensibility
+   - Clarity of responsibility
 
-3. **Criteria Management**: Loading evaluation criteria from configuration files enables flexibility and adaptability while maintaining consistency in the evaluation approach.
+2. **Topological Sorting for Dependencies**: Using topological sorting for section dependencies ensures:
 
-4. **Error Categorization**: We've established a consistent pattern for error categorization and handling across nodes, which should be maintained for future implementations.
+   - Sections are generated in the correct order
+   - No circular dependencies can occur
+   - The system is extensible to new section types
+   - Generation order is deterministic
 
-5. **State Transitions**: The consistent state transition pattern (queued → running → evaluating → awaiting_review/error) provides a clear lifecycle for each node's execution and should be maintained.
+3. **Structured Output Parsing**: Using Zod schemas for structured output parsing provides:
 
-6. **Section Management Design**: The section manager node design should focus on flexibility and extensibility to accommodate different section types and generation strategies. It should also handle dependencies between sections to ensure proper ordering of generation.
+   - Type-safe extraction of LLM outputs
+   - Clear validation errors for debugging
+   - Documentation of expected output formats
+   - Runtime validation matching TypeScript types
+
+4. **Context Window Management**: Managing context windows for LLM inputs ensures:
+
+   - Reliable operation with large documents
+   - Optimal use of the LLM's context window
+   - Prioritization of the most relevant information
+   - Graceful handling of oversized inputs
+
+5. **Comprehensive Testing**: Our test approach verifies:
+   - Happy path functionality
+   - Error handling and recovery
+   - State transitions and updates
+   - Integration with other components
 
 ## Active Context
 
 ## Current Focus
 
-Working on fixing the remaining evaluation framework test files. We've made significant progress with four files now passing, and two files still requiring fixes:
+We've successfully implemented the section manager node and problem statement node, and are now focusing on implementing the remaining section generation nodes. We've established solid patterns for:
 
-1. **stateManagement.test.ts** (8/9 tests failing):
+1. **Section Generation**:
 
-   - Issues with mock implementation for factory methods like `createResearchEvaluationNode()`
-   - Missing proper content extractors for section types like 'problem_statement'
-   - Functions returning "is not a function" errors, showing they're not properly mocked
+   - LLM integration for content generation
+   - Structured output parsing with Zod schemas
+   - Context window management for large inputs
+   - Comprehensive error handling
 
-2. **factory.test.ts** (tests pass but has linter errors):
-   - TypeScript typing issues with `Mock<any, any>` vs `Mock<any, any, any>`
-   - Potential null/undefined handling issues with `overrides` parameter in mocks
+2. **Section Management**:
+   - Dependency resolution using topological sorting
+   - Section status management
+   - Section data structure standardization
+   - Error tracking and logging
+
+The established patterns should be applied consistently to the remaining section generators (methodology, budget, timeline, conclusion) with section-specific adjustments to prompts and output schemas.
 
 ## Recent Changes
 

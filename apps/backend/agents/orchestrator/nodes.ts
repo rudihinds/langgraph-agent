@@ -365,7 +365,7 @@ async function analyzeUserQuery(
     const llm = new ChatOpenAI({
       modelName: "gpt-4-turbo",
       temperature: 0.2,
-    });
+    }).withRetry({ stopAfterAttempt: 3 });
 
     const prompt = ChatPromptTemplate.fromTemplate(ANALYZE_USER_QUERY_PROMPT);
 

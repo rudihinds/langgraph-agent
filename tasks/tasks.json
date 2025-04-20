@@ -84,7 +84,7 @@
       "id": 5,
       "title": "Implement Orchestrator Service",
       "description": "Create the central orchestration service that manages workflow execution and state.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         3,
         4
@@ -115,13 +115,72 @@
       ],
       "priority": "medium",
       "details": "Implement section manager node in /agents/proposal_generation/nodes/section_manager.ts to determine required sections. Create section generation nodes for each section type (problem statement, methodology, etc.). Implement evaluation nodes for each section type to assess quality. Ensure generated sections maintain consistency with previously approved content. Add connection pairs node to link RFP requirements with solution components.",
-      "testStrategy": "Test section generation with various inputs to verify quality and relevance. Verify evaluation nodes correctly identify strengths and weaknesses. Test dependency handling between sections to ensure consistency. Verify connection pairs correctly map requirements to solutions."
+      "testStrategy": "Test section generation with various inputs to verify quality and relevance. Verify evaluation nodes correctly identify strengths and weaknesses. Test dependency handling between sections to ensure consistency. Verify connection pairs correctly map requirements to solutions.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Section Manager Node",
+          "description": "Create the section manager node that analyzes RFP requirements and determines the necessary proposal sections to generate.",
+          "dependencies": [],
+          "details": "Implementation steps:\n1. Create a new file at `/agents/proposal_generation/nodes/section_manager.ts`\n2. Implement a node class that extends the base node structure\n3. Add logic to analyze RFP content and identify required section types (problem statement, methodology, technical approach, etc.)\n4. Implement section prioritization based on RFP emphasis\n5. Create a schema for the output that includes section types, order, and requirements for each section\n6. Add unit tests that verify section identification logic with sample RFP content\n7. Include documentation on how the section manager interacts with other nodes",
+          "status": "pending",
+          "parentTaskId": 7
+        },
+        {
+          "id": 2,
+          "title": "Create Problem Statement Section Generator Node",
+          "description": "Implement a specialized node for generating the problem statement section of the proposal based on RFP analysis.",
+          "dependencies": [
+            1
+          ],
+          "details": "Implementation steps:\n1. Create a new file at `/agents/proposal_generation/nodes/section_generators/problem_statement_generator.ts`\n2. Implement a node class that takes section requirements from the section manager as input\n3. Add logic to extract and analyze problem-related content from the RFP\n4. Implement prompt engineering for generating a comprehensive problem statement\n5. Include parameters for controlling tone, detail level, and approach\n6. Add validation to ensure the generated content addresses all identified requirements\n7. Create unit tests with sample inputs and expected outputs\n8. Ensure the output format is consistent with other section generators",
+          "status": "pending",
+          "parentTaskId": 7
+        },
+        {
+          "id": 3,
+          "title": "Implement Methodology Section Generator Node",
+          "description": "Create a node for generating the methodology section that outlines the approach to solving the identified problems.",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Implementation steps:\n1. Create a new file at `/agents/proposal_generation/nodes/section_generators/methodology_generator.ts`\n2. Implement a node class that consumes both section requirements and problem statement content\n3. Add logic to generate a methodology that directly addresses the identified problems\n4. Implement context management to ensure consistency with the problem statement\n5. Add parameters for customizing methodology details, approach, and frameworks\n6. Include validation to ensure completeness and alignment with RFP requirements\n7. Create unit tests for different methodology scenarios\n8. Add documentation on methodology generation strategies",
+          "status": "pending",
+          "parentTaskId": 7
+        },
+        {
+          "id": 4,
+          "title": "Create Section Evaluation Nodes",
+          "description": "Implement evaluation nodes for assessing the quality and completeness of generated proposal sections.",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "Implementation steps:\n1. Create a base evaluation node at `/agents/proposal_generation/nodes/evaluators/base_section_evaluator.ts`\n2. Implement specific evaluator nodes for each section type (problem_statement_evaluator.ts, methodology_evaluator.ts, etc.)\n3. Add evaluation criteria including: completeness, alignment with RFP, clarity, persuasiveness, and technical accuracy\n4. Implement scoring mechanisms for each criterion\n5. Add feedback generation for improvement suggestions\n6. Create a schema for evaluation results that includes scores and actionable feedback\n7. Implement unit tests for each evaluator using sample section content\n8. Add documentation on how to extend the evaluation framework",
+          "status": "pending",
+          "parentTaskId": 7
+        },
+        {
+          "id": 5,
+          "title": "Implement Connection Pairs Node",
+          "description": "Create a node that identifies and establishes connections between RFP requirements and proposed solution components.",
+          "dependencies": [
+            1,
+            3,
+            4
+          ],
+          "details": "Implementation steps:\n1. Create a new file at `/agents/proposal_generation/nodes/connection_pairs.ts`\n2. Implement a node class that analyzes both RFP requirements and generated section content\n3. Add logic to identify key requirements in the RFP\n4. Implement matching algorithms to connect requirements with solution components from generated sections\n5. Create a visualization schema for representing these connections\n6. Add validation to ensure all critical requirements have corresponding solution components\n7. Implement gap analysis to identify unaddressed requirements\n8. Create unit tests with sample RFPs and section content\n9. Add documentation on how the connection pairs can be used for proposal refinement",
+          "status": "pending",
+          "parentTaskId": 7
+        }
+      ]
     },
     {
       "id": 8,
       "title": "Implement Editor Agent for Non-Sequential Editing",
       "description": "Create the specialized EditorAgent service for handling section revisions and dependency updates.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         5,
         7
@@ -169,7 +228,7 @@
       "id": 12,
       "title": "Refactor Orchestrator Service with Enhanced Workflow Management",
       "description": "Implement a comprehensive OrchestratorService that manages session state, tracks dependencies between workflow components, and supports non-sequential editing of proposal elements.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [],
       "priority": "medium",
       "details": "Create a robust OrchestratorService class that serves as the central coordinator for the application workflow:\n\n1. Session Management:\n   - Implement methods to create, retrieve, and update user sessions\n   - Store session metadata including creation time, last activity, and user information\n   - Add timeout and cleanup mechanisms for inactive sessions\n\n2. Dependency Tracking:\n   - Design a dependency map data structure that represents relationships between workflow components\n   - Implement methods to query dependencies (getDependents, getDependencies)\n   - Create validation logic to ensure dependent components are updated when parent components change\n\n3. Non-Sequential Editing Support:\n   - Implement state management that allows users to navigate between different sections without losing progress\n   - Create a change tracking system to identify modified components\n   - Add methods to validate the overall proposal state regardless of editing sequence\n\n4. Workflow State Management:\n   - Implement methods to transition between workflow states (initiate, process, review, complete)\n   - Add event listeners for state changes to trigger appropriate actions\n   - Create recovery mechanisms for handling interrupted workflows\n\n5. Integration Points:\n   - Define clear interfaces for interaction with the API layer\n   - Implement hooks for HITL intervention based on Task #10\n   - Ensure compatibility with the state management system from Task #11\n\nThe service should follow the singleton pattern and provide a clear API for other components to interact with the orchestration functionality.",
@@ -378,7 +437,7 @@
       "id": 17,
       "title": "Implement Standardized Evaluation Framework",
       "description": "Create a robust evaluation system with consistent patterns across all content types in the proposal generation system.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         16
       ],
@@ -423,7 +482,7 @@
           "title": "Implement Human-in-the-Loop Integration",
           "description": "Integrate the evaluation framework with LangGraph's interrupt capabilities and create mechanisms for handling user feedback.",
           "details": "Implementation steps:\n1. Define the interrupt integration approach:\n   - Identify appropriate interrupt points after evaluation nodes\n   - Define the interrupt data structure to include evaluation results\n   - Create consistent interrupt triggering logic\n   - Implement state preservation during interrupts\n\n2. Implement feedback incorporation mechanisms:\n   - Create structure for user feedback on evaluations\n   - Design override capability for human reviewers to adjust scores\n   - Implement approval/rejection/revision tracking\n   - Add support for comments and suggested changes\n   - Create history tracking for feedback iterations\n\n3. Configure LangGraph interrupt points:\n   - Update graph definition to include interrupts after evaluation nodes\n   - Create handlers for interrupt events\n   - Implement resumption logic for after user feedback\n   - Add timeout handling for interrupted states\n\n4. Implement UI hooks for review workflow:\n   - Define API endpoints for evaluation review\n   - Create standard response format for UI consumption\n   - Implement webhook/callback mechanisms for async notification\n   - Support real-time updates if using WebSockets\n\n5. Support approval, revision, and regeneration paths:\n   - Implement branching logic based on user feedback type\n   - Create state updates for different feedback scenarios\n   - Support direct editing of evaluated content\n   - Implement regeneration requests with incorporated feedback\n   - Maintain evaluation history across regenerations\n\n6. Create comprehensive error handling:\n   - Handle network interruptions during feedback submission\n   - Implement timeout recovery\n   - Add validation for malformed feedback\n   - Create fallback options for failed interrupt/resume cycles\n\nThe implementation should follow the established LangGraph patterns for human-in-the-loop interactions while providing the specialized functionality needed for evaluation feedback.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             3
           ],
@@ -434,7 +493,7 @@
           "title": "Implement Specific Evaluation Nodes",
           "description": "Create specialized evaluation nodes for each content type using the base evaluation factory and appropriate criteria.",
           "details": "Implementation steps:\n1. Implement research evaluation node:\n   - Use the base evaluation factory with research-specific configuration\n   - Create custom prompt extensions for research quality assessment\n   - Implement specialized validation logic for research content\n   - Create criteria configuration file for research evaluation\n   - Develop tests with realistic research content\n\n2. Implement solution evaluation node:\n   - Use the base evaluation factory with solution-specific configuration\n   - Create custom prompt extensions for solution quality assessment\n   - Implement specialized validation for solution content structure\n   - Create criteria configuration file for solution evaluation\n   - Develop tests with various solution qualities\n\n3. Implement connection pairs evaluation node:\n   - Use the base evaluation factory with connection-specific configuration\n   - Create custom prompt extensions for assessing connection relevance and strength\n   - Implement specialized validation for connection pair structures\n   - Create criteria configuration file for connection evaluation\n   - Develop tests with various connection qualities\n\n4. Implement section evaluation nodes:\n   - Create factory configuration for each section type:\n     - Problem statement\n     - Methodology\n     - Budget\n     - Timeline\n     - Team qualifications\n     - Other section types as needed\n   - Implement section-specific criteria configurations\n   - Create specialized prompts for each section type\n   - Develop validation logic for section-specific structures\n   - Create comprehensive test suite for section evaluations\n\n5. Ensure consistent integration with HITL:\n   - Configure interrupt points for each evaluation node\n   - Create appropriate UI hooks for specialized content review\n   - Implement content-specific feedback processing\n\n6. Create common utility functions:\n   - Content extractors for each type\n   - Specialized scoring algorithms where needed\n   - Content-specific validation helpers\n\nEach implementation should leverage the base evaluation framework while adding the necessary specialization for content-specific evaluation needs.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             3,
             4
@@ -446,7 +505,7 @@
           "title": "Implement Conditional Routing Based on Evaluation Results",
           "description": "Create routing logic that determines the next steps in the workflow based on evaluation outcomes.",
           "details": "Implementation steps:\n1. Design routing function architecture:\n   - Create standard routing function signatures\n   - Define expected routing outcomes (continue, revise, regenerate, etc.)\n   - Implement state inspection for evaluation results\n   - Define routing decision criteria\n\n2. Implement pass/fail routing functions:\n   - Create `routeAfterEvaluation(state)` function that examines evaluation results\n   - Implement logic to route to different nodes based on pass/fail status\n   - Add support for threshold configuration\n   - Implement handling for critical failures\n   - Create routing for different severity levels\n\n3. Implement state update patterns:\n   - Create consistent state updates for different routing outcomes\n   - Implement status field updates based on routing decisions\n   - Add metadata for tracking routing history\n   - Create event emission for significant routing decisions\n\n4. Support multi-path workflows:\n   - Implement branching logic for different quality levels\n   - Create fast-track routing for high-quality content\n   - Implement remediation paths for different types of quality issues\n   - Add support for hybrid paths (partial approvals)\n\n5. Integrate with LangGraph:\n   - Update graph definition to include conditional edges\n   - Register routing functions with the graph\n   - Implement proper edge connections based on routing outcomes\n   - Ensure proper interaction with HITL interrupt points\n\n6. Implement routing analytics:\n   - Add logging for routing decisions\n   - Create tracking for routing patterns\n   - Implement visualization helpers for workflow paths\n   - Add metrics for routing effectiveness\n\n7. Create comprehensive tests:\n   - Test routing with various evaluation outcomes\n   - Verify edge traversal in the graph\n   - Test with mock state objects\n   - Validate interaction with HITL\n\nThe implementation should ensure that content flows through the appropriate paths based on quality assessment while maintaining visibility and control over the process.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             4,
             5
@@ -458,7 +517,7 @@
           "title": "Create Documentation and Comprehensive Tests",
           "description": "Develop detailed documentation for the evaluation framework and implement comprehensive tests for all components.",
           "details": "Implementation steps:\n1. Create framework documentation:\n   - Write detailed README.md for the evaluation framework\n   - Document the overall architecture and design decisions\n   - Create usage examples for each major component\n   - Document configuration options and customization approaches\n   - Add diagrams for visual clarity (component interaction, state flow)\n   - Create troubleshooting guide for common issues\n\n2. Implement code-level documentation:\n   - Add comprehensive JSDoc comments to all interfaces and functions\n   - Create inline documentation for complex logic\n   - Document state update patterns and side effects\n   - Add type annotations with detailed descriptions\n   - Document error handling strategies\n\n3. Create pattern documentation:\n   - Document evaluation patterns and best practices\n   - Create guidelines for creating new evaluation criteria\n   - Document HITL integration patterns\n   - Create examples of custom evaluator implementations\n   - Document routing patterns for different scenarios\n\n4. Implement unit tests:\n   - Create tests for each evaluation node type\n   - Test evaluation result interfaces and helper functions\n   - Test criteria configuration loading and validation\n   - Test routing functions with various inputs\n   - Implement test coverage reporting\n\n5. Implement integration tests:\n   - Test evaluation nodes within the full graph\n   - Test HITL interrupts and workflow resumption\n   - Test state persistence during evaluation\n   - Verify proper interaction between components\n   - Test with realistic proposal content\n\n6. Create test fixtures and utilities:\n   - Create mock LLM responses for testing\n   - Generate sample content for each content type\n   - Create evaluation result fixtures\n   - Implement test helpers for state manipulation\n   - Create visualization tools for test results\n\n7. Implement validation tests:\n   - Verify consistency across evaluation implementations\n   - Test boundary conditions and edge cases\n   - Validate error handling\n   - Test performance with large content\n   - Verify compatibility with the overall system architecture\n\nComprehensive documentation and testing are essential for ensuring the evaluation framework is maintainable, extensible, and robust in production use.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             5,
             6
@@ -520,19 +579,6 @@
       ]
     },
     {
-      "id": 20,
-      "title": "Optimize HITL Performance and Implement Caching",
-      "description": "Enhance the performance of HITL functionality by implementing caching, optimizing graph instantiation, and improving state serialization.",
-      "status": "pending",
-      "dependencies": [
-        14,
-        17
-      ],
-      "priority": "medium",
-      "details": "Now that the HITL functionality is implemented and passing tests, we need to optimize it for production use, especially for handling multiple concurrent sessions efficiently.\n\nThis task involves:\n1. Implementing caching for frequently accessed proposals to reduce database load\n2. Optimizing the graph instantiation process to reduce memory footprint and startup time\n3. Improving state serialization to minimize storage requirements\n4. Adding performance monitoring metrics to track LLM response times and state size\n5. Implementing timeout handling for long-running operations\n\nThese optimizations will improve user experience by reducing latency, increase system capacity by optimizing resource usage, and provide better monitoring capabilities for production deployments.",
-      "testStrategy": "1. Create benchmark tests to measure performance before and after optimization\n2. Implement stress tests with multiple concurrent requests to verify scalability\n3. Test with artificially large state objects to verify serialization improvements\n4. Verify cache hit/miss rates with different access patterns\n5. Create a performance dashboard or logging system to track metrics"
-    },
-    {
       "id": 21,
       "title": "Create Comprehensive HITL API Documentation",
       "description": "Develop detailed documentation for the HITL API endpoints, including request/response formats, error handling, and usage examples.",
@@ -543,7 +589,151 @@
       ],
       "priority": "medium",
       "details": "To ensure proper usage of the HITL functionality by frontend developers and other consumers, we need comprehensive API documentation.\n\nThis task involves:\n1. Creating detailed documentation for all HITL API endpoints\n2. Documenting request and response formats with examples\n3. Describing error handling and expected status codes\n4. Adding usage examples for common scenarios\n5. Creating sequence diagrams to illustrate the flow of HITL interactions\n\nGood documentation will reduce integration issues, improve developer experience, and ensure consistent usage of the API across different parts of the application.",
-      "testStrategy": "1. Review documentation with frontend developers to ensure clarity and completeness\n2. Validate all examples against the actual implementation\n3. Create a documentation test suite that verifies the API behaves as documented\n4. Set up automated documentation generation from code comments\n5. Implement a process for keeping documentation updated as the API evolves"
+      "testStrategy": "1. Review documentation with frontend developers to ensure clarity and completeness\n2. Validate all examples against the actual implementation\n3. Create a documentation test suite that verifies the API behaves as documented\n4. Set up automated documentation generation from code comments\n5. Implement a process for keeping documentation updated as the API evolves",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Document HITL API Endpoints and Authentication",
+          "description": "Create documentation for all HITL API endpoints, their purposes, and authentication requirements",
+          "dependencies": [],
+          "details": "Implementation details:\n1. Identify and list all HITL API endpoints\n2. For each endpoint, document:\n   - HTTP method (GET, POST, PUT, DELETE)\n   - URL path and structure\n   - Purpose and functionality description\n   - Authentication requirements (API keys, tokens, etc.)\n   - Required permissions or roles\n3. Create a table summarizing all endpoints\n4. Document rate limiting and throttling policies if applicable\n5. Include information about API versioning\n\nTesting approach:\n- Review with backend developers to ensure all endpoints are covered\n- Verify authentication information is accurate\n- Ensure documentation is clear and follows standard API documentation formats",
+          "status": "pending",
+          "parentTaskId": 21
+        },
+        {
+          "id": 2,
+          "title": "Document Request/Response Formats and Schemas",
+          "description": "Create detailed documentation for request and response formats, including JSON schemas, parameters, and status codes",
+          "dependencies": [
+            1
+          ],
+          "details": "Implementation details:\n1. For each API endpoint documented in subtask 1:\n   - Document request parameters (path, query, body)\n   - Create JSON schema for request bodies\n   - Document expected response formats\n   - Create JSON schema for response bodies\n   - List all possible HTTP status codes\n   - Document pagination mechanisms if applicable\n2. Include data types, field descriptions, and validation rules\n3. Highlight required vs. optional fields\n4. Document any specific formatting requirements\n\nTesting approach:\n- Validate JSON schemas against actual API responses\n- Verify with backend team that all parameters are correctly documented\n- Check that all possible status codes are listed with explanations\n- Review with QA team to ensure completeness",
+          "status": "pending",
+          "parentTaskId": 21
+        },
+        {
+          "id": 3,
+          "title": "Document Error Handling and Edge Cases",
+          "description": "Create comprehensive documentation for error responses, error codes, and handling edge cases",
+          "dependencies": [
+            2
+          ],
+          "details": "Implementation details:\n1. Document the standard error response format\n2. Create a comprehensive list of all possible error codes\n3. For each error code, document:\n   - Description and meaning\n   - Possible causes\n   - Recommended client-side handling\n4. Document edge cases for each endpoint:\n   - Empty results handling\n   - Rate limiting responses\n   - Timeout scenarios\n   - Concurrent modification issues\n5. Create a troubleshooting guide for common errors\n\nTesting approach:\n- Review with backend developers to ensure all error codes are covered\n- Verify error handling recommendations with frontend team\n- Check that all edge cases are addressed\n- Test documentation against actual error responses",
+          "status": "pending",
+          "parentTaskId": 21
+        },
+        {
+          "id": 4,
+          "title": "Create Usage Examples and Integration Guidelines",
+          "description": "Develop practical usage examples, sequence diagrams, and integration guidelines for frontend developers",
+          "dependencies": [
+            1,
+            2,
+            3
+          ],
+          "details": "Implementation details:\n1. Create code examples for common use cases in relevant languages (JavaScript, etc.)\n2. For each key workflow, create:\n   - Step-by-step integration guide\n   - Complete request/response examples\n   - Code snippets showing proper error handling\n3. Develop sequence diagrams showing:\n   - HITL initialization flow\n   - Human review request/response flow\n   - Error handling sequences\n   - Timeout and retry patterns\n4. Document best practices for:\n   - Efficient API usage\n   - Handling network issues\n   - Implementing client-side validation\n   - Managing state during HITL processes\n5. Create a quick-start guide for new developers\n\nTesting approach:\n- Review examples with frontend team to ensure they meet their needs\n- Verify code examples actually work in practice\n- Have a developer unfamiliar with the API attempt to integrate using only the documentation\n- Collect feedback and refine examples",
+          "status": "pending",
+          "parentTaskId": 21
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Implement MVP Section Manager Node for Proposal Generation",
+      "description": "Develop a Section Manager Node that analyzes RFP requirements, determines necessary proposal sections based on dependencies.json, and schedules section generation in the optimal order.",
+      "status": "pending",
+      "dependencies": [
+        7
+      ],
+      "priority": "high",
+      "details": "Create a Section Manager Node that will serve as the central coordinator for proposal section generation. The node should:\n\n1. Parse and load the dependency graph from dependencies.json\n2. Analyze the RFP requirements to determine which sections are needed for the proposal\n3. Build a directed acyclic graph (DAG) of section dependencies\n4. Implement a topological sorting algorithm to determine the optimal order for generating sections\n5. Create a scheduling mechanism that dispatches section generation tasks to the Section Generation Nodes\n6. Implement a tracking system to monitor the progress of each section\n7. Handle edge cases such as circular dependencies or missing requirements\n8. Provide interfaces for:\n   - Adding/removing sections from the generation queue\n   - Updating section dependencies dynamically\n   - Reporting on section generation status\n   - Re-prioritizing sections based on new information\n9. Implement error handling for failed section generation attempts\n10. Create a visualization component for the dependency graph to help users understand section relationships\n\nThe implementation should follow the existing node architecture pattern and integrate with the Section Generation Nodes created in Task 7.",
+      "testStrategy": "Testing should verify the Section Manager Node's ability to correctly analyze, schedule, and manage proposal sections:\n\n1. Unit Tests:\n   - Test parsing of dependencies.json with various valid and invalid formats\n   - Verify topological sorting algorithm works with different dependency structures\n   - Test section requirement analysis with mock RFP data\n   - Verify error handling for circular dependencies\n\n2. Integration Tests:\n   - Test interaction with Section Generation Nodes using mock implementations\n   - Verify correct scheduling order based on dependencies\n   - Test the complete workflow from RFP analysis to section scheduling\n\n3. Performance Tests:\n   - Measure performance with large dependency graphs (100+ sections)\n   - Test scheduling algorithm efficiency\n\n4. Edge Case Tests:\n   - Test behavior when dependencies.json is malformed\n   - Verify handling of missing dependencies\n   - Test recovery from failed section generation\n   - Verify behavior when RFP requirements don't match any known sections\n\n5. Manual Testing:\n   - Verify the visualization component accurately represents the dependency graph\n   - Test the user interfaces for managing the section generation queue\n\nCreate a test harness that simulates the full proposal generation process with various RFP inputs and dependency configurations."
+    },
+    {
+      "id": 23,
+      "title": "Implement Basic Section Generator Nodes for Problem Statement and Organizational Capacity",
+      "description": "Create specialized generator functions that produce the problem_statement and organizational_capacity sections for proposals based on RFP requirements and organization data.",
+      "status": "pending",
+      "dependencies": [
+        22
+      ],
+      "priority": "high",
+      "details": "Develop two section generator nodes that will work with the Section Manager Node:\n\n1. Problem Statement Generator:\n   - Create a function that extracts key problems/challenges from the RFP document\n   - Implement logic to articulate how these problems impact the client organization\n   - Generate a compelling narrative that demonstrates understanding of the client's pain points\n   - Include a transition that sets up how your organization will address these challenges\n   - Ensure the generator follows the structure defined in dependencies.json for problem_statement\n\n2. Organizational Capacity Generator:\n   - Develop a function that analyzes organization profile data (expertise, past performance, etc.)\n   - Implement logic to match organizational strengths with RFP requirements\n   - Generate content highlighting relevant experience, qualifications, and capabilities\n   - Include success metrics or testimonials where appropriate\n   - Ensure the generator follows the structure defined in dependencies.json for organizational_capacity\n\nBoth generators should:\n- Accept standardized input from the Section Manager Node\n- Produce content in a consistent format compatible with the overall proposal structure\n- Include placeholders for dynamic content that will be filled in later phases\n- Handle cases where input data is incomplete by generating appropriate placeholder text\n- Implement error handling for missing or malformed input data",
+      "testStrategy": "Testing should verify both the functionality and quality of the generated content:\n\n1. Unit Tests:\n   - Test each generator with various input combinations\n   - Verify proper handling of edge cases (missing data, malformed inputs)\n   - Check that outputs conform to expected structure\n\n2. Integration Tests:\n   - Test integration with the Section Manager Node\n   - Verify correct data flow between components\n   - Ensure generators respond appropriately to Section Manager directives\n\n3. Content Quality Tests:\n   - Create a set of sample RFPs and organization profiles\n   - Generate sections using these samples and evaluate output quality\n   - Check for:\n     * Relevance to the RFP requirements\n     * Logical flow and narrative coherence\n     * Appropriate tone and language\n     * Absence of generic/meaningless content\n\n4. Manual Review:\n   - Have team members review generated content for a selection of test cases\n   - Compare against human-written examples for quality benchmarking\n\n5. Performance Testing:\n   - Measure generation time for different input sizes\n   - Ensure generators complete within acceptable time limits"
+    },
+    {
+      "id": 24,
+      "title": "Implement Generator Nodes for Solution, Implementation Plan, and Evaluation Sections",
+      "description": "Create specialized generator functions that produce the solution, implementation_plan, and evaluation_approach sections for proposals based on RFP requirements and organizational capabilities.",
+      "status": "pending",
+      "dependencies": [
+        23
+      ],
+      "priority": "high",
+      "details": "Building on the section generator nodes created in Task #23, implement three additional generator functions:\n\n1. **Solution Generator**:\n   - Create a function that analyzes RFP requirements and organizational capabilities to generate a compelling solution section\n   - The generator should identify key requirements from the RFP and match them with relevant organizational capabilities\n   - Include logic to incorporate technical approaches, methodologies, and innovative solutions\n   - Format the output as structured text with appropriate headings and subheadings\n\n2. **Implementation Plan Generator**:\n   - Develop a function that produces a detailed implementation plan based on the proposed solution\n   - Include project phases, timelines, milestones, and deliverables\n   - Incorporate resource allocation and project management methodologies\n   - Ensure the implementation plan aligns with the RFP requirements and organizational capabilities\n   - Format the output with clear structure including timelines and responsibility assignments\n\n3. **Evaluation Approach Generator**:\n   - Create a function that generates an evaluation methodology section\n   - Include quality assurance processes, metrics for success, and monitoring approaches\n   - Incorporate feedback mechanisms and continuous improvement processes\n   - Ensure alignment with industry standards and best practices mentioned in the RFP\n   - Format the output with clear structure highlighting evaluation criteria and methods\n\nEach generator should:\n- Accept structured input data (RFP requirements, organizational data)\n- Have configurable parameters to adjust the level of detail and focus areas\n- Return well-formatted text suitable for inclusion in a proposal document\n- Include appropriate citations or references to organizational past performance when relevant",
+      "testStrategy": "Testing should verify both the functionality and quality of the generated content:\n\n1. **Unit Tests**:\n   - Create unit tests for each generator function to verify they accept proper inputs and return expected output formats\n   - Test edge cases with minimal input data to ensure graceful handling\n   - Verify error handling for missing or malformed inputs\n\n2. **Integration Tests**:\n   - Test the integration of these generators with the previously implemented problem_statement and organizational_capacity generators\n   - Verify that cross-references between sections are handled correctly\n   - Test the complete pipeline from RFP input to full section generation\n\n3. **Content Quality Tests**:\n   - Create a set of sample RFPs and organizational data profiles for testing\n   - For each sample, manually review the generated sections for:\n     - Relevance to the RFP requirements\n     - Logical flow and structure\n     - Appropriate level of detail\n     - Proper incorporation of organizational capabilities\n   - Compare generated content against human-written examples for quality benchmarking\n\n4. **Performance Tests**:\n   - Measure generation time for various input sizes\n   - Establish acceptable performance benchmarks\n   - Test with large, complex RFPs to ensure scalability\n\n5. **Validation Framework**:\n   - Implement automated checks for:\n     - Section length and complexity appropriateness\n     - Keyword relevance to RFP terms\n     - Grammar and style consistency\n     - Presence of required elements (e.g., timeline in implementation plan)\n   - Create a scoring system to evaluate the quality of generated sections"
+    },
+    {
+      "id": 25,
+      "title": "Implement Basic Section Generator Nodes for Budget, Executive Summary, and Conclusion",
+      "description": "Create specialized generator functions that produce the budget, executive_summary, and conclusion sections for proposals based on RFP requirements and organizational capabilities.",
+      "status": "pending",
+      "dependencies": [
+        24
+      ],
+      "priority": "high",
+      "details": "Develop three new generator node functions to complete the basic section generators:\n\n1. **Budget Generator**:\n   - Create a function that generates a detailed budget section based on project requirements\n   - Include cost breakdowns by category (labor, materials, overhead, etc.)\n   - Incorporate formulas to calculate totals and subtotals\n   - Include options for different budget presentation formats (tables, charts)\n   - Allow for customization based on client expectations and RFP specifications\n   - Handle different currency formats and regional budget presentation standards\n\n2. **Executive Summary Generator**:\n   - Develop a function that creates concise yet comprehensive executive summaries\n   - Include automatic extraction of key proposal highlights\n   - Ensure the summary covers problem statement, proposed solution, benefits, and costs\n   - Implement language optimization for executive-level readers\n   - Keep summaries within 1-2 pages regardless of proposal length\n   - Include options for visual elements like charts or diagrams\n\n3. **Conclusion Generator**:\n   - Create a function that produces effective proposal conclusions\n   - Summarize key benefits and value propositions\n   - Include next steps and implementation timelines\n   - Add compelling calls to action\n   - Ensure conclusions reinforce the unique selling points\n   - Include options for testimonials or success stories\n\nAll generators should:\n- Accept parameters for customization\n- Use consistent formatting with other section generators\n- Include placeholders for dynamic content\n- Follow best practices for proposal writing\n- Integrate with the existing generator framework",
+      "testStrategy": "Test the implementation with the following approach:\n\n1. **Unit Testing**:\n   - Verify each generator function returns properly structured output\n   - Test with various input parameters to ensure adaptability\n   - Validate error handling for missing or invalid inputs\n   - Check that output follows required formatting guidelines\n\n2. **Integration Testing**:\n   - Test integration with existing generator nodes\n   - Verify consistent formatting across all generated sections\n   - Ensure proper data flow between interconnected sections\n   - Test the complete proposal generation pipeline\n\n3. **Specific Test Cases**:\n   - **Budget Generator**:\n     - Test with small, medium, and large project scopes\n     - Verify calculations are accurate\n     - Check formatting of currency values\n     - Validate table structures and totals\n   \n   - **Executive Summary Generator**:\n     - Test with various proposal types and lengths\n     - Verify key information is extracted correctly\n     - Check language complexity is appropriate for executives\n     - Validate length constraints are maintained\n   \n   - **Conclusion Generator**:\n     - Test alignment with proposal objectives\n     - Verify next steps are clear and actionable\n     - Check for proper reinforcement of key selling points\n     - Validate call-to-action effectiveness\n\n4. **User Acceptance Testing**:\n   - Have proposal experts review generated sections for quality\n   - Compare against manually created sections for completeness\n   - Gather feedback on readability and persuasiveness"
+    },
+    {
+      "id": 26,
+      "title": "Build Minimal Proposal Generation Graph",
+      "description": "Create a basic graph structure that connects all implemented nodes in a flow that respects the dependencies in dependencies.json, with simple routing logic and defined entry/exit points.",
+      "status": "pending",
+      "dependencies": [
+        22,
+        25
+      ],
+      "priority": "high",
+      "details": "Implement a directed graph structure that connects the Section Manager Node with the specialized Section Generator Nodes (Budget, Executive Summary, and Conclusion). The graph should:\n\n1. Initialize with a clear entry point (RFP input) and exit point (completed proposal output)\n2. Use the dependencies defined in dependencies.json to establish the correct flow between nodes\n3. Implement a simple routing mechanism that:\n   - Passes RFP data from the entry point to the Section Manager Node\n   - Routes section generation requests from the Section Manager to appropriate Section Generator Nodes\n   - Collects completed sections and assembles them in the correct order\n   - Handles error states gracefully with appropriate fallback paths\n4. Include a basic visualization capability to display the current graph state\n5. Implement a simple execution engine that can traverse the graph, executing each node in the correct sequence\n6. Create a logging mechanism to track the flow of data through the graph\n\nThe implementation should be modular and extensible, allowing for easy addition of new nodes in the future. Use a clean interface design that standardizes how nodes communicate with each other.",
+      "testStrategy": "Testing should verify both the structure and execution of the graph:\n\n1. **Graph Structure Tests**:\n   - Verify that all implemented nodes (Section Manager, Budget Generator, Executive Summary Generator, Conclusion Generator) are included in the graph\n   - Confirm that connections between nodes respect the dependencies in dependencies.json\n   - Validate that entry and exit points are properly defined and connected\n\n2. **Execution Flow Tests**:\n   - Create a mock RFP and trace its path through the graph\n   - Verify that the Section Manager correctly routes to each Generator Node\n   - Confirm that data passes correctly between nodes\n   - Test error handling by introducing failures at various points\n\n3. **Integration Tests**:\n   - Process a complete sample RFP through the graph\n   - Verify that the output contains all required sections in the correct order\n   - Measure execution time and identify any bottlenecks\n\n4. **Visualization Test**:\n   - Confirm that the graph visualization accurately represents the implemented structure\n   - Verify that the visualization updates correctly as the graph is traversed\n\nProvide a test harness that allows for executing these tests and reporting results in a structured format."
+    },
+    {
+      "id": 27,
+      "title": "Implement Basic Orchestrator Integration with Session Management",
+      "description": "Develop minimal orchestrator functionality that manages execution sessions, handles checkpoints at critical stages, and orchestrates the proposal generation graph for MVP delivery.",
+      "status": "pending",
+      "dependencies": [
+        26
+      ],
+      "priority": "high",
+      "details": "This task involves implementing the core orchestration layer that will coordinate the execution of the proposal generation graph:\n\n1. Create an Orchestrator class that acts as the central execution controller\n   - Implement session creation, retrieval, and basic state management\n   - Add methods to initialize a new execution session with unique identifiers\n   - Develop functionality to track current position in the execution graph\n\n2. Implement checkpoint management:\n   - Add checkpoint saving at critical points in the workflow (node transitions, after significant data processing steps)\n   - Store execution state including input/output data between nodes\n   - Implement basic recovery mechanism to resume from last checkpoint\n\n3. Graph execution functionality:\n   - Add methods to traverse the proposal generation graph created in Task #26\n   - Implement sequential node execution following the defined dependencies\n   - Create simple error handling for the happy path execution (focus on successful flows)\n\n4. Session persistence:\n   - Implement a simple storage mechanism for session data (in-memory for MVP with serialization capability)\n   - Store relevant execution metadata (timestamps, execution path, user info)\n\n5. API interface:\n   - Create methods for external components to initiate and interact with the orchestration process\n   - Add hooks for monitoring execution progress\n\nFocus on the happy path execution flow first, ensuring the system can successfully complete an end-to-end proposal generation with proper session tracking.",
+      "testStrategy": "Testing should verify the orchestrator's ability to manage sessions and execute the proposal generation graph:\n\n1. Unit tests:\n   - Test session creation and retrieval functionality\n   - Verify checkpoint saving and loading mechanisms work correctly\n   - Test graph traversal logic with mock nodes\n   - Ensure proper state management during execution\n\n2. Integration tests:\n   - Create an end-to-end test that runs through the entire proposal generation graph\n   - Verify all nodes are executed in the correct order based on dependencies\n   - Test checkpoint creation at each critical transition point\n   - Verify session data persistence throughout the execution flow\n\n3. Specific test scenarios:\n   - Test session resumption from various checkpoint positions\n   - Verify session isolation (multiple concurrent sessions don't interfere)\n   - Test with various input configurations to ensure graph traversal works correctly\n   - Validate checkpoint data contains all necessary information to resume execution\n\n4. Performance validation:\n   - Measure memory usage during execution to ensure session management is efficient\n   - Verify checkpoint operations don't significantly impact execution time\n\nSuccessful implementation should demonstrate a complete happy-path execution of the proposal generation process with proper session tracking and checkpoint creation at each critical stage."
+    },
+    {
+      "id": 28,
+      "title": "Implement Critical Human-in-the-Loop (HITL) Integration Points",
+      "description": "Add human review capability for final output with simple approval/rejection logic that integrates with the orchestration system.",
+      "status": "pending",
+      "dependencies": [
+        27
+      ],
+      "priority": "medium",
+      "details": "This task involves implementing a human review layer that intercepts final outputs before they're delivered to end users. Key implementation points include:\n\n1. Create a ReviewQueue class that captures outputs at designated checkpoints from the orchestrator\n2. Implement a ReviewInterface with the following components:\n   - Display of the full proposal content in a readable format\n   - Simple approve/reject buttons with optional feedback field\n   - Status indicators showing pending/approved/rejected state\n3. Add checkpoint hooks in the orchestration system where human review is required\n4. Implement logic to pause execution flow until human approval is received\n5. Create callback handlers for both approval and rejection paths:\n   - Approval: continue normal flow and mark session as human-verified\n   - Rejection: either terminate the session or route back to a previous stage based on feedback\n6. Add session metadata flags to track which outputs have undergone human review\n7. Implement timeout handling for reviews that aren't addressed within a configurable time period\n8. Create notification mechanisms to alert reviewers of pending items\n\nThe implementation should be modular enough to allow for future expansion of review capabilities beyond simple approve/reject functionality.",
+      "testStrategy": "Testing should verify both the technical integration and the user experience aspects:\n\n1. Unit tests:\n   - Verify ReviewQueue correctly captures outputs at designated checkpoints\n   - Test approve/reject logic and confirm proper session state transitions\n   - Validate timeout handling behaves as expected\n\n2. Integration tests:\n   - Confirm orchestrator properly pauses at review checkpoints\n   - Verify execution resumes correctly after approval\n   - Test rejection path and ensure proper handling of feedback\n   - Validate session metadata correctly reflects review status\n\n3. End-to-end tests:\n   - Create a complete proposal generation flow that includes review points\n   - Manually verify the review interface displays content correctly\n   - Test approval flow end-to-end and confirm final delivery\n   - Test rejection flow and verify appropriate system response\n\n4. User acceptance testing:\n   - Have potential reviewers test the interface for usability\n   - Gather feedback on the clarity of the review process\n   - Verify notifications are effective at alerting reviewers\n\nAll tests should include both happy path scenarios and edge cases such as concurrent reviews, system failures during review, and timeout conditions."
+    },
+    {
+      "id": 29,
+      "title": "Create Essential API Endpoints for Proposal Generation Workflow",
+      "description": "Implement four core REST API endpoints (/initiate, /status, /review, and /results) that support the minimal proposal generation workflow for the MVP.",
+      "status": "pending",
+      "dependencies": [
+        27,
+        28
+      ],
+      "priority": "medium",
+      "details": "Develop the following API endpoints with these specifications:\n\n1. `/initiate` endpoint:\n   - HTTP Method: POST\n   - Purpose: Start a new proposal generation process\n   - Request payload: Client requirements, parameters, and configuration options\n   - Response: Session ID and initial status information\n   - Integration: Must connect to the orchestrator to create a new session\n\n2. `/status` endpoint:\n   - HTTP Method: GET\n   - Purpose: Check the current status of an in-progress proposal\n   - Query parameters: Session ID\n   - Response: Current stage, progress percentage, estimated completion time\n   - Error handling: Proper 404 response for invalid session IDs\n\n3. `/review` endpoint:\n   - HTTP Method: POST\n   - Purpose: Submit human feedback on generated proposals\n   - Request payload: Session ID, approval status, comments/feedback\n   - Response: Confirmation of feedback receipt and next steps\n   - Integration: Must connect to the HITL system implemented in Task #28\n\n4. `/results` endpoint:\n   - HTTP Method: GET\n   - Purpose: Retrieve the final or in-progress proposal\n   - Query parameters: Session ID\n   - Response: Complete proposal data or the current draft with generation status\n\nImplementation notes:\n- Use RESTful design principles with proper HTTP status codes\n- Include basic request validation and error handling\n- Implement rate limiting to prevent abuse\n- Add appropriate logging for debugging and monitoring\n- Document all endpoints using OpenAPI/Swagger specifications\n- Ensure secure handling of session IDs",
+      "testStrategy": "Testing should verify both the functionality and integration of each endpoint:\n\n1. Unit Tests:\n   - Test each endpoint with valid and invalid inputs\n   - Verify proper HTTP status codes are returned\n   - Confirm response structure matches API documentation\n   - Test validation logic for each endpoint\n\n2. Integration Tests:\n   - Create an end-to-end test that follows the complete workflow:\n     a. Call `/initiate` to start a proposal generation\n     b. Poll `/status` until ready for review\n     c. Submit feedback via `/review`\n     d. Retrieve final results via `/results`\n   - Verify orchestrator integration by confirming session creation and management\n   - Test HITL integration by verifying human feedback is properly processed\n\n3. Edge Case Testing:\n   - Test behavior when services are unavailable\n   - Verify timeout handling for long-running processes\n   - Test concurrent requests to ensure thread safety\n   - Confirm proper handling of canceled or abandoned sessions\n\n4. Performance Testing:\n   - Measure response times under various loads\n   - Test the system's ability to handle multiple concurrent sessions\n\n5. Manual Testing:\n   - Use a tool like Postman to manually verify each endpoint\n   - Document the expected request/response patterns for team reference"
     }
   ],
   "metadata": {

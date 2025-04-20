@@ -2,53 +2,53 @@
  * Mistral implementation of the LLM client
  */
 
-import { 
-  LLMClient, 
-  LLMCompletionOptions, 
-  LLMCompletionResponse, 
-  LLMModel, 
+import {
+  LLMClient,
+  LLMCompletionOptions,
+  LLMCompletionResponse,
+  LLMModel,
   LLMStreamCallback,
-  LLMStreamEventType
-} from './types.js';
-import { ChatMistralAI } from '@langchain/mistralai';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { env } from '../../env.js';
+  LLMStreamEventType,
+} from "./types.js";
+import { ChatMistralAI } from "@langchain/mistralai";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { env } from "../../env.js";
 
 /**
  * Mistral models configuration
  */
 const MISTRAL_MODELS: LLMModel[] = [
   {
-    id: 'mistral-large-latest',
-    name: 'Mistral Large',
-    provider: 'mistral',
+    id: "mistral-large-latest",
+    name: "Mistral Large",
+    provider: "mistral",
     contextWindow: 32768,
     inputCostPer1000Tokens: 0.008,
     outputCostPer1000Tokens: 0.024,
     supportsStreaming: true,
   },
   {
-    id: 'mistral-medium-latest',
-    name: 'Mistral Medium',
-    provider: 'mistral',
+    id: "mistral-medium-latest",
+    name: "Mistral Medium",
+    provider: "mistral",
     contextWindow: 32768,
     inputCostPer1000Tokens: 0.0027,
     outputCostPer1000Tokens: 0.0081,
     supportsStreaming: true,
   },
   {
-    id: 'mistral-small-latest',
-    name: 'Mistral Small',
-    provider: 'mistral',
+    id: "mistral-small-latest",
+    name: "Mistral Small",
+    provider: "mistral",
     contextWindow: 32768,
     inputCostPer1000Tokens: 0.0014,
     outputCostPer1000Tokens: 0.0042,
     supportsStreaming: true,
   },
   {
-    id: 'open-mistral-7b',
-    name: 'Open Mistral 7B',
-    provider: 'mistral',
+    id: "open-mistral-7b",
+    name: "Open Mistral 7B",
+    provider: "mistral",
     contextWindow: 8192,
     inputCostPer1000Tokens: 0.0002,
     outputCostPer1000Tokens: 0.0002,
@@ -70,7 +70,7 @@ export class MistralClient implements LLMClient {
   constructor(apiKey?: string) {
     this.client = new ChatMistralAI({
       apiKey: apiKey || env.MISTRAL_API_KEY,
-    });
+    }).withRetry({ stopAfterAttempt: 3 });
   }
 
   /**
@@ -79,13 +79,13 @@ export class MistralClient implements LLMClient {
    * @returns Array of formatted messages for Mistral
    */
   private convertMessages(messages: Array<{ role: string; content: string }>) {
-    return messages.map(message => {
-      if (message.role === 'system') {
+    return messages.map((message) => {
+      if (message.role === "system") {
         return new SystemMessage(message.content);
-      } else if (message.role === 'user' || message.role === 'human') {
+      } else if (message.role === "user" || message.role === "human") {
         return new HumanMessage(message.content);
-      } else if (message.role === 'assistant' || message.role === 'ai') {
-        return { role: 'assistant', content: message.content };
+      } else if (message.role === "assistant" || message.role === "ai") {
+        return { role: "assistant", content: message.content };
       }
       // Default to user role for unknown roles
       return new HumanMessage(message.content);
@@ -97,18 +97,20 @@ export class MistralClient implements LLMClient {
    * @param options Completion options
    * @returns Promise with completion response
    */
-  async completion(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+  async completion(
+    options: LLMCompletionOptions
+  ): Promise<LLMCompletionResponse> {
     const startTime = Date.now();
 
     try {
       // Prepare messages
       let messages = this.convertMessages([...options.messages]);
-      
+
       // Add system message if provided
       if (options.systemMessage) {
         messages = [new SystemMessage(options.systemMessage), ...messages];
       }
-      
+
       // Configure the model client
       const modelInstance = this.client.bind({
         model: options.model,
@@ -116,7 +118,9 @@ export class MistralClient implements LLMClient {
         maxTokens: options.maxTokens,
         topP: options.topP,
         tools: options.functions,
-        toolChoice: options.functionCall ? { type: "function", function: { name: options.functionCall } } : undefined,
+        toolChoice: options.functionCall
+          ? { type: "function", function: { name: options.functionCall } }
+          : undefined,
         responseFormat: options.responseFormat,
       });
 
@@ -127,10 +131,12 @@ export class MistralClient implements LLMClient {
       // Approximate token count
       // Mistral's JS client doesn't report exact token counts
       const promptTokens = this.estimateTokens(
-        messages.map(msg => typeof msg === 'string' ? msg : msg.content).join(' ')
+        messages
+          .map((msg) => (typeof msg === "string" ? msg : msg.content))
+          .join(" ")
       );
       const completionTokens = this.estimateTokens(response.content);
-      
+
       // Calculate cost
       const { cost } = this.calculateCost(
         options.model,
@@ -156,7 +162,7 @@ export class MistralClient implements LLMClient {
         },
       };
     } catch (error) {
-      console.error('Mistral completion error:', error);
+      console.error("Mistral completion error:", error);
       throw new Error(`Mistral completion failed: ${(error as Error).message}`);
     }
   }
@@ -176,12 +182,12 @@ export class MistralClient implements LLMClient {
     try {
       // Prepare messages
       let messages = this.convertMessages([...options.messages]);
-      
+
       // Add system message if provided
       if (options.systemMessage) {
         messages = [new SystemMessage(options.systemMessage), ...messages];
       }
-      
+
       // Configure the model client
       const modelInstance = this.client.bind({
         model: options.model,
@@ -190,21 +196,25 @@ export class MistralClient implements LLMClient {
         topP: options.topP,
         streaming: true,
         tools: options.functions,
-        toolChoice: options.functionCall ? { type: "function", function: { name: options.functionCall } } : undefined,
+        toolChoice: options.functionCall
+          ? { type: "function", function: { name: options.functionCall } }
+          : undefined,
         responseFormat: options.responseFormat,
       });
 
-      let fullContent = '';
-      let functionCallContent = '';
-      let functionCallName = '';
+      let fullContent = "";
+      let functionCallContent = "";
+      let functionCallName = "";
       let isFunctionCall = false;
       const promptTokens = this.estimateTokens(
-        messages.map(msg => typeof msg === 'string' ? msg : msg.content).join(' ')
+        messages
+          .map((msg) => (typeof msg === "string" ? msg : msg.content))
+          .join(" ")
       );
 
       // Execute streaming request
       const stream = await modelInstance.stream(messages);
-      
+
       for await (const chunk of stream) {
         // Regular content
         if (chunk.content && !isFunctionCall) {
@@ -214,21 +224,24 @@ export class MistralClient implements LLMClient {
             content: chunk.content,
           });
         }
-        
+
         // Handle function calls if present
-        if (chunk.additional_kwargs?.tool_calls && chunk.additional_kwargs.tool_calls.length > 0) {
+        if (
+          chunk.additional_kwargs?.tool_calls &&
+          chunk.additional_kwargs.tool_calls.length > 0
+        ) {
           isFunctionCall = true;
           const toolCall = chunk.additional_kwargs.tool_calls[0];
-          
+
           if (toolCall.function) {
             if (toolCall.function.name && !functionCallName) {
               functionCallName = toolCall.function.name;
             }
-            
+
             if (toolCall.function.arguments) {
               const newContent = toolCall.function.arguments;
               functionCallContent += newContent;
-              
+
               callback({
                 type: LLMStreamEventType.FunctionCall,
                 functionName: functionCallName,
@@ -240,13 +253,17 @@ export class MistralClient implements LLMClient {
       }
 
       // Calculate completion tokens and cost
-      const completionTokens = isFunctionCall 
+      const completionTokens = isFunctionCall
         ? this.estimateTokens(functionCallContent)
         : this.estimateTokens(fullContent);
-      
-      const { cost } = this.calculateCost(options.model, promptTokens, completionTokens);
+
+      const { cost } = this.calculateCost(
+        options.model,
+        promptTokens,
+        completionTokens
+      );
       const timeTaken = Date.now() - startTime;
-      
+
       // Send end event with metadata
       callback({
         type: LLMStreamEventType.End,
@@ -260,10 +277,12 @@ export class MistralClient implements LLMClient {
         },
       });
     } catch (error) {
-      console.error('Mistral streaming error:', error);
+      console.error("Mistral streaming error:", error);
       callback({
         type: LLMStreamEventType.Error,
-        error: new Error(`Mistral streaming failed: ${(error as Error).message}`),
+        error: new Error(
+          `Mistral streaming failed: ${(error as Error).message}`
+        ),
       });
     }
   }
@@ -292,14 +311,15 @@ export class MistralClient implements LLMClient {
     completionTokens: number
   ): { cost: number; completionTokens: number } {
     const model = this.getModelById(modelId);
-    
+
     if (!model) {
       return { cost: 0, completionTokens };
     }
 
     const promptCost = (promptTokens / 1000) * model.inputCostPer1000Tokens;
-    const completionCost = (completionTokens / 1000) * model.outputCostPer1000Tokens;
-    
+    const completionCost =
+      (completionTokens / 1000) * model.outputCostPer1000Tokens;
+
     return {
       cost: promptCost + completionCost,
       completionTokens,
@@ -312,6 +332,6 @@ export class MistralClient implements LLMClient {
    * @returns Model object or undefined if not found
    */
   private getModelById(modelId: string): LLMModel | undefined {
-    return this.supportedModels.find(model => model.id === modelId);
+    return this.supportedModels.find((model) => model.id === modelId);
   }
 }

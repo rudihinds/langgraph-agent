@@ -404,6 +404,7 @@ There is no proper implementation for managing dependencies between sections. Wh
 
 // Note: "solution_sought" is not part of the section dependencies as it refers to the research node
 
+
 // that investigates what the funder is looking for, not an actual proposal section.
 ```
 

@@ -4,21 +4,6 @@
  */
 
 /**
- * Status definitions for a section's processing state
- */
-export enum SectionStatus {
-  NOT_STARTED = "not_started",
-  QUEUED = "queued",
-  GENERATING = "generating",
-  AWAITING_REVIEW = "awaiting_review",
-  APPROVED = "approved",
-  EDITED = "edited",
-  STALE = "stale",
-  ERROR = "error",
-  NEEDS_REVISION = "needs_revision",
-}
-
-/**
  * Status definitions for the loading state of resources
  */
 export enum LoadingStatus {
@@ -30,20 +15,18 @@ export enum LoadingStatus {
 
 /**
  * Status definitions for the overall processing state of proposal components
+ * Streamlined to better align with LangGraph node execution boundaries
  */
 export enum ProcessingStatus {
-  NOT_STARTED = "not_started",
-  LOADING = "loading",
-  LOADED = "loaded",
-  QUEUED = "queued",
-  RUNNING = "running",
-  AWAITING_REVIEW = "awaiting_review",
-  APPROVED = "approved",
-  EDITED = "edited",
-  STALE = "stale",
-  COMPLETE = "complete",
-  ERROR = "error",
-  NEEDS_REVISION = "needs_revision",
+  NOT_STARTED = "not_started", // Initial state
+  RUNNING = "running", // Work in progress (combines LOADING/RUNNING)
+  READY_FOR_EVALUATION = "ready_for_evaluation", // Generated but not evaluated
+  AWAITING_REVIEW = "awaiting_review", // Evaluated, waiting for user
+  APPROVED = "approved", // User approved
+  EDITED = "edited", // User edited
+  STALE = "stale", // Dependency changed, needs attention
+  COMPLETE = "complete", // Final state
+  ERROR = "error", // Error occurred
 }
 
 /**
@@ -66,18 +49,16 @@ export enum InterruptReason {
 
 /**
  * Section types for the proposal
+ * Aligned with the sections defined in dependencies.json
  */
 export enum SectionType {
   PROBLEM_STATEMENT = "problem_statement",
-  METHODOLOGY = "methodology",
+  ORGANIZATIONAL_CAPACITY = "organizational_capacity",
   SOLUTION = "solution",
-  OUTCOMES = "outcomes",
+  IMPLEMENTATION_PLAN = "implementation_plan",
+  EVALUATION_APPROACH = "evaluation_approach",
   BUDGET = "budget",
-  TIMELINE = "timeline",
-  TEAM = "team",
-  EVALUATION_PLAN = "evaluation_plan",
-  SUSTAINABILITY = "sustainability",
-  RISKS = "risks",
+  EXECUTIVE_SUMMARY = "executive_summary",
   CONCLUSION = "conclusion",
 }
 

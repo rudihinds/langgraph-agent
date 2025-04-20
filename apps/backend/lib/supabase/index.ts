@@ -14,3 +14,23 @@ if (!supabaseUrl || !supabaseKey) {
     "Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_ANON_KEY environment variables."
   );
 }
+
+/**
+ * Supabase module exports
+ */
+
+// Server-side Supabase client
+export { serverSupabase } from "./client.js";
+
+// Supabase storage provider for LangGraph checkpoints
+export { SupabaseStorage, type StorageItem } from "./storage.js";
+
+// Supabase storage operations with retry
+export {
+  listFilesWithRetry,
+  downloadFileWithRetry,
+  uploadFileWithRetry,
+} from "./storage.js";
+
+// Export default instance for convenience
+export { default } from "./client.js";

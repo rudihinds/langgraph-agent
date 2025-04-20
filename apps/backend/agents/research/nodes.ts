@@ -82,7 +82,7 @@ export async function documentLoaderNode(
 
   try {
     // Update state to indicate loading has started
-    const bucketName = "documents";
+    const bucketName = "proposal-documents";
 
     // List files to get metadata
     const fileObjects = await listFilesWithRetry.invoke({
@@ -293,27 +293,14 @@ export async function researchNode(
     });
     return {
       researchResults: jsonContent,
-      researchStatus: ProcessingStatus.AWAITING_REVIEW,
+      researchStatus: ProcessingStatus.READY_FOR_EVALUATION,
       messages: [
         ...state.messages,
         ...result.messages,
         new SystemMessage({
-          content: "Research analysis completed. Please review the results.",
+          content: "Research analysis completed. Ready for evaluation.",
         }),
       ],
-      // Set interrupt metadata for HITL review
-      interruptMetadata: {
-        reason: InterruptReason.EVALUATION_NEEDED,
-        nodeId: "researchNode",
-        timestamp: new Date().toISOString(),
-        contentReference: "research",
-      },
-      interruptStatus: {
-        isInterrupted: true,
-        interruptionPoint: "research",
-        feedback: null,
-        processingStatus: null,
-      },
     };
   } catch (error: any) {
     // Handle error cases
@@ -494,28 +481,15 @@ export async function solutionSoughtNode(
     });
 
     return {
-      solutionStatus: ProcessingStatus.AWAITING_REVIEW,
+      solutionStatus: ProcessingStatus.READY_FOR_EVALUATION,
       solutionResults: parsedResults,
       messages: [
         ...state.messages,
         new AIMessage({ content: lastMessage.content }),
         new SystemMessage({
-          content: "Solution analysis successful. Please review the results.",
+          content: "Solution analysis successful. Ready for evaluation.",
         }),
       ],
-      // Set interrupt metadata for HITL review
-      interruptMetadata: {
-        reason: InterruptReason.EVALUATION_NEEDED,
-        nodeId: "solutionSoughtNode",
-        timestamp: new Date().toISOString(),
-        contentReference: "solution",
-      },
-      interruptStatus: {
-        isInterrupted: true,
-        interruptionPoint: "solution",
-        feedback: null,
-        processingStatus: null,
-      },
     };
   } catch (error: any) {
     // Handle specific error types
@@ -629,27 +603,13 @@ export async function connectionPairsNode(
 
   return {
     connections: mockConnections,
-    connectionsStatus: ProcessingStatus.AWAITING_REVIEW,
+    connectionsStatus: ProcessingStatus.READY_FOR_EVALUATION,
     messages: [
       ...state.messages,
       new SystemMessage({
-        content:
-          "Connection pairs analysis completed. Please review the results.",
+        content: "Connection pairs analysis completed. Ready for evaluation.",
       }),
     ],
-    // Set interrupt metadata for HITL review
-    interruptMetadata: {
-      reason: InterruptReason.EVALUATION_NEEDED,
-      nodeId: "connectionPairsNode",
-      timestamp: new Date().toISOString(),
-      contentReference: "connections",
-    },
-    interruptStatus: {
-      isInterrupted: true,
-      interruptionPoint: "connections",
-      feedback: null,
-      processingStatus: null,
-    },
   };
 }
 
@@ -659,8 +619,11 @@ export async function connectionPairsNode(
  * Performs evaluation of research results to ensure quality
  * and provides feedback for improvement if needed.
  *
+ * This node is responsible for triggering the HITL interrupt
+ * for research review, as per architectural design.
+ *
  * @param state Current proposal state
- * @returns Updated state with evaluation results
+ * @returns Updated state with evaluation results and HITL interrupt
  */
 export async function evaluateResearchNode(
   state: OverallProposalState
@@ -704,8 +667,16 @@ export async function evaluateResearchNode(
   };
 
   // Set interrupt metadata to provide context for the UI
+  // THIS is where the HITL interrupt should be triggered, not in the research node
   return {
     researchEvaluation: evaluation,
+    researchStatus: ProcessingStatus.AWAITING_REVIEW,
+    messages: [
+      ...state.messages,
+      new SystemMessage({
+        content: "Research evaluation completed. Please review the results.",
+      }),
+    ],
     interruptMetadata: {
       reason: InterruptReason.EVALUATION_NEEDED,
       nodeId: "evaluateResearchNode",
@@ -719,7 +690,167 @@ export async function evaluateResearchNode(
       feedback: null,
       processingStatus: null,
     },
-    // Always set research status to awaiting_review for consistency
-    researchStatus: ProcessingStatus.AWAITING_REVIEW,
+  };
+}
+
+/**
+ * Evaluate Solution node
+ *
+ * Performs evaluation of solution results to ensure quality
+ * and provides feedback for improvement if needed.
+ *
+ * This node is responsible for triggering the HITL interrupt
+ * for solution review, as per architectural design.
+ *
+ * @param state Current proposal state
+ * @returns Updated state with evaluation results and HITL interrupt
+ */
+export async function evaluateSolutionNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Evaluating solution results", {
+    threadId: state.activeThreadId,
+  });
+
+  if (!state.solutionResults) {
+    logger.warn("No solution results found to evaluate.", {
+      threadId: state.activeThreadId,
+    });
+    return {
+      solutionStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, "No solution results found to evaluate."],
+    };
+  }
+
+  // In a real implementation, this would call a model to evaluate the solution
+  // Here we're returning a placeholder evaluation
+
+  const evaluation = {
+    score: 8.0,
+    passed: true,
+    feedback:
+      "The solution analysis is well-aligned with the RFP requirements and identifies key opportunities.",
+    categories: {
+      alignment: {
+        score: 8.5,
+        feedback: "Excellent alignment with funder priorities.",
+      },
+      feasibility: {
+        score: 7.5,
+        feedback:
+          "Implementation approach is realistic but could be more detailed.",
+      },
+      innovation: {
+        score: 8.0,
+        feedback:
+          "Solution offers novel approaches to the identified challenges.",
+      },
+    },
+  };
+
+  // Set interrupt metadata to provide context for the UI
+  return {
+    solutionEvaluation: evaluation,
+    solutionStatus: ProcessingStatus.AWAITING_REVIEW,
+    messages: [
+      ...state.messages,
+      new SystemMessage({
+        content: "Solution evaluation completed. Please review the results.",
+      }),
+    ],
+    interruptMetadata: {
+      reason: InterruptReason.EVALUATION_NEEDED,
+      nodeId: "evaluateSolutionNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "solution",
+      evaluationResult: evaluation,
+    },
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "evaluateSolution",
+      feedback: null,
+      processingStatus: null,
+    },
+  };
+}
+
+/**
+ * Evaluate Connections node
+ *
+ * Performs evaluation of connection pairs to ensure quality
+ * and provides feedback for improvement if needed.
+ *
+ * This node is responsible for triggering the HITL interrupt
+ * for connections review, as per architectural design.
+ *
+ * @param state Current proposal state
+ * @returns Updated state with evaluation results and HITL interrupt
+ */
+export async function evaluateConnectionsNode(
+  state: OverallProposalState
+): Promise<Partial<OverallProposalState>> {
+  logger.info("Evaluating connection pairs", {
+    threadId: state.activeThreadId,
+  });
+
+  if (!state.connections || state.connections.length === 0) {
+    logger.warn("No connection pairs found to evaluate.", {
+      threadId: state.activeThreadId,
+    });
+    return {
+      connectionsStatus: ProcessingStatus.ERROR,
+      errors: [...state.errors, "No connection pairs found to evaluate."],
+    };
+  }
+
+  // In a real implementation, this would call a model to evaluate the connections
+  // Here we're returning a placeholder evaluation
+
+  const evaluation = {
+    score: 7.5,
+    passed: true,
+    feedback:
+      "The connection pairs effectively link funder priorities with applicant capabilities, providing a solid foundation for the proposal.",
+    categories: {
+      relevance: {
+        score: 8.0,
+        feedback: "Connections are directly relevant to funder goals.",
+      },
+      strength: {
+        score: 7.0,
+        feedback: "Evidence for capabilities could be stronger in some areas.",
+      },
+      coverage: {
+        score: 7.5,
+        feedback:
+          "Most major funder priorities are addressed with appropriate capabilities.",
+      },
+    },
+  };
+
+  // Set interrupt metadata to provide context for the UI
+  return {
+    connectionsEvaluation: evaluation,
+    connectionsStatus: ProcessingStatus.AWAITING_REVIEW,
+    messages: [
+      ...state.messages,
+      new SystemMessage({
+        content:
+          "Connection pairs evaluation completed. Please review the results.",
+      }),
+    ],
+    interruptMetadata: {
+      reason: InterruptReason.EVALUATION_NEEDED,
+      nodeId: "evaluateConnectionsNode",
+      timestamp: new Date().toISOString(),
+      contentReference: "connections",
+      evaluationResult: evaluation,
+    },
+    interruptStatus: {
+      isInterrupted: true,
+      interruptionPoint: "evaluateConnections",
+      feedback: null,
+      processingStatus: null,
+    },
   };
 }

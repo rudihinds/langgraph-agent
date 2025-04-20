@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { OverallProposalState } from "../../state/proposal.state";
+import {
+  ProcessingStatus,
+  SectionStatus,
+} from "../../state/modules/constants.js";
 
 // Mock the conditionals module - will be implemented later
 const conditionalsMock = vi.hoisted(() => ({
@@ -26,7 +30,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           research: {
-            status: "approved",
+            status: ProcessingStatus.APPROVED,
             evaluationResult: {
               passed: true,
               score: 8.5,
@@ -52,7 +56,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           research: {
-            status: "revision_requested",
+            status: ProcessingStatus.NEEDS_REVISION,
             evaluationResult: {
               passed: false,
               score: 5.5,
@@ -78,7 +82,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           research: {
-            status: "awaiting_review",
+            status: ProcessingStatus.AWAITING_REVIEW,
             evaluationResult: {
               passed: true,
               score: 7.5,
@@ -111,7 +115,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           solution: {
-            status: "approved",
+            status: ProcessingStatus.APPROVED,
             evaluationResult: {
               passed: true,
               score: 8.0,
@@ -140,7 +144,7 @@ describe("routeAfterEvaluation", () => {
       // Arrange
       const state = {
         connections: {
-          status: "approved",
+          status: ProcessingStatus.APPROVED,
           evaluationResult: {
             passed: true,
             score: 8.0,
@@ -170,7 +174,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           problem_statement: {
-            status: "approved",
+            status: ProcessingStatus.APPROVED,
             evaluationResult: {
               passed: true,
               score: 9.0,
@@ -205,7 +209,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           research: {
-            status: "awaiting_review",
+            status: ProcessingStatus.AWAITING_REVIEW,
             // Missing evaluationResult
           },
         },
@@ -230,7 +234,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           research: {
-            status: "approved", // This would normally route to "continue"
+            status: ProcessingStatus.APPROVED, // This would normally route to "continue"
             evaluationResult: {
               passed: true,
               score: 9.0,
@@ -261,7 +265,7 @@ describe("routeAfterEvaluation", () => {
       const state = {
         sections: {
           research: {
-            status: "edited",
+            status: ProcessingStatus.EDITED,
             evaluationResult: {
               passed: true, // This doesn't matter since it was edited
               score: 8.0,

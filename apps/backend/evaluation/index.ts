@@ -410,7 +410,7 @@ export function createEvaluationNode(
           modelName: "gpt-4o-2024-05-13",
           temperature: 0,
           timeout: timeoutSeconds * 1000, // Convert to ms
-        });
+        }).withRetry({ stopAfterAttempt: 3 });
 
         // Build the prompt
         const res = await llm.invoke([

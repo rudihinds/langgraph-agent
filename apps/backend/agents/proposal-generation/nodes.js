@@ -257,22 +257,13 @@ export const connectionPairsNode = async (state) => {
  * Section Manager Node
  * Coordinates the generation of proposal sections
  */
-export const sectionManagerNode = async (state) => {
-  // Placeholder implementation
-  return {
-    ...state,
-    currentStep: "section_generation",
-  };
-};
+export { sectionManagerNode } from "./nodes/section_manager.js";
 
 /**
  * Generate Problem Statement Node
  * Creates the problem statement section of the proposal
  */
-export const generateProblemStatementNode = async (state) => {
-  // Placeholder implementation
-  return state;
-};
+export { problemStatementNode as generateProblemStatementNode } from "./nodes/problem_statement.js";
 
 /**
  * Generate Methodology Node

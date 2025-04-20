@@ -12,7 +12,9 @@ import { webSearchTool, deepResearchTool } from "./tools.js";
  */
 export const createDeepResearchAgent = () => {
   return createReactAgent({
-    llm: new ChatOpenAI({ model: "gpt-3.5-turbo" }),
+    llm: new ChatOpenAI({ model: "gpt-3.5-turbo" }).withRetry({
+      stopAfterAttempt: 3,
+    }),
     tools: [webSearchTool],
     // systemMessage is not a valid parameter here; prompts are passed during invocation
   });
@@ -26,7 +28,9 @@ export const createDeepResearchAgent = () => {
  */
 export const createSolutionSoughtAgent = () => {
   return createReactAgent({
-    llm: new ChatOpenAI({ model: "gpt-3.5-turbo" }),
+    llm: new ChatOpenAI({ model: "gpt-3.5-turbo" }).withRetry({
+      stopAfterAttempt: 3,
+    }),
     tools: [deepResearchTool],
     // systemMessage is not a valid parameter here; prompts are passed during invocation
   });

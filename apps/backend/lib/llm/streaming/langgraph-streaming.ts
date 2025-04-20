@@ -49,25 +49,25 @@ function createStreamingModel(
       modelName,
       temperature,
       streaming,
-    });
+    }).withRetry({ stopAfterAttempt: 3 });
   } else if (modelName.startsWith("claude-")) {
     return new ChatAnthropic({
       modelName,
       temperature,
       streaming,
-    });
+    }).withRetry({ stopAfterAttempt: 3 });
   } else if (modelName.startsWith("mistral-")) {
     return new ChatMistralAI({
       modelName,
       temperature,
       streaming,
-    });
+    }).withRetry({ stopAfterAttempt: 3 });
   } else if (modelName.startsWith("gemini-")) {
     return new ChatGoogleGenerativeAI({
       model: modelName,
       temperature,
       streaming,
-    });
+    }).withRetry({ stopAfterAttempt: 3 });
   } else {
     throw new Error(`Unsupported model: ${modelName}`);
   }

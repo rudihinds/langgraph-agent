@@ -1,7 +1,11 @@
 import { BaseMessage, SystemMessage } from "@langchain/core/messages";
-import { getModelContextSize, calculateMaxTokens } from "@langchain/core/language_models/count_tokens";
+import {
+  getModelContextSize,
+  calculateMaxTokens,
+} from "@langchain/core/language_models/count_tokens";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { logger } from "../../agents/logger";
+import { ChatOpenAI } from "@langchain/openai";
 
 interface PruneMessageHistoryOptions {
   /**
@@ -9,13 +13,13 @@ interface PruneMessageHistoryOptions {
    * @default 4000
    */
   maxTokens?: number;
-  
+
   /**
    * Whether to keep all system messages
    * @default true
    */
   keepSystemMessages?: boolean;
-  
+
   /**
    * Optional function to summarize pruned messages
    * Will be called with the messages being removed
@@ -32,7 +36,7 @@ interface PruneMessageHistoryOptions {
 
 /**
  * Prune message history to prevent context overflow
- * 
+ *
  * @param messages Array of messages to prune
  * @param options Options for pruning
  * @returns Pruned message array
@@ -64,7 +68,9 @@ export function pruneMessageHistory(
   }
 
   // We need to prune messages
-  logger.debug(`Pruning message history: ${messages.length} messages, need to remove ${-availableTokens} tokens`);
+  logger.debug(
+    `Pruning message history: ${messages.length} messages, need to remove ${-availableTokens} tokens`
+  );
 
   // Make a copy of the messages
   const prunedMessages = [...messages];
@@ -77,7 +83,7 @@ export function pruneMessageHistory(
   // Skip system messages if keepSystemMessages is true
   while (tokensToRemove > 0 && i < prunedMessages.length - 2) {
     const message = prunedMessages[i];
-    
+
     // Skip system messages if we're keeping them
     if (keepSystemMessages && message instanceof SystemMessage) {
       i++;
@@ -87,10 +93,10 @@ export function pruneMessageHistory(
     // Get approximate token count for this message
     const tokenCount = getTokenCount(message);
     tokensToRemove -= tokenCount;
-    
+
     // Remove this message
     prunedMessages.splice(i, 1);
-    
+
     // Don't increment i since we removed an element
   }
 
@@ -98,26 +104,25 @@ export function pruneMessageHistory(
   if (options.summarize && prunedMessages.length < messages.length) {
     // Calculate which messages were removed
     const removedMessages = messages.filter(
-      (msg, idx) => !prunedMessages.some(
-        (prunedMsg) => prunedMsg === msg
-      )
+      (msg, idx) => !prunedMessages.some((prunedMsg) => prunedMsg === msg)
     );
-    
+
     // Add a summary message asynchronously
     // Note: This is async but we return synchronously
     // The summary will be added in a future turn of the event loop
-    options.summarize(removedMessages)
+    options
+      .summarize(removedMessages)
       .then((summaryMessage) => {
         // Find index of first non-system message
         let insertIndex = 0;
         while (
-          insertIndex < prunedMessages.length && 
+          insertIndex < prunedMessages.length &&
           prunedMessages[insertIndex] instanceof SystemMessage &&
           keepSystemMessages
         ) {
           insertIndex++;
         }
-        
+
         // Insert the summary at the appropriate position
         prunedMessages.splice(insertIndex, 0, summaryMessage);
       })
@@ -137,12 +142,13 @@ function getTokenCount(message: BaseMessage): number {
   if (typeof (message as any).getTokenCount === "function") {
     return (message as any).getTokenCount();
   }
-  
+
   // Fallback to approximate counting
-  const content = typeof message.content === "string" 
-    ? message.content 
-    : JSON.stringify(message.content);
-  
+  const content =
+    typeof message.content === "string"
+      ? message.content
+      : JSON.stringify(message.content);
+
   // Rough approximation: 4 chars per token
   return Math.ceil(content.length / 4);
 }
@@ -151,33 +157,43 @@ function getTokenCount(message: BaseMessage): number {
  * Create a summary message for a conversation
  */
 async function summarizeConversation(
-  messages: BaseMessage[], 
+  messages: BaseMessage[],
   llm: any
 ): Promise<AIMessage> {
   // Filter out system messages
   const conversationMessages = messages.filter(
     (msg) => !(msg instanceof SystemMessage)
   );
-  
+
   if (conversationMessages.length === 0) {
     return new AIMessage("No conversation to summarize.");
   }
-  
+
   // Create a prompt for the summarization
   const systemMessage = new SystemMessage(
     "Summarize the following conversation in a concise way. " +
-    "Preserve key information that might be needed for continuing the conversation. " +
-    "Focus on facts, decisions, and important details."
+      "Preserve key information that might be needed for continuing the conversation. " +
+      "Focus on facts, decisions, and important details."
   );
-  
+
   try {
+    // If llm wasn't passed, create one with withRetry
+    if (!llm) {
+      llm = new ChatOpenAI({
+        modelName: "gpt-3.5-turbo",
+        temperature: 0,
+      }).withRetry({ stopAfterAttempt: 3 });
+    }
+
     // Ask the LLM to summarize
     const response = await llm.invoke([
       systemMessage,
       ...conversationMessages,
-      new HumanMessage("Please provide a concise summary of our conversation so far."),
+      new HumanMessage(
+        "Please provide a concise summary of our conversation so far."
+      ),
     ]);
-    
+
     // Return the summary as an AI message
     return new AIMessage(`[Conversation History Summary: ${response.content}]`);
   } catch (error) {
