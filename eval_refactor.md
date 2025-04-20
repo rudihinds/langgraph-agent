@@ -2,7 +2,9 @@
 
 This document outlines the plan for refactoring the evaluation integration to address critical issues identified in the current implementation. The refactor will align the codebase with the architecture defined in `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
 
-## 1. State Structure Consistency
+## ✅ COMPLETED
+
+## 1. State Structure Consistency ✅
 
 ### Issue
 
@@ -42,7 +44,7 @@ sections: Map<SectionType, SectionData>;
 - [x] Update test state creation to use Maps instead of object literals
 - [x] Update section modification functions to use proper Map methods
 
-#### 1. Update OverallProposalState Interface
+#### 1. Update OverallProposalState Interface ✅
 
 - [x] Ensure consistent use of Map for sections throughout codebase
 - [x] Update section access in content extractors and check for downstream consumers
@@ -67,7 +69,7 @@ export interface OverallProposalState {
 }
 ```
 
-#### 2. Update Section Access in Content Extractors
+#### 2. Update Section Access in Content Extractors ✅
 
 - [x] Convert section access to use Map methods instead of object property access
 
@@ -97,7 +99,7 @@ export function extractSectionContent(
 }
 ```
 
-#### 3. Update Test State Creation
+#### 3. Update Test State Creation ✅
 
 - [x] Modify test utilities to create Map-based section structures
 
@@ -130,7 +132,7 @@ const createTestState = (evaluation, status) => {
 };
 ```
 
-#### 4. Update Section Modification Functions
+#### 4. Update Section Modification Functions ✅
 
 - [x] Refactor all functions that modify section data to use Map operations
 
@@ -165,7 +167,7 @@ function updateSectionStatus(state, sectionId, newStatus) {
 }
 ```
 
-#### 5. Check Downstream Consumers
+#### 5. Check Downstream Consumers ✅
 
 - [x] Review and update any additional code accessing or modifying sections:
   - Orchestrator Service
@@ -173,7 +175,7 @@ function updateSectionStatus(state, sectionId, newStatus) {
   - UI state transformations
   - API response handlers
 
-## 2. Status Value Inconsistencies
+## 2. Status Value Inconsistencies ✅
 
 ### Issue
 
@@ -199,7 +201,7 @@ if (status === SectionStatus.AWAITING_REVIEW) { ... }
 
 - [x] Standardize status values using centralized enums
 
-#### 1. Create Central Status Constants
+#### 1. Create Central Status Constants ✅
 
 - [x] Create centralized enums for status values in a new constants.ts file
 
@@ -232,12 +234,12 @@ export enum ProcessingStatus {
 }
 ```
 
-#### 2. Update Imports and Types
+#### 2. Update Imports and Types ✅
 
 - [x] Update type definitions to use enums instead of string literal unions
 - [x] Update Zod schemas to use enums with z.nativeEnum
 
-#### 3. Use Constants in Conditional Logic
+#### 3. Use Constants in Conditional Logic ✅
 
 - [x] Update conditional statements to use enum values instead of string literals
 
@@ -277,7 +279,7 @@ Note: Updated all string literal status checks in:
 - apps/backend/agents/proposal-generation/conditionals.ts
 - apps/backend/agents/proposal-agent/conditionals.ts
 
-#### 4. Update Tests to Use Constants
+#### 4. Update Tests to Use Constants ✅
 
 - [x] Refactor test files to import and use enum values instead of string literals
 
@@ -305,174 +307,57 @@ Note: Updated all string literal status values in test files:
 - apps/backend/agents/proposal-generation/**tests**/evaluation_integration.test.ts
 - apps/backend/agents/proposal-agent/**tests**/conditionals.test.ts
 
-## 3. Error Recovery & Resilience
+## 3. Error Recovery & Resilience using `.withRetry()` ✅
 
-### Issue
+**Issue:** Network calls, particularly to LLMs or external tools, can experience transient failures (timeouts, temporary service unavailability, rate limits). The system needs a standard, robust way to retry these calls automatically.
 
-The current implementation lacks proper error handling for LLM calls, timeout management, and recovery strategies for network failures.
+**Decision:** Utilize the built-in `.withRetry()` method available on LangChain `Runnable` objects (like Chat Models, ToolExecutors) instead of implementing a custom backoff utility.
 
-### Evidence
+**Justification:** `.withRetry()` is the idiomatic LangChain/LangGraph approach, integrates seamlessly, benefits from the library's built-in handling of common retryable errors (e.g., HTTP 429, 5xx), avoids code duplication, and keeps the code cleaner by associating the retry logic directly with the runnable instance.
 
-- No backoff and retry mechanisms for LLM API calls
-- Inconsistent error state handling
-- Missing timeout protection in some evaluation calls
-- Incomplete error reporting to state.errors
+**Implementation Steps:**
 
-### Implementation Steps
+**3.1 Locate Target `Runnable` Instantiations & Invocations:** ✅
 
-- [x] Create backoff and retry utility for LLM calls
-- [x] Enhance LLM call resilience with retry logic
-- [x] Implement graceful error states with detailed error reporting
+- [x] Identify all places where LangChain `Runnables` that make external network calls (primarily `ChatModel` instances, potentially `ToolExecutor` or others) are _instantiated_ or _invoked_.
+- [x] **Strategy:**
+  1.  **Search for Model Instantiations:** Use codebase search to find where models are created
+  2.  **Search for Invocations:** Search for `.invoke(` and `.stream(` method calls
+  3.  **Cross-reference:** Compare instantiation locations with invocation locations
+  4.  **List Files:** Compile a list of files requiring modification
 
-Note: Completed implementing detailed error objects with timestamps, stack traces (in dev), and proper section status updates.
+**3.2 Apply `.withRetry()` Incrementally (Hoisting Preferred):** ✅
 
-#### 1. Create Backoff and Retry Utility
+- [x] Modify the identified instantiation points (preferred) or invocation points one by one or in logical groups to add retry logic.
+- [x] **Default Configuration:** Implemented standard retry configuration: `{ stopAfterAttempt: 3 }`.
+- [x] **Refactoring Steps (Iterative):**
 
-```typescript
-// In apps/backend/lib/utils/backoff.ts
+  1.  **Evaluation Framework:** ✅
 
-export interface RetryOptions {
-  maxRetries: number;
-  initialDelay: number;
-  maxDelay: number;
-  factor: number;
-  timeout?: number;
-}
+      - Applied `.withRetry()` to LLM instantiation within the evaluation components
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: Partial<RetryOptions> = {}
-): Promise<T> {
-  const config: RetryOptions = {
-    maxRetries: 3,
-    initialDelay: 1000,
-    maxDelay: 10000,
-    factor: 2,
-    timeout: 60000,
-    ...options,
-  };
+  2.  **Core Generation Nodes:** ✅
 
-  let attempt = 0;
-  let delay = config.initialDelay;
+      - Applied `.withRetry()` to LLM instantiation or invocation within various agent nodes
 
-  while (true) {
-    try {
-      // Create timeout promise
-      const timeoutPromise = config.timeout
-        ? new Promise<never>((_, reject) => {
-            setTimeout(
-              () =>
-                reject(
-                  new Error(`Operation timed out after ${config.timeout}ms`)
-                ),
-              config.timeout
-            );
-          })
-        : null;
+  3.  **Editing/Revision Logic:** ✅
 
-      // Execute function with timeout if specified
-      const result = timeoutPromise
-        ? await Promise.race([fn(), timeoutPromise])
-        : await fn();
+      - Applied `.withRetry()` to the relevant LLM instances
 
-      return result as T;
-    } catch (error) {
-      attempt++;
+  4.  **Tool Execution:** ✅
+      - Applied `.withRetry()` to the `ToolExecutor` instances where needed
 
-      // Determine if we should retry
-      const isNetworkError =
-        error.message.includes("ECONNRESET") ||
-        error.message.includes("network") ||
-        error.message.includes("timeout");
+**3.3 Update Error Handling Logic:** ✅
 
-      if (attempt >= config.maxRetries || !isNetworkError) {
-        throw error;
-      }
+- [x] Ensured that existing `try...catch` blocks surrounding runnable invocations correctly handle errors that persist _after_ all retry attempts from `.withRetry()` have failed.
+- [x] **Strategy:**
+  1.  **Review `catch` Blocks:** Examined `catch` blocks associated with the modified runnables.
+  2.  **Verify Error Type:** Ensured handlers are robust to both standard `Error` or specific LangChain error types
+  3.  **Update State Correctly:** Confirmed that errors are logged and state is updated properly
 
-      // Calculate delay with exponential backoff
-      delay = Math.min(delay * config.factor, config.maxDelay);
+## 🔄 NEXT STEPS
 
-      // Wait before next attempt
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-}
-```
-
-#### 2. Enhance LLM Call Resilience
-
-```typescript
-// In apps/backend/evaluation/evaluationNodeFactory.ts
-
-import { withRetry } from "../lib/utils/backoff.js";
-
-// Before:
-const result = await llm.invoke(prompt);
-
-// After:
-const result = await withRetry(() => llm.invoke(prompt), {
-  maxRetries: 3,
-  timeout: 60000, // 60 second timeout
-  initialDelay: 1000,
-});
-```
-
-#### 3. Implement Graceful Error States
-
-```typescript
-// In apps/backend/agents/proposal-generation/nodes.ts
-
-// Before:
-try {
-  const evaluationResult = await evaluateContent(state, sectionId);
-  // Update state with result
-} catch (error) {
-  // Add error to state.errors
-  return {
-    ...state,
-    errors: [
-      ...state.errors,
-      `Error evaluating ${sectionId}: ${error.message}`,
-    ],
-  };
-}
-
-// After:
-try {
-  const evaluationResult = await evaluateContent(state, sectionId);
-  // Update state with result
-} catch (error) {
-  // Create a more detailed error object
-  const errorDetail = {
-    type: "evaluation_error",
-    sectionId,
-    message: error.message,
-    timestamp: new Date().toISOString(),
-    // Optionally include stack trace in development
-    stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-  };
-
-  // Update section status to error
-  const sectionsCopy = new Map(state.sections);
-  const section = sectionsCopy.get(sectionId);
-
-  if (section) {
-    sectionsCopy.set(sectionId, {
-      ...section,
-      status: SectionStatus.ERROR,
-      lastError: errorDetail,
-    });
-  }
-
-  return {
-    ...state,
-    errors: [...state.errors, errorDetail],
-    sections: sectionsCopy,
-  };
-}
-```
-
-## 4. Dependency Chain Management
+## 4. Dependency Chain Management ✅
 
 ### Issue
 
@@ -487,27 +372,42 @@ There is no proper implementation for managing dependencies between sections. Wh
 
 ### Implementation Steps
 
-#### 1. Create Dependency Map Definition
+#### 1. Create Dependency Map Definition ✅
 
 ```json
 // In apps/backend/config/dependencies.json
 
 {
   "problem_statement": [],
-  "methodology": ["problem_statement"],
-  "solution": ["problem_statement", "methodology"],
-  "outcomes": ["solution"],
-  "budget": ["solution", "methodology"],
-  "timeline": ["solution", "methodology", "budget"],
-  "team": ["solution", "methodology"],
-  "evaluation_plan": ["solution", "outcomes"],
-  "sustainability": ["solution", "budget", "timeline"],
-  "risks": ["solution", "timeline", "team"],
-  "conclusion": ["problem_statement", "solution", "outcomes"]
+  "organizational_capacity": [],
+  "solution": ["problem_statement"],
+  "implementation_plan": ["solution"],
+  "evaluation_approach": ["solution", "implementation_plan"],
+  "budget": ["solution", "implementation_plan"],
+  "executive_summary": [
+    "problem_statement",
+    "organizational_capacity",
+    "solution",
+    "implementation_plan",
+    "evaluation_approach",
+    "budget"
+  ],
+  "conclusion": [
+    "problem_statement",
+    "organizational_capacity",
+    "solution",
+    "implementation_plan",
+    "evaluation_approach",
+    "budget"
+  ]
 }
+
+// Note: "solution_sought" is not part of the section dependencies as it refers to the research node
+
+// that investigates what the funder is looking for, not an actual proposal section.
 ```
 
-#### 2. Create Dependency Service
+#### 2. Create Dependency Service ✅
 
 ```typescript
 // In apps/backend/services/DependencyService.ts
@@ -580,7 +480,7 @@ export class DependencyService {
 }
 ```
 
-#### 3. Enhance Orchestrator to Handle Dependencies
+#### 3. Enhance Orchestrator to Handle Dependencies ✅
 
 ```typescript
 // In apps/backend/services/OrchestratorService.ts
@@ -694,7 +594,7 @@ export class OrchestratorService {
 }
 ```
 
-## 5. Checkpoint Integration & Interrupt Handling
+## 5. Checkpoint Integration & Interrupt Handling 🔄
 
 ### Issue
 
@@ -1113,39 +1013,39 @@ export async function evaluateSectionNode(
 
 ## 8. Implementation Timeline
 
-### Phase 1: Core Structure (Week 1)
+### Phase 1: Core Structure (Week 1) ✅
 
-- Update `OverallProposalState` interface to use Map for sections
-- Create central constants file with enums
-- Implement state validation schema
-- Update content extractors to use Map access
+- ✅ Update `OverallProposalState` interface to use Map for sections
+- ✅ Create central constants file with enums
+- ✅ Implement state validation schema
+- ✅ Update content extractors to use Map access
 
-### Phase 2: Resilience (Week 2)
+### Phase 2: Resilience (Week 2) ✅
 
-- Create backoff and retry utility
-- Enhance LLM call resilience
-- Implement graceful error states
-- Standardize interrupt metadata
+- ✅ Create backoff and retry utility
+- ✅ Enhance LLM call resilience
+- ✅ Implement graceful error states
+- ✅ Standardize interrupt metadata
 
-### Phase 3: Dependencies (Week 2-3)
+### Phase 3: Dependencies (Week 2-3) 🔄
 
-- Create dependency map JSON file
-- Implement `DependencyService`
-- Enhance `OrchestratorService` with dependency methods
-- Implement stale section handling logic
+- ⏳ Create dependency map JSON file
+- ⏳ Implement `DependencyService`
+- ⏳ Enhance `OrchestratorService` with dependency methods
+- ⏳ Implement stale section handling logic
 
-### Phase 4: Checkpoint Integration (Week 3)
+### Phase 4: Checkpoint Integration (Week 3) 🔄
 
-- Implement `SupabaseCheckpointer`
-- Create DB schema for checkpoints
-- Enhance resume logic in `OrchestratorService`
+- ⏳ Implement `SupabaseCheckpointer`
+- ⏳ Create DB schema for checkpoints
+- ⏳ Enhance resume logic in `OrchestratorService`
 
-### Phase 5: Testing Improvements (Week 4)
+### Phase 5: Testing Improvements (Week 4) 🔄
 
-- Update test state creation to use Maps
-- Fix mocking implementations with `vi.hoisted()`
-- Add tests for dependency tracking
-- Implement tests for checkpoint integration
+- ⏳ Update test state creation to use Maps
+- ⏳ Fix mocking implementations with `vi.hoisted()`
+- ⏳ Add tests for dependency tracking
+- ⏳ Implement tests for checkpoint integration
 
 ## 9. Migration Strategy
 
@@ -1192,8 +1092,4 @@ beforeEach(() => {
 });
 ```
 
-- Use control variables for conditional mock behavior:
-
-```
-
-```
+- Use control variables for conditional mock behavior
