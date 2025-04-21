@@ -13,12 +13,64 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import { FeedbackType } from "../../lib/types/feedback.js";
 import { SectionType, SectionStatus } from "../../state/modules/constants.js";
 import { OverallProposalState } from "../../state/proposal.state.js";
+import { Annotation } from "@langchain/langgraph";
+import {
+  ProcessingStatus,
+  SectionData,
+  EvaluationResult,
+  InterruptReason,
+  InterruptProcessingStatus,
+  SectionContent,
+} from "../../state/modules/types.js";
+import { messagesStateReducer } from "../../state/modules/utils.js";
 
 // Instantiates model at module scope - Apply .withRetry() here
 const model = new ChatOpenAI({
   temperature: 0,
   modelName: "gpt-4o", // or your preferred model
 }).withRetry({ stopAfterAttempt: 3 });
+
+// Define the state annotation using Annotation.Root
+export const ProposalStateAnnotation = Annotation.Root({
+  // Messages with built-in reducer
+  messages: Annotation<BaseMessage[]>({
+    reducer: messagesStateReducer,
+    default: () => [],
+  }),
+
+  // Error tracking
+  errors: Annotation<string[]>({
+    value: (curr, update) => [...(curr || []), ...update],
+    default: () => [],
+  }),
+
+  // Sections map
+  sections: Annotation<Map<SectionType, SectionData>>({
+    value: (existing, update) => new Map([...existing, ...update]),
+    default: () => new Map(),
+  }),
+
+  // Status tracking
+  status: Annotation<ProcessingStatus>({
+    value: (_, update) => update,
+    default: () => "queued" as ProcessingStatus,
+  }),
+
+  // Current step
+  currentStep: Annotation<string | null>({
+    value: (_, update) => update,
+    default: () => null,
+  }),
+
+  // Required sections
+  requiredSections: Annotation<SectionType[]>({
+    value: (curr, update) => [...(curr || []), ...update],
+    default: () => [],
+  }),
+});
+
+// Export the state type
+export type ProposalState = typeof ProposalStateAnnotation.State;
 
 /**
  * Orchestrator node that determines the next step in the workflow

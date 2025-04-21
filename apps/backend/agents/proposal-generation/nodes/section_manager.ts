@@ -101,7 +101,7 @@ function createInitialSectionData(sectionType: SectionType): SectionData {
     id: sectionType,
     title: getSectionTitle(sectionType),
     content: "",
-    status: SectionProcessingStatus.QUEUED,
+    status: ProcessingStatus.NOT_STARTED,
     lastUpdated: now,
   };
 }

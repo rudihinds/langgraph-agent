@@ -324,7 +324,7 @@ function prepareInitialMessages(
   // Get or generate values for required fields
   const funder = extractFunderFromState(state);
   const applicant = extractApplicantFromState(state);
-  const wordLength = getWordLength(state, SectionType.PROBLEM_STATEMENT);
+  const wordLength = getWordLength(state);
 
   // Format the system prompt
   let systemPrompt = createPromptFromTemplate(
@@ -361,7 +361,7 @@ function createPromptFromTemplate(
   research: string,
   funder: string,
   applicant: string,
-  wordLength: number
+  wordLength: string
 ): string {
   // Try to load prompt from file
   try {
@@ -377,7 +377,7 @@ function createPromptFromTemplate(
       .replace("${research}", research)
       .replace("${funder}", funder)
       .replace("${applicant}", applicant)
-      .replace("${wordLength}", wordLength.toString());
+      .replace("${wordLength}", wordLength);
   } catch (err) {
     // Fallback to inline template if file not found
     return `You are an expert proposal writer tasked with writing the Problem Statement section of a grant proposal.
@@ -460,38 +460,23 @@ function extractApplicantFromState(state: OverallProposalState): string {
 /**
  * Gets the recommended word length for a section
  * @param state Current proposal state
- * @param sectionType The type of section
  * @returns The recommended word length
  */
-function getWordLength(
-  state: OverallProposalState,
-  sectionType: SectionType
-): number {
-  // Check if we have a specific word length defined for this section
-  if (state.wordLength) {
-    if (state.wordLength.target) {
-      return state.wordLength.target;
-    }
-
-    if (state.wordLength.max) {
-      return state.wordLength.max;
-    }
+function getWordLength(state: OverallProposalState): string {
+  if (!state.wordLength) {
+    return "500-1000 words";
   }
 
-  // Default lengths based on section type if not defined
-  const defaultLengths: Record<string, number> = {
-    [SectionType.PROBLEM_STATEMENT]: 500,
-    [SectionType.ORGANIZATIONAL_CAPACITY]: 400,
-    [SectionType.SOLUTION]: 800,
-    [SectionType.IMPLEMENTATION_PLAN]: 700,
-    [SectionType.EVALUATION]: 400,
-    [SectionType.BUDGET]: 300,
-    [SectionType.CONCLUSION]: 350,
-    [SectionType.EXECUTIVE_SUMMARY]: 400,
-    [SectionType.STAKEHOLDER_ANALYSIS]: 450,
-  };
+  // Fix: Properly access the properties of the WordLength interface
+  const min = state.wordLength.min || 500;
+  const max = state.wordLength.max || 1000;
+  const target = state.wordLength.target;
 
-  return defaultLengths[sectionType] || 500;
+  if (target) {
+    return `approximately ${target} words`;
+  }
+
+  return `${min}-${max} words`;
 }
 
 /**
