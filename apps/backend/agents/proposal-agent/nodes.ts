@@ -11,9 +11,9 @@ import { z } from "zod";
 import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { FeedbackType } from "../../lib/types/feedback.js";
-import { SectionType, SectionStatus } from "../../state/modules/constants.js";
+import { SectionType } from "../../state/modules/constants.js";
 import { OverallProposalState } from "../../state/proposal.state.js";
-import { Annotation } from "@langchain/langgraph";
+import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import {
   ProcessingStatus,
   SectionData,
@@ -22,7 +22,6 @@ import {
   InterruptProcessingStatus,
   SectionContent,
 } from "../../state/modules/types.js";
-import { messagesStateReducer } from "../../state/modules/utils.js";
 
 // Instantiates model at module scope - Apply .withRetry() here
 const model = new ChatOpenAI({
@@ -622,8 +621,8 @@ export async function generateSectionNode(
     const section = state.sections.get(sectionType);
     if (
       !section ||
-      section.status === SectionStatus.NOT_STARTED ||
-      section.status === SectionStatus.ERROR
+      section.status === ProcessingStatus.NOT_STARTED ||
+      section.status === ProcessingStatus.ERROR
     ) {
       sectionToGenerate = sectionType;
       break;
@@ -983,7 +982,7 @@ export async function finalizeProposalNode(
 
   for (const sectionType of state.requiredSections) {
     const section = state.sections.get(sectionType);
-    if (!section || section.status !== SectionStatus.APPROVED) {
+    if (!section || section.status !== ProcessingStatus.APPROVED) {
       allSectionsComplete = false;
       incompleteSections.push(sectionType);
     }

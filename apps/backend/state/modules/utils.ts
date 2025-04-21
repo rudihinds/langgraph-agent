@@ -3,7 +3,7 @@
  */
 import { OverallProposalStateSchema } from "./schemas.js";
 import { OverallProposalState, SectionType, SectionData } from "./types.js";
-import { SectionStatus, ProcessingStatus, LoadingStatus } from "./constants.js";
+import { ProcessingStatus, LoadingStatus } from "./constants.js";
 
 /**
  * Create a new initial state with default values
@@ -134,7 +134,7 @@ export function isSectionReady(
   const allDependenciesMet = sectionDependencies.every((depType) => {
     const depSection = state.sections.get(depType);
     // Use enum for check - A dependency is met if it's APPROVED
-    return depSection && depSection.status === SectionStatus.APPROVED;
+    return depSection && depSection.status === ProcessingStatus.APPROVED;
   });
 
   return allDependenciesMet;

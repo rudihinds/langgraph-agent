@@ -35,17 +35,32 @@ export function createCheckpointer(
   const { userId, proposalId, tableName, useInMemory = false } = options;
   const tableName1 = tableName || ENV.CHECKPOINTER_TABLE_NAME;
 
-  // Use in-memory checkpointer if explicitly requested or if Supabase is not configured
-  if (useInMemory || !ENV.isSupabaseConfigured()) {
+  // Use in-memory checkpointer in the following cases:
+  // 1. Explicitly requested via useInMemory flag
+  // 2. In development mode (unless Supabase is properly configured)
+  // 3. Supabase is not configured (regardless of environment)
+  const shouldUseInMemory =
+    useInMemory ||
+    (ENV.isDevelopment() && !ENV.isSupabaseConfigured()) ||
+    !ENV.isSupabaseConfigured();
+
+  if (shouldUseInMemory) {
     if (!useInMemory && !ENV.isSupabaseConfigured()) {
       console.warn(
-        "Supabase not configured. Falling back to in-memory checkpointer."
+        `Supabase not configured in ${ENV.NODE_ENV} environment. Falling back to in-memory checkpointer.`
+      );
+    } else if (ENV.isDevelopment() && !useInMemory) {
+      console.info(
+        "Using in-memory checkpointer in development mode. Set NODE_ENV=production to use Supabase checkpointer."
       );
     }
     // Create in-memory checkpointer and wrap with LangGraph adapter
     const inMemoryCheckpointer = new InMemoryCheckpointer();
     return new MemoryLangGraphCheckpointer(inMemoryCheckpointer);
   }
+
+  // Using Supabase in production mode (or when explicitly configured in development)
+  console.info(`Using Supabase checkpointer in ${ENV.NODE_ENV} environment`);
 
   // Create Supabase client with service role key for admin access
   const supabaseClient = createClient(

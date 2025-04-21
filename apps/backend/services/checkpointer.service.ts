@@ -11,26 +11,7 @@ import { InMemoryCheckpointer } from "../lib/persistence/memory-checkpointer.js"
 import { MemoryLangGraphCheckpointer } from "../lib/persistence/memory-adapter.js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import path from "path";
-import dotenv from "dotenv";
-
-// Ensure environment variables are loaded
-// This is mainly for direct imports without going through the main script
-if (
-  typeof process !== "undefined" &&
-  process.env &&
-  !process.env.SUPABASE_URL
-) {
-  try {
-    // Try to load from root .env when imported directly
-    const rootPath = path.resolve(process.cwd(), "../../../.env");
-    dotenv.config({ path: rootPath });
-    // Local .env as fallback
-    dotenv.config();
-  } catch (e) {
-    // Silently fail if no dotenv - might be loaded elsewhere
-  }
-}
+import { ENV } from "../lib/config/env.js";
 
 // Types for the request object (could be Express or Next.js)
 interface RequestLike {
@@ -55,40 +36,45 @@ export async function createCheckpointer(
   req?: RequestLike,
   proposalId?: string
 ) {
-  const hasSupabaseConfig =
-    process.env.SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY &&
-    process.env.SUPABASE_URL !== "https://your-project.supabase.co" &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY !== "your-service-role-key";
+  // Use in-memory checkpointer in the following cases:
+  // 1. In development mode (unless Supabase is properly configured)
+  // 2. Supabase is not configured (regardless of environment)
+  const shouldUseInMemory =
+    (ENV.isDevelopment() && !ENV.isSupabaseConfigured()) ||
+    !ENV.isSupabaseConfigured();
 
   // Get configuration from environment
-  const checkpointTable =
-    process.env.CHECKPOINTER_TABLE_NAME || "proposal_checkpoints";
-  const sessionTable =
-    process.env.CHECKPOINTER_SESSION_TABLE_NAME || "proposal_sessions";
-  const maxRetries = parseInt(process.env.CHECKPOINTER_MAX_RETRIES || "3");
-  const retryDelayMs = parseInt(
-    process.env.CHECKPOINTER_RETRY_DELAY_MS || "500"
-  );
+  const checkpointTable = ENV.CHECKPOINTER_TABLE_NAME;
 
-  if (!hasSupabaseConfig) {
-    // Use in-memory implementation for testing and development
-    console.warn(
-      "No valid Supabase configuration found. Using in-memory checkpointer (data will not be persisted)."
-    );
+  if (shouldUseInMemory) {
+    if (!ENV.isSupabaseConfigured()) {
+      console.warn(
+        `Supabase not configured in ${ENV.NODE_ENV} environment. Using in-memory checkpointer (data will not be persisted).`
+      );
+    } else if (ENV.isDevelopment()) {
+      console.info(
+        "Using in-memory checkpointer in development mode. Set NODE_ENV=production to use Supabase checkpointer."
+      );
+    }
+
     const memoryCheckpointer = new InMemoryCheckpointer();
     return new MemoryLangGraphCheckpointer(memoryCheckpointer);
   }
 
+  // Using Supabase in production mode (or when explicitly configured in development)
+  console.info(
+    `Using Supabase checkpointer in ${ENV.NODE_ENV} environment for ${componentName}`
+  );
+
   // Try to get the user ID from the request if provided
-  let userId = process.env.TEST_USER_ID || "anonymous";
+  let userId = ENV.TEST_USER_ID || "anonymous";
 
   if (req) {
     try {
       // Try to get user from Supabase auth
       const supabase = createServerClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_ANON_KEY!,
+        ENV.SUPABASE_URL,
+        ENV.SUPABASE_ANON_KEY,
         { cookies: () => cookies() }
       );
 
@@ -104,10 +90,18 @@ export async function createCheckpointer(
     }
   }
 
+  // Session table and retry settings - could be moved to the ENV object in the future
+  const sessionTable =
+    process.env.CHECKPOINTER_SESSION_TABLE_NAME || "proposal_sessions";
+  const maxRetries = parseInt(process.env.CHECKPOINTER_MAX_RETRIES || "3");
+  const retryDelayMs = parseInt(
+    process.env.CHECKPOINTER_RETRY_DELAY_MS || "500"
+  );
+
   // Create the Supabase checkpointer with proper configuration
   const supabaseCheckpointer = new SupabaseCheckpointer({
-    supabaseUrl: process.env.SUPABASE_URL!,
-    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl: ENV.SUPABASE_URL,
+    supabaseKey: ENV.SUPABASE_SERVICE_ROLE_KEY,
     tableName: checkpointTable,
     sessionTableName: sessionTable,
     maxRetries,

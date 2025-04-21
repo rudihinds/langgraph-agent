@@ -53,4 +53,18 @@ export const ENV = {
     }
     return null;
   },
+
+  /**
+   * Check if running in development environment
+   */
+  isDevelopment(): boolean {
+    return this.NODE_ENV === "development";
+  },
+
+  /**
+   * Check if running in production environment
+   */
+  isProduction(): boolean {
+    return this.NODE_ENV === "production";
+  },
 };

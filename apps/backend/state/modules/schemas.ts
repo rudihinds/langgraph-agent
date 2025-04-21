@@ -6,7 +6,6 @@ import {
   SectionType,
   LoadingStatus,
   ProcessingStatus,
-  SectionProcessingStatus,
   InterruptReason,
   FeedbackType,
   InterruptProcessingStatus,
@@ -76,7 +75,7 @@ export const sectionDataSchema = z.object({
   id: z.nativeEnum(SectionType),
   title: z.string().optional(),
   content: z.string(),
-  status: z.nativeEnum(SectionProcessingStatus),
+  status: z.nativeEnum(ProcessingStatus),
   evaluation: evaluationResultSchema.nullable().optional(),
   lastUpdated: z.string(),
 });

@@ -20,6 +20,7 @@ export enum LoadingStatus {
 export enum ProcessingStatus {
   NOT_STARTED = "not_started", // Initial state
   RUNNING = "running", // Work in progress (combines LOADING/RUNNING)
+  QUEUED = "queued", // Ready to run but waiting its turn/dependency
   READY_FOR_EVALUATION = "ready_for_evaluation", // Generated but not evaluated
   AWAITING_REVIEW = "awaiting_review", // Evaluated, waiting for user
   APPROVED = "approved", // User approved
@@ -36,6 +37,7 @@ export enum FeedbackType {
   APPROVE = "approve",
   REVISE = "revise",
   REGENERATE = "regenerate",
+  EDIT = "edit",
 }
 
 /**

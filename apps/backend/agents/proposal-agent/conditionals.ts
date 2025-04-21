@@ -15,7 +15,8 @@ import { FeedbackType } from "../../lib/types/feedback.js";
 import { OverallProposalState as ProposalState } from "../../state/modules/types.js";
 import {
   ProcessingStatus,
-  SectionStatus,
+  InterruptReason,
+  InterruptProcessingStatus,
 } from "../../state/modules/constants.js";
 
 // Create logger for conditionals module
@@ -158,7 +159,7 @@ export function determineNextSection(
 
     return dependencies.every((dependency) => {
       const dependencySection = state.sections.get(dependency);
-      return dependencySection?.status === SectionStatus.APPROVED;
+      return dependencySection?.status === ProcessingStatus.APPROVED;
     });
   };
 
@@ -169,8 +170,8 @@ export function determineNextSection(
     // Filter sections that are queued or not_started
     state.sections.forEach((sectionData, sectionType) => {
       if (
-        sectionData.status === SectionStatus.QUEUED ||
-        sectionData.status === SectionStatus.NOT_STARTED
+        sectionData.status === ProcessingStatus.QUEUED ||
+        sectionData.status === ProcessingStatus.NOT_STARTED
       ) {
         queuedSections.push(sectionType);
       }
@@ -197,8 +198,8 @@ export function determineNextSection(
     state.sections.forEach((section) => {
       const status = section.status;
       if (
-        status !== SectionStatus.APPROVED &&
-        status !== SectionStatus.EDITED
+        status !== ProcessingStatus.APPROVED &&
+        status !== ProcessingStatus.EDITED
       ) {
         allSectionsCompleted = false;
       }
@@ -217,10 +218,22 @@ export function determineNextSection(
   switch (nextSection) {
     case SectionType.PROBLEM_STATEMENT:
       return "generateExecutiveSummary";
-    case SectionType.METHODOLOGY:
+    case SectionType.ORGANIZATIONAL_CAPACITY:
       return "generateGoalsAligned";
+    case SectionType.SOLUTION:
+      return "generateTeamAssembly";
+    case SectionType.IMPLEMENTATION_PLAN:
+      return "generateImplementationPlan";
+    case SectionType.BUDGET:
+      return "generateBudget";
+    case SectionType.EVALUATION:
+      return "generateImpact";
+    case SectionType.CONCLUSION:
+    case SectionType.EXECUTIVE_SUMMARY:
+    case SectionType.STAKEHOLDER_ANALYSIS:
+      // Additional mappings as needed
+      return "finalizeProposal";
     // Add appropriate mappings for other section types
-    // This is a placeholder mapping - adjust according to your actual section types
     default:
       logger.error(`Unknown section: ${nextSection}`);
       return "handleError";
@@ -228,47 +241,41 @@ export function determineNextSection(
 }
 
 /**
- * Helper function that retrieves dependencies for a given proposal section.
- *
- * @param section - The proposal section to get dependencies for
- * @returns Array of section names that are dependencies for the specified section
+ * Gets the dependencies for a section
+ * @param section The section to get dependencies for
+ * @returns Array of section types that this section depends on
  */
 function getSectionDependencies(section: SectionType): SectionType[] {
   // Define section dependencies based on proposal structure
-  // This should match the dependency map in config/dependencies.json or DependencyService
+  // This should match the dependency map in the actual SectionType enum
   const dependencies: Record<SectionType, SectionType[]> = {
     [SectionType.PROBLEM_STATEMENT]: [],
-    [SectionType.METHODOLOGY]: [SectionType.PROBLEM_STATEMENT],
+    [SectionType.ORGANIZATIONAL_CAPACITY]: [SectionType.PROBLEM_STATEMENT],
     [SectionType.SOLUTION]: [
       SectionType.PROBLEM_STATEMENT,
-      SectionType.METHODOLOGY,
-    ], // Added SOLUTION
-    [SectionType.OUTCOMES]: [SectionType.SOLUTION], // Added OUTCOMES
-    [SectionType.BUDGET]: [SectionType.METHODOLOGY, SectionType.SOLUTION], // Added SOLUTION dependency
-    [SectionType.TIMELINE]: [
-      SectionType.METHODOLOGY,
-      SectionType.BUDGET,
+      SectionType.ORGANIZATIONAL_CAPACITY,
+    ],
+    [SectionType.IMPLEMENTATION_PLAN]: [SectionType.SOLUTION],
+    [SectionType.EVALUATION]: [
       SectionType.SOLUTION,
-    ], // Added SOLUTION dependency
-    [SectionType.TEAM]: [SectionType.METHODOLOGY, SectionType.SOLUTION], // Added TEAM and SOLUTION dependency
-    [SectionType.EVALUATION_PLAN]: [SectionType.SOLUTION, SectionType.OUTCOMES], // Added EVALUATION_PLAN and OUTCOMES dependency
-    [SectionType.SUSTAINABILITY]: [
+      SectionType.IMPLEMENTATION_PLAN,
+    ],
+    [SectionType.BUDGET]: [
+      SectionType.IMPLEMENTATION_PLAN,
       SectionType.SOLUTION,
-      SectionType.BUDGET,
-      SectionType.TIMELINE,
-    ], // Added SUSTAINABILITY and SOLUTION dependency
-    [SectionType.RISKS]: [
+    ],
+    [SectionType.EXECUTIVE_SUMMARY]: [
+      SectionType.PROBLEM_STATEMENT,
       SectionType.SOLUTION,
-      SectionType.TIMELINE,
-      SectionType.TEAM,
-    ], // Added RISKS and TEAM dependency
+      SectionType.CONCLUSION,
+    ],
     [SectionType.CONCLUSION]: [
       SectionType.PROBLEM_STATEMENT,
       SectionType.SOLUTION,
-      SectionType.OUTCOMES,
+      SectionType.IMPLEMENTATION_PLAN,
       SectionType.BUDGET,
-      SectionType.TIMELINE,
-    ], // Added missing dependencies
+    ],
+    [SectionType.STAKEHOLDER_ANALYSIS]: [SectionType.PROBLEM_STATEMENT],
   };
 
   return dependencies[section] || [];
@@ -376,7 +383,7 @@ export function routeAfterFeedbackProcessing(state: ProposalState): string {
     `Feedback type: ${feedbackType}, Interruption point: ${interruptionPoint}, Content ref: ${contentRef}`
   );
 
-  let statusToCheck: ProcessingStatus | SectionStatus | undefined;
+  let statusToCheck: ProcessingStatus | undefined;
   if (contentRef === "research") {
     statusToCheck = state.researchStatus;
   } else if (contentRef === "solution") {
@@ -389,7 +396,7 @@ export function routeAfterFeedbackProcessing(state: ProposalState): string {
 
   if (
     statusToCheck === ProcessingStatus.STALE ||
-    statusToCheck === SectionStatus.STALE
+    statusToCheck === ProcessingStatus.EDITED
   ) {
     logger.info(
       `Content ${contentRef} is stale, routing to handle stale choice`
@@ -397,19 +404,8 @@ export function routeAfterFeedbackProcessing(state: ProposalState): string {
     return "handle_stale_choice";
   }
 
-  if (
-    statusToCheck === ProcessingStatus.APPROVED ||
-    statusToCheck === SectionStatus.APPROVED
-  ) {
+  if (statusToCheck === ProcessingStatus.APPROVED) {
     logger.info(`Content ${contentRef} approved, determining next step`);
-    return determineNextSection(state);
-  }
-
-  if (
-    statusToCheck === ProcessingStatus.EDITED ||
-    statusToCheck === SectionStatus.EDITED
-  ) {
-    logger.info(`Content ${contentRef} was edited, determining next step`);
     return determineNextSection(state);
   }
 
@@ -498,8 +494,8 @@ export function routeAfterSectionFeedback(state: ProposalState): string {
 export function routeFinalizeProposal(state: OverallProposalState): string {
   const allApprovedOrEdited = Array.from(state.sections.values()).every(
     (section) =>
-      section.status === SectionStatus.APPROVED ||
-      section.status === SectionStatus.EDITED
+      section.status === ProcessingStatus.APPROVED ||
+      section.status === ProcessingStatus.EDITED
   );
 
   if (allApprovedOrEdited) {
@@ -508,8 +504,8 @@ export function routeFinalizeProposal(state: OverallProposalState): string {
     // Find the first section data not approved/edited
     const nextSectionData = Array.from(state.sections.values()).find(
       (section) =>
-        section.status !== SectionStatus.APPROVED &&
-        section.status !== SectionStatus.EDITED
+        section.status !== ProcessingStatus.APPROVED &&
+        section.status !== ProcessingStatus.EDITED
     );
 
     if (nextSectionData) {

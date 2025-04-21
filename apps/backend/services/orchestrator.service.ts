@@ -31,7 +31,6 @@ import { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger, LogLevel } from "../lib/logger.js";
 import { v4 as uuidv4 } from "uuid";
 import {
-  SectionStatus,
   ProcessingStatus,
   InterruptProcessingStatus,
   LoadingStatus,
@@ -374,7 +373,7 @@ export class OrchestratorService {
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          SectionStatus.APPROVED
+          ProcessingStatus.APPROVED
         );
         break;
 
@@ -383,7 +382,7 @@ export class OrchestratorService {
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          SectionStatus.EDITED
+          ProcessingStatus.EDITED
         );
         break;
 
@@ -392,7 +391,7 @@ export class OrchestratorService {
         updatedState = this.updateContentStatus(
           updatedState,
           contentRef,
-          SectionStatus.STALE
+          ProcessingStatus.STALE
         );
         break;
     }
@@ -438,7 +437,7 @@ export class OrchestratorService {
   private updateContentStatus(
     state: OverallProposalState,
     contentRef?: string,
-    status?: ProcessingStatus | SectionProcessingStatus
+    status?: ProcessingStatus
   ): OverallProposalState {
     if (!contentRef || !status) {
       return state;
@@ -449,11 +448,11 @@ export class OrchestratorService {
 
     // Update state based on content type
     if (contentRef === "research") {
-      updatedState.researchStatus = status as ProcessingStatus;
+      updatedState.researchStatus = status;
     } else if (contentRef === "solution") {
-      updatedState.solutionStatus = status as ProcessingStatus;
+      updatedState.solutionStatus = status;
     } else if (contentRef === "connections") {
-      updatedState.connectionsStatus = status as ProcessingStatus;
+      updatedState.connectionsStatus = status;
     } else {
       // Try to handle as a section reference
       try {
@@ -466,7 +465,7 @@ export class OrchestratorService {
             // Create updated section with new status
             const updatedSection = {
               ...section,
-              status: status as SectionProcessingStatus,
+              status: status,
               lastUpdated: new Date().toISOString(),
             };
 
@@ -513,66 +512,61 @@ export class OrchestratorService {
       );
     }
 
-    // Update the interrupt status to indicate processing is happening
-    const updatedState: OverallProposalState = {
-      ...state,
-      interruptStatus: {
-        ...state.interruptStatus!,
-        processingStatus: InterruptProcessingStatus.PROCESSED,
-      },
-      userFeedback: undefined,
-    };
-
-    // Prepare checkpoint object for saving
+    // Prepare LangGraph config with thread_id for execution
     const config: RunnableConfig = { configurable: { thread_id: proposalId } };
     if (!config.configurable?.thread_id) {
       throw new Error(
-        "Thread ID is missing in config for resumeAfterFeedback checkpoint."
+        "Thread ID is missing in config for resumeAfterFeedback."
       );
     }
-    const checkpointToSave: Checkpoint = {
-      v: 1, // Schema version
-      id: config.configurable.thread_id,
-      ts: new Date().toISOString(),
-      channel_values: updatedState as any, // Cast as any for now, ensure alignment with StateDefinition later
-      channel_versions: {}, // Assuming simple checkpoint structure for now
-      versions_seen: {}, // Added missing field
-      pending_sends: [], // Added missing field
-    };
-
-    // Define the metadata for this external save
-    const metadata: CheckpointMetadata = {
-      source: "update",
-      step: -1,
-      writes: null,
-      parents: {},
-    };
-
-    // Persist the updated state *before* resuming
-    await this.checkpointer.put(config, checkpointToSave, metadata, {}); // Pass defined metadata
-    this.logger.info(`Resuming graph after feedback for thread ${proposalId}`);
 
     try {
-      // Assume this.graph is CompiledStateGraph for invoke
+      // Cast to CompiledStateGraph to access proper methods
       const compiledGraph = this.graph as CompiledStateGraph<
         OverallProposalState,
         Partial<OverallProposalState>,
         "__start__"
       >;
 
-      // Resume the graph execution using the compiled graph's invoke
-      // Note: LangGraph typically resumes by passing the config, not the full state again
-      await compiledGraph.invoke(null, config);
+      this.logger.info(
+        `Resuming graph after feedback (${state.userFeedback.type}) for thread ${proposalId}`
+      );
+
+      // First, update the state with user feedback using updateState
+      // This properly registers the feedback in the state without executing a node
+      await compiledGraph.updateState(config, {
+        interruptStatus: {
+          ...state.interruptStatus,
+          isInterrupted: false, // Clear interrupt status to allow resumption
+          processingStatus: InterruptProcessingStatus.PROCESSED,
+        },
+        feedbackResult: {
+          type: state.userFeedback.type,
+          contentReference: state.interruptMetadata?.contentReference,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      this.logger.info(`State updated with feedback, resuming execution`);
+
+      // Now resume execution - LangGraph will pick up at the interrupt point and process feedback
+      const result = await compiledGraph.invoke({}, config);
 
       this.logger.info(`Graph resumed successfully for thread ${proposalId}`);
 
-      // Get the latest state after resumption
-      const latestState = await this.getState(proposalId);
+      // Check if the resumed execution resulted in another interrupt
+      if (result.interruptStatus?.isInterrupted) {
+        return {
+          success: true,
+          message: "Graph execution resumed and reached a new interrupt",
+          status: ProcessingStatus.AWAITING_REVIEW, // New interrupt means awaiting review again
+        };
+      }
 
       return {
         success: true,
         message: "Graph execution resumed successfully",
-        status: latestState.status,
+        status: result.status,
       };
     } catch (error) {
       this.logger.error(`Error resuming graph: ${error}`);
@@ -652,13 +646,13 @@ export class OrchestratorService {
         }
 
         if (
-          section.status === SectionStatus.APPROVED ||
-          section.status === SectionStatus.EDITED
+          section.status === ProcessingStatus.APPROVED ||
+          section.status === ProcessingStatus.EDITED
         ) {
           // Store previous status before marking as stale
           sectionsCopy.set(sectionId, {
             ...section,
-            status: SectionStatus.STALE,
+            status: ProcessingStatus.STALE,
             previousStatus: section.status, // Store previous status for potential fallback
           });
           staleCount++;
@@ -714,7 +708,7 @@ export class OrchestratorService {
       throw new Error(`Section ${sectionId} not found`);
     }
 
-    if (section.status !== SectionStatus.STALE) {
+    if (section.status !== ProcessingStatus.STALE) {
       throw new Error(
         `Cannot handle stale decision for non-stale section ${sectionId}`
       );
@@ -727,12 +721,12 @@ export class OrchestratorService {
       // Restore previous status (approved or edited)
       sectionsCopy.set(sectionId, {
         ...section,
-        status: section.previousStatus || SectionStatus.APPROVED, // Default to APPROVED if no previousStatus
+        status: section.previousStatus || ProcessingStatus.APPROVED, // Default to APPROVED if no previousStatus
         previousStatus: undefined, // Clear previousStatus
       });
 
       this.logger.info(
-        `Keeping section ${sectionId} with status ${section.previousStatus || SectionStatus.APPROVED}`
+        `Keeping section ${sectionId} with status ${section.previousStatus || ProcessingStatus.APPROVED}`
       );
 
       // Update state
@@ -749,7 +743,7 @@ export class OrchestratorService {
       // Set to queued for regeneration
       sectionsCopy.set(sectionId, {
         ...section,
-        status: SectionStatus.QUEUED,
+        status: ProcessingStatus.QUEUED,
         previousStatus: undefined, // Clear previousStatus
       });
 
@@ -804,7 +798,7 @@ export class OrchestratorService {
     const staleSections: SectionType[] = [];
 
     state.sections.forEach((section, sectionId) => {
-      if (section.status === SectionStatus.STALE) {
+      if (section.status === ProcessingStatus.STALE) {
         staleSections.push(sectionId as SectionType);
       }
     });
@@ -878,7 +872,7 @@ export class OrchestratorService {
     sectionsCopy.set(editedSectionId, {
       ...section,
       content: newContent,
-      status: SectionStatus.EDITED,
+      status: ProcessingStatus.EDITED,
     });
 
     // Create updated state

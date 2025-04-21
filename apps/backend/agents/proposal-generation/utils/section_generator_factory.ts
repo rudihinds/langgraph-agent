@@ -206,6 +206,7 @@ export function createSectionGeneratorNode(
       // If the result contains content, update the section
       if (result.content) {
         currentSection.content = result.content;
+        // Update status to READY_FOR_EVALUATION to trigger evaluation
         currentSection.status = ProcessingStatus.READY_FOR_EVALUATION;
         currentSection.lastUpdated = new Date().toISOString();
         sectionsMap.set(sectionType, currentSection);
@@ -224,7 +225,6 @@ export function createSectionGeneratorNode(
       // Return the updated state
       return {
         sections: sectionsMap,
-        currentStep: `${sectionType.toLowerCase()}_evaluation`,
         status: ProcessingStatus.RUNNING,
         sectionToolMessages: updatedSectionToolMessages,
       };
@@ -452,6 +452,28 @@ function prepareInitialMessages(
   const revisionGuidance = getRevisionGuidance(state, sectionType);
   if (revisionGuidance) {
     systemPrompt += `\n\nREVISION GUIDANCE: ${revisionGuidance}`;
+  }
+
+  // Check for evaluation feedback if this is a revision
+  const section = state.sections.get(sectionType);
+  if (section?.evaluation && section.status === ProcessingStatus.RUNNING) {
+    const evaluation = section.evaluation;
+
+    // Add general feedback if available
+    if (evaluation.feedback) {
+      systemPrompt += `\n\nEVALUATION FEEDBACK: ${evaluation.feedback}\n\n`;
+    }
+
+    // Add overall score
+    systemPrompt += `Overall Score: ${evaluation.score || 0}/100\n\n`;
+
+    // Add category scores if available
+    if (evaluation.categories) {
+      systemPrompt += "Category Scores:\n";
+      Object.entries(evaluation.categories).forEach(([category, data]) => {
+        systemPrompt += `- ${category}: ${data.score}/100 - ${data.feedback}\n`;
+      });
+    }
   }
 
   // If we have existing messages, use them after the system message

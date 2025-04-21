@@ -1,3 +1,132 @@
+# Proposal Generator Backend
+
+This is the backend service for the Proposal Generator application, built with LangGraph, Express, and TypeScript.
+
+## Structure
+
+The backend is organized into a modular structure:
+
+- `server.js` - Main entry point for the Express API
+- `/api` - Express API implementation
+  - `/api/express-server.ts` - Main Express application configuration
+  - `/api/rfp` - Route handlers for RFP-related endpoints
+- `/agents` - LangGraph agent definitions
+- `/lib` - Shared utilities and helpers
+- `/state` - State definitions and type declarations
+- `/prompts` - Prompt templates for LLM interactions
+- `/services` - Core business logic and services
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18+)
+- npm or yarn
+- Supabase account (for state persistence)
+
+### Environment Setup
+
+Copy the `.env.example` file to `.env` and fill in the required values:
+
+```
+# LLM API Keys
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Supabase Configuration
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+
+# Server Configuration
+PORT=3001
+NODE_ENV=development
+```
+
+### Development
+
+To start the development server:
+
+```bash
+# Start the HTTP server for agent testing
+npm run dev
+
+# Start the Express API server for RFP endpoints
+npm run dev:api
+```
+
+### Building and Deployment
+
+```bash
+# Build the application
+npm run build
+
+# Start the API server in production mode
+npm start
+```
+
+## API Endpoints
+
+### Proposal Generation
+
+- **POST `/api/rfp/start`** - Start a new proposal generation process
+  - Request: RFP content (string or structured object)
+  - Response: Thread ID and initial state
+
+### Human-in-the-Loop (HITL) Controls
+
+- **GET `/api/rfp/interrupt-status`** - Check if a proposal is awaiting user input
+
+  - Request: Thread ID
+  - Response: Interrupt status and details
+
+- **POST `/api/rfp/feedback`** - Submit user feedback for interrupted proposal
+
+  - Request: Thread ID, feedback type, comments
+  - Response: Status update
+
+- **POST `/api/rfp/resume`** - Resume proposal generation after feedback
+  - Request: Thread ID
+  - Response: Status update
+
+### Utility Endpoints
+
+- **GET `/api/health`** - Health check endpoint
+  - Response: Status confirmation
+
+## State Management
+
+All state is managed by the LangGraph checkpointer, which is integrated with Supabase for persistence. This allows for:
+
+- Resuming interrupted proposal generation
+- Human-in-the-loop reviews and edits
+- Tracking proposal generation progress
+- State recovery in case of server restarts
+
+## Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run unit tests only
+npm run test:unit
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+## Architecture
+
+For more details on the architecture, see `AGENT_ARCHITECTURE.md` and `AGENT_BASESPEC.md`.
+
+## Checkpointer Setup
+
+Before starting, ensure your Supabase database has the required tables:
+
+```bash
+# Set up the checkpointer tables
+npm run setup-checkpointer
+```
+
 # Proposal Agent Backend
 
 This directory contains the LangGraph-based backend for the Proposal Agent System.

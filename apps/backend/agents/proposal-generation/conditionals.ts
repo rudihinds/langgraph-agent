@@ -11,10 +11,11 @@ import {
   EvaluationResult,
 } from "../../state/modules/types.js";
 import { Logger, LogLevel } from "../../lib/logger.js";
-import { FeedbackType } from "../../lib/types/feedback.js";
 import {
   ProcessingStatus,
   SectionStatus,
+  InterruptProcessingStatus,
+  FeedbackType,
 } from "../../state/modules/constants.js";
 
 // Create logger instance
@@ -286,7 +287,15 @@ export function routeAfterEvaluation(
 
   // First priority: check if this is an interrupt for human feedback
   if (state.interruptStatus?.isInterrupted) {
-    // Check if the interrupt is related to this content when contentType is provided
+    // For v2 section evaluations (using createSectionEvaluationNode)
+    if (!contentType && !sectionId) {
+      const nodeId = state.interruptMetadata?.nodeId || "";
+      if (nodeId.startsWith("evaluateSection_")) {
+        return "review";
+      }
+    }
+
+    // For legacy contentType-based interrupts
     if (contentType || sectionId) {
       const contentRef = state.interruptMetadata?.contentReference;
 
@@ -302,6 +311,30 @@ export function routeAfterEvaluation(
     } else {
       // If no specific content is being checked, any interrupt means awaiting feedback
       return "awaiting_feedback";
+    }
+  }
+
+  // Handle v2 section evaluations without contentType/sectionId
+  if (!contentType && !sectionId) {
+    const nodeId = state.interruptMetadata?.nodeId || "";
+    if (nodeId.startsWith("evaluateSection_")) {
+      const sectionType = nodeId.replace("evaluateSection_", "");
+      const section = state.sections.get(sectionType);
+
+      if (!section) {
+        return "next";
+      }
+
+      switch (section.status) {
+        case "APPROVED":
+          return "next";
+        case "AWAITING_REVIEW":
+          return "review";
+        case "RUNNING":
+          return "revision";
+        default:
+          return "next";
+      }
     }
   }
 
@@ -374,6 +407,57 @@ export function routeAfterEvaluation(
   return "awaiting_feedback";
 }
 
+/**
+ * Routes graph execution after processing user feedback
+ * Checks for explicit routing destination or examines feedback type and content type
+ * to determine the appropriate next node
+ *
+ * @param state The current proposal state
+ * @returns The next node destination key based on feedback
+ */
+export function routeAfterFeedback(state: OverallProposalState): string {
+  // First priority: check for explicit routing destination
+  // This is set by processFeedbackNode
+  if (
+    "feedbackDestination" in state &&
+    typeof state.feedbackDestination === "string"
+  ) {
+    return state.feedbackDestination;
+  }
+
+  // If no destination is explicitly set, check feedback type
+  if (state.userFeedback && state.interruptMetadata) {
+    const { type } = state.userFeedback;
+    const { contentType, sectionType } = state.interruptMetadata;
+
+    // If feedback is "approve", continue to next section
+    if (type === FeedbackType.APPROVE || type === "approve") {
+      return "continue";
+    }
+
+    // If feedback is "revise", route to appropriate generation node
+    if (
+      type === FeedbackType.REVISE ||
+      type === "revise" ||
+      type === FeedbackType.EDIT ||
+      type === "edit"
+    ) {
+      // Route based on what content needs revision
+      if (contentType === "research") return "research";
+      if (contentType === "solution") return "solution_content";
+      if (contentType === "connections") return "connections";
+
+      // If it's a section, route to the appropriate section node
+      if (sectionType) {
+        return sectionType;
+      }
+    }
+  }
+
+  // Default: continue to next section if we can't determine a specific route
+  return "continue";
+}
+
 export default {
   determineNextStep,
   routeAfterResearchEvaluation,
@@ -382,4 +466,5 @@ export default {
   routeSectionGeneration,
   routeAfterSectionEvaluation,
   routeAfterEvaluation,
+  routeAfterFeedback,
 };

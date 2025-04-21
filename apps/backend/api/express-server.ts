@@ -1,72 +1,75 @@
 /**
- * Express API Server for Proposal Generator
+ * Express server configuration for the Proposal Generator API.
  *
- * This file implements the API layer as specified in AGENT_ARCHITECTURE.md.
- * It serves as the interface between the frontend UI and the Orchestrator Service.
+ * This file initializes and configures the Express application,
+ * setting up middleware, routes, and error handling.
  */
 
 import express from "express";
-import { Router } from "express";
 import cors from "cors";
-import bodyParser from "body-parser";
+import helmet from "helmet";
 import { Logger } from "../lib/logger.js";
-
-// Import route handlers
-import { getInterruptStatus } from "./rfp/express-handlers/interrupt-status.js";
-import { submitFeedback } from "./rfp/express-handlers/feedback.js";
-import { resumeAfterFeedback } from "./rfp/express-handlers/resume.js";
-import { startProposalGeneration } from "./rfp/express-handlers/start.js";
+import rfpRouter from "./rfp/index.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
 
-// Create Express app
+// Create Express application
 const app = express();
 
-// Configure middleware
+// Apply security middleware
+app.use(helmet());
+
+// Configure CORS - in production, this should be more restrictive
 app.use(cors());
-app.use(bodyParser.json());
 
-// Create router for RFP-related endpoints
-const rfpRouter = Router();
+// Parse request bodies
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Set up RFP routes
-rfpRouter.post("/start", startProposalGeneration);
-rfpRouter.get("/interrupt-status", getInterruptStatus);
-rfpRouter.post("/feedback", submitFeedback);
-rfpRouter.post("/resume", resumeAfterFeedback);
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url}`);
+  next();
+});
+
+// Mount the RFP router
+app.use("/api/rfp", rfpRouter);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Service is running" });
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Mount RFP router
-app.use("/api/rfp", rfpRouter);
+// Global error handler
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    logger.error(`Error processing request: ${err.message}`, err);
 
-/**
- * Initialize the Express server
- *
- * @param port The port to listen on
- * @returns The Express server instance
- */
-export function initializeServer(port = 3001) {
-  return app.listen(port, () => {
-    logger.info(`API server running on port ${port}`);
-    logger.info("Available endpoints:");
-    logger.info("- GET /api/health");
-    logger.info("- POST /api/rfp/start");
-    logger.info("- GET /api/rfp/interrupt-status");
-    logger.info("- POST /api/rfp/feedback");
-    logger.info("- POST /api/rfp/resume");
+    // Don't expose internal error details in production
+    res.status(500).json({
+      error: "Internal server error",
+      message:
+        process.env.NODE_ENV === "production"
+          ? "An unexpected error occurred"
+          : err.message,
+    });
+  }
+);
+
+// 404 handler for unmatched routes
+app.use((req, res) => {
+  logger.info(`Route not found: ${req.method} ${req.url}`);
+  res.status(404).json({
+    error: "Not found",
+    message: "The requested endpoint does not exist",
   });
-}
+});
 
-// Export app for testing
+// Export the configured app
 export { app };
-
-// Start server if this file is run directly
-if (process.env.NODE_ENV !== "test") {
-  const port = parseInt(process.env.PORT || "3001", 10);
-  initializeServer(port);
-}

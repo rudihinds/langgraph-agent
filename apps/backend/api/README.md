@@ -6,11 +6,15 @@ This directory contains the Express API implementation for the Proposal Generato
 
 The Express API is organized in a modular structure:
 
-- `express-server.ts` - Main entry point that configures the Express server
-- `index.ts` - Initializes the Express app and mounts the RFP router
+- `express-server.ts` - Main server entry point that configures and exports the Express application (this is the file that should be used)
+- `index.ts` - Initializes the base Express app and mounts the RFP router
 - `/rfp` - Directory containing all RFP-related endpoints
-  - `/express-handlers` - Individual handler implementations
-  - `/index.ts` - Router configuration
+  - `start.ts` - Start proposal generation endpoint
+  - `resume.ts` - Resume proposal generation endpoint
+  - `feedback.ts` - Submit feedback endpoint
+  - `parse.ts` - Document parsing endpoint
+  - `interrupt-status.ts` - Check interrupt status endpoint
+  - `index.ts` - Router configuration that imports the individual route handlers
 
 ## Available Endpoints
 
