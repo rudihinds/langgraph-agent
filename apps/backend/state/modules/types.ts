@@ -5,10 +5,9 @@ import { BaseMessage } from "@langchain/core/messages";
 import {
   LoadingStatus,
   ProcessingStatus,
-  SectionStatus as SectionProcessingStatus,
+  SectionType,
   FeedbackType,
   InterruptReason,
-  SectionType,
   InterruptProcessingStatus,
 } from "./constants.js";
 
@@ -16,12 +15,17 @@ import {
  * Status definitions for different components of the proposal state
  */
 // These type exports maintain backward compatibility while we transition to enums
-export { LoadingStatus, ProcessingStatus, SectionProcessingStatus };
+export { LoadingStatus, ProcessingStatus };
+
+/**
+ * Status type for sections - alias to ProcessingStatus for semantic clarity
+ */
+export type SectionProcessingStatus = ProcessingStatus;
 
 /**
  * Interrupt-related type definitions for HITL capabilities
  */
-export { InterruptReason, FeedbackType };
+export { InterruptReason, FeedbackType, SectionType };
 
 /**
  * Data structure to track interrupt status
@@ -61,7 +65,7 @@ export interface UserFeedback {
 /**
  * Section types enumeration for typed section references
  */
-export { SectionType };
+// Re-exported above in line 23
 
 /**
  * Evaluation result structure for quality checks
@@ -90,6 +94,42 @@ export interface SectionData {
   evaluation?: EvaluationResult | null;
   lastUpdated: string;
   lastError?: string;
+}
+
+/**
+ * Interface for tracking tool calls and results per section
+ */
+export interface SectionToolInteraction {
+  hasPendingToolCalls: boolean;
+  messages: BaseMessage[];
+  lastUpdated: string;
+}
+
+/**
+ * Funder information type
+ */
+export interface Funder {
+  name?: string;
+  description?: string;
+  priorities?: string[];
+}
+
+/**
+ * Applicant information type
+ */
+export interface Applicant {
+  name?: string;
+  expertise?: string[];
+  experience?: string;
+}
+
+/**
+ * Word length constraints for sections
+ */
+export interface WordLength {
+  min?: number;
+  max?: number;
+  target?: number;
 }
 
 /**
@@ -123,6 +163,14 @@ export interface OverallProposalState {
   // Proposal sections
   sections: Map<SectionType, SectionData>;
   requiredSections: SectionType[];
+
+  // Tool interaction tracking per section
+  sectionToolMessages?: Record<string, SectionToolInteraction>;
+
+  // Fields for applicant and funder info
+  funder?: Funder;
+  applicant?: Applicant;
+  wordLength?: WordLength;
 
   // HITL Interrupt handling
   interruptStatus: InterruptStatus;

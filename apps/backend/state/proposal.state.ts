@@ -21,6 +21,10 @@ import {
   ProcessingStatus,
   SectionProcessingStatus,
   SectionType,
+  SectionToolInteraction,
+  Funder,
+  Applicant,
+  WordLength,
 } from "./modules/types.js";
 
 // Import the schema for validation
@@ -75,6 +79,39 @@ const errorsReducer: BinaryOperator<string[]> = (
   incoming = []
 ) => {
   return [...existing, ...incoming];
+};
+
+/**
+ * Type-safe reducer for section tool messages
+ */
+const sectionToolMessagesReducer: BinaryOperator<
+  Record<SectionType, SectionToolInteraction>
+> = (
+  existing = {} as Record<SectionType, SectionToolInteraction>,
+  incoming = {} as Record<SectionType, SectionToolInteraction>
+) => {
+  const result = { ...existing };
+
+  Object.entries(incoming).forEach(([sectionKey, value]) => {
+    const section = sectionKey as SectionType;
+    if (result[section]) {
+      // Merge with existing tool interaction data
+      result[section] = {
+        ...result[section],
+        ...value,
+        // Merge messages correctly
+        messages:
+          value.messages.length > 0
+            ? [...result[section].messages, ...value.messages]
+            : result[section].messages,
+      };
+    } else {
+      // Add new section tool interaction
+      result[section] = value;
+    }
+  });
+
+  return result;
 };
 
 /**
@@ -153,6 +190,26 @@ export const ProposalStateAnnotation = Annotation.Root({
   requiredSections: Annotation<SectionType[]>({
     reducer: lastValueReducer,
     default: () => [],
+  }),
+
+  // Tool interactions per section
+  sectionToolMessages: Annotation<Record<SectionType, SectionToolInteraction>>({
+    reducer: sectionToolMessagesReducer,
+    default: () => ({}) as Record<SectionType, SectionToolInteraction>,
+  }),
+
+  // Funder and applicant info
+  funder: Annotation<Funder | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  applicant: Annotation<Applicant | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+  wordLength: Annotation<WordLength | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
   }),
 
   // Flow state
@@ -263,6 +320,14 @@ export function createInitialState(
     // Sections
     sections: new Map(),
     requiredSections: [],
+
+    // Tool interactions
+    sectionToolMessages: {} as Record<SectionType, SectionToolInteraction>,
+
+    // Funder and applicant info
+    funder: undefined,
+    applicant: undefined,
+    wordLength: undefined,
 
     // Flow state
     currentStep: null,

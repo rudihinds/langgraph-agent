@@ -61,6 +61,15 @@ export const userFeedbackSchema = z.object({
 });
 
 /**
+ * Schema for section tool interaction
+ */
+export const sectionToolInteractionSchema = z.object({
+  hasPendingToolCalls: z.boolean(),
+  messages: z.array(z.any()), // BaseMessage array
+  lastUpdated: z.string(),
+});
+
+/**
  * Schema for section data validation
  */
 export const sectionDataSchema = z.object({
@@ -149,6 +158,36 @@ export const OverallProposalStateSchema = z.object({
     })
     .optional(),
   userFeedback: userFeedbackSchema.optional(),
+
+  // Tool message tracking per section
+  sectionToolMessages: z
+    .record(z.string(), sectionToolInteractionSchema)
+    .optional(),
+
+  // Metadata fields for proposal sections
+  funder: z
+    .object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      priorities: z.array(z.string()).optional(),
+    })
+    .optional(),
+
+  applicant: z
+    .object({
+      name: z.string().optional(),
+      expertise: z.array(z.string()).optional(),
+      experience: z.string().optional(),
+    })
+    .optional(),
+
+  wordLength: z
+    .object({
+      min: z.number().optional(),
+      max: z.number().optional(),
+      target: z.number().optional(),
+    })
+    .optional(),
 
   currentStep: z.string().nullable(),
   activeThreadId: z.string(),
