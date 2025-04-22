@@ -9,7 +9,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd apps/backend && tsx watch --require tsconfig-paths/register index.ts",
     "dev:frontend": "cd apps/web && npm run dev",
-    "dev:agents": "npx @langchain/langgraph-cli dev --port 2024 --config langgraph.json",
+    "dev:agents": "node apps/backend/langgraph-start.js",
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "tsc -p apps/backend/tsconfig.json",
     "build:frontend": "cd apps/web && npm run build",
@@ -65,6 +65,7 @@
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@playwright/test": "^1.51.1",
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.30",

@@ -8,13 +8,15 @@
 
 import {
   OverallProposalState,
-  OverallProposalStateAnnotation,
   ProcessingStatus,
-  InterruptProcessingStatus,
   InterruptReason,
   EvaluationResult,
 } from "../../state/modules/types.js";
-import { SectionType } from "../../state/modules/constants.js";
+import {
+  SectionType,
+  InterruptProcessingStatus,
+} from "../../state/modules/constants.js";
+import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 
 /**
  * Evaluates content (research, solution, connections, or sections) against predefined criteria

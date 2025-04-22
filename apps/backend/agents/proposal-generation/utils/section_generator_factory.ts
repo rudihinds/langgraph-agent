@@ -17,13 +17,13 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { StateGraph, END } from "@langchain/langgraph";
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
-import { Logger } from "@/lib/logger.js";
+import { Logger } from "../../../lib/logger.js";
 import {
   OverallProposalState,
   SectionType,
   ProcessingStatus,
   SectionToolInteraction,
-} from "@/state/proposal.state.js";
+} from "../../../state/proposal.state.js";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";

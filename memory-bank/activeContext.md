@@ -771,3 +771,26 @@ During our recent work on fixing the evaluation framework tests, we discovered s
 - Reset mocks between tests to prevent unintended interference
 
 _This document reflects the immediate working context, recent activities, and near-term goals. It should be updated frequently._
+
+## 2025‑03‑XX – LangGraph Refactor (Phase 1)
+
+**Context**: We began the evaluation‑integration refactor. Step 1 (StateGraph init + node typings) is now complete in `apps/backend/agents/proposal-generation/graph.ts`.
+
+### Key decisions / learnings
+
+1. **StateGraph constructor (0.2.64)**
+   - Pass a `StateDefinition`, not the raw `AnnotationRoot`.
+   - Use `OverallProposalStateAnnotation.spec` as the argument.
+2. **Temporarily loosen typings**
+   - Cast the graph builder to `any` to keep momentum while we re‑wire edges.
+   - Mark node `state` parameters as `any` for now; will tighten later.
+3. **Edge‑typing plan**
+   - TypeScript only knows node names that exist at the time of calling `addEdge`.
+   - Long‑term fix: re‑assign builder after each `addNode` _or_ chain in a fluent pattern.
+   - Interim fix: cast `proposalGenerationGraph` to `any` for `addEdge` / `addConditionalEdges` calls.
+
+### Next immediate work (Step 2 in `eval_integration_plan.md`)
+
+- Remove temporary `any` on edges by implementing the builder‑reassignment pattern so node name unions update.
+- Update conditional routing functions to return exact literals.
+- Restore proper state parameter typings once edges compile.

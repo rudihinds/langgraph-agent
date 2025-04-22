@@ -13,7 +13,6 @@ import {
 import { Logger, LogLevel } from "../../lib/logger.js";
 import {
   ProcessingStatus,
-  SectionStatus,
   InterruptProcessingStatus,
   FeedbackType,
 } from "../../state/modules/constants.js";
@@ -31,34 +30,25 @@ function getSectionDependencies(section: SectionType): SectionType[] {
   // This should match the dependency map in config/dependencies.json or DependencyService
   const dependencies: Record<SectionType, SectionType[]> = {
     [SectionType.PROBLEM_STATEMENT]: [],
-    [SectionType.METHODOLOGY]: [SectionType.PROBLEM_STATEMENT],
-    [SectionType.SOLUTION]: [
+    [SectionType.SOLUTION]: [SectionType.PROBLEM_STATEMENT],
+    [SectionType.IMPLEMENTATION_PLAN]: [
       SectionType.PROBLEM_STATEMENT,
-      SectionType.METHODOLOGY,
-    ],
-    [SectionType.OUTCOMES]: [SectionType.SOLUTION],
-    [SectionType.BUDGET]: [SectionType.SOLUTION, SectionType.METHODOLOGY],
-    [SectionType.TIMELINE]: [
       SectionType.SOLUTION,
-      SectionType.METHODOLOGY,
-      SectionType.BUDGET,
     ],
-    [SectionType.TEAM]: [SectionType.SOLUTION, SectionType.METHODOLOGY],
-    [SectionType.EVALUATION_PLAN]: [SectionType.SOLUTION, SectionType.OUTCOMES],
-    [SectionType.SUSTAINABILITY]: [
+    [SectionType.EVALUATION]: [SectionType.SOLUTION],
+    [SectionType.BUDGET]: [SectionType.SOLUTION],
+    [SectionType.ORGANIZATIONAL_CAPACITY]: [SectionType.SOLUTION],
+    [SectionType.EXECUTIVE_SUMMARY]: [
+      SectionType.PROBLEM_STATEMENT,
       SectionType.SOLUTION,
-      SectionType.BUDGET,
-      SectionType.TIMELINE,
-    ],
-    [SectionType.RISKS]: [
-      SectionType.SOLUTION,
-      SectionType.TIMELINE,
-      SectionType.TEAM,
     ],
     [SectionType.CONCLUSION]: [
       SectionType.PROBLEM_STATEMENT,
       SectionType.SOLUTION,
-      SectionType.OUTCOMES,
+    ],
+    [SectionType.STAKEHOLDER_ANALYSIS]: [
+      SectionType.PROBLEM_STATEMENT,
+      SectionType.SOLUTION,
     ],
   };
 
@@ -85,7 +75,7 @@ export function determineNextStep(state: ProposalState): string {
   if (state.solutionStatus === ProcessingStatus.STALE) return "solutionSought";
 
   for (const [sectionId, sectionData] of state.sections) {
-    if (sectionData.status === SectionStatus.STALE) {
+    if (sectionData.status === ProcessingStatus.STALE) {
       logger.info(`Section ${sectionId} is stale, routing to section manager`);
       return "section_manager";
     }
@@ -93,7 +83,7 @@ export function determineNextStep(state: ProposalState): string {
 
   if (
     state.researchStatus === ProcessingStatus.QUEUED ||
-    state.researchStatus === ProcessingStatus.NEEDS_REVISION
+    state.researchStatus === ProcessingStatus.STALE
   ) {
     logger.info("Routing to deep research");
     return "deep_research";
@@ -103,7 +93,7 @@ export function determineNextStep(state: ProposalState): string {
   } else if (state.researchStatus === ProcessingStatus.APPROVED) {
     if (
       state.solutionStatus === ProcessingStatus.QUEUED ||
-      state.solutionStatus === ProcessingStatus.NEEDS_REVISION
+      state.solutionStatus === ProcessingStatus.STALE
     ) {
       logger.info("Routing to solution sought");
       return "solution_sought";
@@ -113,7 +103,7 @@ export function determineNextStep(state: ProposalState): string {
     } else if (state.solutionStatus === ProcessingStatus.APPROVED) {
       if (
         state.connectionsStatus === ProcessingStatus.QUEUED ||
-        state.connectionsStatus === ProcessingStatus.NEEDS_REVISION
+        state.connectionsStatus === ProcessingStatus.STALE
       ) {
         logger.info("Routing to connection pairs");
         return "connection_pairs";
@@ -143,7 +133,7 @@ export function routeAfterResearchEvaluation(state: ProposalState): string {
   }
 
   // If research needs revision, go back to research
-  if (state.researchStatus === ProcessingStatus.NEEDS_REVISION) {
+  if (state.researchStatus === ProcessingStatus.STALE) {
     return "revise";
   }
 
@@ -167,7 +157,7 @@ export function routeAfterSolutionEvaluation(state: ProposalState): string {
   }
 
   // If solution needs revision, go back to solution generation
-  if (state.solutionStatus === ProcessingStatus.NEEDS_REVISION) {
+  if (state.solutionStatus === ProcessingStatus.STALE) {
     return "revise";
   }
 
@@ -191,7 +181,7 @@ export function routeAfterConnectionsEvaluation(state: ProposalState): string {
   }
 
   // If connections need revision, go back to connection generation
-  if (state.connectionsStatus === ProcessingStatus.NEEDS_REVISION) {
+  if (state.connectionsStatus === ProcessingStatus.STALE) {
     return "revise";
   }
 
@@ -214,15 +204,15 @@ export function routeSectionGeneration(state: ProposalState): string {
   // Find the first section that is ready (queued/stale/not_started and dependencies met)
   for (const [sectionId, sectionData] of state.sections) {
     if (
-      sectionData.status === SectionStatus.QUEUED ||
-      sectionData.status === SectionStatus.STALE ||
-      sectionData.status === SectionStatus.NOT_STARTED
+      sectionData.status === ProcessingStatus.QUEUED ||
+      sectionData.status === ProcessingStatus.STALE ||
+      sectionData.status === ProcessingStatus.NOT_STARTED
     ) {
       const dependencies = getSectionDependencies(sectionId);
       const depsMet = dependencies.every((depId: SectionType) => {
         const depSection = state.sections.get(depId);
         // Use SectionStatus for dependency check
-        return depSection && depSection.status === SectionStatus.APPROVED;
+        return depSection && depSection.status === ProcessingStatus.APPROVED;
       });
 
       if (depsMet) {
@@ -238,7 +228,8 @@ export function routeSectionGeneration(state: ProposalState): string {
   const allDone = Array.from(state.sections.values()).every(
     // Use SectionStatus for completion check
     (s) =>
-      s.status === SectionStatus.APPROVED || s.status === SectionStatus.EDITED
+      s.status === ProcessingStatus.APPROVED ||
+      s.status === ProcessingStatus.EDITED
   );
   if (allDone) {
     logger.info("All sections complete, routing to finalize");
@@ -259,7 +250,7 @@ export function routeAfterSectionEvaluation(sectionType: SectionType) {
     const sectionState = state.sections.get(sectionType);
 
     // Use SectionStatus for check
-    if (sectionState && sectionState.status === SectionStatus.NEEDS_REVISION) {
+    if (sectionState && sectionState.status === ProcessingStatus.STALE) {
       return "revise";
     }
 
@@ -366,12 +357,12 @@ export function routeAfterEvaluation(
     }
 
     // Use SectionStatus for checks
-    if (section.status === SectionStatus.APPROVED) {
+    if (section.status === ProcessingStatus.APPROVED) {
       const isLastSection =
         state.requiredSections.indexOf(sectionTypeKey) ===
         state.requiredSections.length - 1;
       return isLastSection ? "complete" : "continue";
-    } else if (section.status === SectionStatus.NEEDS_REVISION) {
+    } else if (section.status === ProcessingStatus.STALE) {
       return "revise";
     }
   } else {
@@ -380,14 +371,14 @@ export function routeAfterEvaluation(
       // Use ProcessingStatus for checks
       if (state.researchStatus === ProcessingStatus.APPROVED) {
         return "continue";
-      } else if (state.researchStatus === ProcessingStatus.NEEDS_REVISION) {
+      } else if (state.researchStatus === ProcessingStatus.STALE) {
         return "revise";
       }
     } else if (contentType === "solution") {
       // Use ProcessingStatus for checks
       if (state.solutionStatus === ProcessingStatus.APPROVED) {
         return "continue";
-      } else if (state.solutionStatus === ProcessingStatus.NEEDS_REVISION) {
+      } else if (state.solutionStatus === ProcessingStatus.STALE) {
         return "revise";
       }
     } else if (
@@ -397,7 +388,7 @@ export function routeAfterEvaluation(
       // Use ProcessingStatus for checks
       if (state.connectionsStatus === ProcessingStatus.APPROVED) {
         return "continue";
-      } else if (state.connectionsStatus === ProcessingStatus.NEEDS_REVISION) {
+      } else if (state.connectionsStatus === ProcessingStatus.STALE) {
         return "revise";
       }
     }
@@ -408,14 +399,11 @@ export function routeAfterEvaluation(
 }
 
 /**
- * Routes graph execution after processing user feedback
- * Checks for explicit routing destination or examines feedback type and content type
- * to determine the appropriate next node
- *
- * @param state The current proposal state
- * @returns The next node destination key based on feedback
+ * Processes feedback when execution is resumed after user interaction
+ * @param state The current state
+ * @returns The next node to route to
  */
-export function routeAfterFeedback(state: OverallProposalState): string {
+export function routeAfterFeedback(state: ProposalState): string {
   // First priority: check for explicit routing destination
   // This is set by processFeedbackNode
   if (

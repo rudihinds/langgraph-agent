@@ -15,7 +15,7 @@ import {
 import { tool } from "@langchain/core/tools";
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
-import { Logger } from "@/lib/logger.js";
+import { Logger } from "../../../lib/logger.js";
 import {
   OverallProposalState,
   SectionData,
@@ -23,7 +23,7 @@ import {
   SectionProcessingStatus,
   ProcessingStatus,
   SectionToolInteraction,
-} from "@/state/proposal.state.js";
+} from "../../../state/proposal.state.js";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";

@@ -2,15 +2,19 @@ import { ChatOpenAI } from "@langchain/openai";
 import { LangChainTracer } from "langchain/callbacks";
 import { ConsoleCallbackHandler } from "langchain/callbacks";
 import { withRetry } from "@langchain/core/runnables";
+import fs from "fs";
+import path from "path";
 
 // Add .js extensions to local imports
 import {
   ProcessingStatus,
   SectionStatus,
 } from "../../state/modules/constants.js";
-import { logDebug, logError, logInfo } from "../../lib/utils/logger.js";
+import { Logger, LogLevel } from "../../lib/logger.js";
 import { OverallProposalState } from "../../state/proposal.state.js";
-import { loadJSONFile } from "../../lib/utils/fileLoader.js";
+
+// Create logger instance
+const logger = Logger.getInstance();
 
 /**
  * Options for configuring an evaluation node
@@ -98,7 +102,7 @@ export class EvaluationNodeFactory {
       stopAfterAttempt: 3,
       onFailedAttempt: (error) => {
         const attemptNumber = error.attemptNumber || 1;
-        logInfo(`Retrying evaluation (attempt ${attemptNumber})...`);
+        logger.info(`Retrying evaluation (attempt ${attemptNumber})...`);
       },
     }) as ChatOpenAI;
   }
@@ -116,7 +120,7 @@ export class EvaluationNodeFactory {
         // Extract content to evaluate
         const content = options.contentExtractor(state);
         if (!content) {
-          logError(`No content to evaluate for ${options.contentType}`);
+          logger.error(`No content to evaluate for ${options.contentType}`);
           return {
             ...state,
             [options.statusField]: ProcessingStatus.ERROR,
@@ -134,7 +138,7 @@ export class EvaluationNodeFactory {
         // Load evaluation criteria
         const criteria = await loadJSONFile(options.criteriaPath);
         if (!criteria || !criteria.criteria) {
-          logError(
+          logger.error(
             `Failed to load evaluation criteria from ${options.criteriaPath}`
           );
           return {
@@ -163,7 +167,7 @@ export class EvaluationNodeFactory {
         );
 
         // Invoke the model with retry functionality built in
-        logInfo(`Evaluating ${options.contentType}...`);
+        logger.info(`Evaluating ${options.contentType}...`);
         const response = await model.invoke(prompt);
 
         // Process the response
@@ -185,7 +189,7 @@ export class EvaluationNodeFactory {
             throw new Error("Invalid evaluation result structure");
           }
         } catch (error) {
-          logError(`Failed to parse evaluation response: ${error}`);
+          logger.error(`Failed to parse evaluation response: ${error}`);
           return {
             ...state,
             [options.statusField]: ProcessingStatus.ERROR,
@@ -226,12 +230,12 @@ export class EvaluationNodeFactory {
           updatedState = options.stateUpdateCallback(updatedState, result);
         }
 
-        logInfo(
+        logger.info(
           `Evaluation complete for ${options.contentType}. Result: ${passed ? "Passed" : "Failed"} (${result.overallScore})`
         );
         return updatedState;
       } catch (error) {
-        logError(`Error in evaluation node: ${error}`);
+        logger.error(`Error in evaluation node: ${error}`);
         return {
           ...state,
           [options.statusField]: ProcessingStatus.ERROR,
@@ -313,5 +317,27 @@ Your response should be in JSON format:
       .replace(/([A-Z])/g, " $1")
       .toLowerCase()
       .trim();
+  }
+}
+
+// Implement loadJSONFile function directly instead of importing it
+async function loadJSONFile(filePath: string): Promise<any> {
+  try {
+    // Handle both absolute and relative paths
+    const resolvedPath = path.isAbsolute(filePath)
+      ? filePath
+      : path.resolve(process.cwd(), filePath);
+
+    // Check if file exists
+    if (!fs.existsSync(resolvedPath)) {
+      throw new Error(`File not found: ${resolvedPath}`);
+    }
+
+    // Read and parse the file
+    const rawData = fs.readFileSync(resolvedPath, "utf-8");
+    return JSON.parse(rawData);
+  } catch (error) {
+    logger.error(`Error loading JSON file: ${error}`);
+    return null;
   }
 }

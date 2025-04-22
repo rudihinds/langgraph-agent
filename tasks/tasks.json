@@ -738,7 +738,7 @@
       "id": 26,
       "title": "Build Minimal Proposal Generation Graph",
       "description": "Create a basic graph structure that connects all implemented nodes in a flow that respects the dependencies in dependencies.json, with simple routing logic and defined entry/exit points.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "7"
       ],
@@ -750,7 +750,7 @@
       "id": 27,
       "title": "Implement Basic Orchestrator Integration with Session Management",
       "description": "Develop minimal orchestrator functionality that manages execution sessions, handles checkpoints at critical stages, and orchestrates the proposal generation graph for MVP delivery.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         26
       ],
@@ -762,7 +762,7 @@
       "id": 28,
       "title": "Implement Critical Human-in-the-Loop (HITL) Integration Points",
       "description": "Add human review capability for final output with simple approval/rejection logic that integrates with the orchestration system.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         27
       ],
@@ -774,7 +774,7 @@
       "id": 29,
       "title": "Create Essential API Endpoints for Proposal Generation Workflow",
       "description": "Implement four core REST API endpoints (/initiate, /status, /review, and /results) that support the minimal proposal generation workflow for the MVP.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         27,
         28

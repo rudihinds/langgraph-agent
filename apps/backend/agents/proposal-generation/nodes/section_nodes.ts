@@ -6,7 +6,7 @@
  * proposal section using standardized prompts and tools.
  */
 
-import { SectionType } from "@/state/proposal.state.js";
+import { SectionType } from "../../../state/proposal.state.js";
 import { createSectionGeneratorNode } from "../utils/section_generator_factory.js";
 
 // Define prompt paths for each section

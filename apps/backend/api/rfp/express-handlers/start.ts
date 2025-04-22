@@ -11,7 +11,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { Logger } from "../../../lib/logger.js";
 import { OrchestratorService } from "../../../services/orchestrator.service.js";
-import { createProposalAgentWithCheckpointer } from "../../../agents/proposal-agent/graph.js";
+import { createProposalGenerationGraph } from "../../../agents/proposal-generation/index.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -74,7 +74,7 @@ export async function startProposalGeneration(
     }
 
     // Create graph with appropriate checkpointer (userId-based)
-    const graph = createProposalAgentWithCheckpointer(userId);
+    const graph = createProposalGenerationGraph(userId);
     if (!graph.checkpointer) {
       logger.error("Failed to create graph with checkpointer");
       res.status(500).json({
@@ -95,9 +95,7 @@ export async function startProposalGeneration(
       defaultDependencyMapPath
     );
 
-    logger.info(
-      `Starting proposal generation for user ${userId}`
-    );
+    logger.info(`Starting proposal generation for user ${userId}`);
 
     // Start the proposal generation with either format
     const { threadId, state } =

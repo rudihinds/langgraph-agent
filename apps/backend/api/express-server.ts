@@ -69,7 +69,21 @@ app.use((req, res) => {
     error: "Not found",
     message: "The requested endpoint does not exist",
   });
-});
+  });
 
 // Export the configured app
 export { app };
+
+// If this file is being executed directly, start the server
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log("Available endpoints:");
+    console.log("- GET /api/health - Health check");
+    console.log("- POST /api/rfp/start - Start proposal generation");
+    console.log("- POST /api/rfp/feedback - Submit feedback");
+    console.log("- POST /api/rfp/resume - Resume after feedback");
+    console.log("- GET /api/rfp/interrupt-status - Check interrupt status");
+  });
+}

@@ -6,14 +6,14 @@
  * in which they should be generated.
  */
 
-import { Logger } from "@/lib/logger.js";
+import { Logger } from "../../../lib/logger.js";
 import {
   OverallProposalState,
   ProcessingStatus,
   SectionType,
   SectionData,
   SectionProcessingStatus,
-} from "@/state/proposal.state.js";
+} from "../../../state/proposal.state.js";
 
 // Initialize logger
 const logger = Logger.getInstance();

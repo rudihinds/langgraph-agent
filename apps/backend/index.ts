@@ -1,8 +1,8 @@
 import { createServer } from "http";
 // import { createCustomAgent } from "./agents/basic-agent"; // Removed import
-import { runMultiAgentExample } from "./agents/multi-agent";
-import { runProposalAgent } from "./agents/proposal-agent/graph";
-import { runStreamingProposalAgent } from "./agents/proposal-agent/graph-streaming.js";
+// import { runMultiAgentExample } from "./agents/multi-agent"; // Removing multi-agent import
+import { runProposalAgent } from "./agents/proposal-generation/graph.js";
+import { runStreamingProposalAgent } from "./agents/proposal-generation/graph-streaming.js";
 import "dotenv/config";
 
 // Start a basic HTTP server
@@ -21,6 +21,8 @@ const server = createServer(async (req, res) => {
 
   // Basic router for different agent endpoints
   if (req.url === "/api/multi-agent" && req.method === "POST") {
+    // Commenting out multi-agent endpoint since the import is not available
+    /*
     try {
       let body = "";
       req.on("data", (chunk) => {
@@ -38,6 +40,9 @@ const server = createServer(async (req, res) => {
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Server error" }));
     }
+    */
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Multi-agent endpoint not implemented" }));
   } else if (req.url === "/api/proposal-agent" && req.method === "POST") {
     try {
       let body = "";
@@ -94,7 +99,6 @@ server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log("Available endpoints:");
   console.log("- GET /api/health - Health check");
-  console.log("- POST /api/multi-agent - Multi-agent system");
   console.log("- POST /api/proposal-agent - Proposal agent");
   console.log(
     "- POST /api/proposal-agent-streaming - Streaming proposal agent"
