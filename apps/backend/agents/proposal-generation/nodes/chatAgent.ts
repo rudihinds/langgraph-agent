@@ -136,37 +136,64 @@ export async function chatAgentNode(
       `Using ${filteredMessages.length} messages for reply generation`
     );
 
+    // Check state for context awareness
+    const rfpLoaded =
+      state.rfpDocument &&
+      state.rfpDocument.status === "loaded" &&
+      state.rfpDocument.text;
+
+    const researchStarted =
+      state.researchStatus && state.researchStatus !== "not_started";
+
+    const solutionStarted =
+      state.solutionStatus && state.solutionStatus !== "not_started";
+
+    const sectionsGenerated = state.sections && state.sections.size > 0;
+
     try {
-      // Enhanced system prompt with specific guidance based on intent
+      // Enhanced system prompt with specific guidance based on intent AND workflow state
       let systemPrompt = `You are a helpful proposal‑workflow assistant. Your goal is to guide users through creating effective business proposals.
       
 Respond to the user based on their intent shown below. Be conversational, specific, and action-oriented.
 
 DO NOT mention any internal tools, parsing, or intent recognition in your response.
 
-Available commands you can help with:
-- regenerate_section: Help users regenerate specific proposal sections
-- modify_section: Assist with modifying existing content
-- approve_section: Confirm when a section is approved
-- ask_question: Answer questions about proposal writing
-- help: Provide guidance on available features
-- other: General conversation
+IMPORTANT: You must guide the user through our specific proposal generation workflow:
+1. First, we need an RFP (Request For Proposal) document to analyze
+2. Then we perform research on the RFP
+3. Then we develop a solution approach 
+4. Finally, we generate proposal sections
 
-Your response should vary based on their specific intent and be tailored to proposal writing context.`;
+Based on the current state of the workflow, guide the user to take the appropriate next steps.`;
 
-      // Add specific additional guidance based on the intent type
+      // Add specific workflow state context
+      if (!rfpLoaded) {
+        systemPrompt += `\n\nThe workflow hasn't started yet. We need the user to provide an RFP document first. Ask them to provide an RFP document ID or text. This is a required first step for our proposal generation process.`;
+      } else if (!researchStarted) {
+        systemPrompt += `\n\nAn RFP document has been loaded, but research hasn't started yet. Guide the user to start the research phase.`;
+      } else if (!solutionStarted) {
+        systemPrompt += `\n\nResearch has been performed, but a solution approach hasn't been developed yet. Guide the user to start the solution development phase.`;
+      } else if (!sectionsGenerated) {
+        systemPrompt += `\n\nResearch and solution development are complete, but we haven't generated proposal sections yet. Guide the user to start generating specific sections.`;
+      } else {
+        systemPrompt += `\n\nWe're in the section generation and refinement phase. Help the user modify, approve, or regenerate specific sections.`;
+      }
+
+      // Add intent-specific context
       if (parsed.command === "regenerate_section") {
         systemPrompt += `\n\nFor regenerate_section intent: Explain how you can help them regenerate the section. Ask for confirmation if they want to proceed with regeneration.`;
       } else if (parsed.command === "modify_section") {
         systemPrompt += `\n\nFor modify_section intent: Ask what specific changes they want to make to the section. Offer suggestions for improvement if appropriate.`;
       } else if (parsed.command === "approve_section") {
         systemPrompt += `\n\nFor approve_section intent: Confirm that the section will be marked as approved. Thank them for their review.`;
+      } else if (parsed.command === "load_document") {
+        systemPrompt += `\n\nFor load_document intent: Guide the user through loading an RFP document. Ask them to provide the RFP ID or text.`;
       } else if (parsed.command === "ask_question") {
-        systemPrompt += `\n\nFor ask_question intent: Provide a detailed, helpful answer to their question about proposal writing.`;
+        systemPrompt += `\n\nFor ask_question intent: Provide a helpful answer, but be sure to guide them back to the main workflow afterward.`;
       } else if (parsed.command === "help") {
-        systemPrompt += `\n\nFor help intent: Explain the key features of the proposal writing system - regenerating sections, modifying content, approving sections, asking questions.`;
+        systemPrompt += `\n\nFor help intent: Explain our proposal generation workflow and guide them to the appropriate next step based on their current state in the process.`;
       } else {
-        systemPrompt += `\n\nFor other or general intents: Be helpful and conversational. Ask clarifying questions if their intent isn't clear.`;
+        systemPrompt += `\n\nFor other or general intents: Guide the user to the most appropriate next action in the workflow process.`;
       }
 
       const reply = await replyModel.invoke([
@@ -176,8 +203,14 @@ Your response should vary based on their specific intent and be tailored to prop
           `The user's message was: "${filteredMessages[filteredMessages.length - 1]?.content || "Unknown"}"
            
 Their interpreted intent is: ${JSON.stringify(parsed)}. 
+
+Current workflow state:
+- RFP Document: ${rfpLoaded ? "Loaded" : "Not loaded"}
+- Research: ${researchStarted ? "Started" : "Not started"}
+- Solution: ${solutionStarted ? "Started" : "Not started"}
+- Sections: ${sectionsGenerated ? "Some generated" : "None generated"}
            
-Respond conversationally and helpfully based on this intent, offering specific guidance for their proposal.`
+Respond conversationally and helpfully based on this intent, offering specific guidance for their next step in the proposal workflow.`
         ),
       ]);
 
@@ -197,16 +230,18 @@ Respond conversationally and helpfully based on this intent, offering specific g
       };
     } catch (error) {
       console.error("Error generating reply:", error);
-      // More helpful fallback messages based on intent type
+      // More process-aware fallback messages
       let fallbackMessage =
-        "I'm here to help with your proposal. Could you provide more details about what you need?";
+        "To start our proposal process, we need an RFP (Request For Proposal) document. Could you provide an RFP document ID or text?";
+
+      if (rfpLoaded) {
+        fallbackMessage =
+          "I see we have an RFP loaded. How would you like to proceed with your proposal? We can start research, develop a solution approach, or generate specific sections.";
+      }
 
       if (parsed.command === "help") {
         fallbackMessage =
-          "I can help you with writing proposals, including generating sections, modifying content, and answering questions. What would you like assistance with specifically?";
-      } else if (parsed.command === "ask_question") {
-        fallbackMessage =
-          "I'd be happy to answer your question about proposal writing. Could you provide more details about what you'd like to know?";
+          "Our proposal writing system follows a structured workflow: first load an RFP document, then research, develop a solution, and finally generate proposal sections. What would you like to do next?";
       }
 
       const fallbackReply = new AIMessage(fallbackMessage);
@@ -233,6 +268,20 @@ Respond conversationally and helpfully based on this intent, offering specific g
       temperature: 0,
     }).bindTools([interpretIntentTool]);
 
+    // Check state for context awareness
+    const rfpLoaded =
+      state.rfpDocument &&
+      state.rfpDocument.status === "loaded" &&
+      state.rfpDocument.text;
+
+    const researchStarted =
+      state.researchStatus && state.researchStatus !== "not_started";
+
+    const solutionStarted =
+      state.solutionStatus && state.solutionStatus !== "not_started";
+
+    const sectionsGenerated = state.sections && state.sections.size > 0;
+
     // Prepare a system message that helps guide the model's tool usage
     const systemPrompt = `You are a helpful assistant for a proposal generation system. 
 
@@ -252,7 +301,26 @@ WHEN TO RESPOND DIRECTLY (WITHOUT TOOLS):
 Always use the interpret_intent tool when the user request involves any actions related to the proposal content, workflow, or system functionality. 
 This helps the system understand what actions to take.
 
-Be helpful, conversational and concise.`;
+CURRENT WORKFLOW STATE:
+- RFP Document: ${rfpLoaded ? "Loaded" : "Not loaded"}
+- Research: ${researchStarted ? "Started" : "Not started"}
+- Solution: ${solutionStarted ? "Started" : "Not started"}
+- Sections: ${sectionsGenerated ? "Some generated" : "None generated"}
+
+WORKFLOW GUIDANCE:
+${
+  !rfpLoaded
+    ? "The user needs to load an RFP document as the first step. Guide them to provide an RFP ID or text."
+    : researchStarted
+      ? solutionStarted
+        ? sectionsGenerated
+          ? "The user is in the section refinement phase. Help them modify, approve, or regenerate sections."
+          : "The user needs to generate proposal sections. Guide them to start generating specific sections."
+        : "The user needs to develop a solution approach next. Guide them to start the solution development phase."
+      : "The user needs to start the research phase next. Guide them to initiate research."
+}
+
+Be helpful, conversational and concise while keeping them on the right path in our workflow.`;
 
     // Construct the messages array with a system prompt
     const promptMessages = [

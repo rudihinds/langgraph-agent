@@ -34,20 +34,32 @@ export const interpretIntentTool = tool(
   },
   {
     name: "interpret_intent",
-    description: `Determine what action the user intends based on their message in a proposal writing context.
+    description: `Determine what action the user intends based on their message in our proposal writing workflow.
       
+Our proposal generation workflow has these specific steps:
+1. Load an RFP document 
+2. Perform research on the RFP
+3. Develop a solution approach
+4. Generate and refine proposal sections
+
 Analyze the user's message and categorize the intent into one of these commands:
-- regenerate_section: When user wants to recreate or generate a proposal section from scratch
-- modify_section: When user wants to edit or change an existing section
-- approve_section: When user wants to mark a section as complete or approved
-- ask_question: When user is asking a question about proposal writing or the system
-- load_document: When user wants to upload or use a document
-- help: When user asks for general help, guidance, or explanation of capabilities
-- other: For general conversation, greetings, or intents that don't fit above categories
+- load_document: When user wants to start the process, upload an RFP, or mentions anything about providing a document 
+- regenerate_section: When user wants to recreate a proposal section
+- modify_section: When user wants to edit an existing section
+- approve_section: When user wants to mark a section as approved
+- ask_question: When user is asking a factual question unrelated to workflow actions
+- help: When user asks for guidance on what to do or how the system works
+- other: For general conversation or greetings
+
+IMPORTANT WORKFLOW GUIDANCE:
+- Any message about "help me write a proposal", "start a proposal", or similar should be interpreted as load_document since that's the first required step
+- References to "RFP", "document", "text", or "upload" strongly suggest load_document
+- Saying things like "I want to write a proposal for X" indicates load_document intent
+- Even vague statements about wanting proposal help should default to load_document if it's not clear what specific action they want
 
 Also extract the following (when applicable):
 - target_section: The specific section of the proposal being referenced (e.g., "executive summary", "problem statement")
-- request_details: Additional context or specifics about their request
+- request_details: Additional context or specifics about their request, especially any RFP ID or text they provide
 
 Analyze carefully to determine the most accurate intent and provide all relevant details.`,
     schema: z.object({ userMessage: z.string() }),
