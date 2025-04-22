@@ -137,13 +137,47 @@ export async function chatAgentNode(
     );
 
     try {
+      // Enhanced system prompt with specific guidance based on intent
+      let systemPrompt = `You are a helpful proposal‑workflow assistant. Your goal is to guide users through creating effective business proposals.
+      
+Respond to the user based on their intent shown below. Be conversational, specific, and action-oriented.
+
+DO NOT mention any internal tools, parsing, or intent recognition in your response.
+
+Available commands you can help with:
+- regenerate_section: Help users regenerate specific proposal sections
+- modify_section: Assist with modifying existing content
+- approve_section: Confirm when a section is approved
+- ask_question: Answer questions about proposal writing
+- help: Provide guidance on available features
+- other: General conversation
+
+Your response should vary based on their specific intent and be tailored to proposal writing context.`;
+
+      // Add specific additional guidance based on the intent type
+      if (parsed.command === "regenerate_section") {
+        systemPrompt += `\n\nFor regenerate_section intent: Explain how you can help them regenerate the section. Ask for confirmation if they want to proceed with regeneration.`;
+      } else if (parsed.command === "modify_section") {
+        systemPrompt += `\n\nFor modify_section intent: Ask what specific changes they want to make to the section. Offer suggestions for improvement if appropriate.`;
+      } else if (parsed.command === "approve_section") {
+        systemPrompt += `\n\nFor approve_section intent: Confirm that the section will be marked as approved. Thank them for their review.`;
+      } else if (parsed.command === "ask_question") {
+        systemPrompt += `\n\nFor ask_question intent: Provide a detailed, helpful answer to their question about proposal writing.`;
+      } else if (parsed.command === "help") {
+        systemPrompt += `\n\nFor help intent: Explain the key features of the proposal writing system - regenerating sections, modifying content, approving sections, asking questions.`;
+      } else {
+        systemPrompt += `\n\nFor other or general intents: Be helpful and conversational. Ask clarifying questions if their intent isn't clear.`;
+      }
+
       const reply = await replyModel.invoke([
-        new SystemMessage(
-          "You are a helpful proposal‑workflow assistant. Respond to the user conversationally based on their intent. Do not mention the parsing or tool internals."
-        ),
+        new SystemMessage(systemPrompt),
         ...filteredMessages,
         new HumanMessage(
-          `The user's interpreted intent is: ${JSON.stringify(parsed)}. Craft a helpful reply.`
+          `The user's message was: "${filteredMessages[filteredMessages.length - 1]?.content || "Unknown"}"
+           
+Their interpreted intent is: ${JSON.stringify(parsed)}. 
+           
+Respond conversationally and helpfully based on this intent, offering specific guidance for their proposal.`
         ),
       ]);
 
@@ -163,10 +197,19 @@ export async function chatAgentNode(
       };
     } catch (error) {
       console.error("Error generating reply:", error);
-      // Return a fallback reply in case of error
-      const fallbackReply = new AIMessage(
-        "I'm processing your request. Could you please provide more details?"
-      );
+      // More helpful fallback messages based on intent type
+      let fallbackMessage =
+        "I'm here to help with your proposal. Could you provide more details about what you need?";
+
+      if (parsed.command === "help") {
+        fallbackMessage =
+          "I can help you with writing proposals, including generating sections, modifying content, and answering questions. What would you like assistance with specifically?";
+      } else if (parsed.command === "ask_question") {
+        fallbackMessage =
+          "I'd be happy to answer your question about proposal writing. Could you provide more details about what you'd like to know?";
+      }
+
+      const fallbackReply = new AIMessage(fallbackMessage);
       console.log(
         "ChatAgentNode END (error fallback): Returning fallback reply"
       );
@@ -192,8 +235,24 @@ export async function chatAgentNode(
 
     // Prepare a system message that helps guide the model's tool usage
     const systemPrompt = `You are a helpful assistant for a proposal generation system. 
-When users ask you to perform actions related to the proposal, use the interpret_intent tool to understand their request.
-For general questions, just respond directly without using any tools.`;
+
+WHEN TO USE TOOLS:
+- When users ask to generate or regenerate proposal sections
+- When users want to modify existing proposal content
+- When users want to approve sections
+- When users want to load or upload documents
+- When users ask for help with the proposal system
+
+WHEN TO RESPOND DIRECTLY (WITHOUT TOOLS):
+- General questions about proposal writing best practices
+- Simple greetings or conversation
+- Clarification questions
+- When user asks factual questions that don't require system actions
+
+Always use the interpret_intent tool when the user request involves any actions related to the proposal content, workflow, or system functionality. 
+This helps the system understand what actions to take.
+
+Be helpful, conversational and concise.`;
 
     // Construct the messages array with a system prompt
     const promptMessages = [
