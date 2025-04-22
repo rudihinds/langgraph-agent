@@ -12,13 +12,13 @@ const router = express.Router();
 // Validation schema for feedback
 const feedbackSchema = z
   .object({
-    proposalId: z.string().min(1, "ProposalId is required"),
-    feedbackType: z.enum(
+  proposalId: z.string().min(1, "ProposalId is required"),
+  feedbackType: z.enum(
       [FeedbackType.APPROVE, FeedbackType.REVISE, FeedbackType.EDIT],
-      {
-        errorMap: () => ({ message: "Invalid feedback type" }),
-      }
-    ),
+    {
+      errorMap: () => ({ message: "Invalid feedback type" }),
+    }
+  ),
     // Comments are required for REVISE, optional for others
     comments: z.string().optional(),
     // Edited content is required for EDIT type

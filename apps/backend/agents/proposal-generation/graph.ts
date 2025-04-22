@@ -36,6 +36,11 @@ import { createCheckpointer } from "../../lib/persistence/checkpointer-factory.j
 import { sectionNodes } from "./nodes/section_nodes.js";
 import { ENV } from "../../lib/config/env.js";
 import { processFeedbackNode } from "./nodes/processFeedback.js";
+import { chatAgentNode, shouldContinueChat } from "./nodes/chatAgent.js";
+import { interpretIntentTool } from "../../tools/interpretIntentTool.js";
+import { processToolsNode } from "./nodes/toolProcessor.js";
+import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
+import { FeedbackType } from "../../lib/types/feedback.js";
 
 // Define node name constants for type safety
 const NODES = {
@@ -58,6 +63,8 @@ const NODES = {
   EVAL_RESEARCH: "evaluateResearch",
   EVAL_SOLUTION: "evaluateSolution",
   EVAL_CONNECTIONS: "evaluateConnections",
+  CHAT_AGENT: "chatAgent",
+  CHAT_TOOLS: "chatTools",
 } as const;
 
 // Type-safe node names
@@ -86,11 +93,21 @@ let proposalGenerationGraph: any = new StateGraph(
 // --------------------------------------------------------------------------------
 
 // Add base nodes for research and analysis
-proposalGenerationGraph.addNode(NODES.DOC_LOADER, documentLoaderNode);
+proposalGenerationGraph.addNode(NODES.DOC_LOADER, documentLoaderNode, {
+  // Mark this node as potentially reachable via Command objects
+  ends: [NODES.DEEP_RESEARCH],
+});
 proposalGenerationGraph.addNode(NODES.DEEP_RESEARCH, deepResearchNode);
 proposalGenerationGraph.addNode(NODES.SOLUTION_SOUGHT, solutionSoughtNode);
 proposalGenerationGraph.addNode(NODES.CONNECTION_PAIRS, connectionPairsNode);
 proposalGenerationGraph.addNode(NODES.SECTION_MANAGER, sectionManagerNode);
+
+// Add the chat agent node
+proposalGenerationGraph.addNode(NODES.CHAT_AGENT, chatAgentNode);
+
+// Create a ToolNode with the interpretIntentTool for proper tool handling
+console.log("Setting up custom tool processor for interpret_intent tool");
+proposalGenerationGraph.addNode(NODES.CHAT_TOOLS, processToolsNode);
 
 // Add section generation nodes from our factory
 proposalGenerationGraph.addNode(
@@ -200,7 +217,7 @@ Object.values(SectionType).forEach((sectionType) => {
     // Track successfully added nodes
     addedEvaluationNodes.add(sectionType);
     console.log(`Added evaluation node for ${sectionType}`);
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn(`Error adding evaluation node for ${sectionType}:`, error);
   }
 });
@@ -213,8 +230,33 @@ proposalGenerationGraph.addNode(NODES.PROCESS_FEEDBACK, processFeedbackNode);
 // They silence "Argument of type 'xyz' is not assignable to parameter of type
 // '__start__ | __start__[]'" errors until we adopt the reassignment‑pattern
 // which lets TypeScript track the ever‑growing node‑name union.
-(proposalGenerationGraph as any).addEdge("__start__", NODES.DOC_LOADER);
-(proposalGenerationGraph as any).addEdge(NODES.DOC_LOADER, NODES.DEEP_RESEARCH);
+
+// Add chat agent as the entry point
+(proposalGenerationGraph as any).addEdge("__start__", NODES.CHAT_AGENT);
+
+// Edge from tools back to agent
+console.log("Adding edge from CHAT_TOOLS back to CHAT_AGENT");
+(proposalGenerationGraph as any).addEdge(NODES.CHAT_TOOLS, NODES.CHAT_AGENT);
+
+// Conditional edges from chat agent
+console.log("Adding conditional edges from CHAT_AGENT");
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.CHAT_AGENT,
+  shouldContinueChat,
+  {
+    chatTools: NODES.CHAT_TOOLS,
+    regenerateSection: NODES.SECTION_MANAGER,
+    modifySection: NODES.SECTION_MANAGER,
+    approveSection: NODES.AWAIT_FEEDBACK,
+    answerQuestion: NODES.CHAT_AGENT,
+    loadDocument: NODES.DOC_LOADER,
+    __end__: END,
+  } as Record<string, NodeName | string>
+);
+
+// Original edge for documentLoader to deepResearch is now removed
+// as we want to route through chat router instead
+// (proposalGenerationGraph as any).addEdge(NODES.DOC_LOADER, NODES.DEEP_RESEARCH);
 (proposalGenerationGraph as any).addEdge(
   NODES.DEEP_RESEARCH,
   NODES.EVAL_RESEARCH
@@ -329,7 +371,7 @@ Object.values(SectionType).forEach((sectionType) => {
       routeAfterEvaluation,
       evalRoutingMap
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn(`Error connecting edges for ${sectionType}:`, error);
   }
 });

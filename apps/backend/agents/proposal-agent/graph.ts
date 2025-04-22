@@ -52,6 +52,10 @@ import {
   routeAfterSolutionReview,
   routeAfterSectionFeedback,
   routeFinalizeProposal,
+  routeAfterEvaluation,
+  routeAfterConnectionPairsEvaluation,
+  routeFromChat,
+  shouldContinueChat,
 } from "./conditionals.js";
 import { SupabaseCheckpointer } from "../../lib/persistence/supabase-checkpointer.js";
 import { LangGraphCheckpointer } from "../../lib/persistence/langgraph-adapter.js";
@@ -285,7 +289,7 @@ export function createProposalGenerationGraph(
   });
 
   // Stale content handling
-  graph.addConditionalEdges("handleStaleChoice", routeAfterStaleChoice, {
+  graph.addConditionalEdges("handleStaleChoice", routeAfterStaleContentChoice, {
     research: "research",
     solutionSought: "solutionSought",
     generateSection: "generateSection",

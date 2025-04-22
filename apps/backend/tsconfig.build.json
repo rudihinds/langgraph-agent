@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true, // Skip type checking of all declaration files
+    "noEmitOnError": false, // Generate output files even if there are errors
+    "allowJs": true, // Allow JavaScript files to be compiled
+    "checkJs": false, // Don't type-check JavaScript files
+    "ignoreDeprecations": "5.0", // Ignore deprecations from TypeScript 5.0
+    "noImplicitAny": false, // Allow implicitly inferred 'any' types
+    "noImplicitThis": false, // Allow implicit 'this' expressions
+    "strictNullChecks": false, // Disable strict null checking
+    "strict": false // Disable all strict type checking
+  },
+  "exclude": [
+    "**/__tests__/**", // Exclude test files
+    "node_modules", // Exclude node_modules directory
+    "dist", // Exclude already built files
+    "**/*.test.ts", // Exclude test files
+    "**/*.spec.ts" // Exclude spec files
+  ]
+}

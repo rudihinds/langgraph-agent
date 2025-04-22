@@ -284,6 +284,12 @@ export const ProposalStateAnnotation = Annotation.Root({
     reducer: (_current, newValue) => newValue || new Date().toISOString(), // Always update
     default: () => new Date().toISOString(),
   }),
+
+  // Intent
+  intent: Annotation<OverallProposalState["intent"] | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
 });
 
 /**
@@ -357,6 +363,9 @@ export function createInitialState(
     userId,
     createdAt: now,
     lastUpdatedAt: now,
+
+    // Intent
+    intent: undefined,
   };
 }
 

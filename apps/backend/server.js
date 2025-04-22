@@ -12,7 +12,7 @@ import { Logger } from "./lib/logger.js";
 const logger = Logger.getInstance("server");
 
 // Get port from environment variable or use default
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Start the server
 app.listen(PORT, () => {

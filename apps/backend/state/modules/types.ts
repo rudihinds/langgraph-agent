@@ -133,6 +133,24 @@ export interface WordLength {
 }
 
 /**
+ * Add intent command enumeration type
+ */
+export type UserCommand =
+  | "regenerate_section"
+  | "modify_section"
+  | "approve_section"
+  | "ask_question"
+  | "load_document"
+  | "help"
+  | "other";
+
+export interface UserIntent {
+  command: UserCommand;
+  targetSection?: string;
+  details?: string;
+}
+
+/**
  * Main state interface for the proposal generation system
  */
 export interface OverallProposalState {
@@ -184,6 +202,9 @@ export interface OverallProposalState {
   // Communication and errors
   messages: BaseMessage[];
   errors: string[];
+
+  // Chat router fields
+  intent?: UserIntent;
 
   // Metadata
   projectName?: string;

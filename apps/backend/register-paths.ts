@@ -5,8 +5,9 @@
  */
 import { register } from "tsconfig-paths";
 import { fileURLToPath } from "url";
-import { dirname, resolve } from "path";
+import { dirname, resolve, join } from "path";
 import * as fs from "fs";
+import { register as moduleAliasRegister } from "module-alias";
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +67,25 @@ try {
   console.error("❌ Failed to register TypeScript path aliases:", error);
   console.error("This might cause import errors with @/ path aliases.");
 }
+
+// Register path aliases
+moduleAliasRegister({
+  "@": join(__dirname),
+  "@/lib": join(__dirname, "lib"),
+  "@/state": join(__dirname, "state"),
+  "@/agents": join(__dirname, "agents"),
+  "@/tools": join(__dirname, "tools"),
+  "@/services": join(__dirname, "services"),
+  "@/api": join(__dirname, "api"),
+  "@/prompts": join(__dirname, "prompts"),
+  "@/tests": join(__dirname, "tests"),
+  "@/config": join(__dirname, "config"),
+  "@/utils": join(__dirname, "utils"),
+  "@/types": join(__dirname, "types"),
+  "@/proposal-generation": join(__dirname, "agents/proposal-generation"),
+  "@/evaluation": join(__dirname, "agents/evaluation"),
+  "@/orchestrator": join(__dirname, "agents/orchestrator"),
+});
 
 // Export the values
 export { registeredPaths, baseUrl };

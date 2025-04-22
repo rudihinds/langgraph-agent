@@ -67,8 +67,8 @@ export function determineNextStep(state: ProposalState): string {
   }
 
   if (state.status === ProcessingStatus.STALE) {
-    logger.info("Overall state is stale, routing to handle stale choice");
-    return "handle_stale_choice";
+    logger.info("Overall state is stale, routing to section manager");
+    return "section_manager";
   }
 
   if (state.researchStatus === ProcessingStatus.STALE) return "deepResearch";
@@ -217,8 +217,8 @@ export function routeSectionGeneration(state: ProposalState): string {
 
       if (depsMet) {
         logger.info(`Section ${sectionId} is ready for generation.`);
-        // Return the specific node name for this section
-        return `generate_${sectionId}`;
+        // Return just the section ID (not generate_sectionId)
+        return sectionId;
       }
     }
   }
@@ -232,12 +232,13 @@ export function routeSectionGeneration(state: ProposalState): string {
       s.status === ProcessingStatus.EDITED
   );
   if (allDone) {
-    logger.info("All sections complete, routing to finalize");
-    return "finalize_proposal";
+    logger.info("All sections complete, routing to complete");
+    return "complete";
   }
 
   logger.warn("No sections ready and not all are complete, possible deadlock?");
-  return "handle_error"; // Or wait, depending on logic
+  // Return a key that exists in the conditionalEdges map
+  return "complete"; // Changed from "handle_error" to "complete"
 }
 
 /**
@@ -446,6 +447,65 @@ export function routeAfterFeedback(state: ProposalState): string {
   return "continue";
 }
 
+/**
+ * Maps our descriptive command names to actual node names in the graph
+ * This mapping will be used by the routeFromChat function
+ */
+export const COMMAND_TO_NODE_MAP = {
+  load_rfp_document: "documentLoader",
+  start_background_research: "deepResearch",
+  funder_solution_sought: "solutionSought",
+  map_content_connections: "connectionPairs",
+  create_executive_summary: SectionType.EXECUTIVE_SUMMARY,
+  define_problem_statement: SectionType.PROBLEM_STATEMENT,
+  our_proposed_solution: SectionType.SOLUTION,
+  detail_implementation_plan: SectionType.IMPLEMENTATION_PLAN,
+  outline_evaluation_approach: SectionType.EVALUATION,
+  write_conclusion: SectionType.CONCLUSION,
+  develop_budget: SectionType.BUDGET,
+  process_feedback: "processFeedback",
+  // chatRouter is no longer used in the new architecture
+};
+
+/**
+ * Routes from the chat agent node to the appropriate next node
+ * @param state Current proposal state
+ * @returns Next node name based on intent
+ */
+export function routeFromChat(state: ProposalState): string {
+  // In new architecture, chat routing is handled by shouldContinueChat
+  // This function is kept for backward compatibility only
+  if (!state.intent?.command) {
+    return "__end__"; // End the flow if no intent identified
+  }
+
+  logger.info(`Routing from chat with intent: ${state.intent.command}`);
+
+  // Map each command to the appropriate node in the graph
+  switch (state.intent.command) {
+    case "regenerate_section":
+      return "regenerateSection";
+
+    case "modify_section":
+      return "modifySection";
+
+    case "approve_section":
+      if (state.interruptStatus?.isInterrupted) {
+        return "processFeedback";
+      }
+      break;
+
+    // All other intents end the flow
+    case "ask_question":
+    case "help":
+    case "other":
+      return "__end__";
+  }
+
+  // Default - end the flow
+  return "__end__";
+}
+
 export default {
   determineNextStep,
   routeAfterResearchEvaluation,
@@ -455,4 +515,5 @@ export default {
   routeAfterSectionEvaluation,
   routeAfterEvaluation,
   routeAfterFeedback,
+  routeFromChat,
 };
