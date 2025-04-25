@@ -176,10 +176,30 @@ These must be set in your environment for the middleware to function properly.
 The middleware defines a refresh threshold that determines when a token is considered close to expiration:
 
 ```javascript
-const TOKEN_REFRESH_THRESHOLD_SECONDS = 600; // 10 minutes
+const TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS = 600; // 10 minutes
 ```
 
 This is the window before token expiration when `req.tokenRefreshRecommended` will be set to `true`.
+
+### Helper Functions
+
+The middleware uses several helper functions to improve code organization and maintainability:
+
+```javascript
+// Creates standardized error response objects
+function createErrorResponse(status, errorType, message, additionalData = {}) {...}
+
+// Extracts and validates bearer token from authorization header
+function extractAuthToken(req, logger, requestId) {...}
+
+// Calculates token expiration time and sets appropriate request properties
+function processTokenExpiration(req, session, logger, requestId, userId) {...}
+
+// Handles authentication errors with appropriate responses
+function handleAuthError(res, error, logger, requestId) {...}
+```
+
+These functions help ensure consistent error handling, response formatting, and logging throughout the authentication process.
 
 ## Error Responses
 

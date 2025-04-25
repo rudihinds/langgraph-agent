@@ -32,7 +32,29 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
 
 ## Recent Changes
 
-1. Completed the implementation of the section manager node:
+1. Enhanced and Refactored Authentication Middleware with Token Refresh:
+
+   - Improved code organization and maintainability through functional decomposition
+   - Extracted token extraction, error response creation, and token expiration processing into separate functions
+   - Enhanced error handling with standardized response formats
+   - Improved logging with consistent structure and more detailed context
+   - Renamed constants for better clarity (TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS)
+   - Added comprehensive README.md documentation in the middleware directory
+   - Added long-term improvement tasks to TASK.md for future enhancements
+   - Cleaned up backend-auth.md documentation by removing excessive code snippets
+   - All tests continue to pass after refactoring
+
+2. Implemented Token Refresh Handling in Authentication Middleware:
+
+   - Enhanced the auth middleware to detect expired tokens and calculate token expiration time
+   - Added a `refresh_required` flag to 401 responses for expired tokens
+   - Implemented token expiration calculation for valid tokens
+   - Added `tokenExpiresIn` and `tokenRefreshRecommended` properties to request object
+   - Created comprehensive JSDoc documentation for all authentication middleware functions
+   - Developed a detailed README.md for the middleware directory
+   - Created a standard pattern for token refresh that can be reused across the application
+
+3. Completed the implementation of the section manager node:
 
    - Created a modular implementation in `apps/backend/agents/proposal-generation/nodes/section_manager.ts`
    - Implemented dependency resolution for sections using topological sorting
@@ -41,7 +63,7 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Verified the section manager correctly handles all section types defined in the SectionType enum
    - Ensured proper initialization of section data with appropriate metadata
 
-2. Completed the implementation of the problem statement node:
+4. Completed the implementation of the problem statement node:
 
    - Created a comprehensive implementation in `nodes/problem_statement.ts`
    - Integrated with LangChain for LLM-based section generation
@@ -49,13 +71,13 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Implemented context window management for large inputs
    - Added comprehensive error handling and test coverage
 
-3. Updated node exports and references:
+5. Updated node exports and references:
 
    - Moved from monolithic implementation in nodes.js to modular files
    - Updated exports to reference the new implementations
    - Maintained backward compatibility with existing graph structure
 
-4. Completed the RFP document integration implementation:
+6. Completed the RFP document integration implementation:
    - Successfully implemented document loading with rfpId from state
    - Enhanced documentLoaderNode with proper error handling
    - Added fallback mechanisms for document retrieval
@@ -84,6 +106,33 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Create interfaces for section editing and regeneration
 
 ## Active Decisions & Considerations
+
+### Authentication Token Refresh Strategy
+
+We've implemented a proactive token refresh approach in the authentication middleware:
+
+1. **Token Refresh Thresholds**:
+
+   - A threshold constant `TOKEN_REFRESH_THRESHOLD_SECONDS = 600` (10 minutes) defines when tokens should be refreshed
+   - Tokens with less than 10 minutes before expiration are flagged for refresh
+   - This balances security with user experience by preventing unnecessary refreshes
+
+2. **Expiration Metadata**:
+
+   - `req.tokenExpiresIn`: Number of seconds until token expiration
+   - `req.tokenRefreshRecommended`: Boolean flag indicating if token refresh is recommended
+   - This metadata allows route handlers to make informed decisions about token refresh
+
+3. **Expired Token Handling**:
+
+   - Expired tokens return a 401 response with `refresh_required: true`
+   - This special flag helps clients distinguish between expired tokens and other auth errors
+   - Enables frontend to implement automatic token refresh and request retry
+
+4. **Client Integration**:
+   - Frontend can add token refresh logic for proactive and reactive refresh scenarios
+   - Response headers (e.g., `X-Token-Refresh-Recommended`) can be used to signal refresh needs
+   - This pattern avoids unnecessary interruptions to the user experience
 
 ### Modular Node Implementation
 
@@ -209,60 +258,58 @@ We maintain consistent naming conventions:
    - Prioritization of the most relevant information
    - Graceful handling of oversized inputs
 
-5. **Comprehensive Testing**: Our test approach verifies:
-   - Happy path functionality
-   - Error handling and recovery
-   - State transitions and updates
-   - Integration with other components
+5. **Token Refresh Benefits**: Our token refresh approach provides:
+   - Enhanced security by detecting and handling expired tokens
+   - Improved user experience through proactive refresh before expiration
+   - Clear client-side integration patterns
+   - Standardized error handling for authentication
 
-## RFP Document Integration Feature
+## Authentication Middleware Implementation
 
-✅ The RFP document integration feature is now fully implemented and tested.
+✅ The token refresh handling in the authentication middleware is now fully implemented and tested.
 
 ### Current Implementation
 
 We have successfully implemented the following:
 
-1. **Document Loader Node Enhancements**:
+1. **Token Validation**:
 
-   - Accepts and processes `rfpId` from state
-   - Implements fallback mechanisms (state rfpId → environment variable → default ID)
-   - Properly handles different document formats (PDF, DOCX, etc.)
-   - Includes comprehensive error handling with actionable error messages
-   - All tests are passing with excellent coverage
+   - Validates JWT tokens from the Authorization header
+   - Creates authenticated Supabase client for the user
+   - Attaches user data and client to the request object
+   - Comprehensive error handling for invalid tokens
 
-2. **Chat Agent Integration**:
+2. **Token Expiration Detection**:
 
-   - Provides context-aware guidance based on document status
-   - Enhances system prompts with document-specific information
-   - Detects intent for document loading
-   - Handles conversation continuity across document loading
-   - Tests verify welcome messages adapt based on document status
+   - Calculates remaining time until token expiration
+   - Adds expiration metadata to the request object
+   - Flags tokens close to expiration for proactive refresh
+   - Special handling for already expired tokens
 
 3. **Error Handling**:
 
-   - Gracefully handles document not found scenarios
-   - Provides helpful error messages with recovery suggestions
-   - Handles storage access issues properly
-   - Tests verify all error paths work correctly
+   - Consistent error response structure
+   - Descriptive error messages for different auth scenarios
+   - Special flag for expired tokens to enable client-side refresh
+   - Comprehensive logging for security auditing
 
-4. **API Integration**:
-   - Start endpoint for new proposals with rfpId
-   - Continue endpoint for resuming existing proposals
-   - Authentication for document access
-   - Graph initialization with proper rfpId handling
+4. **Documentation**:
+   - JSDoc comments for all functions
+   - README.md for middleware directory
+   - Detailed examples for route handlers
+   - Client-side implementation recommendations
 
 ### Testing Results
 
-The comprehensive test suite for RFP document integration is now passing, including:
+The comprehensive test suite for authentication middleware is now passing, including:
 
-- Document ID handling tests (state, environment variable, default fallbacks)
-- Document retrieval tests (various formats, error conditions)
-- Error handling tests (graceful handling of various error conditions)
-- Large document handling tests (ensuring no timeouts)
-- PDF format processing tests
-- Flow tests for proper routing and state management
-- Chat agent tests for document-aware responses
+- Valid token authentication tests
+- Invalid token rejection tests
+- Expired token handling tests
+- Missing auth header tests
+- Token expiration calculation tests
+- Error response structure tests
+- Integration with document loading tests
 
 ## Node Status
 
@@ -468,6 +515,13 @@ router.post("/api/rfp/start", async (req, res) => {
    - Implement robust error recovery
 
 3. **API Design**:
+
    - Use clear naming conventions
    - Implement proper parameter validation
    - Provide helpful error messages
+
+4. **Authentication Middleware Design**:
+   - Use functional decomposition for clarity and testability
+   - Add comprehensive logging for security events
+   - Implement clear error patterns for different auth scenarios
+   - Consider both security and user experience in token refresh design

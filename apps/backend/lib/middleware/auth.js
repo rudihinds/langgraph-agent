@@ -22,7 +22,27 @@ import { createClient } from "@supabase/supabase-js";
 import { Logger } from "../logger.js";
 
 // Number of seconds before token expiration when refresh should be recommended (10 minutes)
-const TOKEN_REFRESH_THRESHOLD_SECONDS = 600;
+const TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS = 600;
+
+/**
+ * Creates a standardized error response object
+ *
+ * @param {number} status - HTTP status code for the response
+ * @param {string} errorType - Short error type identifier (e.g., "Invalid token")
+ * @param {string} message - Detailed error message
+ * @param {Object} [additionalData] - Optional additional fields to include in the response
+ * @returns {Object} Formatted error response object
+ */
+function createErrorResponse(status, errorType, message, additionalData = {}) {
+  return {
+    status,
+    responseBody: {
+      error: errorType,
+      message,
+      ...additionalData,
+    },
+  };
+}
 
 /**
  * Extracts bearer token from authorization header
@@ -35,7 +55,7 @@ const TOKEN_REFRESH_THRESHOLD_SECONDS = 600;
  * @param {string} requestId - Request identifier for logging
  * @returns {Object} Object containing either:
  *   - { token: string } - The successfully extracted token
- *   - { error: { status: number, message: string, error: string } } - Error information
+ *   - { error: Object } - Error response object from createErrorResponse
  */
 function extractAuthToken(req, logger, requestId) {
   const authHeader = req.headers.authorization;
@@ -43,11 +63,11 @@ function extractAuthToken(req, logger, requestId) {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     logger.warn("Missing or invalid authorization header", { requestId });
     return {
-      error: {
-        status: 401,
-        message: "Authorization header missing or invalid format",
-        error: "Authentication required",
-      },
+      error: createErrorResponse(
+        401,
+        "Authentication required",
+        "Authorization header missing or invalid format"
+      ),
     };
   }
 
@@ -56,11 +76,11 @@ function extractAuthToken(req, logger, requestId) {
   if (!token) {
     logger.warn("Empty token in authorization header", { requestId });
     return {
-      error: {
-        status: 401,
-        message: "Authentication token cannot be empty",
-        error: "Invalid token",
-      },
+      error: createErrorResponse(
+        401,
+        "Invalid token",
+        "Authentication token cannot be empty"
+      ),
     };
   }
 
@@ -93,23 +113,54 @@ function processTokenExpiration(req, session, logger, requestId, userId) {
   // Attach expiration metadata to request for downstream handlers
   req.tokenExpiresIn = timeRemainingSeconds;
   req.tokenRefreshRecommended =
-    timeRemainingSeconds <= TOKEN_REFRESH_THRESHOLD_SECONDS;
+    timeRemainingSeconds <= TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS;
+
+  // Prepare common log data for consistent structure
+  const logData = {
+    requestId,
+    userId,
+    timeRemaining: timeRemainingSeconds,
+    expiresAt: expiresAtSeconds,
+  };
 
   // Log appropriate message based on expiration proximity
   if (req.tokenRefreshRecommended) {
-    logger.warn("Token close to expiration", {
-      requestId,
-      timeRemaining: timeRemainingSeconds,
-      expiresAt: expiresAtSeconds,
-      userId,
-    });
+    logger.warn("Token close to expiration", logData);
   } else {
-    logger.info("Valid authentication", {
-      requestId,
-      userId,
-      tokenExpiresIn: timeRemainingSeconds,
-    });
+    logger.info("Valid authentication with healthy token expiration", logData);
   }
+}
+
+/**
+ * Handles authentication errors and sends appropriate response
+ *
+ * @param {Object} res - Express response object
+ * @param {Object} error - Error object from Supabase
+ * @param {Object} logger - Logger instance
+ * @param {string} requestId - Request identifier for logging
+ * @returns {void}
+ */
+function handleAuthError(res, error, logger, requestId) {
+  // Special handling for expired tokens
+  if (error.message && error.message.includes("expired")) {
+    logger.warn("Auth error: expired token", { requestId, error });
+    const { status, responseBody } = createErrorResponse(
+      401,
+      "Token expired",
+      "Token has expired",
+      { refresh_required: true }
+    );
+    return res.status(status).json(responseBody);
+  }
+
+  // Handle other authentication errors
+  logger.warn("Auth error: invalid token", { requestId, error });
+  const { status, responseBody } = createErrorResponse(
+    401,
+    "Invalid token",
+    error.message
+  );
+  return res.status(status).json(responseBody);
 }
 
 /**
@@ -171,10 +222,7 @@ export async function authMiddleware(req, res, next) {
   );
 
   if (extractError) {
-    return res.status(extractError.status).json({
-      error: extractError.error,
-      message: extractError.message,
-    });
+    return res.status(extractError.status).json(extractError.responseBody);
   }
 
   try {
@@ -184,10 +232,12 @@ export async function authMiddleware(req, res, next) {
 
     if (!supabaseUrl || !supabaseAnonKey) {
       logger.error("Missing Supabase environment variables", { requestId });
-      return res.status(500).json({
-        error: "Server configuration error",
-        message: "Server configuration error",
-      });
+      const { status, responseBody } = createErrorResponse(
+        500,
+        "Server configuration error",
+        "Server configuration error"
+      );
+      return res.status(status).json(responseBody);
     }
 
     // Initialize Supabase client with proper configuration
@@ -204,22 +254,7 @@ export async function authMiddleware(req, res, next) {
 
     // Handle authentication errors
     if (error) {
-      // Special handling for expired tokens
-      if (error.message && error.message.includes("expired")) {
-        logger.warn("Auth error: expired token", { requestId, error });
-        return res.status(401).json({
-          error: "Token expired",
-          message: "Token has expired",
-          refresh_required: true,
-        });
-      }
-
-      // Handle other authentication errors
-      logger.warn("Auth error", { requestId, error });
-      return res.status(401).json({
-        error: "Invalid token",
-        message: error.message,
-      });
+      return handleAuthError(res, error, logger, requestId);
     }
 
     // Authentication successful - attach user and supabase client to request
@@ -235,13 +270,15 @@ export async function authMiddleware(req, res, next) {
     // Handle unexpected errors
     logger.error("Unexpected auth error", {
       requestId,
-      error: err,
+      error: err.message,
       stack: err.stack,
     });
 
-    return res.status(500).json({
-      error: "Authentication error",
-      message: "Internal server error during authentication",
-    });
+    const { status, responseBody } = createErrorResponse(
+      500,
+      "Authentication error",
+      "Internal server error during authentication"
+    );
+    return res.status(status).json(responseBody);
   }
 }
