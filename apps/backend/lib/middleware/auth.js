@@ -21,7 +21,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { Logger } from "../logger.js";
 
-// Number of seconds before token expiration when refresh should be recommended (10 minutes)
+// Time threshold (in seconds) before token expiration when clients should be notified to refresh
+// 10 minutes provides adequate time for client-side refresh while not being too frequent
 const TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS = 600;
 
 /**
@@ -45,6 +46,36 @@ function createErrorResponse(status, errorType, message, additionalData = {}) {
 }
 
 /**
+ * Validates required Supabase environment variables
+ *
+ * @param {Object} logger - Logger instance
+ * @param {string} requestId - Request identifier for logging
+ * @returns {Object|null} Error response object if validation fails, null if successful
+ */
+function validateSupabaseConfig(logger, requestId) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    logger.error("Missing Supabase environment variables", {
+      requestId,
+      missingVars: {
+        url: !supabaseUrl,
+        anonKey: !supabaseAnonKey,
+      },
+    });
+
+    return createErrorResponse(
+      500,
+      "Server configuration error",
+      "Server configuration error"
+    );
+  }
+
+  return null;
+}
+
+/**
  * Extracts bearer token from authorization header
  *
  * Validates the Authorization header format and extracts the JWT token.
@@ -57,7 +88,7 @@ function createErrorResponse(status, errorType, message, additionalData = {}) {
  *   - { token: string } - The successfully extracted token
  *   - { error: Object } - Error response object from createErrorResponse
  */
-function extractAuthToken(req, logger, requestId) {
+function extractBearerToken(req, logger, requestId) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -94,32 +125,56 @@ function extractAuthToken(req, logger, requestId) {
  * 1. Calculates seconds remaining until token expiration
  * 2. Determines if token is close to expiration (within threshold)
  * 3. Attaches expiration metadata to the request object
- * 4. Logs warnings for tokens close to expiration
+ * 4. Sets X-Token-Refresh-Recommended header if token is close to expiring
+ * 5. Logs warnings for tokens close to expiration
  *
  * @param {Object} req - Express request object
+ * @param {Object} res - Express response object for setting headers
  * @param {Object} session - User session containing expiration timestamp
  * @param {Object} logger - Logger instance
  * @param {string} requestId - Request identifier for logging
  * @param {string} userId - User ID for logging
  * @returns {void}
  */
-function processTokenExpiration(req, session, logger, requestId, userId) {
-  if (!session || !session.expires_at) return;
+function processTokenExpiration(req, res, session, logger, requestId, userId) {
+  // Handle missing session data gracefully
+  if (!session) {
+    logger.warn("Missing session data during token expiration processing", {
+      requestId,
+      userId,
+    });
+    return;
+  }
+
+  // Handle missing expiration data
+  if (!session.expires_at) {
+    logger.warn("Session missing expiration timestamp", {
+      requestId,
+      userId,
+      session: { hasExpiresAt: false },
+    });
+    return;
+  }
 
   const currentTimeSeconds = Math.floor(Date.now() / 1000);
   const expiresAtSeconds = session.expires_at;
-  const timeRemainingSeconds = expiresAtSeconds - currentTimeSeconds;
+  const secondsUntilExpiration = expiresAtSeconds - currentTimeSeconds;
 
   // Attach expiration metadata to request for downstream handlers
-  req.tokenExpiresIn = timeRemainingSeconds;
+  req.tokenExpiresIn = secondsUntilExpiration;
   req.tokenRefreshRecommended =
-    timeRemainingSeconds <= TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS;
+    secondsUntilExpiration <= TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS;
+
+  // Set header to recommend token refresh if needed
+  if (req.tokenRefreshRecommended) {
+    res.setHeader("X-Token-Refresh-Recommended", "true");
+  }
 
   // Prepare common log data for consistent structure
   const logData = {
     requestId,
     userId,
-    timeRemaining: timeRemainingSeconds,
+    timeRemaining: secondsUntilExpiration,
     expiresAt: expiresAtSeconds,
   };
 
@@ -134,16 +189,20 @@ function processTokenExpiration(req, session, logger, requestId, userId) {
 /**
  * Handles authentication errors and sends appropriate response
  *
+ * Different authentication error types receive specialized handling:
+ * - Expired tokens: Include refresh_required flag to guide client-side refresh
+ * - Other auth errors: Return standard 401 with error details
+ *
  * @param {Object} res - Express response object
  * @param {Object} error - Error object from Supabase
  * @param {Object} logger - Logger instance
  * @param {string} requestId - Request identifier for logging
  * @returns {void}
  */
-function handleAuthError(res, error, logger, requestId) {
-  // Special handling for expired tokens
+function handleAuthenticationError(res, error, logger, requestId) {
+  // Special handling for expired tokens to facilitate client-side refresh
   if (error.message && error.message.includes("expired")) {
-    logger.warn("Auth error: expired token", { requestId, error });
+    logger.warn("Token expired", { requestId });
     const { status, responseBody } = createErrorResponse(
       401,
       "Token expired",
@@ -215,7 +274,7 @@ export async function authMiddleware(req, res, next) {
   const requestId = req.headers["x-request-id"] || "unknown";
 
   // Extract and validate token from authorization header
-  const { token, error: extractError } = extractAuthToken(
+  const { token, error: extractError } = extractBearerToken(
     req,
     logger,
     requestId
@@ -226,43 +285,46 @@ export async function authMiddleware(req, res, next) {
   }
 
   try {
-    // Check for required environment variables
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      logger.error("Missing Supabase environment variables", { requestId });
-      const { status, responseBody } = createErrorResponse(
-        500,
-        "Server configuration error",
-        "Server configuration error"
-      );
-      return res.status(status).json(responseBody);
+    // Validate Supabase configuration
+    const configError = validateSupabaseConfig(logger, requestId);
+    if (configError) {
+      return res.status(configError.status).json(configError.responseBody);
     }
 
     // Initialize Supabase client with proper configuration
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
+    const supabaseClient = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      },
-    });
+      }
+    );
 
     // Validate the token and get the user
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await supabaseClient.auth.getUser();
 
     // Handle authentication errors
     if (error) {
-      return handleAuthError(res, error, logger, requestId);
+      return handleAuthenticationError(res, error, logger, requestId);
     }
 
     // Authentication successful - attach user and supabase client to request
     req.user = data.user;
-    req.supabase = supabase;
+    req.supabase = supabaseClient;
 
     // Process token expiration information
-    processTokenExpiration(req, data.session, logger, requestId, data.user.id);
+    processTokenExpiration(
+      req,
+      res,
+      data.session,
+      logger,
+      requestId,
+      data.user.id
+    );
 
     // Continue to next middleware or route handler
     next();

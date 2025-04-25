@@ -33,6 +33,15 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ Added comprehensive error handling for document loading
    - ✅ Created context-aware chat responses based on document status
    - ✅ All RFP integration tests are now passing
+6. **Authentication Middleware Enhancement**:
+   - ✅ Implemented token refresh handling in the auth middleware
+   - ✅ Added proactive token expiration detection with 10-minute threshold
+   - ✅ Created standardized response format for expired tokens with refresh_required flag
+   - ✅ Added token expiration metadata to the request object
+   - ✅ Implemented resilient edge case handling for missing session data and expiration timestamps
+   - ✅ Created comprehensive documentation and README.md for the middleware
+   - ✅ All authentication tests are now passing, including edge cases
+   - ✅ Implemented client-side integration guidance
 
 ### Next
 
@@ -84,10 +93,18 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - Clear integration points for human feedback via the OrchestratorService
 
 7. **Document Loading Strategy**: We've implemented a robust approach for document handling:
+
    - Fallback chain for document ID resolution (state → environment → default)
    - Format-agnostic document processing (supports PDF, DOCX, etc.)
    - Comprehensive error handling with actionable messages
    - Consistent state updates to track document status
+
+8. **Authentication and Token Refresh Strategy**: We've implemented a comprehensive approach for authentication:
+   - Token validation with detailed error handling for different failure modes
+   - Proactive token expiration detection with a 10-minute threshold
+   - Token refresh recommendations for tokens nearing expiration
+   - Special handling for expired tokens with clear client guidance
+   - Standardized error response structure for authentication failures
 
 ## Completed Tasks
 
@@ -112,11 +129,20 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
   - Established consistent error handling and state management patterns across all nodes
 
 - Completed RFP Document Integration
+
   - Enhanced `documentLoaderNode` to work with rfpId from various sources
   - Updated graph initialization to include rfpId in initial state
   - Implemented comprehensive error handling for document loading
   - Created extensive test suite covering all key functionality
   - All tests are now passing
+
+- Implemented Authentication Middleware Enhancements
+  - Added token refresh handling in auth middleware
+  - Created token expiration detection and metadata
+  - Implemented standardized error responses for different auth scenarios
+  - Added comprehensive JSDoc documentation
+  - Created README.md for middleware directory
+  - All authentication tests are now passing
 
 ## Current Status
 
@@ -136,12 +162,23 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
   - Standardized evaluation for all research outputs with HITL integration
 
 - The RFP integration feature is now fully implemented:
+
   - Document loading with rfpId support
   - Fallback mechanisms for document ID resolution
   - Format-agnostic document processing
   - Comprehensive error handling
   - Context-aware chat responses
   - All tests passing
+
+- The authentication middleware has been enhanced:
+  - Token refresh handling with expiration detection and calculation
+  - Proactive refresh recommendations for tokens nearing expiration (10-minute threshold)
+  - Special handling for expired tokens with refresh_required flag
+  - Consistent error response structure for all auth scenarios
+  - Resilient edge case handling for missing session data and expiration timestamps
+  - Detailed logging for security auditing
+  - Comprehensive documentation with client-side integration patterns
+  - All tests passing, including edge cases
 
 ## Next Steps
 
@@ -171,7 +208,7 @@ _This document should be updated whenever significant progress is made on the pr
 
 - **Document Loading**: The document loader node successfully extracts content from RFP documents using the provided `rfpId`.
 - **Research Integration**: Deep research node with document context works correctly.
-- **Authentication**: Supabase authentication is integrated.
+- **Authentication**: Supabase authentication is integrated with token refresh handling.
 - **API Endpoints**: Express API endpoints for proposal lifecycle management are implemented.
 - **Core Generation Flow**: Basic flow from document loading to section generation functions correctly.
 - **Human Review**: Human-in-the-loop approval/review process for sections is working.
@@ -181,6 +218,7 @@ _This document should be updated whenever significant progress is made on the pr
 - **API Integration**: Added continue API endpoint with proper authentication and error handling.
 - **RFP Testing**: All tests for RFP document integration are now passing.
 - **Error Handling**: Comprehensive error handling for document loading issues with clear error messages.
+- **Token Refresh**: Authentication middleware now handles token expiration and refresh requirements.
 
 ## Current Development Status
 
@@ -193,6 +231,7 @@ _This document should be updated whenever significant progress is made on the pr
 | API Integration                    | Complete | 100%                |
 | User Authentication                | Complete | 100%                |
 | Error Handling                     | Complete | 100%                |
+| Token Refresh                      | Complete | 100%                |
 
 ## What's Left to Build
 
@@ -207,7 +246,16 @@ _This document should be updated whenever significant progress is made on the pr
 - [x] Create continue endpoint for existing proposals
 - [x] Implement comprehensive testing for RFP integration
 
-### Phase 2: User Flow Enhancement
+### Phase 2: Authentication Enhancement (Completed)
+
+- [x] Implement token refresh detection in authentication middleware
+- [x] Add token expiration metadata to request object
+- [x] Create special handling for expired tokens with refresh_required flag
+- [x] Add comprehensive JSDoc documentation
+- [x] Create README.md for middleware directory
+- [x] Implement comprehensive testing for auth middleware
+
+### Phase 3: User Flow Enhancement
 
 - [ ] Implement unified proposal listing with RFP details
 - [ ] Create document selection interface
@@ -215,7 +263,7 @@ _This document should be updated whenever significant progress is made on the pr
 - [ ] Implement section editing interface
 - [ ] Add proposal export functionality
 
-### Phase 3: Quality Improvements
+### Phase 4: Quality Improvements
 
 - [x] Implement comprehensive test cases outlined in init-rfp.md
 - [x] Enhance error recovery suggestions
@@ -260,6 +308,76 @@ ${documentStatus}
 
 // Rest of the prompt...
 `;
+```
+
+### Authentication Middleware with Token Refresh Handling
+
+```javascript
+/**
+ * Calculates token expiration information and attaches it to the request
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} session - User session containing expiration timestamp
+ * @param {Object} logger - Logger instance
+ * @param {string} requestId - Request identifier for logging
+ * @param {string} userId - User ID for logging
+ */
+function processTokenExpiration(req, session, logger, requestId, userId) {
+  if (!session || !session.expires_at) return;
+
+  const currentTimeSeconds = Math.floor(Date.now() / 1000);
+  const expiresAtSeconds = session.expires_at;
+  const timeRemainingSeconds = expiresAtSeconds - currentTimeSeconds;
+
+  // Attach expiration metadata to request for downstream handlers
+  req.tokenExpiresIn = timeRemainingSeconds;
+  req.tokenRefreshRecommended =
+    timeRemainingSeconds <= TOKEN_REFRESH_THRESHOLD_SECONDS;
+
+  // Log appropriate message based on expiration proximity
+  if (req.tokenRefreshRecommended) {
+    logger.warn("Token close to expiration", {
+      requestId,
+      timeRemaining: timeRemainingSeconds,
+      expiresAt: expiresAtSeconds,
+      userId,
+    });
+  } else {
+    logger.info("Valid authentication", {
+      requestId,
+      userId,
+      tokenExpiresIn: timeRemainingSeconds,
+    });
+  }
+}
+```
+
+### Special Handling for Expired Tokens
+
+```javascript
+// Special handling for expired tokens
+if (error.message && error.message.includes("expired")) {
+  logger.warn("Auth error: expired token", { requestId, error });
+  return res.status(401).json({
+    error: "Token expired",
+    message: "Token has expired",
+    refresh_required: true,
+  });
+}
+```
+
+### Route Handler Usage Example
+
+```javascript
+app.get("/api/data", authMiddleware, (req, res) => {
+  // If token is close to expiration, suggest a refresh
+  if (req.tokenRefreshRecommended) {
+    res.set("X-Token-Refresh-Recommended", "true");
+  }
+
+  // Proceed with normal request handling
+  res.json({ data: "Your data" });
+});
 ```
 
 ### Graph Edge for Document Flow

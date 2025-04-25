@@ -15,6 +15,7 @@ The authentication middleware is responsible for ensuring that requests to prote
 - **JWT Token Validation**: Verifies tokens using Supabase Auth
 - **Automatic Token Expiration Detection**: Identifies and handles expired tokens
 - **Proactive Token Refresh**: Calculates token lifetime and flags tokens nearing expiration
+- **Resilient Edge Case Handling**: Gracefully handles missing session data or expiration timestamps
 - **Standardized Error Handling**: Provides consistent error responses for authentication failures
 - **Authenticated Supabase Client**: Attaches an authenticated Supabase client to the request
 
@@ -51,6 +52,7 @@ export default router;
    - User data is attached to `req.user`
    - Authenticated Supabase client is attached to `req.supabase`
    - Token expiration data is calculated and attached to the request
+   - Response header is set when refresh is recommended
 4. For invalid or expired tokens:
    - Request is rejected with a 401 status code
    - Appropriate error messages are returned
@@ -64,19 +66,48 @@ The middleware calculates the time remaining until token expiration and attaches
 - `req.tokenExpiresIn`: Number of seconds until the token expires
 - `req.tokenRefreshRecommended`: Boolean flag indicating if the token is close to expiration (within 10 minutes)
 
-Route handlers can use these properties to notify clients that a token refresh is recommended:
+For tokens that are close to expiration, the middleware will also automatically add a header to the response:
+
+```
+X-Token-Refresh-Recommended: true
+```
+
+Route handlers can still add additional response headers if needed:
 
 ```javascript
 app.get("/api/data", authMiddleware, (req, res) => {
-  // If token is close to expiration, suggest a refresh
-  if (req.tokenRefreshRecommended) {
-    res.set("X-Token-Refresh-Recommended", "true");
+  // The middleware already sets the X-Token-Refresh-Recommended header
+  // when req.tokenRefreshRecommended is true
+
+  // Additional custom headers can be added
+  if (req.tokenExpiresIn < 300) {
+    // Less than 5 minutes
+    res.set("X-Token-Critical", "true");
   }
 
   // Proceed with normal request handling
   res.json({ data: "Your data" });
 });
 ```
+
+### Edge Case Handling
+
+The middleware gracefully handles several edge cases:
+
+1. **Missing Session Data**: If the token validation returns a user but no session data, the middleware:
+
+   - Still attaches the user data to the request
+   - Logs a warning about the missing session data
+   - Does not calculate or attach token expiration data to the request
+   - Does not set any refresh recommendation headers
+
+2. **Missing Expiration Timestamp**: If the session data exists but has no expiration timestamp, the middleware:
+   - Still attaches the user data to the request
+   - Logs a warning about the missing expiration data
+   - Does not calculate or attach token expiration data to the request
+   - Does not set any refresh recommendation headers
+
+This resilience ensures the middleware doesn't break the request flow when dealing with non-standard token responses.
 
 ### For Expired Tokens
 
@@ -179,7 +210,10 @@ The middleware defines a refresh threshold that determines when a token is consi
 const TOKEN_REFRESH_RECOMMENDATION_THRESHOLD_SECONDS = 600; // 10 minutes
 ```
 
-This is the window before token expiration when `req.tokenRefreshRecommended` will be set to `true`.
+This is the window before token expiration when:
+
+- `req.tokenRefreshRecommended` will be set to `true`
+- The `X-Token-Refresh-Recommended` header will be automatically added to the response
 
 ### Helper Functions
 
@@ -189,14 +223,17 @@ The middleware uses several helper functions to improve code organization and ma
 // Creates standardized error response objects
 function createErrorResponse(status, errorType, message, additionalData = {}) {...}
 
+// Validates required Supabase environment variables
+function validateSupabaseConfig(logger, requestId) {...}
+
 // Extracts and validates bearer token from authorization header
-function extractAuthToken(req, logger, requestId) {...}
+function extractBearerToken(req, logger, requestId) {...}
 
 // Calculates token expiration time and sets appropriate request properties
-function processTokenExpiration(req, session, logger, requestId, userId) {...}
+function processTokenExpiration(req, res, session, logger, requestId, userId) {...}
 
 // Handles authentication errors with appropriate responses
-function handleAuthError(res, error, logger, requestId) {...}
+function handleAuthenticationError(res, error, logger, requestId) {...}
 ```
 
 These functions help ensure consistent error handling, response formatting, and logging throughout the authentication process.
@@ -221,6 +258,7 @@ The middleware logs authentication events and errors using the application logge
   - Tokens close to expiration
   - Missing/invalid authorization headers
   - Authentication errors and expired tokens
+  - Missing session data or expiration timestamps
 - **Error level**: Configuration or unexpected errors
 
 Each log entry includes the request ID (from `x-request-id` header) for request tracing.
@@ -229,14 +267,16 @@ Each log entry includes the request ID (from `x-request-id` header) for request 
 
 The middleware has comprehensive tests in:
 
-- `lib/middleware/__tests__/auth.test.js`: Unit tests for general functionality
-- `lib/middleware/__tests__/auth-refresh.test.js`: Tests specific to token refresh functionality
-- `__tests__/integration/auth-document-flow.test.js`: Integration tests with the rest of the application
+- `lib/middleware/__tests__/auth.test.js`: Unit tests covering:
+  - Valid token validation
+  - Token expiration detection
+  - Refresh recommendation handling
+  - Edge cases (missing session data, missing expiration time)
 
 To run the tests:
 
 ```bash
-npx vitest run lib/middleware/__tests__/auth.test.js lib/middleware/__tests__/auth-refresh.test.js __tests__/integration/auth-document-flow.test.js
+npx vitest run lib/middleware/__tests__/auth.test.js
 ```
 
 ## Integration with Other Components
@@ -247,6 +287,7 @@ The authentication middleware integrates with:
 - **Logging System**: For logging authentication events and errors
 - **Route Handlers**: Provides user data and Supabase client to route handlers
 - **Error Handlers**: Standardized error responses for failed authentication
+- **Document Loading**: Authenticated client is used for secure storage access
 
 ## Security Considerations
 
@@ -254,3 +295,12 @@ The authentication middleware integrates with:
 - Invalid tokens are immediately rejected with a 401 status
 - Environment variables for Supabase credentials should be properly secured
 - Token refresh should be implemented securely on the client to avoid exposing refresh tokens
+- Automatically sets refresh headers without requiring route handler implementation
+- Includes detailed error messages for debugging while maintaining security
+
+## Future Improvements
+
+- Add rate limiting for token validation attempts
+- Implement token blacklisting for revoked tokens
+- Add support for custom authorization schemes beyond Bearer tokens
+- Enhance logging with more context for security auditing
