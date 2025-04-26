@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Message, StreamContextType } from "../lib/types.js";
+import { Message, StreamContextType } from "../lib/types";
+import { createAuthInterceptor } from "../../../lib/api/auth-interceptor";
 
 // Create a default context for Stream provider
 const StreamContext = createContext<StreamContextType | null>(null);
@@ -19,11 +20,17 @@ interface StreamProviderProps {
 }
 
 // Stream provider component
-export const StreamProvider: React.FC<StreamProviderProps> = ({ children, rfpId }) => {
+export const StreamProvider: React.FC<StreamProviderProps> = ({
+  children,
+  rfpId,
+}) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [threadId, setThreadId] = useState<string>("default-thread");
+
+  // Initialize auth interceptor
+  const authInterceptor = createAuthInterceptor();
 
   // Connect to the LangGraph backend with the rfpId if provided
   useEffect(() => {
@@ -48,8 +55,8 @@ export const StreamProvider: React.FC<StreamProviderProps> = ({ children, rfpId 
 
       setMessages((prev) => [...prev, newMessage]);
 
-      // Make an API call to your LangGraph backend
-      const response = await fetch("/api/langgraph/chat", {
+      // Make an API call to your LangGraph backend using auth interceptor
+      const response = await authInterceptor.fetch("/api/langgraph/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -5,6 +5,8 @@ module.exports = {
     "./index.html",
     "./src/**/*.{ts,tsx,js,jsx}",
     "./agent/**/*.{ts,tsx,js,jsx}",
+    "./src/components/chat-ui/**/*.{ts,tsx,js,jsx}",
+    "./app/**/*.{ts,tsx,js,jsx}",
   ],
   theme: {
     container: {
