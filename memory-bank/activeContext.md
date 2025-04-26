@@ -75,7 +75,18 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Updated backend-auth.md to reflect completed implementation
    - Integrated with existing authentication and rate limiting middleware
 
-5. Completed the implementation of the section manager node:
+5. Implemented Token Refresh Header in Route Handlers:
+
+   - Created comprehensive tests for token refresh header functionality in chat routes
+   - Implemented the token refresh awareness in the chat router
+   - Added the `X-Token-Refresh-Recommended` header when tokens are nearing expiration
+   - Created proper TypeScript interfaces for authenticated requests
+   - Added detailed logging for token refresh recommendations
+   - Followed TDD approach with Red-Green-Refactor cycle
+   - Completed full implementation of Route Handler token refresh requirements
+   - All tests passing with both positive and negative cases covered
+
+6. Completed the implementation of the section manager node:
 
    - Created a modular implementation in `apps/backend/agents/proposal-generation/nodes/section_manager.ts`
    - Implemented dependency resolution for sections using topological sorting
@@ -84,7 +95,7 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Verified the section manager correctly handles all section types defined in the SectionType enum
    - Ensured proper initialization of section data with appropriate metadata
 
-6. Completed the implementation of the problem statement node:
+7. Completed the implementation of the problem statement node:
 
    - Created a comprehensive implementation in `nodes/problem_statement.ts`
    - Integrated with LangChain for LLM-based section generation
@@ -92,13 +103,13 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Implemented context window management for large inputs
    - Added comprehensive error handling and test coverage
 
-7. Updated node exports and references:
+8. Updated node exports and references:
 
    - Moved from monolithic implementation in nodes.js to modular files
    - Updated exports to reference the new implementations
    - Maintained backward compatibility with existing graph structure
 
-8. Completed the RFP document integration implementation:
+9. Completed the RFP document integration implementation:
    - Successfully implemented document loading with rfpId from state
    - Enhanced documentLoaderNode with proper error handling
    - Added fallback mechanisms for document retrieval
@@ -290,6 +301,7 @@ We maintain consistent naming conventions:
 ✅ The token refresh handling in the authentication middleware is now fully implemented, tested, and documented.
 ✅ The rate limiting middleware is now fully implemented, tested, and documented with improvement plans.
 ✅ The request timeout handling is now fully implemented, tested, and documented.
+✅ The token refresh header functionality in route handlers is now fully implemented, tested, and documented.
 
 ### Current Implementation
 
@@ -338,14 +350,23 @@ We have successfully implemented the following:
    - Detailed logging for tracking timeout patterns
    - Support for client notification of approaching timeouts
 
-6. **Code Organization**:
+6. **Route Handler Token Refresh**:
+
+   - Implementation of `X-Token-Refresh-Recommended` header in route handlers
+   - TypeScript interfaces for authenticated requests
+   - Proper check for token refresh recommendation from middleware
+   - Detailed logging of token expiration information
+   - Comprehensive test coverage for various scenarios
+   - Clean implementation following TDD principles
+
+7. **Code Organization**:
 
    - Refactored into helper functions for better maintainability
    - Consistent error response creation
    - Proper middleware integration with Express.js
    - Clear separation of concerns
 
-7. **Documentation**:
+8. **Documentation**:
    - Comprehensive JSDoc comments for all functions
    - Detailed README.md in the middleware directory
    - Usage examples for route handlers
@@ -354,7 +375,7 @@ We have successfully implemented the following:
 
 ### Testing Results
 
-The comprehensive test suite for authentication middleware is now passing, including:
+The comprehensive test suite for authentication is now passing, including:
 
 - ✅ Valid token authentication tests
 - ✅ Invalid token rejection tests
@@ -364,6 +385,7 @@ The comprehensive test suite for authentication middleware is now passing, inclu
 - ✅ Edge case handling tests (missing session data, missing expiration time)
 - ✅ Error response structure tests
 - ✅ Integration with document loading tests
+- ✅ Route handler token refresh header tests
 
 ### Implementation Insights
 
@@ -376,6 +398,8 @@ The comprehensive test suite for authentication middleware is now passing, inclu
 4. **Resilient Edge Case Handling**: Gracefully handling missing session data or expiration timestamps ensures the middleware doesn't break the request flow in non-standard scenarios.
 
 5. **Clear Client Integration Patterns**: The README documentation provides clear guidance for client-side token refresh implementation.
+
+6. **TDD Approach Benefits**: Following a Test-Driven Development approach led to cleaner code, better separation of concerns, and more comprehensive test coverage.
 
 ## Node Status
 
