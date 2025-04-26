@@ -151,6 +151,7 @@ The test suite for the authentication system is organized into phases, with cove
   - Added detailed logging for request timeouts
 
 - ✅ Route Handler Token Refresh Awareness
+
   - Implemented token refresh header functionality in API routes
   - Added `X-Token-Refresh-Recommended` header when tokens are nearing expiration
   - Created TypeScript interfaces for authenticated requests
@@ -158,10 +159,58 @@ The test suite for the authentication system is organized into phases, with cove
   - Implemented complete end-to-end testing covering various scenarios
   - Used Test-Driven Development approach for clean implementation
 
+- ✅ Document Loader Authentication
+  - Implemented authentication-aware document loading in `documentLoaderNode`
+  - Created client type tracking for distinguishing between authenticated and server access
+  - Added proper error handling with client-specific context
+  - Implemented clear error classification (authorization vs. not found vs. parsing errors)
+  - Added timestamp and metadata tracking for document operations
+  - Created comprehensive test suite for authenticated document access
+  - All document loader authentication tests passing with high coverage
+
 ### Pending
 
 - Frontend Token Refresh Interceptor
 - NextJS Authentication Higher-Order Functions
+
+## Document Loader Authentication Best Practices
+
+The document loader implementation provides a secure pattern for authenticated document access:
+
+### Authentication Pattern
+
+1. **Context-Based Authentication**
+
+   - The document loader accepts an optional `context` parameter with authenticated client
+   - Falls back to server client only when authenticated client is unavailable
+   - Tracks which client type was used in the response metadata
+
+2. **Error Classification**
+
+   - Distinguishes between authentication/authorization errors and other failures
+   - Uses error status codes (403) to identify permission issues
+   - Provides clear error types to inform client response strategies
+
+3. **Metadata Tracking**
+   - Records which client was used for each operation
+   - Timestamps all operations for audit trails
+   - Includes user context when available
+
+### Security Considerations
+
+- Always prefer authenticated client over server client
+- Perform proper error classification to avoid exposing sensitive information
+- Track and log all document access including client type
+- Include appropriate RLS policies in Supabase for document buckets
+- Validate document ownership before allowing access
+
+### Future Security Enhancements
+
+- Implement document size validation to prevent DoS attacks
+- Add path sanitization for document IDs to prevent path traversal
+- Implement streaming for large documents to prevent memory issues
+- Consider implementing document access auditing
+- Add document versioning and change tracking for sensitive RFPs
 
 ## Future Improvements
 

@@ -394,3 +394,103 @@ These should be considered as the application and team scales:
   - Current issue: Limited configurability for advanced use cases
   - Risk: Custom requirements need middleware modifications
   - Solution: Expand configuration API for custom response formats, headers, etc.
+
+## Document Loader Improvements
+
+### Overview
+
+We've implemented a document loader node that handles RFP document retrieval from Supabase storage with support for both authenticated and server-side clients. While the implementation is functional and passes all tests, there are several areas for improvement to enhance security, performance, and reliability.
+
+### Priority Improvements
+
+- **[HIGH]** Implement document size validation and limits
+
+  - Current issue: No size checks before loading entire documents into memory
+  - Risk: Memory overflow errors with large RFPs (>50MB)
+  - Fix: Add size validation before loading, implement streaming for large documents
+
+- **[HIGH]** Add rfpId validation and sanitization
+
+  - Current issue: No sanitization of rfpId before constructing storage paths
+  - Risk: Potential path traversal vulnerabilities if rfpId comes from untrusted sources
+  - Fix: Implement strict validation of rfpId format with regex or dedicated validator
+
+- **[HIGH]** Support multiple documents per RFP
+
+  - Current issue: Architecture assumes single document per RFP (`${rfpId}/document.pdf`)
+  - Risk: Unable to handle real-world RFPs with multiple documents/attachments
+  - Fix: Redesign storage path structure and loader to support document collections
+
+- **[MEDIUM]** Implement retry mechanism for transient errors
+
+  - Current issue: No retry attempts for network issues or temporary Supabase unavailability
+  - Risk: Document loading fails unnecessarily on recoverable errors
+  - Fix: Implement backoff retry strategy for non-authorization errors
+
+- **[MEDIUM]** Add caching for frequently accessed documents
+
+  - Current issue: Documents are fetched from storage on every request
+  - Risk: Increased latency and storage costs with frequent access
+  - Fix: Implement document caching with appropriate invalidation strategies
+
+- **[MEDIUM]** Improve error classification robustness
+
+  - Current issue: Using string matching (`includes("not found")`) to classify errors
+  - Risk: Breaking changes if Supabase modifies error message formats
+  - Fix: Create more reliable error classification mechanisms
+
+- **[MEDIUM]** Add document format flexibility
+
+  - Current issue: `DEFAULT_FORMAT` constant hardcodes PDF assumption
+  - Risk: Unable to support other common formats like DOCX, TXT, etc.
+  - Fix: Implement format detection and multi-format support
+
+- **[MEDIUM]** Decouple from state schema
+
+  - Current issue: Tight coupling with `OverallProposalState` structure
+  - Risk: Changes to state schema require updates to document loader implementation
+  - Fix: Implement adapter pattern to separate concerns
+
+- **[LOW]** Enhance logging with operational metrics
+
+  - Current issue: Logs contain basic info but miss useful operational metrics
+  - Risk: Difficult to identify performance issues or degradation over time
+  - Fix: Add document size, processing time, and user context to all logs
+
+- **[LOW]** Implement partial document recovery
+
+  - Current issue: No ability to partially recover from corrupted documents
+  - Risk: All-or-nothing document loading leads to unnecessary failures
+  - Fix: Add content extraction from partially valid documents when possible
+
+### Long-Term Improvements
+
+- **[HIGH]** Implement streaming document processing
+
+  - Current issue: Entire documents loaded into memory before processing
+  - Risk: Memory constraints limit maximum document size
+  - Solution: Implement streaming document processing to handle arbitrarily large files
+
+- **[MEDIUM]** Add document preprocessing capabilities
+
+  - Current issue: Documents are passed directly to parser without optimization
+  - Risk: Suboptimal parsing results with poorly formatted documents
+  - Solution: Add preprocessing steps like OCR, format normalization, etc.
+
+- **[MEDIUM]** Implement content-based format detection
+
+  - Current issue: Format determined solely by file extension
+  - Risk: Incorrectly named files cause parsing failures
+  - Solution: Add content-based format detection as fallback
+
+- **[MEDIUM]** Create document versioning support
+
+  - Current issue: No version tracking for documents
+  - Risk: Can't track changes to RFP documents over time
+  - Solution: Implement versioning system with historical access
+
+- **[LOW]** Add document structure validation
+
+  - Current issue: No validation of document structure before parsing
+  - Risk: Malformed documents cause parser failures
+  - Solution: Implement document validation before full parsing
