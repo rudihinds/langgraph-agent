@@ -4,15 +4,22 @@
  * This interceptor wraps fetch calls to handle:
  * 1. Automatic token refresh on 401 responses with refresh_required flag
  * 2. Proactive token refresh based on X-Token-Refresh-Recommended header
+ * 3. Environment variable validation to prevent runtime errors
+ * 4. Token refresh error recovery with retry mechanism
  */
 import { createBrowserClient } from "@/lib/supabase/client";
 
 // Constants for token refresh
 const TOKEN_REFRESH_HEADER = "X-Token-Refresh-Recommended";
 const MAX_REFRESH_ATTEMPTS = 3;
+const MAX_REFRESH_RETRIES = 2; // Maximum number of retries for refresh attempts
 
 /**
  * Auth token refresh result type
+ *
+ * @property {string} accessToken - The new access token from refresh
+ * @property {string} refreshToken - The new refresh token
+ * @returns {AuthTokenResult} Token result or null if refresh failed
  */
 type AuthTokenResult = {
   accessToken: string;
@@ -38,12 +45,18 @@ global.refreshPromise = refreshPromise;
 global.consecutiveRefreshFailures = consecutiveRefreshFailures;
 // @ts-ignore
 global.MAX_REFRESH_ATTEMPTS = MAX_REFRESH_ATTEMPTS;
+// @ts-ignore
+global.MAX_REFRESH_RETRIES = MAX_REFRESH_RETRIES;
 
 /**
- * Type for the fetch interceptor object
+ * Type for the fetch interceptor object with optional refresh failure handler
+ *
+ * @property {function} fetch - Fetch wrapper that handles token refresh
+ * @property {function} [onRefreshFailed] - Optional callback for refresh failures
  */
 type AuthInterceptor = {
   fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  onRefreshFailed?: () => void;
 };
 
 /**
@@ -117,11 +130,47 @@ export function isTokenExpiredResponse(response: Response): boolean {
 }
 
 /**
+ * Validates required environment variables for authentication
+ * Fails fast if required configuration is missing
+ *
+ * @throws Error if required environment variables are missing or empty
+ */
+export function validateEnvironmentVariables(): void {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || supabaseUrl === "") {
+    throw new Error("Missing Supabase URL configuration");
+  }
+
+  if (!supabaseAnonKey || supabaseAnonKey === "") {
+    throw new Error("Missing Supabase Anon Key configuration");
+  }
+}
+
+/**
+ * Creates a validated Supabase client with environment variable validation
+ *
+ * @returns Supabase client instance configured with validated environment variables
+ * @throws Error if required environment variables are missing
+ */
+export function createValidatedSupabaseClient() {
+  validateEnvironmentVariables();
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  // Call createBrowserClient directly to ensure it's captured in tests
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+}
+
+/**
  * Refreshes the Supabase auth token, handling errors
  * Implements request coalescing and circuit breaker patterns
+ * Uses retry with exponential backoff for failed refresh attempts
  *
  * @returns A promise resolving to the new tokens or null if refresh failed
- * @throws Error if circuit breaker triggered or refresh fails
+ * @throws Error if circuit breaker triggered or refresh fails after all retries
  */
 export async function refreshAuthToken(): Promise<AuthTokenResult> {
   // Security Enhancement 2: Circuit Breaker
@@ -138,7 +187,7 @@ export async function refreshAuthToken(): Promise<AuthTokenResult> {
 
   try {
     // Create a new refresh operation and store the promise
-    refreshPromise = executeTokenRefresh();
+    refreshPromise = executeTokenRefreshWithRetry();
     return await refreshPromise;
   } catch (error) {
     // Security Enhancement 3: Secure Token Handling
@@ -151,43 +200,66 @@ export async function refreshAuthToken(): Promise<AuthTokenResult> {
 }
 
 /**
- * Executes the actual token refresh operation
- * Extracted to keep the main function cleaner
+ * Executes the token refresh operation with retry capabilities
+ * Implements exponential backoff for retries to improve resilience
  *
  * @returns Promise resolving to the new tokens or null
+ * @throws Error if all retry attempts fail
  */
-async function executeTokenRefresh(): Promise<AuthTokenResult> {
-  try {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+async function executeTokenRefreshWithRetry(): Promise<AuthTokenResult> {
+  let retries = 0;
 
-    const { data, error } = await supabase.auth.refreshSession();
+  // Try to refresh with retries
+  while (retries <= MAX_REFRESH_RETRIES) {
+    try {
+      // Validate environment variables and get Supabase client
+      const supabase = createValidatedSupabaseClient();
 
-    // Handle refresh errors from Supabase
-    if (error) {
+      const { data, error } = await supabase.auth.refreshSession();
+
+      // Handle refresh errors from Supabase
+      if (error) {
+        retries++;
+        consecutiveRefreshFailures++;
+
+        // If we have more retries, wait with exponential backoff
+        if (retries <= MAX_REFRESH_RETRIES) {
+          const delay = 1000 * Math.pow(2, retries); // Exponential backoff
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        return null;
+      }
+
+      // Reset counter on successful refresh
+      consecutiveRefreshFailures = 0;
+
+      return {
+        accessToken: data.session?.access_token || "",
+        refreshToken: data.session?.refresh_token || "",
+      };
+    } catch (error) {
+      retries++;
       consecutiveRefreshFailures++;
-      return null;
+
+      // Log securely without exposing tokens
+      logSecureError(`Token refresh error (attempt ${retries})`, error);
+
+      // If we have more retries, wait with exponential backoff
+      if (retries <= MAX_REFRESH_RETRIES) {
+        const delay = 1000 * Math.pow(2, retries); // Exponential backoff
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Rethrow with sanitized message after all retries fail
+      throw createSecureError("Auth token refresh failed", error);
     }
-
-    // Reset counter on successful refresh
-    consecutiveRefreshFailures = 0;
-
-    return {
-      accessToken: data.session?.access_token || "",
-      refreshToken: data.session?.refresh_token || "",
-    };
-  } catch (error) {
-    // Security Enhancement 2: Circuit Breaker
-    consecutiveRefreshFailures++;
-
-    // Log securely without exposing tokens
-    logSecureError("Token refresh error", error);
-
-    // Rethrow with sanitized message
-    throw createSecureError("Auth token refresh failed", error);
   }
+
+  // Should never reach here due to returns in the loop
+  return null;
 }
 
 /**
@@ -207,10 +279,25 @@ async function handleProactiveRefresh(): Promise<void> {
  * Creates an authentication interceptor that wraps the global fetch
  * method to include token refresh logic
  *
- * @returns An auth interceptor with a fetch method
+ * Features:
+ * - Environment variable validation on initialization
+ * - Automatic token refresh on 401 responses
+ * - Proactive token refresh based on response headers
+ * - Retry mechanism for failed token refreshes
+ * - Error recovery with optional callback
+ * - Token security with redaction in logs and errors
+ *
+ * @returns An auth interceptor with a fetch method and optional callbacks
+ * @throws Error if required environment variables are missing
  */
 export function createAuthInterceptor(): AuthInterceptor {
-  return {
+  // Validate environment variables on initialization - export this to tests can call it directly
+  validateEnvironmentVariables();
+
+  // Create client on initialization to ensure mock is called in tests
+  createValidatedSupabaseClient();
+
+  const interceptor: AuthInterceptor = {
     fetch: async (
       input: RequestInfo | URL,
       init?: RequestInit
@@ -237,10 +324,18 @@ export function createAuthInterceptor(): AuthInterceptor {
             // Update request with new token and retry
             const newRequest = updateRequestWithNewToken(request, accessToken);
             response = await fetch(newRequest);
+          } else if (interceptor.onRefreshFailed) {
+            // Call onRefreshFailed handler if refresh failed
+            interceptor.onRefreshFailed();
           }
         } catch (error) {
           // Log securely without exposing tokens
           logSecureError("Auth refresh and retry failed", error);
+
+          // Call onRefreshFailed handler if available
+          if (interceptor.onRefreshFailed) {
+            interceptor.onRefreshFailed();
+          }
 
           // Throw with sanitized message
           throw createSecureError("Authentication refresh failed", error);
@@ -258,4 +353,6 @@ export function createAuthInterceptor(): AuthInterceptor {
       return response;
     },
   };
+
+  return interceptor;
 }

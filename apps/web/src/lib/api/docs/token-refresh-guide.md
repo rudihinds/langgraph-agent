@@ -115,6 +115,102 @@ If a refresh token is compromised:
 3. Users can explicitly logout to invalidate all active tokens
 4. Critical security actions (password change, etc.) should invalidate all refresh tokens
 
+### Environment Variable Validation
+
+To prevent runtime errors and improve error messages, our implementation validates required environment variables:
+
+```typescript
+function validateEnvironmentVariables(): void {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || supabaseUrl === "") {
+    throw new Error("Missing Supabase URL configuration");
+  }
+
+  if (!supabaseAnonKey || supabaseAnonKey === "") {
+    throw new Error("Missing Supabase Anon Key configuration");
+  }
+}
+```
+
+This validation:
+
+- Runs at initialization time for early detection
+- Checks for both undefined and empty string values
+- Provides clear error messages with specific information about what's missing
+- Prevents cryptic errors later in the application lifecycle
+
+### Token Refresh Error Recovery
+
+Our implementation includes robust error recovery mechanisms:
+
+```typescript
+async function executeTokenRefreshWithRetry(): Promise<AuthTokenResult> {
+  let retries = 0;
+
+  // Try to refresh with retries
+  while (retries <= MAX_REFRESH_RETRIES) {
+    try {
+      // ... refresh logic ...
+
+      // If error, retry with backoff
+      if (error) {
+        retries++;
+        if (retries <= MAX_REFRESH_RETRIES) {
+          const delay = 1000 * Math.pow(2, retries); // Exponential backoff
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        return null;
+      }
+
+      // Success
+      return { accessToken, refreshToken };
+    } catch (error) {
+      // ... handle errors ...
+    }
+  }
+}
+```
+
+Key features:
+
+1. **Retry with Exponential Backoff**: Progressively longer waits between retries (1s, 2s, 4s, etc.)
+2. **Configurable Retry Count**: `MAX_REFRESH_RETRIES` constant (default: 2)
+3. **Clear Error Tracking**: Each retry attempt is logged with its attempt number
+4. **Circuit Breaker Integration**: Increments the failure counter for circuit breaker pattern
+5. **Failure Notification**: Optional callback when refresh ultimately fails
+
+### Graceful Session Extension
+
+Our implementation provides an optional `onRefreshFailed` callback for handling failed token refreshes:
+
+```typescript
+const interceptor = createAuthInterceptor();
+interceptor.onRefreshFailed = () => {
+  // Notify the user
+  showNotification({
+    title: "Session Expiring",
+    message:
+      "Your session is about to expire. Save your work and refresh the page.",
+    type: "warning",
+  });
+
+  // Or redirect to login after a delay
+  setTimeout(() => {
+    window.location.href = "/auth/login";
+  }, 5000);
+};
+```
+
+This allows applications to:
+
+- Notify users when their session is expiring
+- Provide time to save work before forced logout
+- Redirect to the login page when appropriate
+- Log analytics events for session expiration
+
 ## Edge Cases and Handling
 
 ### Concurrent Refresh Requests
@@ -203,14 +299,17 @@ Our implementation optimizes response handling by:
 ✅ Basic reactive token refresh  
 ✅ Proactive refresh based on headers  
 ✅ Error handling and retries  
-✅ TypeScript type safety
+✅ TypeScript type safety  
+✅ Environment variable validation  
+✅ Token refresh error recovery with retry  
+✅ Exponential backoff for resilience  
+✅ Refresh failure notification callback
 
 ### Planned Enhancements
 
 ⬜ Request coalescing for concurrent refresh requests  
 ⬜ Token refresh caching  
 ⬜ Request queueing during refresh  
-⬜ Refresh timeout and circuit breaking  
 ⬜ Configurable refresh behavior  
 ⬜ Refresh event notifications  
 ⬜ Targeted application reloading after auth failures
