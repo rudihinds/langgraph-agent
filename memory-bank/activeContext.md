@@ -648,3 +648,44 @@ router.post("/api/rfp/start", async (req, res) => {
    - Add comprehensive logging for security events
    - Implement clear error patterns for different auth scenarios
    - Consider both security and user experience in token refresh design
+
+# Active Development Context
+
+## Chat UI Integration (Current Focus)
+
+We're implementing a direct port of the existing standalone LangGraph Chat UI app (`../agent-chat-ui`) into our application. The Chat UI is already a working app, so our focus is on integrating it rather than building from scratch.
+
+Key progress so far:
+
+- Created the test infrastructure for TDD approach
+- Set up the core component structure for the Thread component
+- Implemented the basic providers (Stream, Thread) with the necessary functionality
+- Added message components for human and AI messages
+- All basic tests are now passing
+
+The directory structure we've established mirrors the source Chat UI app:
+
+- `/apps/web/src/components/chat-ui/thread` - Main Thread component and message rendering
+- `/apps/web/src/components/chat-ui/providers` - Stream and Thread context providers
+- `/apps/web/src/components/chat-ui/lib` - Shared types and utilities
+- `/apps/web/src/__tests__/chat-ui` - Tests for the Chat UI components
+
+Additional integration work remains to connect the UI with our backend services, authentication system, and navigation. We're taking a test-driven approach to ensure components work correctly before connecting to real data sources.
+
+Next steps:
+
+- Create the Chat page to host the Thread component
+- Set up the API proxy for LangGraph
+- Integrate with authentication
+- Connect with the navigation and routing
+
+## Current Tasks and Focus
+
+We're following the integration plan in `chat-int.md` and test scenarios in `chat-cases.md`, implementing in phases:
+
+1. Environment Setup and Dependencies
+2. Core Component Extraction (Current)
+3. Authentication Integration
+4. Navigation and Routing Integration
+5. Backend Integration
+6. Testing and Refinement

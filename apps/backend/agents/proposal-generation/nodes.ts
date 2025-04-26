@@ -11,6 +11,7 @@ import {
   ProcessingStatus,
   InterruptReason,
   EvaluationResult,
+  LoadingStatus,
 } from "../../state/modules/types.js";
 import {
   SectionType,
@@ -233,18 +234,7 @@ export const evaluateContent = async (
  * Document Loader Node
  * Loads and processes RFP documents
  */
-export const documentLoaderNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return {
-    rfpDocument: {
-      ...state.rfpDocument,
-      status: "loaded" as const,
-    },
-    currentStep: "deepResearch",
-  };
-};
+export { documentLoaderNode } from "./nodes/document_loader.js";
 
 /**
  * Deep Research Node

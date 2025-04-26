@@ -44,6 +44,7 @@ describe("Auth Middleware - Token Refresh", () => {
   const mockRes = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    setHeader: vi.fn(),
   };
 
   const mockNext = vi.fn();
@@ -90,12 +91,9 @@ describe("Auth Middleware - Token Refresh", () => {
       })
     );
     expect(authMiddlewareMocks.logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Auth error"),
+      "Token expired",
       expect.objectContaining({
         requestId: "test-request-id",
-        error: expect.objectContaining({
-          message: expect.stringContaining("expired"),
-        }),
       })
     );
   });
@@ -134,7 +132,7 @@ describe("Auth Middleware - Token Refresh", () => {
     // Token expires in 5 minutes (300 seconds)
     const expiresAt = currentTime + 300;
 
-    // Setup mock for valid token close to expiration
+    // Setup mock for valid token close to expiration with proper data structure
     authMiddlewareMocks.getUser.mockResolvedValue({
       data: {
         user: { id: "test-user-id" },
@@ -142,7 +140,11 @@ describe("Auth Middleware - Token Refresh", () => {
           expires_at: expiresAt,
         },
       },
+      error: null,
     });
+
+    // Add setHeader to mockRes to handle automatic header setting
+    mockRes.setHeader = vi.fn();
 
     // Execute middleware
     await authMiddleware(mockReq, mockRes, mockNext);
@@ -175,6 +177,7 @@ describe("Auth Middleware - Token Refresh", () => {
           expires_at: expiresAt,
         },
       },
+      error: null,
     });
 
     // Execute middleware
