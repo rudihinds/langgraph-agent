@@ -316,3 +316,81 @@
   - [ ] Create dashboards for token expiration patterns
   - [ ] Set up alerting for unusual authentication patterns
   - [ ] Implement detailed logging for security audit purposes
+
+## Rate Limiting Middleware Improvements
+
+### Overview
+
+We've implemented a basic IP-based rate limiting middleware that currently stores data in-memory and provides essential protection against excessive requests. This MVP implementation is sufficient for launch with an initial small user base (up to ~500 users), but will require improvements as the application scales.
+
+### Near-Term Improvements (Post-Launch)
+
+These should be addressed relatively soon after launch, before significant user growth:
+
+- **[HIGH]** Add error handling to cleanup function
+
+  - Current issue: Unhandled errors in the cleanup interval will permanently stop cleanup process
+  - Risk: Memory leaks leading to performance degradation and potential crashes
+  - Fix: Wrap cleanup logic in try/catch to ensure continued operation even if an iteration fails
+
+- **[MEDIUM]** Implement basic input validation for configuration options
+
+  - Current issue: Configuration parameters aren't validated, allowing invalid values
+  - Risk: Unexpected behavior with negative or extremely large values for window time or request limits
+  - Fix: Add simple checks for parameters with appropriate defaults/constraints
+
+- **[MEDIUM]** Add upper bounds for Map size
+
+  - Current issue: Potential for unbounded memory growth between cleanup cycles
+  - Risk: Memory exhaustion during traffic spikes, even with cleanup intervals
+  - Fix: Implement size limits with eviction policies (e.g., LRU) for the store
+
+- **[LOW]** Document middleware ordering requirements
+  - Current issue: Insufficient guidance on where rate limiting should appear in middleware chain
+  - Risk: Inefficient application if placed after expensive operations
+  - Fix: Expand documentation with specific placement recommendations
+
+### Long-Term Improvements (Larger Team & User Base)
+
+These should be considered as the application and team scales:
+
+- **[HIGH]** Implement distributed storage option
+
+  - Current issue: In-memory storage doesn't work across multiple application instances
+  - Risk: Ineffective rate limiting in load-balanced/horizontally-scaled environments
+  - Solution: Add support for Redis or database-backed storage with configurable adapters
+
+- **[HIGH]** Address IP spoofing vulnerabilities
+
+  - Current issue: Reliance on X-Forwarded-For header without verification
+  - Risk: Rate limit bypass through header spoofing
+  - Solution: Implement header validation or alternative client identification methods
+
+- **[MEDIUM]** Optimize cleanup performance
+
+  - Current issue: O(n) cleanup becomes expensive with large numbers of tracked IPs
+  - Risk: Cleanup process impacts application performance as user base grows
+  - Solution: Implement time-bucketed data structures for more efficient expiration
+
+- **[MEDIUM]** Support alternative rate limiting algorithms
+
+  - Current issue: Fixed time windows can allow request bursts at window boundaries
+  - Risk: Less effective protection compared to more sophisticated algorithms
+  - Solution: Implement sliding window or token bucket algorithms as configuration options
+
+- **[MEDIUM]** Integrate with authentication system
+
+  - Current issue: All clients have same rate limits regardless of authentication status
+  - Risk: Legitimate power users face same restrictions as anonymous clients
+  - Solution: Allow for user/role-based rate limiting tied to authentication
+
+- **[LOW]** Improve cleanup lifecycle management
+
+  - Current issue: Cleanup interval runs forever with no way to stop it
+  - Risk: Resource waste and potential memory leaks
+  - Solution: Implement proper start/stop controls for cleanup process
+
+- **[LOW]** Enhance configuration options
+  - Current issue: Limited configurability for advanced use cases
+  - Risk: Custom requirements need middleware modifications
+  - Solution: Expand configuration API for custom response formats, headers, etc.

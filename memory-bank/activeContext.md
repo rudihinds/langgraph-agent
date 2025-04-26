@@ -54,7 +54,28 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Developed a detailed README.md for the middleware directory
    - Created a standard pattern for token refresh that can be reused across the application
 
-3. Completed the implementation of the section manager node:
+3. Implemented Rate Limiting Middleware:
+
+   - Created IP-based rate limiting middleware for API protection
+   - Implemented configurable time window and request limits
+   - Added automatic cleanup to prevent memory leaks
+   - Created clear error responses for rate-limited requests
+   - Added comprehensive logging for rate limiting events
+   - Documented near-term and long-term improvement plans in TASK.md
+   - Completed tests verifying rate limiting functionality
+   - Applied middleware to API routes with appropriate configuration
+
+4. Implemented Request Timeout Handling:
+
+   - Created timeout middleware for long-running operations
+   - Added configurable timeout thresholds for different request types
+   - Implemented graceful termination of stalled requests
+   - Created clear error responses for timed-out operations
+   - Added detailed logging for request timeouts
+   - Updated backend-auth.md to reflect completed implementation
+   - Integrated with existing authentication and rate limiting middleware
+
+5. Completed the implementation of the section manager node:
 
    - Created a modular implementation in `apps/backend/agents/proposal-generation/nodes/section_manager.ts`
    - Implemented dependency resolution for sections using topological sorting
@@ -63,7 +84,7 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Verified the section manager correctly handles all section types defined in the SectionType enum
    - Ensured proper initialization of section data with appropriate metadata
 
-4. Completed the implementation of the problem statement node:
+6. Completed the implementation of the problem statement node:
 
    - Created a comprehensive implementation in `nodes/problem_statement.ts`
    - Integrated with LangChain for LLM-based section generation
@@ -71,13 +92,13 @@ Task 17.6: Implement the `conclusionNode` - Generate the conclusion section summ
    - Implemented context window management for large inputs
    - Added comprehensive error handling and test coverage
 
-5. Updated node exports and references:
+7. Updated node exports and references:
 
    - Moved from monolithic implementation in nodes.js to modular files
    - Updated exports to reference the new implementations
    - Maintained backward compatibility with existing graph structure
 
-6. Completed the RFP document integration implementation:
+8. Completed the RFP document integration implementation:
    - Successfully implemented document loading with rfpId from state
    - Enhanced documentLoaderNode with proper error handling
    - Added fallback mechanisms for document retrieval
@@ -267,6 +288,8 @@ We maintain consistent naming conventions:
 ## Authentication Middleware Implementation
 
 ✅ The token refresh handling in the authentication middleware is now fully implemented, tested, and documented.
+✅ The rate limiting middleware is now fully implemented, tested, and documented with improvement plans.
+✅ The request timeout handling is now fully implemented, tested, and documented.
 
 ### Current Implementation
 
@@ -296,18 +319,38 @@ We have successfully implemented the following:
    - Consistent error messages for different failure modes
    - Detailed logging for authentication events
 
-4. **Code Organization**:
+4. **Rate Limiting**:
+
+   - IP-based request tracking and rate enforcement
+   - Configurable time window and request limits
+   - Automatic cleanup of old request data
+   - Standardized 429 responses with retry information
+   - Comprehensive logging for rate-limited requests
+   - Memory-efficient implementation
+   - Clear improvement roadmap for scaling
+
+5. **Request Timeout Handling**:
+
+   - Configurable timeout thresholds for different request types
+   - Graceful termination of stalled requests
+   - Well-structured error responses for timed-out operations
+   - Integration with authentication flow
+   - Detailed logging for tracking timeout patterns
+   - Support for client notification of approaching timeouts
+
+6. **Code Organization**:
 
    - Refactored into helper functions for better maintainability
    - Consistent error response creation
    - Proper middleware integration with Express.js
    - Clear separation of concerns
 
-5. **Documentation**:
+7. **Documentation**:
    - Comprehensive JSDoc comments for all functions
    - Detailed README.md in the middleware directory
    - Usage examples for route handlers
    - Implementation guidance for client-side token refresh
+   - Rate limiting improvement roadmap in TASK.md
 
 ### Testing Results
 
