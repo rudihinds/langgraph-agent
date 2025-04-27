@@ -2,19 +2,22 @@
  * Auth API exports
  */
 
-// Client exports
-export { createClient } from "./client";
-export { createClient as createServerClient } from "./server";
-export { createBrowserClient } from "./client";
-
-// Action exports
+// Re-export the auth functionality from the existing Supabase library
 export {
+  createClient,
   signIn,
-  signOut,
   getSession,
   getCurrentUser,
-  checkUserSession,
-} from "./actions";
+} from "@/lib/supabase";
 
-// Utility exports
+// Export local auth actions that aren't in the main Supabase lib
+export { signOut, checkUserSession } from "./actions";
+
+// Export server-side client creation
+export { createClient as createServerClient } from "@/lib/supabase/server";
+
+// Auth-specific client export (if needed)
+export { createClient as createAuthClient } from "./client";
+
+// Additional utility exports
 export { getRedirectURL, getAccessToken, validateSession } from "./utils";
