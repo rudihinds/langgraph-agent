@@ -93,4 +93,4 @@ const ProposalSchema = z.object({
 type Question = z.infer<typeof QuestionSchema>;
 type FunderDetails = z.infer<typeof FunderDetailsSchema>;
 type Document = z.infer<typeof DocumentSchema>;
-type Proposal = z.infer<typeof ProposalSchema>;
+export type Proposal = z.infer<typeof ProposalSchema>;

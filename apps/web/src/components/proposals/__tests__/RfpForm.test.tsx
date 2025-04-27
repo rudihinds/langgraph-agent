@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RfpForm } from "../RfpForm";
-import { uploadProposalFile } from "@/lib/proposal-actions/actions";
+import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
 import React from "react";
 
 // Mock scrollIntoView which isn't implemented in JSDOM
@@ -19,8 +19,8 @@ vi.mock("../UploadToast", () => ({
 }));
 
 // Mock the server action
-vi.mock("@/lib/proposal-actions/actions", () => ({
-  uploadProposalFile: vi.fn(),
+vi.mock("@/features/proposals/api/actions", () => ({
+  uploadProposalFileEnhanced: vi.fn(),
   createProposal: vi.fn().mockResolvedValue({ id: "mock-proposal-id" }),
 }));
 
@@ -213,7 +213,9 @@ describe("RfpForm", () => {
       }
 
       // Alternatively, check if there's a file validation error that's preventing submission
-      expect(errorFound || !uploadProposalFile.mock.calls.length).toBeTruthy();
+      expect(
+        errorFound || !uploadProposalFileEnhanced.mock.calls.length
+      ).toBeTruthy();
     });
   });
 
@@ -255,7 +257,7 @@ describe("RfpForm", () => {
 
     // Check that the create proposal function is called
     await waitFor(() => {
-      expect(uploadProposalFile).toHaveBeenCalled();
+      expect(uploadProposalFileEnhanced).toHaveBeenCalled();
     });
   });
 

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { uploadProposalFile } from "@/lib/proposal-actions/actions";
+import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
 import { FileCheck, Upload, AlertCircle } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
@@ -282,7 +282,7 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
 
       // Perform the actual upload
       console.log("Calling uploadProposalFile API");
-      const result = await uploadProposalFile({
+      const result = await uploadProposalFileEnhanced({
         userId,
         title,
         description,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { EnhancedRfpForm } from "../EnhancedRfpForm";
-import { uploadProposalFile } from "@/lib/proposal-actions/actions";
+import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
 
 // Mock the useFileUploadToast hook
 vi.mock("../UploadToast", () => ({
@@ -11,8 +11,8 @@ vi.mock("../UploadToast", () => ({
 }));
 
 // Mock the server action
-vi.mock("@/lib/proposal-actions/actions", () => ({
-  uploadProposalFile: vi.fn(),
+vi.mock("@/features/proposals/api/actions", () => ({
+  uploadProposalFileEnhanced: vi.fn(),
 }));
 
 // Mock the AppointmentPicker component
@@ -24,7 +24,7 @@ vi.mock("@/components/ui/appointment-picker", () => ({
 
 describe("EnhancedRfpForm", () => {
   beforeEach(() => {
-    vi.mocked(uploadProposalFile).mockReset();
+    vi.mocked(uploadProposalFileEnhanced).mockReset();
   });
 
   it("renders form elements correctly", () => {

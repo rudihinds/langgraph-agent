@@ -11,14 +11,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { uploadProposalFile } from "@/lib/proposal-actions/actions";
+import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
 import { AppointmentPicker } from "@/components/ui/appointment-picker";
 import { formatDateForAPI } from "@/lib/utils/date-utils";
 import { FormErrorBoundary } from "@/components/ui/form-error";
 import { FormField } from "@/components/ui/form-field";
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { rfpFormSchema, RfpFormValues } from "@/lib/forms/schemas/rfp-form-schema";
+import {
+  rfpFormSchema,
+  RfpFormValues,
+} from "@/lib/forms/schemas/rfp-form-schema";
 
 type RfpFormProps = {
   userId: string;
@@ -30,44 +33,39 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
   const [overlayVisible, setOverlayVisible] = useState(false);
   const [currentOverlayStep, setCurrentOverlayStep] = useState(0);
   const [proposalId, setProposalId] = useState<string | null>(null);
-  
+
   // File upload handling
   const [file, setFile] = useState<File | null>(null);
-  
+
   // Use the form validation hook
-  const {
-    values,
-    errors,
-    isSubmitting,
-    setValue,
-    handleSubmit
-  } = useZodForm(rfpFormSchema);
-  
+  const { values, errors, isSubmitting, setValue, handleSubmit } =
+    useZodForm(rfpFormSchema);
+
   // Use the toast hook
   const fileUploadToast = useFileUploadToast();
   const showToast = fileUploadToast?.showFileUploadToast || (() => "toast-id");
   const updateToast = fileUploadToast?.updateFileUploadToast || (() => {});
-  
+
   // File handling functions
   const handleFileChange = (selectedFile: File | null) => {
     setFile(selectedFile);
-    setValue('file', selectedFile);
+    setValue("file", selectedFile);
   };
-  
+
   // Handle form submission
   const onSubmit = handleSubmit(async (formValues: RfpFormValues) => {
     try {
       // Start overlay and progress indicators
       setOverlayVisible(true);
       setCurrentOverlayStep(0);
-      
+
       // Show toast for the upload process
       const toastId = showToast({
         fileName: formValues.file.name,
         status: "uploading",
         progress: 10,
       });
-      
+
       // Validating step
       await new Promise((resolve) => setTimeout(resolve, 500));
       setCurrentOverlayStep(1);
@@ -76,7 +74,7 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
         status: "uploading",
         message: "Creating proposal...",
       });
-      
+
       // Uploading step
       await new Promise((resolve) => setTimeout(resolve, 500));
       setCurrentOverlayStep(2);
@@ -85,9 +83,9 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
         status: "uploading",
         message: "Uploading document...",
       });
-      
+
       // Perform the actual upload
-      const result = await uploadProposalFile({
+      const result = await uploadProposalFileEnhanced({
         userId,
         title: formValues.title,
         description: formValues.description,
@@ -95,18 +93,18 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
         fundingAmount: formValues.fundingAmount,
         file: formValues.file,
       });
-      
+
       // Handle success
       if (result.success && result.proposalId) {
         setProposalId(result.proposalId);
         setCurrentOverlayStep(3);
-        
+
         updateToast(toastId, {
           progress: 100,
           status: "success",
           message: "Document uploaded successfully!",
         });
-        
+
         // Close overlay after short delay
         setTimeout(() => {
           setOverlayVisible(false);
@@ -130,14 +128,15 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
     } catch (error) {
       // Reset UI for error state
       setOverlayVisible(false);
-      
+
       // Show error toast
       showToast({
         fileName: formValues.file.name,
         status: "error",
-        message: error instanceof Error ? error.message : "Failed to upload document",
+        message:
+          error instanceof Error ? error.message : "Failed to upload document",
       });
-      
+
       throw error; // Let the form hook handle the error
     }
   });
@@ -185,8 +184,8 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
               id="title"
               type="text"
               label="Title"
-              value={values.title || ''}
-              onChange={(value) => setValue('title', value)}
+              value={values.title || ""}
+              onChange={(value) => setValue("title", value)}
               error={errors.title}
               required
               placeholder="Enter a title for this RFP"
@@ -197,8 +196,8 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
               id="description"
               type="textarea"
               label="Description"
-              value={values.description || ''}
-              onChange={(value) => setValue('description', value)}
+              value={values.description || ""}
+              onChange={(value) => setValue("description", value)}
               error={errors.description}
               required
               placeholder="Enter a brief description of this RFP"
@@ -212,7 +211,7 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
                 type="date"
                 label="Submission Deadline"
                 value={values.deadline}
-                onChange={(date) => setValue('deadline', date)}
+                onChange={(date) => setValue("deadline", date)}
                 error={errors.deadline}
                 required
                 DatePickerComponent={AppointmentPicker}
@@ -224,8 +223,8 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
                 id="fundingAmount"
                 type="text"
                 label="Funding Amount"
-                value={values.fundingAmount || ''}
-                onChange={(value) => setValue('fundingAmount', value)}
+                value={values.fundingAmount || ""}
+                onChange={(value) => setValue("fundingAmount", value)}
                 error={errors.fundingAmount}
                 required
                 placeholder="e.g. 10000"
@@ -249,13 +248,13 @@ export function RfpForm({ userId, onSuccess }: RfpFormProps) {
         </Card>
 
         <div className="flex justify-end gap-3 mt-4">
-          <Button 
-            type="submit" 
-            className="w-full md:w-auto" 
+          <Button
+            type="submit"
+            className="w-full md:w-auto"
             size="lg"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating...' : 'Create'}
+            {isSubmitting ? "Creating..." : "Create"}
           </Button>
         </div>
       </form>

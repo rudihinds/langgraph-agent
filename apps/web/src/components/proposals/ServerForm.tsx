@@ -1,17 +1,14 @@
 "use client";
 
 import { useRef, useState, FormEvent, useEffect, ChangeEvent } from "react";
-import {
-  createProposal,
-  uploadProposalFile,
-} from "@/app/api/proposals/actions";
+import { createProposal, uploadProposalFile } from "@/features/proposals/api";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useRequireAuth, signOut } from "@/lib/client-auth";
 import { Loader2, Upload, FileText, Trash, Info } from "lucide-react";
-import { UploadResult } from "@/lib/proposal-actions/upload-helper";
+import { UploadResult } from "@/features/proposals/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";

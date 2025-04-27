@@ -61,7 +61,7 @@ import { z } from "zod";
 import {
   FunderDetailsFormSchema,
   type FunderDetailsForm,
-} from "@shared/types/ProposalSchema";
+} from "@/schemas/ProposalSchema";
 import { DatePicker } from "@/components/ui/date-picker";
 import { AppointmentPicker } from "@/components/ui/appointment-picker";
 import { zodResolver } from "@hookform/resolvers/zod";

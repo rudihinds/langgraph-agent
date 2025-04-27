@@ -1,4 +1,4 @@
-import { getProposals, calculateProgress } from "../proposals";
+import { getProposals, calculateProgress } from "../proposals"; //need to find and update
 import { createServerClient } from "@supabase/ssr";
 
 // Mock the dependencies

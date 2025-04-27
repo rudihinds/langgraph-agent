@@ -11,7 +11,7 @@ import ProposalTypeModal, {
 import { ProposalGrid } from "@/components/dashboard/ProposalGrid";
 import { ProposalCard } from "@/components/dashboard/ProposalCard";
 import NewProposalCard from "@/components/dashboard/NewProposalCard";
-import { getUserProposals, Proposal } from "@/lib/api/proposals";
+import { getUserProposals, Proposal } from "@/features/proposals/utils/proposals";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";

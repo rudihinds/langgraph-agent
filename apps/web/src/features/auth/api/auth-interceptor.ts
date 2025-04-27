@@ -7,7 +7,7 @@
  * 3. Environment variable validation to prevent runtime errors
  * 4. Token refresh error recovery with retry mechanism
  */
-import { createBrowserClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@/features/auth/utils/client";
 
 // Constants for token refresh
 const TOKEN_REFRESH_HEADER = "X-Token-Refresh-Recommended";

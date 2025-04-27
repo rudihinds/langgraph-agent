@@ -10,8 +10,8 @@
  */
 import { ComponentType, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@/lib/supabase/client";
-import { createAuthInterceptor } from "@/lib/api/auth-interceptor";
+import { createBrowserClient } from "@/features/auth/utils/client";
+import { createAuthInterceptor } from "@/features/auth/api/auth-interceptor";
 
 // Configuration constants
 const TOKEN_REFRESH_THRESHOLD = 600; // In seconds (10 minutes)

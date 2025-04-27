@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createProposal, uploadProposalFile } from "../actions";
+import { createProposal, uploadProposalFile } from "../actions[dep]";
 import { ProposalSchema } from "@/schemas/proposal";
 import { SupabaseClient } from "@supabase/supabase-js";
 
