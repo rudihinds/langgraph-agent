@@ -2,7 +2,7 @@ import {
   checkUserSession,
   requireAuth,
   redirectIfAuthenticated,
-} from "../auth";
+} from "../../../../lib/auth";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 

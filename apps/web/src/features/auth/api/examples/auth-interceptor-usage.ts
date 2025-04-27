@@ -4,7 +4,7 @@
  * This file provides usage examples and patterns for integrating the
  * auth interceptor with different parts of your application.
  */
-import { createAuthInterceptor } from "../../../features/auth/utils/auth-interceptor";
+import { createAuthInterceptor } from "@/features/auth/api/auth-interceptor";
 
 // Example 1: Basic usage with a simple API client
 export function createBasicApiClient() {

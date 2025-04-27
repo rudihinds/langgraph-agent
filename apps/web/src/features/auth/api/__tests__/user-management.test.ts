@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ensureUserExists } from '../user-management';
+import { ensureUserExists } from '../../../../lib/user-management';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 // Mock Supabase client

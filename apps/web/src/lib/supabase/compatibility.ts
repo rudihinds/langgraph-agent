@@ -14,8 +14,8 @@ export {
   getRedirectURL,
   checkAuthAndRedirect,
   useCurrentUser,
-  useRequireAuth
-} from './auth';
+  useRequireAuth,
+} from "./auth";
 
 // Re-export client creation
-export { createClient } from './client';
+export { createClient } from "./client";

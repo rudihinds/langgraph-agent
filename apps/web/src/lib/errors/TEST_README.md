@@ -1,3 +1,5 @@
+// needs updating after refactor on 27/4/25
+
 # Error Handling Test Documentation
 
 This document explains the testing strategy for the error handling system in our application.

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useCurrentUser, useRequireAuth, signOut } from "../client-auth";
+import {
+  useCurrentUser,
+  useRequireAuth,
+  signOut,
+} from "../../../../lib/client-auth";
 
 // Set up mock router before importing modules
 const mockRouter = { push: vi.fn(), refresh: vi.fn() };
@@ -20,7 +24,7 @@ vi.mock("../supabase/client", () => ({
       getUser: vi.fn(),
       signOut: vi.fn().mockResolvedValue({ error: null }),
       onAuthStateChange: vi.fn(),
-    }
+    },
   })),
 }));
 
@@ -54,7 +58,7 @@ describe("Authentication Hooks", () => {
   beforeEach(() => {
     // Clear all mocks
     vi.clearAllMocks();
-    
+
     // Reset router mock methods
     mockRouter.push.mockReset();
     mockRouter.refresh.mockReset();
@@ -90,10 +94,10 @@ describe("Authentication Hooks", () => {
     );
 
     // Reset window.location.href
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const originalLocation = window.location;
       delete window.location;
-      window.location = { ...originalLocation, href: '' } as any;
+      window.location = { ...originalLocation, href: "" } as any;
     }
   });
 
@@ -225,8 +229,8 @@ describe("Authentication Hooks", () => {
 
     it("should not redirect if authenticated", async () => {
       mockSupabaseClient.auth.getUser.mockResolvedValueOnce({
-        data: { 
-          user: { id: "test-user-id", email: "test@example.com" } 
+        data: {
+          user: { id: "test-user-id", email: "test@example.com" },
         },
         error: null,
       });
@@ -277,4 +281,3 @@ describe("Authentication Hooks", () => {
     });
   });
 });
-
