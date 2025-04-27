@@ -6,17 +6,20 @@
  */
 
 // Re-export from actions
-export { signIn, signOut } from "./actions";
+export {
+  signIn,
+  signOut,
+  getSession,
+  getCurrentUser,
+  checkUserSession,
+} from "./actions";
 
 // Re-export from utils
 export {
   getRedirectURL,
-  getSession,
   getAccessToken,
   validateSession,
-  getCurrentUser,
   checkAuthAndRedirect,
 } from "./utils";
 
 // Re-export from hooks
-;

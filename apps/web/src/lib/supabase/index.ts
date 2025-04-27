@@ -9,5 +9,17 @@
 export { createClient } from "@/lib/supabase/client";
 export { createClient as createServerClient } from "@/lib/supabase/server";
 
+// Re-export auth functionality
+export {
+  signIn,
+  signOut,
+  getSession,
+  getCurrentUser,
+  checkUserSession,
+  getRedirectURL,
+  getAccessToken,
+  validateSession,
+} from "@/lib/supabase/auth";
+
 // Export types
 export type { SupabaseClient } from "@supabase/supabase-js";

@@ -1,23 +1,24 @@
 /**
  * Auth API exports
+ *
+ * @deprecated Use imports from '@/lib/supabase/auth' instead.
  */
 
-// Re-export the auth functionality from the existing Supabase library
+// Import auth functionality directly from the centralized location
 export {
   createClient,
   signIn,
+  signOut,
   getSession,
   getCurrentUser,
-} from "@/lib/supabase";
-
-// Export local auth actions that aren't in the main Supabase lib
-export { signOut, checkUserSession } from "@/features/auth/api/actions";
+  checkUserSession,
+  getRedirectURL,
+  getAccessToken,
+  validateSession,
+} from "@/lib/supabase/auth";
 
 // Export server-side client creation
 export { createClient as createServerClient } from "@/lib/supabase/server";
 
-// Auth-specific client export (if needed)
+// Auth-specific client export for backwards compatibility
 export { createClient as createAuthClient } from "@/features/auth/api/client";
-
-// Additional utility exports
-export { getRedirectURL, getAccessToken, validateSession } from "./utils";

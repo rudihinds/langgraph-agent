@@ -1,5 +1,10 @@
 /**
+ * @deprecated
  * Auth actions for Supabase authentication
+ *
+ * DO NOT USE THIS FILE DIRECTLY. Import from '@/lib/supabase/auth' instead.
+ * Example:
+ * import { signIn, signOut, getSession, getCurrentUser, checkUserSession } from '@/lib/supabase/auth';
  */
 import { createClient } from "@/features/auth/utils/server";
 import { getRedirectURL } from "@/features/auth/api/utils";
@@ -9,6 +14,7 @@ import { ApiResponse, ErrorCodes } from "@/lib/errors/types";
 import { logger } from "@/lib/logger";
 
 /**
+ * @deprecated Import from '@/lib/supabase/auth' instead.
  * Initiates the sign-in with Google OAuth flow
  * This redirects the user to Google's authentication page
  *
@@ -16,7 +22,7 @@ import { logger } from "@/lib/logger";
  */
 export async function signIn(): Promise<ApiResponse<SignInResult["data"]>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const redirectURL = getRedirectURL() + "/auth/callback";
 
     logger.info("[Auth] Starting sign-in with redirect URL:", { redirectURL });
@@ -56,6 +62,7 @@ export async function signIn(): Promise<ApiResponse<SignInResult["data"]>> {
 }
 
 /**
+ * @deprecated Import from '@/lib/supabase/auth' instead.
  * Signs out the current user on both client and server
  * Makes a server-side request to clear cookies and then signs out on the client
  *
@@ -95,7 +102,7 @@ export async function signOut(
     }
 
     // Then sign out on the client side
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -116,13 +123,14 @@ export async function signOut(
 }
 
 /**
+ * @deprecated Import from '@/lib/supabase/auth' instead.
  * Gets the current session if available
  *
  * @returns {Promise<ApiResponse<{ session: any }>>} The current session data with standardized response format
  */
 export async function getSession(): Promise<ApiResponse<{ session: any }>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const result = await supabase.auth.getSession();
 
     if (result.error) {
@@ -141,13 +149,14 @@ export async function getSession(): Promise<ApiResponse<{ session: any }>> {
 }
 
 /**
+ * @deprecated Import from '@/lib/supabase/auth' instead.
  * Gets the current user if authenticated
  *
  * @returns {Promise<ApiResponse<AppUser|null>>} The current user or null if not authenticated
  */
 export async function getCurrentUser(): Promise<ApiResponse<AppUser | null>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
 
     if (error) {
@@ -168,6 +177,7 @@ export async function getCurrentUser(): Promise<ApiResponse<AppUser | null>> {
 }
 
 /**
+ * @deprecated Import from '@/lib/supabase/auth' instead.
  * Function to check if user is authenticated and redirect if not
  * This is intended for client-side use only
  *
@@ -175,7 +185,7 @@ export async function getCurrentUser(): Promise<ApiResponse<AppUser | null>> {
  */
 export async function checkUserSession(): Promise<ApiResponse<AppUser | null>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
 
     if (error) {
