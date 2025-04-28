@@ -1,29 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "@/features/auth/utils/actions";
-import { useFormSubmit } from "@/hooks/use-form-submit";
-import {
-  FormError,
-  FormErrorBoundary,
-  FieldError,
-} from "@/components/ui/form-error";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { createServerAction } from "@/lib/errors/server-action";
-import { z } from "zod";
+import { useState } from 'react';
+import { signIn } from '@/lib/supabase/auth/actions';
+import { useFormSubmit } from '@/hooks/use-form-submit';
+import { FormError, FormErrorBoundary, FieldError } from '@/components/ui/form-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { createServerAction } from '@/lib/errors/server-action';
+import { z } from 'zod';
 
 // Login validation schema
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters")
 });
 
 // Create server action with error handling
@@ -33,83 +23,91 @@ const handleLogin = createServerAction(
     return result.data;
   },
   {
-    actionName: "login",
+    actionName: 'login',
     schema: loginSchema,
     transformInput: (formData: FormData) => ({
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    }),
+      email: formData.get('email') as string,
+      password: formData.get('password') as string
+    })
   }
 );
 
 export function StandardLoginForm() {
-  const { isPending, formError, fieldErrors, handleSubmit, getFieldError } =
-    useFormSubmit(handleLogin, {
-      onSuccess: () => {
-        // Redirect happens automatically after successful auth
-        console.log("Login successful");
-      },
-    });
+  const {
+    isPending,
+    formError,
+    fieldErrors,
+    handleSubmit,
+    getFieldError,
+  } = useFormSubmit(handleLogin, {
+    onSuccess: () => {
+      // Redirect happens automatically after successful auth
+      console.log('Login successful');
+    }
+  });
 
   return (
     <FormErrorBoundary>
-      <div className="w-full max-w-md p-6 mx-auto space-y-6 rounded-lg shadow-md bg-card">
+      <div className="w-full max-w-md mx-auto p-6 space-y-6 bg-card rounded-lg shadow-md">
         <div className="space-y-2 text-center">
           <h1 className="text-3xl font-bold">Welcome Back</h1>
-          <p className="text-muted-foreground">
-            Sign in to continue to your account
-          </p>
+          <p className="text-muted-foreground">Sign in to continue to your account</p>
         </div>
 
-        {formError && <FormError message={formError} dismissible />}
+        {formError && (
+          <FormError 
+            message={formError}
+            dismissible
+          />
+        )}
 
-        <Form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            handleSubmit(formData);
-          }}
-        >
+        <Form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          handleSubmit(formData);
+        }}>
           <div className="space-y-4">
             <FormItem>
               <FormLabel htmlFor="email">Email</FormLabel>
               <FormControl>
-                <Input
+                <Input 
                   id="email"
-                  name="email"
-                  type="email"
+                  name="email" 
+                  type="email" 
                   placeholder="your.email@example.com"
-                  className={getFieldError("email") ? "border-destructive" : ""}
+                  className={getFieldError('email') ? 'border-destructive' : ''}
                   required
                 />
               </FormControl>
-              <FieldError error={getFieldError("email")} />
+              <FieldError error={getFieldError('email')} />
             </FormItem>
 
             <FormItem>
               <FormLabel htmlFor="password">Password</FormLabel>
               <FormControl>
-                <Input
+                <Input 
                   id="password"
-                  name="password"
-                  type="password"
+                  name="password" 
+                  type="password" 
                   placeholder="••••••••"
-                  className={
-                    getFieldError("password") ? "border-destructive" : ""
-                  }
+                  className={getFieldError('password') ? 'border-destructive' : ''}
                   required
                 />
               </FormControl>
-              <FieldError error={getFieldError("password")} />
+              <FieldError error={getFieldError('password')} />
             </FormItem>
 
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Signing in..." : "Sign In"}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isPending}
+            >
+              {isPending ? 'Signing in...' : 'Sign In'}
             </Button>
           </div>
         </Form>
 
-        <div className="mt-4 text-sm text-center">
+        <div className="mt-4 text-center text-sm">
           <a href="#" className="text-primary hover:underline">
             Forgot your password?
           </a>
@@ -120,16 +118,16 @@ export function StandardLoginForm() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="px-2 bg-background text-muted-foreground">
+            <span className="bg-background px-2 text-muted-foreground">
               Or continue with
             </span>
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          className="flex items-center justify-center w-full gap-2"
-          onClick={() => handleSubmit({ provider: "google" })}
+        <Button 
+          variant="outline" 
+          className="w-full flex items-center justify-center gap-2"
+          onClick={() => handleSubmit({ provider: 'google' })}
           disabled={isPending}
         >
           <svg
@@ -143,8 +141,8 @@ export function StandardLoginForm() {
           <span>Google</span>
         </Button>
 
-        <div className="mt-4 text-sm text-center">
-          Don't have an account?{" "}
+        <div className="mt-4 text-center text-sm">
+          Don't have an account?{' '}
           <a href="/signup" className="text-primary hover:underline">
             Sign up
           </a>
