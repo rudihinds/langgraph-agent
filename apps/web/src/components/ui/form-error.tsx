@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { X, AlertCircle, Info } from "lucide-react";
 

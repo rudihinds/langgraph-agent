@@ -1,10 +1,10 @@
-import React from 'react';
-import { Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { FieldError } from '@/components/ui/form-error';
-import { FilePreview } from '@/components/proposals/FilePreview';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { FieldError } from "@/components/ui/form-error";
+import { FilePreview } from "@/components/proposals/FilePreview";
+import { cn } from "@/lib/utils/utils";
 
 export type FileUploadFieldProps = {
   id: string;
@@ -33,12 +33,16 @@ export function FileUploadField({
   description,
   supportedFormatsText,
 }: FileUploadFieldProps) {
-  const fileInfo = file ? {
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    isValid: file.size <= maxSize && (acceptedTypes.length === 0 || acceptedTypes.includes(file.type))
-  } : null;
+  const fileInfo = file
+    ? {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        isValid:
+          file.size <= maxSize &&
+          (acceptedTypes.length === 0 || acceptedTypes.includes(file.type)),
+      }
+    : null;
 
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -70,7 +74,7 @@ export function FileUploadField({
             <input
               id={id}
               type="file"
-              accept={acceptedTypes.join(',')}
+              accept={acceptedTypes.join(",")}
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0] || null;

@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
 import { FileCheck, Upload, AlertCircle } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";

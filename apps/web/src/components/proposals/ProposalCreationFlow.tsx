@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Question } from "./ApplicationQuestionsView";
 import { FunderDetails } from "./FunderDetailsView";
 import { ProgressStepper } from "./ProgressStepper";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 // MODEL
 export type ProposalType = "rfp" | "application";

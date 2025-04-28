@@ -1,17 +1,23 @@
-import React from 'react';
+import React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/form-error";
-import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 
 export type Question = {
   id: string;
   text: string;
-  type: 'text' | 'multiline';
+  type: "text" | "multiline";
   required: boolean;
 };
 
@@ -36,7 +42,7 @@ export function QuestionField({
     onUpdate({ ...question, text: value });
   };
 
-  const handleTypeChange = (value: 'text' | 'multiline') => {
+  const handleTypeChange = (value: "text" | "multiline") => {
     onUpdate({ ...question, type: value });
   };
 
@@ -47,7 +53,13 @@ export function QuestionField({
   const id = `question_${question.id}_text`;
 
   return (
-    <div className={cn("space-y-3 p-4 border rounded-md", error ? "border-destructive/70" : "border-border", className)}>
+    <div
+      className={cn(
+        "space-y-3 p-4 border rounded-md",
+        error ? "border-destructive/70" : "border-border",
+        className
+      )}
+    >
       <div className="flex items-center justify-between">
         <Label className="text-base font-medium">Question {index + 1}</Label>
         <Button
@@ -61,7 +73,7 @@ export function QuestionField({
           <Trash className="h-4 w-4" />
         </Button>
       </div>
-      
+
       <div className="space-y-1.5">
         <Textarea
           id={id}
@@ -69,13 +81,15 @@ export function QuestionField({
           onChange={(e) => handleTextChange(e.target.value)}
           placeholder="Enter your question here"
           className={cn(
-            error ? "border-destructive/70 ring-0 focus-visible:ring-destructive/30" : ""
+            error
+              ? "border-destructive/70 ring-0 focus-visible:ring-destructive/30"
+              : ""
           )}
           aria-invalid={!!error}
         />
         {error && <FieldError error={error} id={`${id}-error`} />}
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`question_${question.id}_type`} className="text-sm">
@@ -83,7 +97,9 @@ export function QuestionField({
           </Label>
           <Select
             value={question.type}
-            onValueChange={(value) => handleTypeChange(value as 'text' | 'multiline')}
+            onValueChange={(value) =>
+              handleTypeChange(value as "text" | "multiline")
+            }
           >
             <SelectTrigger id={`question_${question.id}_type`} className="mt-1">
               <SelectValue placeholder="Select type" />
@@ -94,10 +110,13 @@ export function QuestionField({
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex flex-col justify-end">
           <div className="flex items-center justify-end space-x-2 h-10 mt-auto">
-            <Label htmlFor={`question_${question.id}_required`} className="text-sm cursor-pointer">
+            <Label
+              htmlFor={`question_${question.id}_required`}
+              className="text-sm cursor-pointer"
+            >
               Required
             </Label>
             <Switch

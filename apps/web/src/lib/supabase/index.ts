@@ -19,6 +19,9 @@ export {
   getRedirectURL,
   getAccessToken,
   validateSession,
+  checkAuthAndRedirect,
+  useCurrentUser,
+  useRequireAuth,
 } from "@/lib/supabase/auth";
 
 // Export types

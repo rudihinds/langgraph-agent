@@ -11,7 +11,7 @@ import { CheckIcon, CopyIcon } from "lucide-react";
 import { SyntaxHighlighter } from "@/components/thread/syntax-highlighter";
 
 import { TooltipIconButton } from "@/components/thread/tooltip-icon-button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 import "katex/dist/katex.min.css";
 
@@ -62,7 +62,7 @@ const defaultComponents: any = {
     <h1
       className={cn(
         "mb-8 scroll-m-20 text-4xl font-extrabold tracking-tight last:mb-0",
-        className,
+        className
       )}
       {...props}
     />
@@ -71,7 +71,7 @@ const defaultComponents: any = {
     <h2
       className={cn(
         "mb-4 mt-8 scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 last:mb-0",
-        className,
+        className
       )}
       {...props}
     />
@@ -80,7 +80,7 @@ const defaultComponents: any = {
     <h3
       className={cn(
         "mb-4 mt-6 scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0 last:mb-0",
-        className,
+        className
       )}
       {...props}
     />
@@ -89,7 +89,7 @@ const defaultComponents: any = {
     <h4
       className={cn(
         "mb-4 mt-6 scroll-m-20 text-xl font-semibold tracking-tight first:mt-0 last:mb-0",
-        className,
+        className
       )}
       {...props}
     />
@@ -98,7 +98,7 @@ const defaultComponents: any = {
     <h5
       className={cn(
         "my-4 text-lg font-semibold first:mt-0 last:mb-0",
-        className,
+        className
       )}
       {...props}
     />
@@ -119,7 +119,7 @@ const defaultComponents: any = {
     <a
       className={cn(
         "text-primary font-medium underline underline-offset-4",
-        className,
+        className
       )}
       {...props}
     />
@@ -149,7 +149,7 @@ const defaultComponents: any = {
     <table
       className={cn(
         "my-5 w-full border-separate border-spacing-0 overflow-y-auto",
-        className,
+        className
       )}
       {...props}
     />
@@ -158,7 +158,7 @@ const defaultComponents: any = {
     <th
       className={cn(
         "bg-muted px-4 py-2 text-left font-bold first:rounded-tl-lg last:rounded-tr-lg [&[align=center]]:text-center [&[align=right]]:text-right",
-        className,
+        className
       )}
       {...props}
     />
@@ -167,7 +167,7 @@ const defaultComponents: any = {
     <td
       className={cn(
         "border-b border-l px-4 py-2 text-left last:border-r [&[align=center]]:text-center [&[align=right]]:text-right",
-        className,
+        className
       )}
       {...props}
     />
@@ -176,7 +176,7 @@ const defaultComponents: any = {
     <tr
       className={cn(
         "m-0 border-b p-0 first:border-t [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg",
-        className,
+        className
       )}
       {...props}
     />
@@ -191,7 +191,7 @@ const defaultComponents: any = {
     <pre
       className={cn(
         "overflow-x-auto rounded-lg bg-black text-white max-w-4xl",
-        className,
+        className
       )}
       {...props}
     />

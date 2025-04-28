@@ -1,35 +1,52 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils/utils";
 
 interface ProgressCircleProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: number
-  size?: "sm" | "md" | "lg"
-  showValue?: boolean
-  textClassName?: string
+  value: number;
+  size?: "sm" | "md" | "lg";
+  showValue?: boolean;
+  textClassName?: string;
 }
 
-export const ProgressCircle = React.forwardRef<HTMLDivElement, ProgressCircleProps>(
-  ({ className, value, size = "md", showValue = false, textClassName, ...props }, ref) => {
-    const radius = size === "sm" ? 8 : size === "md" ? 10 : 12
-    const strokeWidth = size === "sm" ? 2 : size === "md" ? 2.5 : 3
-    const circumference = 2 * Math.PI * radius
-    const strokeDashoffset = circumference - (value / 100) * circumference
-    
+export const ProgressCircle = React.forwardRef<
+  HTMLDivElement,
+  ProgressCircleProps
+>(
+  (
+    {
+      className,
+      value,
+      size = "md",
+      showValue = false,
+      textClassName,
+      ...props
+    },
+    ref
+  ) => {
+    const radius = size === "sm" ? 8 : size === "md" ? 10 : 12;
+    const strokeWidth = size === "sm" ? 2 : size === "md" ? 2.5 : 3;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (value / 100) * circumference;
+
     const sizeClass = {
       sm: "h-5 w-5",
       md: "h-8 w-8",
       lg: "h-12 w-12",
-    }
-    
+    };
+
     const textSize = {
       sm: "text-[8px]",
       md: "text-xs",
       lg: "text-sm",
-    }
+    };
 
     return (
       <div
-        className={cn("relative inline-flex items-center justify-center", sizeClass[size], className)}
+        className={cn(
+          "relative inline-flex items-center justify-center",
+          sizeClass[size],
+          className
+        )}
         ref={ref}
         {...props}
       >
@@ -59,11 +76,17 @@ export const ProgressCircle = React.forwardRef<HTMLDivElement, ProgressCirclePro
           />
         </svg>
         {showValue && (
-          <span className={cn("absolute text-center font-medium", textSize[size], textClassName)}>
+          <span
+            className={cn(
+              "absolute text-center font-medium",
+              textSize[size],
+              textClassName
+            )}
+          >
             {Math.round(value)}%
           </span>
         )}
       </div>
-    )
+    );
   }
-)
+);

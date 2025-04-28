@@ -4,7 +4,7 @@ import React from "react";
 import { toast, Toast } from "sonner";
 import { X, CheckCircle, AlertCircle, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 // Types
 type FileUploadStatus = "uploading" | "success" | "error" | "processing";
@@ -44,7 +44,7 @@ export function useFileUploadToast() {
     toast.custom(
       (t) => (
         <FileUploadToast
-          fileName={t.title as string || "File"}
+          fileName={(t.title as string) || "File"}
           status={(t.data?.status as FileUploadStatus) || "uploading"}
           progress={(t.data?.progress as number) || 0}
           message={(t.data?.message as string) || ""}

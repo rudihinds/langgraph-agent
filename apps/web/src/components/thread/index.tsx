@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { useStreamContext } from "@/providers/Stream";
 import { useState, FormEvent } from "react";
 import { Button } from "../ui/button";
@@ -71,11 +71,11 @@ export function Thread() {
   const [threadId, setThreadId] = useQueryState("threadId");
   const [chatHistoryOpen, setChatHistoryOpen] = useQueryState(
     "chatHistoryOpen",
-    parseAsBoolean.withDefault(false),
+    parseAsBoolean.withDefault(false)
   );
   const [hideToolCalls, setHideToolCalls] = useQueryState(
     "hideToolCalls",
-    parseAsBoolean.withDefault(false),
+    parseAsBoolean.withDefault(false)
   );
   const [input, setInput] = useState("");
   const [firstTokenReceived, setFirstTokenReceived] = useState(false);
@@ -153,14 +153,14 @@ export function Thread() {
             newHumanMessage,
           ],
         }),
-      },
+      }
     );
 
     setInput("");
   };
 
   const handleRegenerate = (
-    parentCheckpoint: Checkpoint | null | undefined,
+    parentCheckpoint: Checkpoint | null | undefined
   ) => {
     // Do this so the loading state is correct
     prevMessageLength.current = prevMessageLength.current - 1;
@@ -199,7 +199,7 @@ export function Thread() {
       <motion.div
         className={cn(
           "flex-1 flex flex-col min-w-0 overflow-hidden relative",
-          !chatStarted && "grid-rows-[1fr]",
+          !chatStarted && "grid-rows-[1fr]"
         )}
         layout={isLargeScreen}
         animate={{
@@ -289,7 +289,7 @@ export function Thread() {
             className={cn(
               "absolute inset-0 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
               !chatStarted && "flex flex-col items-stretch mt-[25vh]",
-              chatStarted && "grid grid-rows-[1fr_auto]",
+              chatStarted && "grid grid-rows-[1fr_auto]"
             )}
             contentClassName="pt-8 pb-16  max-w-3xl mx-auto flex flex-col gap-4 w-full"
             content={
@@ -310,7 +310,7 @@ export function Thread() {
                         isLoading={isLoading}
                         handleRegenerate={handleRegenerate}
                       />
-                    ),
+                    )
                   )}
                 {isLoading && !firstTokenReceived && (
                   <AssistantMessageLoading />

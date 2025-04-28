@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import NewProposalModal from "./NewProposalModal";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 // MODEL
 interface NewProposalCardProps {

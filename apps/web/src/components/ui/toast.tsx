@@ -3,7 +3,7 @@ import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 const ToastProvider = ToastPrimitives.Provider;
 
@@ -120,10 +120,6 @@ export {
   ToastProvider,
   ToastViewport,
   Toast,
-  
-  
-  
-  
 };
 
 // Custom useToast hook to manage toast state
@@ -309,4 +305,4 @@ function useToast() {
   };
 }
 
-export { useToast,  };
+export { useToast };

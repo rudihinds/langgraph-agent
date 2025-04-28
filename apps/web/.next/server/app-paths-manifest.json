@@ -2,5 +2,6 @@
   "/proposals/new/application/page": "app/proposals/new/application/page.js",
   "/proposals/created/page": "app/proposals/created/page.js",
   "/proposals/new/rfp/page": "app/proposals/new/rfp/page.js",
+  "/login/page": "app/login/page.js",
   "/dashboard/page": "app/dashboard/page.js"
 }

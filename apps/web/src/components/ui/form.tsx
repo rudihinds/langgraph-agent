@@ -3,34 +3,22 @@
 import * as React from "react";
 import { useFormStatus } from "react-dom";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Slot } from "@radix-ui/react-slot";
 
 const Form = React.forwardRef<
   HTMLFormElement,
   React.FormHTMLAttributes<HTMLFormElement>
 >(({ className, ...props }, ref) => {
-  return (
-    <form
-      ref={ref}
-      className={cn("space-y-6", className)}
-      {...props}
-    />
-  );
+  return <form ref={ref} className={cn("space-y-6", className)} {...props} />;
 });
 Form.displayName = "Form";
 
 const FormItem = React.forwardRef<
-  HTMLDivElement, 
+  HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("space-y-2", className)}
-      {...props}
-    />
-  );
+  return <div ref={ref} className={cn("space-y-2", className)} {...props} />;
 });
 FormItem.displayName = "FormItem";
 
@@ -86,11 +74,11 @@ const FormMessage = React.forwardRef<
 });
 FormMessage.displayName = "FormMessage";
 
-const FormField = ({ 
-  name, 
+const FormField = ({
+  name,
   control,
-  render 
-}: { 
+  render,
+}: {
   name: string;
   control: any;
   render: (props: { field: any }) => React.ReactNode;
@@ -102,20 +90,21 @@ const FormField = ({
       if (control?.setValue) {
         control.setValue(name, value);
       }
-    }
+    },
   };
-  
+
   return render({ field });
 };
 
-interface FormSubmitProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface FormSubmitProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   className?: string;
 }
 
 function FormSubmit({ children, className, ...props }: FormSubmitProps) {
   const { pending } = useFormStatus();
-  
+
   return (
     <button
       type="submit"
@@ -139,5 +128,5 @@ export {
   FormDescription,
   FormMessage,
   FormField,
-  FormSubmit
+  FormSubmit,
 };

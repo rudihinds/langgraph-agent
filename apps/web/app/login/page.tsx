@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
-import { signIn } from "@/lib/supabase";
+import { signIn } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Info } from "lucide-react";
@@ -98,7 +98,7 @@ function LoginContent() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-md p-8 space-y-8 bg-card border rounded-lg shadow-md">
+      <div className="w-full max-w-md p-8 space-y-8 border rounded-lg shadow-md bg-card">
         <div className="text-center">
           <h1 className="text-3xl font-bold">Login</h1>
           <p className="mt-2 text-muted-foreground">
@@ -111,7 +111,7 @@ function LoginContent() {
             variant="warning"
             className="bg-amber-50 dark:bg-amber-950 border-amber-300"
           >
-            <Info className="h-4 w-4" />
+            <Info className="w-4 h-4" />
             <AlertTitle>Recovery mode</AlertTitle>
             <AlertDescription>
               Previous session data was cleared due to sync issues. Please sign
@@ -122,7 +122,7 @@ function LoginContent() {
 
         {error && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className="w-4 h-4" />
             <AlertTitle>Authentication Error</AlertTitle>
             <AlertDescription>
               {ERROR_MESSAGES[error] || error}
@@ -132,10 +132,10 @@ function LoginContent() {
 
         {redirectPath && (
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="w-4 h-4" />
             <AlertDescription>
               You'll be redirected back to{" "}
-              <code className="text-xs bg-muted p-1 rounded">
+              <code className="p-1 text-xs rounded bg-muted">
                 {redirectPath}
               </code>{" "}
               after sign in.
@@ -172,7 +172,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="flex flex-col items-center justify-center min-h-screen p-4">
-          <div className="w-full max-w-md p-8 space-y-8 bg-card border rounded-lg shadow-md">
+          <div className="w-full max-w-md p-8 space-y-8 border rounded-lg shadow-md bg-card">
             <div className="text-center">
               <h1 className="text-3xl font-bold">Login</h1>
               <p className="mt-2 text-muted-foreground">Loading...</p>

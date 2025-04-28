@@ -7,7 +7,7 @@ import {
   unknownToPrettyDate,
 } from "../utils";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { BaseMessage } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { ToolCallTable } from "./tool-call-table";
@@ -156,7 +156,7 @@ function HasContentsEllipsis({ onClick }: { onClick?: () => void }) {
         "font-mono text-[10px] leading-3 p-[2px] rounded-md",
         "bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-800",
         "transition-colors ease-in-out cursor-pointer",
-        "-translate-y-[2px] inline-block",
+        "-translate-y-[2px] inline-block"
       )}
     >
       {"{...}"}
@@ -248,7 +248,7 @@ export function StateView({
       className={cn(
         "flex flex-row gap-0 w-full",
         view === "state" &&
-          "border-t-[1px] lg:border-t-[0px] lg:border-l-[1px] border-gray-100 ",
+          "border-t-[1px] lg:border-t-[0px] lg:border-l-[1px] border-gray-100 "
       )}
     >
       {view === "description" && (

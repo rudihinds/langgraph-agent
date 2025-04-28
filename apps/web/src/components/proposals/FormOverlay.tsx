@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { LoaderCircle, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 interface FormOverlayProps {
   isVisible: boolean;
@@ -55,9 +55,7 @@ export function FormOverlay({
             </div>
           )}
 
-          <h3 className="text-xl font-semibold mb-4">
-            {getMessage()}
-          </h3>
+          <h3 className="text-xl font-semibold mb-4">{getMessage()}</h3>
 
           <div className="w-full bg-muted rounded-full h-2 mb-4">
             <div
@@ -114,13 +112,11 @@ function StepIndicator({ isActive, isComplete, label }: StepIndicatorProps) {
           isComplete
             ? "bg-green-500"
             : isActive
-            ? "bg-primary"
-            : "bg-muted-foreground/30"
+              ? "bg-primary"
+              : "bg-muted-foreground/30"
         )}
       >
-        {isComplete && (
-          <CheckCircle className="h-4 w-4 text-white" />
-        )}
+        {isComplete && <CheckCircle className="h-4 w-4 text-white" />}
       </div>
       <span
         className={cn(
@@ -128,8 +124,8 @@ function StepIndicator({ isActive, isComplete, label }: StepIndicatorProps) {
           isComplete
             ? "text-green-500"
             : isActive
-            ? "text-primary"
-            : "text-muted-foreground"
+              ? "text-primary"
+              : "text-muted-foreground"
         )}
       >
         {label}

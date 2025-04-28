@@ -63,8 +63,9 @@ export const createClient = cache(
                   cookieJar.set(name, value, options)
                 );
               } catch (error) {
-                console.error("[SupabaseClient] Error setting cookies:", error);
-                // This can be ignored if you have middleware refreshing user sessions
+                console.log(
+                  "[SupabaseClient] Note: Cookie set attempted in component scope - this is expected in some contexts"
+                );
               }
             },
           },

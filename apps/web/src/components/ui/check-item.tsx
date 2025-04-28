@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 interface CheckItemProps {
   children: ReactNode;

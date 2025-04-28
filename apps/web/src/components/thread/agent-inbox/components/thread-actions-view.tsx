@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ThreadIdCopyable } from "./thread-id";
 import { InboxItemInput } from "./inbox-item-input";
 import useInterruptedActions from "../hooks/use-interrupted-actions";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { toast } from "sonner";
 import { useQueryState } from "nuqs";
 import { constructOpenInStudioURL } from "../utils";
@@ -32,7 +32,7 @@ function ButtonGroup({
         variant="outline"
         className={cn(
           "rounded-l-md rounded-r-none border-r-[0px]",
-          showingState ? "text-black" : "bg-white",
+          showingState ? "text-black" : "bg-white"
         )}
         size="sm"
         onClick={handleShowState}
@@ -43,7 +43,7 @@ function ButtonGroup({
         variant="outline"
         className={cn(
           "rounded-l-none rounded-r-md border-l-[0px]",
-          showingDescription ? "text-black" : "bg-white",
+          showingDescription ? "text-black" : "bg-white"
         )}
         size="sm"
         onClick={handleShowDescription}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRequireAuth } from "@/lib/client-auth";
+import { useRequireAuth } from "@/lib/supabase/auth";
 import { RfpForm } from "@/components/proposals/RfpForm";
 import { Loader2 } from "lucide-react";
 
@@ -20,7 +20,7 @@ export default function NewRfpProposalPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2">Loading...</span>
       </div>
     );

@@ -2,7 +2,7 @@ import { useStreamContext } from "@/providers/Stream";
 import { Message } from "@langchain/langgraph-sdk";
 import { useState } from "react";
 import { getContentString } from "../utils";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { BranchSwitcher, CommandBar } from "./shared";
 
@@ -65,7 +65,7 @@ export function HumanMessage({
             messages: [...(values.messages ?? []), newMessage],
           };
         },
-      },
+      }
     );
   };
 
@@ -73,7 +73,7 @@ export function HumanMessage({
     <div
       className={cn(
         "flex items-center ml-auto gap-2 group",
-        isEditing && "w-full max-w-xl",
+        isEditing && "w-full max-w-xl"
       )}
     >
       <div className={cn("flex flex-col gap-2", isEditing && "w-full")}>
@@ -93,7 +93,7 @@ export function HumanMessage({
           className={cn(
             "flex gap-2 items-center ml-auto transition-opacity",
             "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
-            isEditing && "opacity-100",
+            isEditing && "opacity-100"
           )}
         >
           <BranchSwitcher

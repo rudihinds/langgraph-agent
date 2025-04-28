@@ -3,7 +3,7 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -67,12 +67,14 @@ export function DatePicker({
               day_selected:
                 "bg-primary text-primary-foreground font-medium hover:bg-primary hover:text-primary-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2",
               head_row: "flex",
-              head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] py-1.5",
+              head_cell:
+                "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] py-1.5",
               day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 data-[state=inactive]:opacity-50 cursor-pointer hover:bg-accent transition-colors",
               caption: "flex justify-center pt-1 relative items-center mb-2",
               caption_label: "text-sm font-medium",
-              nav: "space-x-1 flex items-center", 
-              nav_button: "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 transition-opacity",
+              nav: "space-x-1 flex items-center",
+              nav_button:
+                "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 transition-opacity",
               table: "w-full border-collapse space-y-1",
             }}
           />
@@ -81,4 +83,4 @@ export function DatePicker({
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
-} 
+}

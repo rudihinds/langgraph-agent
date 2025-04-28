@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase";
 import { syncUserToDatabase } from "@/lib/user-management";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";

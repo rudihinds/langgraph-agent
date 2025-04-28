@@ -12,7 +12,7 @@ export {
   getSession,
   getCurrentUser,
   checkUserSession,
-} from "./actions";
+} from "@/lib/supabase/auth/actions";
 
 // Re-export from utils
 export {
@@ -20,6 +20,9 @@ export {
   getAccessToken,
   validateSession,
   checkAuthAndRedirect,
-} from "./utils";
+} from "@/lib/supabase/auth/utils";
 
 // Re-export from hooks
+export { useCurrentUser } from "@/lib/supabase/auth/hooks";
+export { useRequireAuth } from "@/lib/supabase/auth/hooks";
+

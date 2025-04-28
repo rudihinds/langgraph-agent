@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useSession } from "@/hooks/useSession";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ModeToggle } from "@/components/ui/mode-toggle";

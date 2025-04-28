@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileType, Upload, X, CheckCircle, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 interface FileInfo {
   name: string;
@@ -77,7 +77,7 @@ export function FilePreview({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
@@ -100,7 +100,7 @@ export function FilePreview({
         onChange={handleFileChange}
         accept={acceptedTypes.join(",")}
       />
-      
+
       {file ? (
         <Card className="overflow-hidden border border-border">
           <CardContent className="p-4">
@@ -114,18 +114,20 @@ export function FilePreview({
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                     <span>{formatFileSize(file.size)}</span>
                     <span className="h-1 w-1 rounded-full bg-muted-foreground/60"></span>
-                    <span>{file.type.split('/')[1]?.toUpperCase() || 'DOCUMENT'}</span>
+                    <span>
+                      {file.type.split("/")[1]?.toUpperCase() || "DOCUMENT"}
+                    </span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-1.5">
                   {acceptedTypes.includes(file.type) && file.size <= maxSize ? (
                     <CheckCircle className="h-5 w-5 text-green-500" />
                   ) : (
                     <AlertCircle className="h-5 w-5 text-destructive" />
                   )}
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="icon"
                     onClick={handleRemove}
                     className="h-8 w-8 rounded-full"
@@ -142,8 +144,8 @@ export function FilePreview({
         <div
           className={cn(
             "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-colors",
-            dragActive 
-              ? "border-primary bg-primary/5" 
+            dragActive
+              ? "border-primary bg-primary/5"
               : "border-border bg-background/50 hover:bg-muted/40"
           )}
           onDragOver={handleDragOver}

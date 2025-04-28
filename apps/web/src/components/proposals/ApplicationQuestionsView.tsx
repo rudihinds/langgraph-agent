@@ -58,7 +58,7 @@ import {
   File,
   AlertCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckItem } from "@/components/ui/check-item";
 import {
@@ -94,11 +94,11 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { slugify } from "@/lib/utils";
+import { slugify } from "@/lib/utils/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProgressCircle } from "@/components/ui/progress-circle";
-import { debounce } from "@/lib/utils";
+import { debounce } from "@/lib/utils/utils";
 import { SubmitButton } from "./SubmitButton";
 import { FormErrorBoundary, FieldError } from "@/components/ui/form-error";
 

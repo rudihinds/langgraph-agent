@@ -25,7 +25,7 @@ import {
   Save,
 } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { motion } from "framer-motion";
 import { FunderDetails } from "./FunderDetailsView";
 import { CheckItem } from "@/components/ui/check-item";

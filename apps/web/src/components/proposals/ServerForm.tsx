@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
-import { useRequireAuth, signOut } from "@/lib/client-auth";
+import { useRequireAuth, signOut } from "@/lib/supabase/auth";
 import { Loader2, Upload, FileText, Trash, Info } from "lucide-react";
 import { UploadResult } from "@/features/proposals/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { z } from "zod";
 
 interface ServerFormProps {
@@ -308,8 +308,8 @@ export default function ServerForm({
 
   if (loading || isVerifyingUser) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2">Loading...</span>
       </div>
     );
@@ -317,7 +317,7 @@ export default function ServerForm({
 
   if (error) {
     return (
-      <div className="text-red-500 p-4">
+      <div className="p-4 text-red-500">
         Authentication error. Please try logging in again.
       </div>
     );
@@ -380,7 +380,7 @@ export default function ServerForm({
           </div>
 
           {fileValidation.message && (
-            <p className="text-sm text-destructive flex items-center">
+            <p className="flex items-center text-sm text-destructive">
               <Info className="w-3.5 h-3.5 mr-1" />
               {fileValidation.message}
             </p>
@@ -395,7 +395,7 @@ export default function ServerForm({
         </div>
       )}
 
-      <div className="flex flex-col space-y-3 pt-4">
+      <div className="flex flex-col pt-4 space-y-3">
         <Button
           type="submit"
           size="lg"
@@ -411,7 +411,7 @@ export default function ServerForm({
           {isSubmitting ? (
             <>
               <Loader2
-                className="mr-2 h-4 w-4 animate-spin"
+                className="w-4 h-4 mr-2 animate-spin"
                 data-testid="submitting-indicator"
               />
               Submitting...

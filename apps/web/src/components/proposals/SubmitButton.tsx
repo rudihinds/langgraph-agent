@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { LoaderCircle, AlertCircle, CheckCircle } from "lucide-react";
 
 type StateType = "idle" | "loading" | "success" | "error" | "disabled";

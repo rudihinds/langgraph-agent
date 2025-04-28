@@ -3,7 +3,7 @@
 import { ProposalCard } from "@/components/dashboard/ProposalCard";
 import { EmptyProposalState } from "@/components/dashboard/EmptyProposalState";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 // MODEL: Define the data structure
 interface ProposalGridProps {

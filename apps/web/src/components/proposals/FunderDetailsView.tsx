@@ -52,7 +52,7 @@ import {
   PopoverTrigger,
   AutoClosePopover,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
