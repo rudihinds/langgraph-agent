@@ -9,21 +9,21 @@ import {
   CardHeader,
   CardDescription,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/components/card";
+import { Button } from "@/features/ui/components/button";
 import { Plus } from "lucide-react";
-import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { AppointmentPicker } from "@/features/ui/components/appointment-picker";
 import { formatDateForAPI } from "@/lib/utils/date-utils";
-import { FormErrorBoundary } from "@/components/ui/form-error";
-import { FormField } from "@/components/ui/form-field";
+import { FormErrorBoundary } from "@/features/ui/components/form-error";
+import { FormField } from "@/features/ui/components/form-field";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { QuestionField, Question } from "@/components/ui/question-field";
+import { QuestionField, Question } from "@/features/ui/components/question-field";
 import {
   questionsFormSchema,
   QuestionsFormValues,
 } from "@/lib/forms/schemas/questions-form-schema";
 import { logger } from "@/lib/logger";
-import { createProposalWithQuestions } from "@/lib/proposal-actions/actions[dep]";
+import { createProposalWithQuestions } from "@/features/proposals/utils/actions[dep]";
 
 type ApplicationQuestionsViewProps = {
   userId: string;
@@ -48,7 +48,7 @@ export function ApplicationQuestionsView({
   const { values, errors, isSubmitting, setValue, handleSubmit } =
     useZodForm(questionsFormSchema);
 
-  // Set initial values for fields that aren't directly bound to inputs
+  // Set initial values for fields that aren"t directly bound to inputs
   React.useEffect(() => {
     setValue("questions", questions);
   }, [questions, setValue]);

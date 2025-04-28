@@ -9,9 +9,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+} from "@/features/ui/components/card";
+import { Badge } from "@/features/ui/components/badge";
+import { Progress } from "@/features/ui/components/progress";
 import {
   BarChart,
   Calendar,
@@ -29,8 +29,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/components/dropdown-menu";
+import { Button } from "@/features/ui/components/button";
 import { cn } from "@/lib/utils/utils";
 
 // MODEL: Define the data structure

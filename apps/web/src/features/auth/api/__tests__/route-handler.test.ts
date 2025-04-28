@@ -3,8 +3,8 @@
  */
 import { NextRequest } from 'next/server';
 import { createRouteHandler } from '../route-handler';
-import { AppError, ValidationError, AuthenticationError } from '@/lib/errors/custom-errors';
-import { logger } from '@/lib/logger';
+import { AppError, ValidationError, AuthenticationError } from "@/features/shared/errors/custom-errors";
+import { logger } from "@/lib/logger";
 
 // Mock the logger
 vi.mock('@/lib/logger', () => ({

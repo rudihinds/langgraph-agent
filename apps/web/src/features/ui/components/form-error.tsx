@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils/utils";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/features/ui/components/alert";
 import { X, AlertCircle, Info } from "lucide-react";
 
 interface FormErrorProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -43,7 +43,7 @@ export function FormError({
   icon = <AlertCircle className="h-4 w-4" />,
   ...props
 }: FormErrorProps) {
-  // Don't render anything if no message
+  // Don"t render anything if no message
   if (!message) return null;
 
   return (

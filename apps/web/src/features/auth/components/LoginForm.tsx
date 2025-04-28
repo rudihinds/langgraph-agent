@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { signIn } from '@/lib/supabase';
+import { signIn } from "@/lib/supabase";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);

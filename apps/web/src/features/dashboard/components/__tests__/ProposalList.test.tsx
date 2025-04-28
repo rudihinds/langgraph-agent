@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import ProposalList from "../ProposalList";
-import { getProposals } from "@/lib/api/proposals";
+import { getProposals } from "@/features/api/utils/proposals";
 import EmptyDashboard from "../EmptyDashboard";
 
 // Mock dependencies
@@ -36,7 +36,7 @@ describe("ProposalList", () => {
     expect(screen.getByTestId("empty-dashboard")).toBeInTheDocument();
   });
 
-  it('renders all proposals in the "all" tab', async () => {
+  it("renders all proposals in the "all" tab', async () => {
     const mockProposals = [
       {
         id: "1",

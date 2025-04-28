@@ -1,14 +1,14 @@
 /**
  * Supabase-specific error handling utilities
  */
-import { PostgrestError, AuthError } from '@supabase/supabase-js';
+import { PostgrestError, AuthError } from "@supabase/supabase-js";
 import { 
   AuthenticationError, 
   DatabaseError, 
   ValidationError, 
   ForbiddenError 
-} from '@/lib/errors/custom-errors';
-import { logger } from '@/lib/logger';
+} from "@/features/shared/errors/custom-errors";
+import { logger } from "@/lib/logger";
 
 // Map Postgres error codes to meaningful error messages
 const DB_ERROR_CODES: Record<string, string> = {

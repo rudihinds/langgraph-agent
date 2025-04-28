@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useState, useCallback, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/features/ui/components/card";
 import {
   Calendar,
   CheckCircle2,
@@ -28,7 +28,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils/utils";
 import { motion } from "framer-motion";
 import { FunderDetails } from "./FunderDetailsView";
-import { CheckItem } from "@/components/ui/check-item";
+import { CheckItem } from "@/features/ui/components/check-item";
 import { z } from "zod";
 import { Question } from "./ApplicationQuestionsView";
 import { ProposalType } from "./ProposalCreationFlow";
@@ -98,7 +98,7 @@ function useReviewProposal({
         budgetRange: funderDetails.budgetRange,
         focusArea: funderDetails.focusArea,
       },
-      // Add application questions if we're in application flow
+      // Add application questions if we"re in application flow
       ...(proposalType === "application"
         ? {
             questions: applicationQuestions.map((q) => {

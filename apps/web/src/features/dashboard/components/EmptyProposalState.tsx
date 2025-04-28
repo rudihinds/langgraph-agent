@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
-} from "@/components/ui/card";
+} from "@/features/ui/components/card";
 import { ClipboardList, Check, Plus, PlusIcon } from "lucide-react";
 import NewProposalModal from "./NewProposalModal";
 import Image from "next/image";

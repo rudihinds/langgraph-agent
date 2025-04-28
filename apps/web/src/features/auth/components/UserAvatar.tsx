@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/features/auth/hooks/useSession";
 import { signOut } from "@/lib/supabase";
 
 export function UserAvatar() {

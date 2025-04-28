@@ -2,7 +2,7 @@
  * Type definitions for Supabase-related functionality
  */
 import { User, Session } from "@supabase/supabase-js";
-import { ApiResponse, BaseError } from "@/lib/errors/types";
+import { ApiResponse, BaseError } from "@/features/shared/errors/types";
 
 /**
  * Supabase user extended with application-specific properties

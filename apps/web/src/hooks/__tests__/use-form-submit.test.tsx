@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useFormSubmit } from "../use-form-submit";
-import { ErrorCodes } from "@/lib/errors/types";
+import { ErrorCodes } from "@/features/shared/errors/types";
 
 describe("useFormSubmit Hook", () => {
   // Test component using the hook

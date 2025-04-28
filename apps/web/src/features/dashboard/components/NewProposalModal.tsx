@@ -12,10 +12,10 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/features/ui/components/sheet";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
+import { Label } from "@/features/ui/components/label";
 
 // Validation schema
 const formSchema = z.object({

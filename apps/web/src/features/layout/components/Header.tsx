@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/ui/mode-toggle";
+import { Button } from "@/features/ui/components/button";
+import { ModeToggle } from "@/features/ui/components/mode-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,8 +8,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from "@/features/ui/components/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/features/ui/components/avatar";
 import { User } from "@supabase/supabase-js";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import { useSession } from "@/hooks/useSession";
@@ -23,13 +23,13 @@ export default function Header({ user }: HeaderProps) {
   const isAuthenticated = !!user;
 
   return (
-    <header className="fixed top-0 left-0 right-0 border-b bg-background z-10">
-      <div className="container mx-auto h-16 px-4 flex items-center justify-between">
+    <header className="fixed top-0 left-0 right-0 z-10 border-b bg-background">
+      <div className="container flex items-center justify-between h-16 px-4 mx-auto">
         <div className="flex items-center gap-6">
-          <Link href="/" className="font-bold text-xl">
+          <Link href="/" className="text-xl font-bold">
             Proposal Agent
           </Link>
-          <nav className="hidden md:flex items-center gap-4">
+          <nav className="items-center hidden gap-4 md:flex">
             {isAuthenticated ? (
               <>
                 <Link
@@ -121,8 +121,8 @@ function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
+        <Button variant="ghost" className="relative w-10 h-10 rounded-full">
+          <Avatar className="w-10 h-10">
             <AvatarImage src={avatarUrl} alt={userName} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
@@ -141,18 +141,18 @@ function UserMenu({
         <DropdownMenuItem asChild>
           <Link
             href="/profile"
-            className="cursor-pointer w-full flex items-center"
+            className="flex items-center w-full cursor-pointer"
           >
-            <UserIcon className="mr-2 h-4 w-4" />
+            <UserIcon className="w-4 h-4 mr-2" />
             <span>Profile</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link
             href="/settings"
-            className="cursor-pointer w-full flex items-center"
+            className="flex items-center w-full cursor-pointer"
           >
-            <Settings className="mr-2 h-4 w-4" />
+            <Settings className="w-4 h-4 mr-2" />
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
@@ -161,7 +161,7 @@ function UserMenu({
           onClick={handleSignOut}
           className="cursor-pointer focus:bg-destructive/10"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="w-4 h-4 mr-2" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

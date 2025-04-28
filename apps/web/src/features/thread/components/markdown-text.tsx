@@ -8,9 +8,9 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { FC, memo, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { SyntaxHighlighter } from "@/components/thread/syntax-highlighter";
+import { SyntaxHighlighter } from "@/features/thread/components/syntax-highlighter";
 
-import { TooltipIconButton } from "@/components/thread/tooltip-icon-button";
+import { TooltipIconButton } from "@/features/thread/components/tooltip-icon-button";
 import { cn } from "@/lib/utils/utils";
 
 import "katex/dist/katex.min.css";

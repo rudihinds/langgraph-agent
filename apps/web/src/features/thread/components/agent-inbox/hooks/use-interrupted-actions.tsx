@@ -12,7 +12,7 @@ import { createDefaultHumanResponse } from "../utils";
 import { toast } from "sonner";
 import { HumanInterrupt, HumanResponse } from "@langchain/langgraph/prebuilt";
 import { END } from "@langchain/langgraph/web";
-import { useStreamContext } from "@/providers/Stream";
+import { useStreamContext } from '@/features/providers/Stream';
 
 interface UseInterruptedActionsInput {
   interrupt: HumanInterrupt;

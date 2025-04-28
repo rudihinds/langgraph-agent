@@ -1,9 +1,9 @@
-import { useStreamContext } from "@/providers/Stream";
+import { useStreamContext } from "@/features/providers/Stream";
 import { Message } from "@langchain/langgraph-sdk";
 import { useState } from "react";
 import { getContentString } from "../utils";
-import { cn } from "@/lib/utils/utils";
-import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/features/shared/utils/utils";
+import { Textarea } from "@/features/ui/components/textarea";
 import { BranchSwitcher, CommandBar } from "./shared";
 
 function EditableContent({

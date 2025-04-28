@@ -4,7 +4,7 @@
 import { createClient } from "../client";
 import { AppUser } from "../types";
 import { createAuthErrorResponse } from "./auth-errors";
-import { ApiResponse } from "@/lib/errors/types";
+import { ApiResponse } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 /**
@@ -101,7 +101,7 @@ export async function validateSession(): Promise<ApiResponse<boolean>> {
       return { success: true, data: false };
     }
 
-    // If we have a session but it's expired, try to refresh
+    // If we have a session but it"s expired, try to refresh
     const expiresAt = session.expires_at;
     const currentTime = Date.now() / 1000;
 

@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
+import { Textarea } from "@/features/ui/components/textarea";
+import { Label } from "@/features/ui/components/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/features/ui/components/select";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/features/ui/components/dialog";
 import {
   Card,
   CardContent,
@@ -28,12 +28,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/features/ui/components/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/features/ui/components/collapsible";
 import {
   ChevronUp,
   ChevronDown,
@@ -60,25 +60,25 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckItem } from "@/components/ui/check-item";
+import { CheckItem } from "@/features/ui/components/check-item";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
   AutoClosePopover,
-} from "@/components/ui/popover";
+} from "@/features/ui/components/popover";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/features/ui/components/tooltip";
 import {
   type Question as SharedQuestion,
   type ApplicationQuestions,
 } from "@shared/types/ProposalSchema";
 import { z } from "zod";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/features/ui/components/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,19 +88,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+} from "@/features/ui/components/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/components/tabs";
+import { Separator } from "@/features/ui/components/separator";
+import { Badge } from "@/features/ui/components/badge";
+import { Switch } from "@/features/ui/components/switch";
+import { RadioGroup, RadioGroupItem } from "@/features/ui/components/radio-group";
 import { slugify } from "@/lib/utils/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ProgressCircle } from "@/components/ui/progress-circle";
+import { Alert, AlertDescription, AlertTitle } from "@/features/ui/components/alert";
+import { ScrollArea } from "@/features/ui/components/scroll-area";
+import { ProgressCircle } from "@/features/ui/components/progress-circle";
 import { debounce } from "@/lib/utils/utils";
 import { SubmitButton } from "./SubmitButton";
-import { FormErrorBoundary, FieldError } from "@/components/ui/form-error";
+import { FormErrorBoundary, FieldError } from "@/features/ui/components/form-error";
 
 // MODEL
 // Extend the shared Question type to include ID for internal management

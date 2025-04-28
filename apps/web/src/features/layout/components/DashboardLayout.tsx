@@ -5,9 +5,9 @@ import { useSession } from "@/hooks/useSession";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils/utils";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ModeToggle } from "@/components/ui/mode-toggle";
+import { Button } from "@/features/ui/components/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/features/ui/components/avatar";
+import { ModeToggle } from "@/features/ui/components/mode-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/features/ui/components/dropdown-menu";
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,7 +28,7 @@ import {
   User as UserIcon,
   Settings,
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/features/ui/components/separator";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -140,12 +140,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* App branding */}
         <div className="flex items-center h-16 px-4 border-b border-border">
           {!isSidebarCollapsed && (
-            <Link href="/dashboard" className="font-bold text-xl">
+            <Link href="/dashboard" className="text-xl font-bold">
               Proposal Agent
             </Link>
           )}
           {isSidebarCollapsed && (
-            <div className="w-full flex justify-center">
+            <div className="flex justify-center w-full">
               <Link href="/dashboard" aria-label="Proposal Agent">
                 <FileTextIcon size={24} className="text-primary" />
               </Link>
@@ -155,7 +155,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          <ul className="space-y-1 px-2">
+          <ul className="px-2 space-y-1">
             <NavItem
               href="/dashboard"
               icon={<HomeIcon size={20} />}
@@ -188,7 +188,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="border-t border-border py-4 px-6 flex justify-center">
+        <div className="flex justify-center px-6 py-4 border-t border-border">
           <Button
             data-testid="sidebar-toggle"
             variant="ghost"
@@ -210,27 +210,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-border flex items-center px-6">
+        <header className="flex items-center h-16 px-6 border-b border-border">
           <h1 className="text-xl font-semibold">
             {pathname === "/dashboard" && "Dashboard"}
             {pathname === "/proposals" && "My Proposals"}
             {pathname === "/proposals/new" && "New Proposal"}
             {pathname === "/settings" && "Settings"}
           </h1>
-          <div className="ml-auto flex items-center space-x-2">
+          <div className="flex items-center ml-auto space-x-2">
             <ModeToggle />
             <UserProfileMenu user={user} onSignOut={signOut} />
           </div>
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-auto relative">
-          <div className="max-w-7xl mx-auto p-6">{children}</div>
+        <main className="relative flex-1 overflow-auto">
+          <div className="p-6 mx-auto max-w-7xl">{children}</div>
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-border py-4 px-6">
-          <div className="flex justify-between items-center">
+        <footer className="px-6 py-4 border-t border-border">
+          <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
               Proposal Agent v1.0.0
             </p>
@@ -291,8 +291,8 @@ function UserProfileMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
+        <Button variant="ghost" className="relative w-10 h-10 rounded-full">
+          <Avatar className="w-10 h-10">
             <AvatarImage
               src={user?.user_metadata?.avatar_url}
               alt={user?.email || ""}
@@ -316,18 +316,18 @@ function UserProfileMenu({
         <DropdownMenuItem asChild>
           <Link
             href="/profile"
-            className="cursor-pointer w-full flex items-center"
+            className="flex items-center w-full cursor-pointer"
           >
-            <UserIcon className="mr-2 h-4 w-4" />
+            <UserIcon className="w-4 h-4 mr-2" />
             <span>Profile</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link
             href="/settings"
-            className="cursor-pointer w-full flex items-center"
+            className="flex items-center w-full cursor-pointer"
           >
-            <Settings className="mr-2 h-4 w-4" />
+            <Settings className="w-4 h-4 mr-2" />
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
@@ -336,7 +336,7 @@ function UserProfileMenu({
           onClick={handleSignOut}
           className="cursor-pointer focus:bg-destructive/10"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="w-4 h-4 mr-2" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

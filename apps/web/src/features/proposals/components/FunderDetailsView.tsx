@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
+import { Textarea } from "@/features/ui/components/textarea";
+import { Label } from "@/features/ui/components/label";
 import {
   Card,
   CardContent,
@@ -12,14 +12,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/features/ui/components/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/features/ui/components/select";
 import {
   Info,
   Building,
@@ -45,30 +45,30 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/features/ui/components/tooltip";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
   AutoClosePopover,
-} from "@/components/ui/popover";
+} from "@/features/ui/components/popover";
 import { cn } from "@/lib/utils/utils";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { CheckItem } from "@/components/ui/check-item";
+import { Calendar as CalendarComponent } from "@/features/ui/components/calendar";
+import { CheckItem } from "@/features/ui/components/check-item";
 import { z } from "zod";
 import {
   FunderDetailsFormSchema,
   type FunderDetailsForm,
 } from "@/schemas/ProposalSchema";
-import { DatePicker } from "@/components/ui/date-picker";
-import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { DatePicker } from "@/features/ui/components/date-picker";
+import { AppointmentPicker } from "@/features/ui/components/appointment-picker";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { FormErrorBoundary, FieldError } from "@/components/ui/form-error";
-import { useToast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FormErrorBoundary, FieldError } from "@/features/ui/components/form-error";
+import { useToast } from "@/features/ui/components/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/features/ui/components/alert";
 
 // MODEL
 interface FunderDetailsViewProps {
@@ -172,7 +172,7 @@ function useFunderDetails({
 
   // Auto-save to localStorage when data changes
   useEffect(() => {
-    // Don't save if all fields are empty
+    // Don"t save if all fields are empty
     if (Object.values(formData).every((v) => !v)) return;
 
     const saveTimeout = setTimeout(() => {

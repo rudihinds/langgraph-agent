@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { ProposalCard } from "@/components/dashboard/ProposalCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EmptyDashboard from "@/components/dashboard/EmptyDashboard";
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
-import { getProposals } from "@/lib/api/proposals";
+import { ProposalCard } from "@/features/dashboard/components/ProposalCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/components/tabs";
+import EmptyDashboard from "@/features/dashboard/components/EmptyDashboard";
+import DashboardSkeleton from "@/features/dashboard/components/DashboardSkeleton";
+import { getProposals } from "@/features/api/utils/proposals";
 
 export default async function ProposalList() {
   const proposals = await getProposals();

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/supabase/auth";
-import ProposalCreationFlow from "@/components/proposals/ProposalCreationFlow";
+import ProposalCreationFlow from "@/features/proposals/components/ProposalCreationFlow";
 import { Loader2 } from "lucide-react";
 
 export default function NewApplicationProposalPage() {

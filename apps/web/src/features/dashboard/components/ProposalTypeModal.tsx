@@ -10,8 +10,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/components/dialog";
+import { Button } from "@/features/ui/components/button";
 import { FileText, ClipboardList, Check } from "lucide-react";
 
 // MODEL: Define types and business logic

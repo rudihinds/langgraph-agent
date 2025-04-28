@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { signIn } from "@/lib/supabase/auth";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/features/ui/components/button";
+import { Alert, AlertDescription, AlertTitle } from "@/features/ui/components/alert";
 import { AlertCircle, Info } from "lucide-react";
 
 // Map error codes to user-friendly messages

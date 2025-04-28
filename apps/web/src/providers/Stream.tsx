@@ -13,12 +13,12 @@ import {
   type RemoveUIMessage,
 } from "@langchain/langgraph-sdk/react-ui";
 import { useQueryState } from "nuqs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { LangGraphLogoSVG } from "@/components/icons/langgraph";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/features/ui/components/input";
+import { Button } from "@/features/ui/components/button";
+import { LangGraphLogoSVG } from "@/features/shared/components/icons/langgraph";
+import { Label } from "@/features/ui/components/label";
 import { ArrowRight } from "lucide-react";
-import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordInput } from "@/features/ui/components/password-input";
 import { getApiKey } from "@/lib/api-key";
 import { useThreads } from "./Thread";
 import { toast } from "sonner";
@@ -90,7 +90,7 @@ const StreamSession = ({
     onThreadId: (id) => {
       setThreadId(id);
       // Refetch threads list when thread ID changes.
-      // Wait for some seconds before fetching so we're able to get the new thread that was created.
+      // Wait for some seconds before fetching so we"re able to get the new thread that was created.
       sleep().then(() => getThreads().then(setThreads).catch(console.error));
     },
   });

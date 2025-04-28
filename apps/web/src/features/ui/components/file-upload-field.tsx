@@ -1,9 +1,9 @@
 import React from "react";
 import { Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { FieldError } from "@/components/ui/form-error";
-import { FilePreview } from "@/components/proposals/FilePreview";
+import { Button } from "@/features/ui/components/button";
+import { Label } from "@/features/ui/components/label";
+import { FieldError } from "@/features/ui/components/form-error";
+import { FilePreview } from "@/features/proposals/components/FilePreview";
 import { cn } from "@/lib/utils/utils";
 
 export type FileUploadFieldProps = {

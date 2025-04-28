@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 
 export default function LoginButton() {
   const [isLoading, setIsLoading] = useState(false);

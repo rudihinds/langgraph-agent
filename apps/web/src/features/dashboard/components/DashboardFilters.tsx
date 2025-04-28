@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
+import { Label } from "@/features/ui/components/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/features/ui/components/select";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/features/ui/components/collapsible";
 import {
   BadgeCheck,
   ChevronDown,
@@ -25,14 +25,14 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/features/ui/components/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/features/ui/components/card";
 
 export default function DashboardFilters() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -140,7 +140,7 @@ export default function DashboardFilters() {
                 variant="outline"
                 size="sm"
                 onClick={handleClearFilters}
-                className="text-xs h-8"
+                className="h-8 text-xs"
               >
                 <X className="mr-1 h-3.5 w-3.5" />
                 Reset
@@ -148,7 +148,7 @@ export default function DashboardFilters() {
               <Button
                 size="sm"
                 onClick={handleApplyFilters}
-                className="text-xs h-8"
+                className="h-8 text-xs"
               >
                 <Filter className="mr-1 h-3.5 w-3.5" />
                 Apply Filters
@@ -158,8 +158,8 @@ export default function DashboardFilters() {
 
           {appliedFilters.length > 0 && (
             <CardContent className="pt-0">
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium mb-2">Applied Filters</h4>
+              <div className="pt-4 border-t">
+                <h4 className="mb-2 text-sm font-medium">Applied Filters</h4>
                 <div className="flex flex-wrap gap-2">
                   {appliedFilters.map((filter, index) => (
                     <Badge
@@ -168,13 +168,13 @@ export default function DashboardFilters() {
                       className="gap-1 px-1.5 py-0.5"
                     >
                       {filter.startsWith("Search:") && (
-                        <Search className="h-3 w-3" />
+                        <Search className="w-3 h-3" />
                       )}
                       {filter.startsWith("Status:") && (
-                        <BadgeCheck className="h-3 w-3" />
+                        <BadgeCheck className="w-3 h-3" />
                       )}
                       {filter.startsWith("Time:") && (
-                        <Clock className="h-3 w-3" />
+                        <Clock className="w-3 h-3" />
                       )}
                       <span className="text-xs">{filter}</span>
                       <Button

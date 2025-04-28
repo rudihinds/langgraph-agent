@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Message, StreamContextType } from "../lib/types";
-import { createAuthInterceptor } from "../../../lib/api/auth-interceptor";
+import { createAuthInterceptor } from "@/features/api/utils/auth-interceptor";
 
 // Create a default context for Stream provider
 const StreamContext = createContext<StreamContextType | null>(null);

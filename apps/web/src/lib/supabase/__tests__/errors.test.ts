@@ -1,7 +1,7 @@
 /**
  * Tests for Supabase error handling utilities
  */
-import { PostgrestError } from '@supabase/supabase-js';
+import { PostgrestError } from "@supabase/supabase-js";
 import { 
   handleSupabaseError,
   handleDatabaseError,
@@ -12,7 +12,7 @@ import {
   AuthenticationError,
   ForbiddenError,
   ValidationError
-} from '@/lib/errors/custom-errors';
+} from "@/features/shared/errors/custom-errors";
 
 // Mock the logger
 vi.mock('@/lib/logger', () => ({

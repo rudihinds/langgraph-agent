@@ -1,13 +1,13 @@
 import { HumanResponseWithEdits, SubmitType } from "../types";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from '@/features/ui/components/textarea';
 import React from "react";
 import { haveArgsChanged, prettifyText } from "../utils";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/features/ui/components/button';
 import { Undo2 } from "lucide-react";
 import { MarkdownText } from "../../markdown-text";
 import { ActionRequest, HumanInterrupt } from "@langchain/langgraph/prebuilt";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from '@/features/ui/components/separator';
 
 function ResetButton({ handleReset }: { handleReset: () => void }) {
   return (

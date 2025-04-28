@@ -32,6 +32,12 @@ function isProtectedPath(path: string): boolean {
 export async function middleware(request: NextRequest) {
   console.log(`[Middleware] Processing ${request.nextUrl.pathname}`);
 
+  // Check if we should skip middleware processing
+  if (request.headers.get("x-no-redirect") === "true") {
+    console.log("[Middleware] Skipping redirect due to x-no-redirect header");
+    return NextResponse.next();
+  }
+
   // Check if we're in a redirect loop
   const redirectCount = parseInt(
     request.headers.get("x-redirect-count") || "0"
@@ -77,7 +83,11 @@ export async function middleware(request: NextRequest) {
       console.log(
         "[Middleware] Redirecting to login due to auth error on protected route"
       );
-      return NextResponse.redirect(new URL("/login", request.url));
+      const loginUrl = new URL("/login", request.url);
+      const response = NextResponse.redirect(loginUrl);
+      // Set the no-redirect flag to prevent loops
+      response.headers.set("x-no-redirect", "true");
+      return response;
     }
 
     return NextResponse.next();

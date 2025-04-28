@@ -17,7 +17,7 @@ vi.mock("../Header", () => ({
   )),
 }));
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/features/auth/hooks/useSession";
 
 describe("HeaderWrapper", () => {
   const mockUser: User = {

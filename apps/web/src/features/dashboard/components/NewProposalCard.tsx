@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/features/ui/components/card";
 import { Plus } from "lucide-react";
 import NewProposalModal from "./NewProposalModal";
 import { cn } from "@/lib/utils/utils";

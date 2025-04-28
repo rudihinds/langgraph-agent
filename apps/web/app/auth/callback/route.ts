@@ -1,7 +1,17 @@
-import { createClient } from "@/lib/supabase";
+import { createServerClient } from "@/lib/supabase";
 import { syncUserToDatabase } from "@/lib/user-management";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+
+// Helper to get cookie store safely
+function getCookieStore() {
+  try {
+    return cookies();
+  } catch (e) {
+    console.error("[Auth] Error accessing cookies:", e);
+    throw new Error("Could not access cookies");
+  }
+}
 
 // This route handles the OAuth callback from Supabase authentication
 export async function GET(request: NextRequest) {
@@ -15,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   // Log debugging information
   console.log("[Auth] Callback URL parameters:", {
-    code: code ? "present" : "missing",
+    code: code ? "present" : "none",
     error: error || "none",
     errorDescription: errorDescription || "none",
   });
@@ -50,13 +60,13 @@ export async function GET(request: NextRequest) {
   try {
     console.log("[Auth] Creating server-side Supabase client");
 
-    // Create a server client for handling the authentication
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
+    // Create the Supabase client first so we get automatic cookie handling
+    const supabase = await createServerClient();
 
     console.log("[Auth] Exchanging auth code for session");
 
-    // Exchange the code for a session
+    // Exchange the code for a session - we don't need to manually pass code verifier
+    // Supabase will handle retrieving it from cookies automatically
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
@@ -92,8 +102,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Since Supabase handles the session cookie automatically, we'll create
-    // a simple redirect response
+    // Create a response with the right cookies
     const redirectUrl = new URL("/dashboard", targetOrigin);
     console.log("[Auth] Will redirect to:", redirectUrl.toString());
 

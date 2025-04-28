@@ -2,7 +2,7 @@
 
 import { Component, ErrorInfo, ReactNode } from "react";
 import { logger } from "@/lib/logger";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 
 interface ErrorBoundaryProps {
   children: ReactNode;

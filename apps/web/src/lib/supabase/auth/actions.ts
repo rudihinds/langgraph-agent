@@ -5,12 +5,12 @@ import { createClient } from "../client";
 import { getRedirectURL } from "./utils";
 import { SignInResult, SignOutResult } from "../types";
 import { createAuthErrorResponse } from "./auth-errors";
-import { ApiResponse, ErrorCodes } from "@/lib/errors/types";
+import { ApiResponse, ErrorCodes } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 /**
  * Initiates the sign-in with Google OAuth flow
- * This redirects the user to Google's authentication page
+ * This redirects the user to Google"s authentication page
  *
  * @returns {Promise<SignInResult>} The result of the sign-in attempt
  */

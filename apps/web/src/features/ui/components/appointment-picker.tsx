@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar } from "@/features/ui/components/calendar";
 import { AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
+import { Label } from "@/features/ui/components/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/features/ui/components/popover";
 import { formatDateForUI, parseUIDate } from "@/lib/utils/date-utils";
 
 /**
@@ -139,7 +139,7 @@ export function AppointmentPicker({
       onDateChange(undefined);
     } else {
       // Only attempt to parse and validate if we have a full input
-      // (otherwise, we'd be showing validation errors while the user is still typing)
+      // (otherwise, we"d be showing validation errors while the user is still typing)
       if (value.length === 10) {
         // DD/MM/YYYY = 10 characters
         const parsedDate = parseUIDate(value);

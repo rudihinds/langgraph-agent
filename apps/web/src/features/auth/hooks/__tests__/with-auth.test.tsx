@@ -12,7 +12,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { withAuth } from "../with-auth";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { createAuthInterceptor } from "@/lib/api/auth-interceptor";
+import { createAuthInterceptor } from "@/features/api/utils/auth-interceptor";
 
 // Mock Next.js router
 const mockRouterReplace = vi.hoisted(() => vi.fn());

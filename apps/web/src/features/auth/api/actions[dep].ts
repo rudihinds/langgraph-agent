@@ -2,19 +2,19 @@
 //  * @deprecated
 //  * Auth actions for Supabase authentication
 //  *
-//  * DO NOT USE THIS FILE DIRECTLY. Import from '@/lib/supabase/auth' instead.
+//  * DO NOT USE THIS FILE DIRECTLY. Import from "@/lib/supabase/auth" instead.
 //  * Example:
-//  * import { signIn, signOut, getSession, getCurrentUser, checkUserSession } from '@/lib/supabase/auth';
+//  * import { signIn, signOut, getSession, getCurrentUser, checkUserSession } from "@/lib/supabase/auth";
 //  */
 // import { createClient } from "@/features/auth/utils/server";
 // import { getRedirectURL } from "@/features/auth/api/utils";
 // import { SignInResult, SignOutResult, AppUser } from "@/features/auth/types";
 // import { createAuthErrorResponse } from "@/features/auth/api/auth-errors";
-// import { ApiResponse, ErrorCodes } from "@/lib/errors/types";
+// import { ApiResponse, ErrorCodes } from "@/features/shared/errors/types";
 // import { logger } from "@/lib/logger";
 
 // /**
-//  * @deprecated Import from '@/lib/supabase/auth' instead.
+//  * @deprecated Import from "@/lib/supabase/auth' instead.
 //  * Initiates the sign-in with Google OAuth flow
 //  * This redirects the user to Google's authentication page
 //  *
@@ -62,7 +62,7 @@
 // }
 
 // /**
-//  * @deprecated Import from '@/lib/supabase/auth' instead.
+//  * @deprecated Import from "@/lib/supabase/auth" instead.
 //  * Signs out the current user on both client and server
 //  * Makes a server-side request to clear cookies and then signs out on the client
 //  *
@@ -123,7 +123,7 @@
 // }
 
 // /**
-//  * @deprecated Import from '@/lib/supabase/auth' instead.
+//  * @deprecated Import from "@/lib/supabase/auth" instead.
 //  * Gets the current session if available
 //  *
 //  * @returns {Promise<ApiResponse<{ session: any }>>} The current session data with standardized response format
@@ -149,7 +149,7 @@
 // }
 
 // /**
-//  * @deprecated Import from '@/lib/supabase/auth' instead.
+//  * @deprecated Import from "@/lib/supabase/auth" instead.
 //  * Gets the current user if authenticated
 //  *
 //  * @returns {Promise<ApiResponse<AppUser|null>>} The current user or null if not authenticated
@@ -177,7 +177,7 @@
 // }
 
 // /**
-//  * @deprecated Import from '@/lib/supabase/auth' instead.
+//  * @deprecated Import from "@/lib/supabase/auth" instead.
 //  * Function to check if user is authenticated and redirect if not
 //  * This is intended for client-side use only
 //  *

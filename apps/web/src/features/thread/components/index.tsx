@@ -1,18 +1,18 @@
 import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils/utils";
-import { useStreamContext } from "@/providers/Stream";
+import { cn } from "@/features/shared/utils/utils";
+import { useStreamContext } from "@/features/providers/Stream";
 import { useState, FormEvent } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/features/ui/components/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
 import { AssistantMessage, AssistantMessageLoading } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
 import {
   DO_NOT_RENDER_ID_PREFIX,
   ensureToolCallsHaveResponses,
-} from "@/lib/ensure-tool-responses";
-import { LangGraphLogoSVG } from "../icons/langgraph";
+} from "@/features/shared/utils/ensure-tool-responses";
+import { LangGraphLogoSVG } from "@/components/shared/icons/langgraph";
 import { TooltipIconButton } from "./tooltip-icon-button";
 import {
   ArrowDown,
@@ -25,9 +25,9 @@ import { useQueryState, parseAsBoolean } from "nuqs";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import ThreadHistory from "./history";
 import { toast } from "sonner";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
+import { useMediaQuery } from "@/features/shared/hooks/useMediaQuery";
+import { Label } from "@/features/ui/components/label";
+import { Switch } from "@/features/ui/components/switch";
 
 function StickyToBottomContent(props: {
   content: ReactNode;

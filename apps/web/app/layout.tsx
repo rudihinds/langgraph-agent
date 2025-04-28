@@ -3,8 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/hooks/useSession";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { DashboardLayoutProvider } from "@/components/layout/DashboardLayoutContext";
-import MainContent from "@/components/layout/MainContent";
+import { DashboardLayoutProvider } from "@/features/layout/components/DashboardLayoutContext";
+import MainContent from "@/features/layout/components/MainContent";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 

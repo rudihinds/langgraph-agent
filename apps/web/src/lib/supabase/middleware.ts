@@ -48,6 +48,17 @@ function isPublicPath(path: string): boolean {
 export async function updateSession(request: NextRequest) {
   try {
     const path = request.nextUrl.pathname;
+    console.log(`[Supabase Middleware] Processing path: ${path}`);
+
+    // Skip processing if explicitly requested (to prevent loops)
+    if (request.headers.get("x-no-redirect") === "true") {
+      console.log("[Supabase Middleware] Skipping due to no-redirect header");
+      return NextResponse.next({
+        request: {
+          headers: request.headers,
+        },
+      });
+    }
 
     // Create an unmodified response
     let response = NextResponse.next({
@@ -81,16 +92,25 @@ export async function updateSession(request: NextRequest) {
     // Refresh the session
     const {
       data: { session },
+      error: sessionError,
     } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error("[Supabase Middleware] Session error:", sessionError);
+    }
 
     // Check if the path requires authentication
     const needsAuth = isProtectedPath(path);
     const isPublic = isPublicPath(path);
 
+    console.log(
+      `[Supabase Middleware] Auth check - needsAuth: ${needsAuth}, isPublic: ${isPublic}, hasSession: ${!!session}`
+    );
+
     // Handle protected routes that require authentication
     if (needsAuth && !session) {
       console.log(
-        `[Middleware] Redirecting unauthenticated user from protected path: ${path}`
+        `[Supabase Middleware] Redirecting unauthenticated user from protected path: ${path}`
       );
 
       // Redirect to login
@@ -99,21 +119,25 @@ export async function updateSession(request: NextRequest) {
       // Store the original URL to redirect back after login
       redirectUrl.searchParams.set("redirect", encodeURIComponent(path));
 
-      return NextResponse.redirect(redirectUrl);
+      response = NextResponse.redirect(redirectUrl);
+      response.headers.set("x-auth-redirect", "true");
+      return response;
     }
 
     // Redirect authenticated users from login page to dashboard
     if (session && path === "/login") {
       console.log(
-        "[Middleware] Redirecting authenticated user from login to dashboard"
+        "[Supabase Middleware] Redirecting authenticated user from login to dashboard"
       );
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      response = NextResponse.redirect(new URL("/dashboard", request.url));
+      response.headers.set("x-auth-redirect", "true");
+      return response;
     }
 
     return response;
   } catch (e) {
     // If there's an error, log it but don't break the application
-    console.error("[Middleware] Error in auth middleware:", e);
+    console.error("[Supabase Middleware] Error in auth middleware:", e);
 
     // Return unmodified response to avoid breaking the app
     return NextResponse.next({

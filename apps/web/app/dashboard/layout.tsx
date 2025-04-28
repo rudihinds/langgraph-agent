@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import ClientDashboardLayout from "@/components/layout/ClientDashboardLayout";
+import ClientDashboardLayout from "@/features/layout/components/ClientDashboardLayout";
 
 /**
  * Server Component that wraps dashboard pages

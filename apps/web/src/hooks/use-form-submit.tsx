@@ -4,8 +4,8 @@
  * Hook for form submission with standardized error handling
  */
 import { useState, useTransition } from "react";
-import { ApiResponse } from "@/lib/errors/types";
-import { extractFieldErrors } from "@/lib/errors/form-errors";
+import { ApiResponse } from "@/features/shared/errors/types";
+import { extractFieldErrors } from "@/features/shared/errors/form-errors";
 
 interface UseFormSubmitOptions<TData> {
   /**

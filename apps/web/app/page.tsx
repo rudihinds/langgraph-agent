@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { getSession } from "@/lib/supabase";
-import Header from "@/components/layout/Header";
-import LoginButton from "@/components/auth/LoginButton";
+import Header from "@/features/layout/components/Header";
+import LoginButton from "@/features/auth/components/LoginButton"
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -47,8 +47,8 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       <Header user={user} />
 
-      <main className="flex-1 flex flex-col">
-        <div className="flex flex-col flex-1 items-center justify-center py-16 md:py-24">
+      <main className="flex flex-col flex-1">
+        <div className="flex flex-col items-center justify-center flex-1 py-16 md:py-24">
           <div className="w-full max-w-5xl px-4 mx-auto">
             <div className="mb-16 space-y-8 text-center">
               <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
@@ -64,7 +64,7 @@ export default function Home() {
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="px-4 py-2 font-medium text-white bg-primary rounded-md hover:bg-primary/90"
+                  className="px-4 py-2 font-medium text-white rounded-md bg-primary hover:bg-primary/90"
                 >
                   Go to Dashboard
                 </Link>
@@ -157,8 +157,8 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="py-6 border-t mt-auto">
-        <div className="container text-center text-sm text-muted-foreground">
+      <footer className="py-6 mt-auto border-t">
+        <div className="container text-sm text-center text-muted-foreground">
           <p>
             © {new Date().getFullYear()} Proposal Writer System. All rights
             reserved.

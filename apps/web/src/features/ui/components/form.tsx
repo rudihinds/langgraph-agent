@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useFormStatus } from "react-dom";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/features/ui/components/label";
 import { cn } from "@/lib/utils/utils";
 import { Slot } from "@radix-ui/react-slot";
 

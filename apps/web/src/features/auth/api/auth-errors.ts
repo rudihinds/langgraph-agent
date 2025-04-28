@@ -1,11 +1,11 @@
 /**
  * Authentication error handling for Supabase
  */
-import { AuthError as SupabaseAuthError } from '@supabase/supabase-js';
-import { ErrorCodes } from '@/lib/errors/types';
-import { AuthenticationError, ValidationError, ServerError } from '@/lib/errors/custom-errors';
-import { logger } from '@/lib/logger';
-import { ApiErrorResponse, ApiResponse } from '@/lib/errors/types';
+import { AuthError as SupabaseAuthError } from "@supabase/supabase-js";
+import { ErrorCodes } from "@/features/shared/errors/types";
+import { AuthenticationError, ValidationError, ServerError } from "@/features/shared/errors/custom-errors";
+import { logger } from "@/lib/logger";
+import { ApiErrorResponse, ApiResponse } from "@/features/shared/errors/types";
 
 /**
  * Mapping of Supabase auth error codes to standardized error codes

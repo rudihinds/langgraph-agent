@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect } from "vitest";
-import { EmptyProposalState } from "@/components/dashboard/EmptyProposalState";
+import { EmptyProposalState } from "@/features/dashboard/components/EmptyProposalState";
 
 // Mock the NewProposalModal component
 vi.mock("@/components/dashboard/NewProposalModal", () => ({

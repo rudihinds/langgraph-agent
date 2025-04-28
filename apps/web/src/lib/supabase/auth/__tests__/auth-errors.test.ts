@@ -2,14 +2,14 @@
  * Tests for auth error handling
  */
 import { expect, describe, it, vi, beforeEach, afterEach } from 'vitest';
-import { AuthError } from '@supabase/supabase-js';
+import { AuthError } from "@supabase/supabase-js";
 import { 
   handleAuthError, 
   createAuthErrorResponse, 
   withAuthErrorHandling 
 } from '../auth-errors';
-import { ErrorCodes } from '@/lib/errors/types';
-import { logger } from '@/lib/logger';
+import { ErrorCodes } from "@/features/shared/errors/types";
+import { logger } from "@/lib/logger";
 
 // Mock the logger
 vi.mock('@/lib/logger', () => ({

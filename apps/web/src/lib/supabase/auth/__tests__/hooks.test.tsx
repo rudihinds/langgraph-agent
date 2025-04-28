@@ -2,7 +2,7 @@
  * Tests for Auth hooks
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from "@testing-library/react";
 import { useEffect } from 'react';
 
 // Mock modules before importing hooks

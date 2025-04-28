@@ -1,8 +1,8 @@
 "use client";
 
-import { ProposalCard } from "@/components/dashboard/ProposalCard";
-import { EmptyProposalState } from "@/components/dashboard/EmptyProposalState";
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
+import { ProposalCard } from "@/features/dashboard/components/ProposalCard";
+import { EmptyProposalState } from "@/features/dashboard/components/EmptyProposalState";
+import DashboardSkeleton from "@/features/dashboard/components/DashboardSkeleton";
 import { cn } from "@/lib/utils/utils";
 
 // MODEL: Define the data structure

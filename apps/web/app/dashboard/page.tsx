@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import EmptyProposalState from "@/components/dashboard/EmptyProposalState";
-import { Button } from "@/components/ui/button";
+import { EmptyProposalState } from "@/features/dashboard/components/EmptyProposalState";
+import { Button } from "@/features/ui/components/button";
 import { PlusIcon, LayoutGrid, LayoutList } from "lucide-react";
-import NewProposalModal from "@/components/dashboard/NewProposalModal";
+import NewProposalModal from "@/features/dashboard/components/NewProposalModal";
 import ProposalTypeModal, {
   ProposalType,
-} from "@/components/dashboard/ProposalTypeModal";
-import { ProposalGrid } from "@/components/dashboard/ProposalGrid";
-import { ProposalCard } from "@/components/dashboard/ProposalCard";
-import NewProposalCard from "@/components/dashboard/NewProposalCard";
-import { getUserProposals, Proposal } from "@/features/proposals/utils/proposals";
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
+} from "@/features/dashboard/components/ProposalTypeModal";
+import { ProposalGrid } from "@/features/dashboard/components/ProposalGrid";
+import { ProposalCard } from "@/features/dashboard/components/ProposalCard";
+import NewProposalCard from "@/features/dashboard/components/NewProposalCard";
+import {
+  getUserProposals,
+  Proposal,
+} from "@/features/proposals/api/proposals";
+import DashboardSkeleton from "@/features/dashboard/components/DashboardSkeleton";  
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 

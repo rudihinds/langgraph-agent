@@ -2,9 +2,9 @@
  * Utility for standardized API route handling
  */
 import { NextRequest } from 'next/server';
-import { AppError, handleAppError } from '@/lib/errors/custom-errors';
-import { createErrorResponse, createSuccessResponse } from '@/lib/errors';
-import { logger } from '@/lib/logger';
+import { AppError, handleAppError } from "@/features/shared/errors/custom-errors";
+import { createErrorResponse, createSuccessResponse } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 type RouteHandler = (
   req: NextRequest,

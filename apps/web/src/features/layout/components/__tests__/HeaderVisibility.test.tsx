@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { DashboardLayoutProvider } from "../DashboardLayoutContext";
 import HeaderWrapper from "../HeaderWrapper";
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/features/auth/hooks/useSession";
 import { usePathname } from "next/navigation";
 
 // Mock the necessary hooks
@@ -63,7 +63,7 @@ describe("Header Visibility", () => {
       </DashboardLayoutProvider>
     );
 
-    // Header should be rendered (we'll at least expect the container to be there)
+    // Header should be rendered (we"ll at least expect the container to be there)
     expect(screen.getByRole("banner")).toBeInTheDocument();
   });
 });

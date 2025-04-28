@@ -1,7 +1,7 @@
 "use server";
 
 import { SupabaseClient, User } from "@supabase/supabase-js";
-import { Database } from "@/lib/schema/database";
+import { Database } from "@/lib/supabase/db/schema/database";
 
 export type SyncUserResult = {
   success: boolean;
@@ -12,7 +12,7 @@ export type SyncUserResult = {
 
 /**
  * Sync user data to the database after authentication.
- * Creates a user record if it doesn't exist, or updates last_login if it does.
+ * Creates a user record if it doesn"t exist, or updates last_login if it does.
  */
 export async function syncUserToDatabase(
   supabaseClient: SupabaseClient<Database>,

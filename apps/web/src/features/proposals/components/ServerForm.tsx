@@ -2,16 +2,16 @@
 
 import { useRef, useState, FormEvent, useEffect, ChangeEvent } from "react";
 import { createProposal, uploadProposalFile } from "@/features/proposals/api";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/features/ui/components/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useRequireAuth, signOut } from "@/lib/supabase/auth";
 import { Loader2, Upload, FileText, Trash, Info } from "lucide-react";
 import { UploadResult } from "@/features/proposals/api";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/features/ui/components/input";
+import { Label } from "@/features/ui/components/label";
+import { Alert, AlertTitle, AlertDescription } from "@/features/ui/components/alert";
 import { cn } from "@/lib/utils/utils";
 import { z } from "zod";
 

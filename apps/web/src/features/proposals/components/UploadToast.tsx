@@ -3,7 +3,7 @@
 import React from "react";
 import { toast, Toast } from "sonner";
 import { X, CheckCircle, AlertCircle, FileText, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { cn } from "@/lib/utils/utils";
 
 // Types

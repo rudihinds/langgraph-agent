@@ -1,10 +1,10 @@
 // Adapted from shadcn/ui (https://ui.shadcn.com/docs/components/toast)
-import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
+import { Toast, ToastActionElement, ToastProps } from "@/features/ui/components/toast"
 import {
   ToastProvider,
   ToastViewport,
-} from "@/components/ui/toast"
-import { useToast as useToastLib } from "@/components/ui/toast"
+} from "@/features/ui/components/toast"
+import { useToast as useToastLib } from "@/features/ui/components/toast"
 
 type ToasterToast = ToastProps & {
   id: string

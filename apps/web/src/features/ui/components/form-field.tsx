@@ -1,8 +1,8 @@
 import React from "react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { FieldError } from "@/components/ui/form-error";
+import { Input } from "@/features/ui/components/input";
+import { Textarea } from "@/features/ui/components/textarea";
+import { Label } from "@/features/ui/components/label";
+import { FieldError } from "@/features/ui/components/form-error";
 import { cn } from "@/lib/utils/utils";
 
 type FieldBaseProps = {

@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationQuestionsView from "./ApplicationQuestionsView";
-import RFPResponseView from "../../../../../RFPResponseView";
+import RFPResponseView from "@/features/proposals/components/RFPResponseView";
 import FunderDetailsView from "./FunderDetailsView";
 import ReviewProposalView from "./ReviewProposalView";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { useProposalSubmission } from "@/hooks/useProposalSubmission";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/features/ui/components/use-toast";
 import { Question } from "./ApplicationQuestionsView";
 import { FunderDetails } from "./FunderDetailsView";
 import { ProgressStepper } from "./ProgressStepper";
@@ -167,7 +167,7 @@ function useProposalCreationFlow({
       setIsSubmitting(true);
 
       try {
-        // If we're at the review step, the data should already be prepared
+        // If we"re at the review step, the data should already be prepared
         // in the correct format by the ReviewProposalView component
         console.log("Submitting proposal with data:", data);
 

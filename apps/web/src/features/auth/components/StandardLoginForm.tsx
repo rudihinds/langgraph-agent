@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from 'react';
-import { signIn } from '@/lib/supabase/auth/actions';
-import { useFormSubmit } from '@/hooks/use-form-submit';
-import { FormError, FormErrorBoundary, FieldError } from '@/components/ui/form-error';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { createServerAction } from '@/lib/errors/server-action';
+import { signIn } from "@/lib/supabase/auth/actions";
+import { useFormSubmit } from "@/hooks/use-form-submit";
+import { FormError, FormErrorBoundary, FieldError } from "@/features/ui/components/form-error";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
+import { Form, FormItem, FormLabel, FormControl, FormMessage } from "@/features/ui/components/form";
+import { createServerAction } from "@/features/shared/errors/server-action";
 import { z } from 'zod';
 
 // Login validation schema

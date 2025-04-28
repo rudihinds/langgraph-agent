@@ -1,8 +1,8 @@
 import React from "react";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { FieldError } from "@/components/ui/form-error";
+import { Textarea } from "@/features/ui/components/textarea";
+import { Switch } from "@/features/ui/components/switch";
+import { Label } from "@/features/ui/components/label";
+import { FieldError } from "@/features/ui/components/form-error";
 import { cn } from "@/lib/utils/utils";
 import {
   Select,
@@ -10,8 +10,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/components/select";
+import { Button } from "@/features/ui/components/button";
 import { Trash } from "lucide-react";
 
 export type Question = {

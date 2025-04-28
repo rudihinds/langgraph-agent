@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/features/ui/components/card";
+import { Button } from "@/features/ui/components/button";
+import { Input } from "@/features/ui/components/input";
 import { FileType, Upload, X, CheckCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils/utils";
 

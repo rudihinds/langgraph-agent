@@ -9,14 +9,14 @@ import {
   CardHeader,
   CardDescription,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/components/card";
+import { Button } from "@/features/ui/components/button";
 import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
-import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { AppointmentPicker } from "@/features/ui/components/appointment-picker";
 import { formatDateForAPI } from "@/lib/utils/date-utils";
-import { FormErrorBoundary } from "@/components/ui/form-error";
-import { FormField } from "@/components/ui/form-field";
-import { FileUploadField } from "@/components/ui/file-upload-field";
+import { FormErrorBoundary } from "@/features/ui/components/form-error";
+import { FormField } from "@/features/ui/components/form-field";
+import { FileUploadField } from "@/features/ui/components/file-upload-field";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import {
   rfpFormSchema,

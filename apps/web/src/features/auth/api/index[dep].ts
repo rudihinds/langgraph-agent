@@ -1,7 +1,7 @@
 // /**
 //  * Auth API exports
 //  *
-//  * @deprecated Use imports from '@/lib/supabase/auth' instead.
+//  * @deprecated Use imports from "@/lib/supabase/auth" instead.
 //  * This file is no longer needed and can be removed.
 //  */
 

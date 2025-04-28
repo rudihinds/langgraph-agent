@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/lib/supabase/auth";
-import { RfpForm } from "@/components/proposals/RfpForm";
+import { RfpForm } from "@/features/proposals/components/RfpForm";
 import { Loader2 } from "lucide-react";
 
 export default function NewRfpProposalPage() {

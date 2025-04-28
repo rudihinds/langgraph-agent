@@ -1,16 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import Link from "next/link";
 
 export default function ProposalsPage() {
   return (
-    <div className="container mx-auto py-12 px-4">
+    <div className="container px-4 py-12 mx-auto">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Proposals Overview</h1>
+        <h1 className="mb-8 text-3xl font-bold">Proposals Overview</h1>
         
         <div className="mb-8">
-          <p className="text-lg mb-4">
+          <p className="mb-4 text-lg">
             Welcome to the Proposals section. Here you can create, manage, and track all your proposals.
           </p>
           <p className="mb-4">
@@ -18,10 +18,10 @@ export default function ProposalsPage() {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <div className="border rounded-lg p-6 bg-card">
-            <h2 className="text-xl font-semibold mb-3">RFP Response</h2>
-            <p className="text-muted-foreground mb-4">
+        <div className="grid grid-cols-1 gap-6 mb-12 md:grid-cols-2">
+          <div className="p-6 border rounded-lg bg-card">
+            <h2 className="mb-3 text-xl font-semibold">RFP Response</h2>
+            <p className="mb-4 text-muted-foreground">
               Create a proposal in response to a formal Request for Proposals (RFP)
             </p>
             <Button asChild>
@@ -29,9 +29,9 @@ export default function ProposalsPage() {
             </Button>
           </div>
           
-          <div className="border rounded-lg p-6 bg-card">
-            <h2 className="text-xl font-semibold mb-3">Application Questions</h2>
-            <p className="text-muted-foreground mb-4">
+          <div className="p-6 border rounded-lg bg-card">
+            <h2 className="mb-3 text-xl font-semibold">Application Questions</h2>
+            <p className="mb-4 text-muted-foreground">
               Answer a series of application questions for a grant or funding opportunity
             </p>
             <Button asChild>

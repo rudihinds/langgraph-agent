@@ -2,9 +2,9 @@
  * Tests for ErrorBoundary component
  */
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen } from "@testing-library/react";
 import { ErrorBoundary } from '../error-boundary';
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 // Mock the logger
 vi.mock('@/lib/logger', () => ({

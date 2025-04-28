@@ -5,25 +5,25 @@ import { FilePreview } from "./FilePreview";
 import { SubmitButton } from "./SubmitButton";
 import { FormOverlay } from "./FormOverlay";
 import { useFileUploadToast } from "./UploadToast";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/features/ui/components/input";
+import { Label } from "@/features/ui/components/label";
+import { Textarea } from "@/features/ui/components/textarea";
 import {
   Card,
   CardContent,
   CardHeader,
   CardDescription,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/components/card";
+import { Button } from "@/features/ui/components/button";
 import { cn } from "@/lib/utils/utils";
 import { uploadProposalFileEnhanced } from "@/features/proposals/api/actions";
 import { FileCheck, Upload, AlertCircle } from "lucide-react";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DatePicker } from "@/features/ui/components/date-picker";
 import { format } from "date-fns";
-import { AppointmentPicker } from "@/components/ui/appointment-picker";
+import { AppointmentPicker } from "@/features/ui/components/appointment-picker";
 import { formatDateForAPI } from "@/lib/utils/date-utils";
-import { FormErrorBoundary, FieldError } from "@/components/ui/form-error";
+import { FormErrorBoundary, FieldError } from "@/features/ui/components/form-error";
 
 // Simple validation helper function
 const validateField = (

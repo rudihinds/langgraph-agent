@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import {
   Card,
   CardContent,
@@ -8,10 +8,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/features/ui/components/card";
+import { Input } from "@/features/ui/components/input";
+import { Label } from "@/features/ui/components/label";
+import { Textarea } from "@/features/ui/components/textarea";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -21,23 +21,23 @@ export const metadata: Metadata = {
 
 export default function NewProposalPage() {
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container px-4 py-6 mx-auto">
       <div className="mb-6">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 transition-colors text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </Link>
       </div>
 
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Create New Proposal
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground">
             Start a new proposal by filling out basic information and uploading
             your RFP document
           </p>
@@ -88,12 +88,12 @@ export default function NewProposalPage() {
 
             <div className="space-y-2">
               <Label htmlFor="rfp-document">RFP Document</Label>
-              <div className="border border-input rounded-md p-4">
+              <div className="p-4 border rounded-md border-input">
                 <div className="text-center">
-                  <div className="mt-2 flex text-sm leading-6 text-muted-foreground">
+                  <div className="flex mt-2 text-sm leading-6 text-muted-foreground">
                     <label
                       htmlFor="file-upload"
-                      className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/70"
+                      className="relative font-semibold rounded-md cursor-pointer bg-background text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/70"
                     >
                       <span>Upload a file</span>
                       <input

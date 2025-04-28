@@ -2,9 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { Sparkles } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/features/ui/components/card";
 import { cn } from "@/lib/utils/utils";
 
 interface EnhancedFormBannerProps {

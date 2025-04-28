@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DashboardLayout from "../DashboardLayout";
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/features/auth/hooks/useSession";
 import { usePathname, useRouter } from "next/navigation";
 
 // Mock the hooks
@@ -147,7 +147,7 @@ describe("DashboardLayout", () => {
       name: /test@example.com/i,
     });
 
-    // Should find at least one avatar button in header (there's also one in sidebar)
+    // Should find at least one avatar button in header (there"s also one in sidebar)
     expect(avatarButtons.length).toBeGreaterThanOrEqual(1);
 
     // Mode toggle should be in the header
