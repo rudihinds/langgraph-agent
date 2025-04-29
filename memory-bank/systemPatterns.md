@@ -618,3 +618,79 @@ The most critical implementation paths in this system are:
 4. **State Persistence**: Saving and loading state via the checkpointer
 
 These paths require special attention for error handling, testing, and performance optimization.
+
+## Chat UI Architecture
+
+### Directory Structure
+
+The Chat UI implementation follows a feature-based architecture within the web application:
+
+```
+/apps/web/src/features/chat-ui/
+├── components/       # UI components for the chat interface
+├── hooks/            # Custom React hooks for chat functionality
+├── providers/        # Context providers for state management
+├── types.ts          # Type definitions for the chat feature
+├── utils.ts          # Utility functions for chat operations
+└── index.ts          # Public exports from the feature
+```
+
+### Core Patterns
+
+#### State Management
+
+The Chat UI uses React Context for state management with a clear separation of concerns:
+
+1. **Chat Context**: Manages thread data and operations
+
+   - Stores threads, active thread ID, and loading state
+   - Provides actions for thread manipulation (create, update, delete)
+   - Implements optimistic updates for better UX
+
+2. **Stream Context**: Handles real-time communication with LangGraph
+   - Manages WebSocket/SSE connections to the LangGraph server
+   - Handles authentication and authorization
+   - Processes incoming messages and updates the UI accordingly
+
+#### Component Hierarchy
+
+```
+└── ChatProvider
+    └── StreamProvider
+        ├── ThreadHistory
+        │   └── ThreadListItem
+        └── Thread
+            ├── MessageList
+            │   └── Message (variants)
+            │       ├── UserMessage
+            │       ├── AssistantMessage
+            │       ├── ToolCallMessage
+            │       └── ToolResultMessage
+            ├── AgentInbox (for interruptions)
+            └── MessageInput
+```
+
+#### Type System
+
+The type system is built around these core interfaces:
+
+- `Message`: Represents a single message in a conversation
+- `Thread`: Represents a conversation thread with multiple messages
+- `ChatState`: Tracks the current state of all threads and UI
+- `ChatActions`: Defines all possible operations on threads
+- `ChatContextValue`: Combines state and actions for the context
+
+#### Data Flow
+
+1. User input is captured in the `MessageInput` component
+2. The input is processed and added to the thread via `ChatContext`
+3. Messages are sent to LangGraph through the `StreamProvider`
+4. Responses from LangGraph are processed by `StreamProvider`
+5. New messages are added to the thread via `ChatContext`
+6. The UI updates to reflect the new state
+
+#### Error Handling
+
+- Network errors are caught and displayed to the user
+- LangGraph server errors are processed and displayed appropriately
+- UI state includes loading and error states to handle asynchronous operations

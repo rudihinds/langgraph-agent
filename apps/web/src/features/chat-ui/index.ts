@@ -2,15 +2,22 @@
  * Chat UI Feature
  *
  * This module provides the main components for the LangGraph Agent Chat UI integration.
- * It exports the main Thread component and providers needed for chat functionality.
  */
 
-// Export main components
+// Export components and hooks
+export { ChatProvider, useChatContext } from "./context/ChatContext";
 export { Thread } from "./components/Thread";
+export { useMediaQuery } from "./hooks/useMediaQuery";
 
-// Export providers
-export { StreamProvider } from "./providers/StreamProvider";
-export { ThreadProvider } from "./providers/ThreadProvider";
+// Export utility functions
+export {
+  formatMessageTime,
+  truncateMessage,
+  groupMessagesByDate,
+  getLastMessage,
+  getTimeAgo,
+  getContentString,
+} from "./utils/message-utils";
 
-// Export types
-export * from "./types";
+// Export types explicitly to avoid name conflicts
+export type { Message, Thread as ThreadType, ChatContextValue } from "./types";

@@ -126,4 +126,57 @@
 
 - **Nodes:** Defined as TypeScript functions or LangChain Runnables, interacting with state.
 
+## Chat UI Technologies
+
+### Frontend Technologies
+
+- **React**: Core UI library for building the chat interface components
+- **Next.js**: Framework for server-side rendering and routing
+- **TypeScript**: For type-safe development throughout the codebase
+- **Context API**: For state management of chat threads and messages
+- **React Hooks**: Custom hooks for managing chat logic and state
+- **Tailwind CSS**: For responsive and consistent styling
+- **Shadcn UI**: Component library providing UI primitives
+
+### Backend Integration
+
+- **LangGraph SDK**: JavaScript SDK for integration with LangGraph server
+  - `@langchain/langgraph-sdk`: Primary package for connecting to LangGraph
+  - Server-sent events (SSE) for streaming responses
+  - WebSocket connections for real-time updates
+- **Supabase Auth**: Used for authentication and securing chat endpoints
+  - JWT tokens for authentication with LangGraph server
+  - Row-level security for user data
+
+### Tools & Utilities
+
+- **clsx** and **tailwind-merge**: For conditional class name composition
+- **Zod**: For runtime validation of data structures
+- **date-fns**: For date manipulation and formatting in timestamps
+- **nanoid**: For generating unique IDs for messages and threads
+
+### Key APIs & Integration Points
+
+- **LangGraph Server API**:
+  - `/v1/thread` endpoints for thread management
+  - Stream endpoints for real-time communication
+  - Tool call handling for agent actions
+- **Supabase API**:
+  - Authentication endpoints
+  - User profile management
+  - Storage for persistent thread history
+
+### Development Tools
+
+- **Vitest**: Testing framework for unit and integration tests
+- **React Testing Library**: For component testing
+- **MSW (Mock Service Worker)**: For API mocking during development and testing
+- **Storybook**: For component documentation and visual testing
+
+### Browser APIs
+
+- **EventSource**: For server-sent events
+- **LocalStorage**: For caching thread data
+- **Fetch API**: For non-streaming HTTP requests
+
 _This document provides the technical landscape for the project, essential for onboarding and understanding the development environment._
