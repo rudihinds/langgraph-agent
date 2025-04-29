@@ -26,14 +26,14 @@ This document outlines the complete plan for integrating the LangGraph Agent Cha
 
 ### Phase 1: Environment Setup and Dependencies
 
-1. Install required dependencies:
+1. ✅ Install required dependencies:
 
    ```bash
    cd apps/web
    npm install @langchain/langgraph-sdk @langchain/core @langchain/langgraph framer-motion nuqs use-stick-to-bottom sonner date-fns lodash uuid react-syntax-highlighter rehype-katex remark-gfm remark-math katex
    ```
 
-2. Set up API proxy for LangGraph:
+2. ✅ Set up API proxy for LangGraph:
 
    ```typescript
    // Target: /apps/web/app/api/langgraph/[...path]/route.ts
@@ -41,13 +41,14 @@ This document outlines the complete plan for integrating the LangGraph Agent Cha
 
    export const { GET, POST, PUT, PATCH, DELETE, OPTIONS, runtime } =
      initApiPassthrough({
-       apiUrl: process.env.LANGGRAPH_API_URL ?? "http://localhost:2024",
+       apiUrl:
+         process.env.NEXT_PUBLIC_LANGGRAPH_API_URL ?? "http://localhost:2024",
        apiKey: process.env.LANGSMITH_API_KEY ?? "",
        runtime: "edge",
      });
    ```
 
-3. Update environment variables (.env.local):
+3. ✅ Update environment variables (.env.local):
    ```
    NEXT_PUBLIC_LANGGRAPH_API_URL="http://localhost:2024"
    NEXT_PUBLIC_ASSISTANT_ID="agent"
@@ -56,7 +57,7 @@ This document outlines the complete plan for integrating the LangGraph Agent Cha
 
 ### Phase 2: Feature Structure Setup
 
-1. Create the chat-ui feature directory structure:
+1. ✅ Create the chat-ui feature directory structure:
 
    ```bash
    mkdir -p apps/web/src/features/chat-ui/{components,hooks,types,lib,providers,utils}
@@ -65,7 +66,7 @@ This document outlines the complete plan for integrating the LangGraph Agent Cha
    mkdir -p apps/web/src/__tests__/chat-ui
    ```
 
-2. Create the feature's public API exports file:
+2. ✅ Create the feature's public API exports file:
 
    ```typescript
    // Target: /apps/web/src/features/chat-ui/index.ts
