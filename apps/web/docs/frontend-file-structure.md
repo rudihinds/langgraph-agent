@@ -25,11 +25,13 @@ apps/web/
 ├── public/             # Static assets
 ├── .next/              # Next.js build output
 ├── node_modules/       # Dependencies
+├── .env.development    # Development environment variables
 ├── .env.example        # Example environment variables
 ├── next.config.mjs     # Next.js configuration
 ├── package.json        # Package dependencies
 ├── tailwind.config.js  # Tailwind CSS configuration
-└── tsconfig.json       # TypeScript configuration
+├── tsconfig.json       # TypeScript configuration
+└── vitest.config.ts    # Vitest test configuration
 ```
 
 ## App Router Structure
@@ -38,6 +40,7 @@ The application uses Next.js App Router, with routes defined in the root `app/` 
 
 ```
 app/
+├── __tests__/          # Tests for root pages
 ├── api/                # API route handlers
 │   ├── auth/           # Authentication API routes
 │   │   ├── login/      # Login API
@@ -48,19 +51,25 @@ app/
 │   │   └── verify-user/# User verification API
 │   ├── diagnostics/    # Diagnostic routes
 │   ├── langgraph/      # LangGraph routes
-│   └── proposals/      # Proposal API routes
-│       └── [id]/       # Proposal by ID routes
+│   │   └── [...path]/  # Catch-all route
+│   ├── proposals/      # Proposal API routes
+│   │   └── [id]/       # Proposal by ID routes
+│   │       └── upload/ # Upload endpoints
+│   └── rfp/            # RFP API routes
+│       ├── thread/     # Thread management
+│       │   └── [threadId]/ # Specific thread routes
+│       └── threads/    # Threads list endpoints
 ├── auth/               # Authentication pages
 │   ├── callback/       # OAuth callback handling
 │   └── login/          # Login page
 ├── auth-test/          # Authentication test page
 ├── dashboard/          # Dashboard pages
+│   ├── chat/           # Chat interface within dashboard
 │   ├── simple/         # Simple dashboard variation
 │   └── test-page.tsx   # Test dashboard page
 ├── debug/              # Debug page
 ├── login/              # Login page
 ├── proposals/          # Proposal routes
-│   ├── [id]/           # Specific proposal page
 │   ├── create/         # Redirect handler for proposal creation
 │   ├── created/        # Success page after creation
 │   └── new/            # Proposal creation pages
@@ -91,20 +100,20 @@ The `src/lib` directory contains shared code that can be used across features:
 
 ```
 src/lib/
+├── api/                # API utilities and route handlers
+├── errors/             # Error handling utilities
+├── forms/              # Form-related utilities
+│   └── schemas/        # Form validation schemas
+├── logger/             # Shared logging utilities
+├── schema/             # Schema definitions
 ├── supabase/           # Supabase client and utilities
 │   ├── auth/           # Authentication utilities
-│   ├── types/          # Supabase-related types
 │   ├── docs/           # Supabase integration documentation
-│   ├── __tests__/      # Supabase tests
+│   ├── types/          # Supabase-related types
 │   ├── client.ts       # Browser client initialization
 │   ├── server.ts       # Server-side client utilities
-│   ├── middleware.ts   # Authentication middleware
-│   ├── errors.ts       # Error handling utilities
-│   ├── compatibility.ts # Compatibility layer
-│   ├── index.ts        # Main exports
-│   └── README.md       # Documentation
-├── utils/              # Shared utility functions
-└── validators/         # Shared validation schemas
+│   └── middleware.ts   # Authentication middleware
+└── utils/              # Shared utility functions
 ```
 
 ## Component Organization
@@ -118,8 +127,10 @@ src/lib/
 ```
 apps/web/
 ├── app/                                    # Next.js App Router
+│   ├── __tests__/                          # Root tests
 │   ├── api/                                # API route handlers
 │   │   ├── auth/                           # Auth API routes
+│   │   │   ├── __tests__/                  # Auth API tests
 │   │   │   ├── login/                      # Login API
 │   │   │   ├── sign-in/                    # Sign-in API
 │   │   │   ├── sign-out/                   # Sign-out API
@@ -130,57 +141,107 @@ apps/web/
 │   │   ├── langgraph/                      # LangGraph routes
 │   │   │   └── [...path]/                  # Catch-all route
 │   │   ├── proposals/                      # Proposal API routes
-│   │   │   └── [id]/                       # Proposal by ID routes
+│   │   │   ├── __tests__/                  # Proposal API tests
+│   │   │   ├── [id]/                       # Proposal by ID routes
+│   │   │   │   └── upload/                 # Upload endpoints
+│   │   │   ├── actions[dep].ts             # Proposal actions
+│   │   │   └── route.ts                    # Proposal route handler
 │   │   └── rfp/                            # RFP API routes
 │   │       ├── thread/                     # Thread endpoints
+│   │       │   ├── [threadId]/             # Specific thread routes
+│   │       │   └── route.ts                # Thread route handler
 │   │       └── threads/                    # Threads list endpoints
 │   ├── auth/                               # Authentication routes
+│   │   ├── __tests__/                      # Auth tests
 │   │   ├── callback/                       # OAuth callback handling
+│   │   │   ├── __tests__/                  # Callback tests
+│   │   │   └── route.ts                    # Callback route handler
 │   │   └── login/                          # Login page
+│   │       └── page.tsx                    # Login page component
 │   ├── auth-test/                          # Auth testing page
+│   │   └── page.tsx                        # Auth test page component
 │   ├── dashboard/                          # Dashboard pages
-│   │   ├── chat/                           # Chat interface within dashboard
-│   │   ├── simple/                         # Simple dashboard variant
 │   │   ├── __tests__/                      # Dashboard tests
+│   │   ├── chat/                           # Chat interface within dashboard
+│   │   │   └── page.tsx                    # Chat page component
+│   │   ├── simple/                         # Simple dashboard variant
+│   │   │   └── page.tsx                    # Simple dashboard page
 │   │   ├── layout.tsx                      # Dashboard layout
+│   │   ├── metadata.ts                     # Dashboard metadata
 │   │   └── page.tsx                        # Dashboard main page
 │   ├── debug/                              # Debug routes
+│   │   └── page.tsx                        # Debug page component
 │   ├── login/                              # Login page
+│   │   ├── __tests__/                      # Login tests
+│   │   └── page.tsx                        # Login page component
 │   ├── proposals/                          # Proposal routes
+│   │   ├── __tests__/                      # Proposal page tests
 │   │   ├── create/                         # Proposal creation redirect
+│   │   │   └── page.tsx                    # Creation redirect page
 │   │   ├── created/                        # Post-creation success page
+│   │   │   └── page.tsx                    # Success page component
 │   │   ├── new/                            # New proposal setup page
+│   │   │   ├── __tests__/                  # New proposal tests
 │   │   │   ├── application/                # Application proposal flow
-│   │   │   └── rfp/                        # RFP proposal flow
+│   │   │   │   └── page.tsx                # Application page component
+│   │   │   ├── rfp/                        # RFP proposal flow
+│   │   │   │   └── page.tsx                # RFP page component
+│   │   │   └── page.tsx                    # New proposal page
 │   │   └── page.tsx                        # Proposals list page
 │   ├── globals.css                         # Global CSS
 │   ├── layout.tsx                          # Root layout
 │   └── page.tsx                            # Home page
 │
 ├── docs/                                   # Documentation
-│   └── frontend-file-structure.md          # This document
+│   ├── auth-integration.md                 # Auth integration docs
+│   ├── frontend-file-structure.md          # This document
+│   └── routing.md                          # Routing documentation
 │
 ├── public/                                 # Static assets
 │   └── images/                             # Image assets
+│       └── empty-proposals.svg             # Empty state illustration
 │
 ├── src/                                    # Source code
+│   ├── __tests__/                          # Source tests
+│   │   └── chat-ui/                        # Chat UI tests
+│   │       ├── pages/                      # Chat page tests
+│   │       ├── providers/                  # Provider tests
+│   │       └── thread/                     # Thread tests
+│   │
 │   ├── components/                         # Shared UI components
 │   │   ├── layouts/                        # Layout components
+│   │   │   └── Sidebar.tsx                 # Sidebar component
 │   │   └── ui/                             # shadcn/ui components
+│   │       ├── button.tsx                  # Button component
+│   │       ├── card.tsx                    # Card component
+│   │       └── ...                         # Other UI components
 │   │
 │   ├── features/                           # Feature modules
 │   │   ├── auth/                           # Authentication feature
 │   │   │   ├── api/                        # Auth API calls
+│   │   │   │   ├── __tests__/              # Auth API tests
+│   │   │   │   ├── docs/                   # Auth API docs
+│   │   │   │   └── examples/               # Auth examples
 │   │   │   ├── components/                 # Auth-specific components
 │   │   │   ├── hoc/                        # Higher-order components
 │   │   │   ├── hooks/                      # Auth hooks (useAuth, etc.)
+│   │   │   │   └── __tests__/              # Auth hook tests
 │   │   │   └── types/                      # Auth types
 │   │   │
 │   │   ├── chat/                           # Chat feature
 │   │   │   └── components/                 # Chat components
+│   │   │       ├── lib/                    # Chat component utilities
+│   │   │       ├── providers/              # Chat providers
+│   │   │       └── thread/                 # Thread components
+│   │   │           └── messages/           # Message components
 │   │   │
 │   │   ├── chat-ui/                        # Chat UI feature
 │   │   │   ├── components/                 # Chat UI components
+│   │   │   │   ├── agent-inbox/            # Agent inbox components
+│   │   │   │   ├── icons/                  # Icon components
+│   │   │   │   ├── messages/               # Message components
+│   │   │   │   ├── thread/                 # Thread components
+│   │   │   │   └── thread-history/         # Thread history components
 │   │   │   ├── context/                    # Context providers
 │   │   │   ├── hooks/                      # Chat-related hooks
 │   │   │   ├── lib/                        # Chat-specific libraries
@@ -190,44 +251,66 @@ apps/web/
 │   │   │
 │   │   ├── dashboard/                      # Dashboard feature
 │   │   │   └── components/                 # Dashboard components
+│   │   │       └── __tests__/              # Dashboard component tests
 │   │   │
 │   │   ├── layout/                         # Layout feature
 │   │   │   └── components/                 # Layout components
+│   │   │       └── __tests__/              # Layout component tests
 │   │   │
 │   │   ├── proposals/                      # Proposals feature
 │   │   │   ├── api/                        # Proposal API calls
 │   │   │   ├── components/                 # Proposal-specific components
+│   │   │   │   └── __tests__/              # Proposal component tests
 │   │   │   └── utils/                      # Proposal utilities
 │   │   │
 │   │   ├── rfp/                            # RFP feature
 │   │   │   └── hooks/                      # RFP-related hooks
 │   │   │
 │   │   ├── shared/                         # Shared feature components
+│   │   │   ├── __tests__/                  # Shared component tests
 │   │   │   └── components/                 # Shared UI components
+│   │   │       ├── error/                  # Error handling components
+│   │   │       └── icons/                  # Shared icons
 │   │   │
 │   │   ├── thread/                         # Thread feature
 │   │   │   └── components/                 # Thread-related components
+│   │   │       ├── agent-inbox/            # Agent inbox components
+│   │   │       ├── history/                # Thread history components
+│   │   │       └── messages/               # Message components
 │   │   │
 │   │   └── ui/                             # UI feature
 │   │       └── components/                 # UI-specific components
+│   │           └── __tests__/              # UI component tests
 │   │
 │   ├── hooks/                              # Shared hooks
+│   │   └── __tests__/                      # Hook tests
 │   │
 │   ├── lib/                                # Shared libraries
 │   │   ├── api/                            # API utilities
 │   │   ├── errors/                         # Error handling
+│   │   │   └── __tests__/                  # Error handling tests
 │   │   ├── forms/                          # Form utilities
 │   │   │   └── schemas/                    # Form validation schemas
 │   │   ├── logger/                         # Logging utilities
 │   │   ├── schema/                         # Schema definitions
 │   │   ├── supabase/                       # Supabase integration
+│   │   │   ├── __tests__/                  # Supabase tests
 │   │   │   ├── auth/                       # Supabase auth utilities
+│   │   │   │   └── __tests__/              # Auth utility tests
 │   │   │   ├── docs/                       # Supabase documentation
 │   │   │   └── types/                      # Supabase type definitions
 │   │   └── utils/                          # General utilities
 │   │
 │   ├── providers/                          # Context providers
 │   └── schemas/                            # Validation schemas
+│
+├── .env.development                        # Development environment variables
+├── .env.example                            # Example environment variables
+├── next.config.mjs                         # Next.js configuration
+├── package.json                            # Package dependencies
+├── tailwind.config.js                      # Tailwind CSS configuration
+├── tsconfig.json                           # TypeScript configuration
+└── vitest.config.ts                        # Vitest test configuration
 ```
 
 ## Guidelines for Adding New Code
