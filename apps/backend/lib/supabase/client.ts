@@ -17,7 +17,8 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables from both locations
 // First try the root .env (more important)
-dotenv.config({ path: path.resolve(__dirname, "../../../../../.env") });
+// Path: apps/backend/lib/supabase/ -> go up 4 levels to reach root
+dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
 // Then local .env as fallback (less important)
 dotenv.config();
 

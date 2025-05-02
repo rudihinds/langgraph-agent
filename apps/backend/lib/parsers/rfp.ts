@@ -1,4 +1,5 @@
-import pdf from "pdf-parse";
+// Import our custom PDF parser wrapper that handles fallbacks
+import parsePdf from "./pdf-parser.js";
 import mammoth from "mammoth";
 // import { Logger } from '../../../../apps/web/src/lib/logger/index.js';
 
@@ -62,7 +63,7 @@ export async function parseRfpFromBuffer(
   if (lowerCaseFileType === "pdf") {
     try {
       // pdf-parse is mocked in tests
-      const data = await pdf(buffer);
+      const data = await parsePdf(buffer);
       const metadata: Record<string, any> = {
         format: "pdf",
         info: data.info, // PDF specific metadata
@@ -143,7 +144,7 @@ export async function parseRfpFromBuffer(
 async function parsePdf(buffer: ArrayBuffer): Promise<ParsedDocument> {
   // pdf-parse expects a Buffer
   const nodeBuffer = Buffer.from(buffer);
-  const data = await pdf(nodeBuffer);
+  const data = await parsePdf(nodeBuffer);
   return {
     text: data.text || "",
     metadata: {

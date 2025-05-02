@@ -1,21 +1,21 @@
+#!/usr/bin/env node
+
 /**
- * This script registers TypeScript path aliases for runtime
- * so that imports like @/lib/x work with tsx and direct execution.
- * Enhanced for compatibility with LangGraph and ESM modules.
+ * LangGraph Server Startup Script with Path Aliases (ESM Version)
+ *
+ * This script initializes path aliases before starting the LangGraph server.
+ * It ensures that TypeScript path aliases like @/lib/* work at runtime.
  */
 import { register } from "tsconfig-paths";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
+import { spawn } from "child_process";
 import * as fs from "fs";
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const tsconfigPath = resolve(__dirname, "tsconfig.json");
-
-// Initialize the exports with default values
-let registeredPaths: Record<string, string[]> = {};
-let baseUrl: string = __dirname;
 
 try {
   // Load tsconfig.json
@@ -24,18 +24,17 @@ try {
 
   // Create a more robust path mapping that explicitly handles .js extensions
   const paths = { ...tsconfig.compilerOptions.paths };
-  const enhancedPaths: Record<string, string[]> = {};
+  const enhancedPaths = {};
 
   // Process each path to ensure .js extensions are properly handled
   Object.entries(paths).forEach(([key, value]) => {
     // Store the original path mapping
-    enhancedPaths[key] = value as string[];
+    enhancedPaths[key] = value;
 
     // If the key doesn't end with .js, add an additional mapping for .js extension
     if (!key.endsWith(".js*")) {
       const jsKey = key.endsWith("*") ? key.replace("*", ".js*") : `${key}.js`;
-
-      enhancedPaths[jsKey] = (value as string[]).map((path) =>
+      enhancedPaths[jsKey] = value.map((path) =>
         path.endsWith("*") ? path : `${path}.js`
       );
     }
@@ -49,23 +48,44 @@ try {
     addMatchAll: true,
   });
 
-  // Log success with more details to help troubleshooting
   console.log("✅ TypeScript path aliases registered for runtime");
-  console.log(
-    `  - Base URL: ${resolve(__dirname, tsconfig.compilerOptions.baseUrl)}`
-  );
-  console.log(`  - Registered paths:`);
-  Object.keys(enhancedPaths).forEach((key) => {
-    console.log(`    - ${key} => ${enhancedPaths[key]}`);
-  });
-
-  // Update the exports
-  registeredPaths = enhancedPaths;
-  baseUrl = resolve(__dirname, tsconfig.compilerOptions.baseUrl);
 } catch (error) {
   console.error("❌ Failed to register TypeScript path aliases:", error);
   console.error("This might cause import errors with @/ path aliases.");
 }
 
-// Export the values
-export { registeredPaths, baseUrl };
+console.log("🚀 Starting LangGraph server...");
+
+// Start LangGraph server with the same arguments passed to this script
+const serverProcess = spawn(
+  "npx",
+  [
+    "@langchain/langgraph-cli",
+    "dev",
+    "--port",
+    "2024",
+    "--config",
+    "langgraph.json",
+  ],
+  {
+    stdio: "inherit",
+    cwd: resolve(__dirname, "../.."),
+    env: {
+      ...process.env,
+      NODE_OPTIONS:
+        "--experimental-specifier-resolution=node --experimental-modules",
+    },
+  }
+);
+
+// Forward exit signals to the LangGraph server
+["SIGINT", "SIGTERM"].forEach((signal) => {
+  process.on(signal, () => {
+    serverProcess.kill(signal);
+  });
+});
+
+// Forward exit code from LangGraph server
+serverProcess.on("exit", (code) => {
+  process.exit(code);
+});

@@ -6,9 +6,9 @@
  * supporting both authenticated and server-side access patterns.
  */
 import { OverallProposalState, LoadingStatus } from "@/state/proposal.state.js";
-import { serverSupabase } from "@/lib/supabase/client.js";
-import { parseRfpFromBuffer } from "@/lib/parsers/rfp.js";
-import { Logger } from "@/lib/logger.js";
+import { serverSupabase } from "../../../lib/supabase/client.js";
+import { parseRfpFromBuffer } from "../../../lib/parsers/rfp.js";
+import { Logger } from "../../../lib/logger.js";
 
 const logger = Logger.getInstance();
 const BUCKET_NAME = "proposal-documents";
