@@ -1,6 +1,1 @@
-{
-  "/api/langgraph/[...path]/route": "app/api/langgraph/[...path]/route.js",
-  "/proposals/page": "app/proposals/page.js",
-  "/dashboard/chat/page": "app/dashboard/chat/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
-}
+{}

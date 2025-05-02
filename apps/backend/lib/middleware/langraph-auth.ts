@@ -71,24 +71,51 @@ export const createLangGraphAuth = () => {
         value.metadata.lastModified = new Date().toISOString();
       }
 
-      // Filter resources by owner
+      // Filter resources by owner for general access
       return { owner: user.identity };
     })
     .on("threads", ({ user }) => {
-      // Return a filter based on owner identity
-      // Use the simple string format (simpler than the $eq object format)
+      // Return a filter based on owner identity for threads
+      logger.debug("Filtering threads by owner", { userId: user.identity });
       return { owner: user.identity };
     })
     .on("store", ({ user, value }) => {
+      // Handle namespaced storage access
       if (value.namespace != null) {
-        // If using namespaced storage (user_id, resource_type, resource_id)
         const [userId, resourceType, resourceId] = value.namespace;
+
         if (userId !== user.identity) {
+          logger.warn("Access denied to namespaced resource", {
+            userId: user.identity,
+            resourceUserId: userId,
+            resourceType,
+          });
+
           throw new HTTPException(403, {
             message: "Access denied to resource",
           });
         }
+
+        // Log successful access for thread mapping operations
+        if (resourceType === "thread_mappings") {
+          logger.debug("Thread mapping access granted", {
+            userId: user.identity,
+            resourceId,
+          });
+        }
       }
+
+      // Add additional context to the value for thread-related operations
+      // This helps track user access within the application logic
+      if (typeof value === "object" && value !== null) {
+        // Attach user identity to the value for tracking
+        (value as Record<string, unknown>).accessedBy = user.identity;
+        (value as Record<string, unknown>).accessTimestamp =
+          new Date().toISOString();
+      }
+
+      // Default filter by owner
+      return { owner: user.identity };
     });
 };
 
