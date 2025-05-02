@@ -16,7 +16,7 @@ import {
   HumanMessage,
   SystemMessage,
 } from "@langchain/core/messages";
-import { env } from "../../env.js";
+import { env } from "../config/env.js";
 
 /**
  * Anthropic models configuration

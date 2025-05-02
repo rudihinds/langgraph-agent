@@ -12,7 +12,7 @@ import {
 } from "./types.js";
 import { ChatMistralAI } from "@langchain/mistralai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { env } from "../../env.js";
+import { env } from "../config/env.js";
 
 /**
  * Mistral models configuration

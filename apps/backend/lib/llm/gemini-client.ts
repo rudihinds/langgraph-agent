@@ -2,43 +2,47 @@
  * Gemini implementation of the LLM client
  */
 
-import { 
-  LLMClient, 
-  LLMCompletionOptions, 
-  LLMCompletionResponse, 
-  LLMModel, 
+import {
+  LLMClient,
+  LLMCompletionOptions,
+  LLMCompletionResponse,
+  LLMModel,
   LLMStreamCallback,
-  LLMStreamEventType
-} from './types.js';
-import { GoogleGenerativeAI, GenerativeModel, Part } from '@google/generative-ai';
-import { env } from '../../env.js';
+  LLMStreamEventType,
+} from "./types.js";
+import {
+  GoogleGenerativeAI,
+  GenerativeModel,
+  Part,
+} from "@google/generative-ai";
+import { env } from "../config/env.js";
 
 /**
  * Gemini models configuration
  */
 const GEMINI_MODELS: LLMModel[] = [
   {
-    id: 'gemini-1.5-pro',
-    name: 'Gemini 1.5 Pro',
-    provider: 'gemini',
+    id: "gemini-1.5-pro",
+    name: "Gemini 1.5 Pro",
+    provider: "gemini",
     contextWindow: 1000000, // 1M tokens context window
-    inputCostPer1000Tokens: 0.0010,
-    outputCostPer1000Tokens: 0.0020,
+    inputCostPer1000Tokens: 0.001,
+    outputCostPer1000Tokens: 0.002,
     supportsStreaming: true,
   },
   {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
-    provider: 'gemini',
+    id: "gemini-1.5-flash",
+    name: "Gemini 1.5 Flash",
+    provider: "gemini",
     contextWindow: 1000000, // 1M tokens context window
     inputCostPer1000Tokens: 0.00035,
-    outputCostPer1000Tokens: 0.00070,
+    outputCostPer1000Tokens: 0.0007,
     supportsStreaming: true,
   },
   {
-    id: 'gemini-1.0-pro',
-    name: 'Gemini 1.0 Pro',
-    provider: 'gemini',
+    id: "gemini-1.0-pro",
+    name: "Gemini 1.0 Pro",
+    provider: "gemini",
     contextWindow: 32768,
     inputCostPer1000Tokens: 0.00025,
     outputCostPer1000Tokens: 0.0005,
@@ -80,40 +84,43 @@ export class GeminiClient implements LLMClient {
     systemMessage?: string
   ): Part[] {
     const parts: Part[] = [];
-    
+
     // If there's a system message, add it as a first user message
     if (systemMessage) {
       parts.push({
-        role: 'user',
-        parts: [{ text: systemMessage }]
+        role: "user",
+        parts: [{ text: systemMessage }],
       });
-      
+
       // If the first message is from a user, add an empty assistant response
       // to maintain the proper conversation flow after the system message
-      if (messages.length > 0 && (messages[0].role === 'user' || messages[0].role === 'human')) {
+      if (
+        messages.length > 0 &&
+        (messages[0].role === "user" || messages[0].role === "human")
+      ) {
         parts.push({
-          role: 'model',
-          parts: [{ text: '' }]
+          role: "model",
+          parts: [{ text: "" }],
         });
       }
     }
-    
+
     // Convert and add the rest of the messages
     for (const message of messages) {
-      if (message.role === 'user' || message.role === 'human') {
+      if (message.role === "user" || message.role === "human") {
         parts.push({
-          role: 'user',
-          parts: [{ text: message.content }]
+          role: "user",
+          parts: [{ text: message.content }],
         });
-      } else if (message.role === 'assistant' || message.role === 'ai') {
+      } else if (message.role === "assistant" || message.role === "ai") {
         parts.push({
-          role: 'model',
-          parts: [{ text: message.content }]
+          role: "model",
+          parts: [{ text: message.content }],
         });
       }
       // Ignore system messages as they were handled above
     }
-    
+
     return parts;
   }
 
@@ -122,7 +129,9 @@ export class GeminiClient implements LLMClient {
    * @param options Completion options
    * @returns Promise with completion response
    */
-  async completion(options: LLMCompletionOptions): Promise<LLMCompletionResponse> {
+  async completion(
+    options: LLMCompletionOptions
+  ): Promise<LLMCompletionResponse> {
     const startTime = Date.now();
 
     try {
@@ -135,66 +144,81 @@ export class GeminiClient implements LLMClient {
           topP: options.topP,
         },
         // Configure tools/functions if provided
-        tools: options.functions ? [{
-          functionDeclarations: options.functions.map(func => ({
-            name: func.name,
-            description: func.description || '',
-            parameters: func.parameters
-          }))
-        }] : undefined,
+        tools: options.functions
+          ? [
+              {
+                functionDeclarations: options.functions.map((func) => ({
+                  name: func.name,
+                  description: func.description || "",
+                  parameters: func.parameters,
+                })),
+              },
+            ]
+          : undefined,
       });
 
       // Prepare messages
-      const parts = this.convertMessages([...options.messages], options.systemMessage);
-      
+      const parts = this.convertMessages(
+        [...options.messages],
+        options.systemMessage
+      );
+
       // Start token counting
-      const promptText = parts.map(part => 
-        part.parts.map(p => ('text' in p) ? p.text : '').join(' ')
-      ).join(' ');
+      const promptText = parts
+        .map((part) =>
+          part.parts.map((p) => ("text" in p ? p.text : "")).join(" ")
+        )
+        .join(" ");
       const promptTokens = this.estimateTokens(promptText);
-      
+
       // Make the completion request
       const response = await model.generateContent({
-        contents: [{ role: 'user', parts }],
-        tools: options.functions ? [{
-          functionDeclarations: options.functions.map(func => ({
-            name: func.name,
-            description: func.description || '',
-            parameters: func.parameters
-          }))
-        }] : undefined,
-        toolConfig: options.functionCall ? {
-          toolChoice: {
-            functionCalling: {
-              functionName: options.functionCall
+        contents: [{ role: "user", parts }],
+        tools: options.functions
+          ? [
+              {
+                functionDeclarations: options.functions.map((func) => ({
+                  name: func.name,
+                  description: func.description || "",
+                  parameters: func.parameters,
+                })),
+              },
+            ]
+          : undefined,
+        toolConfig: options.functionCall
+          ? {
+              toolChoice: {
+                functionCalling: {
+                  functionName: options.functionCall,
+                },
+              },
             }
-          }
-        } : undefined,
+          : undefined,
       });
-      
+
       const result = response.response;
       const timeTaken = Date.now() - startTime;
-      
+
       // Extract text content or function call
-      let content = '';
+      let content = "";
       let functionCallResult: GeminiFunctionCallResult | undefined;
-      
+
       if (result.functionCalling) {
         // Handle function call response
         const functionCall = result.functionCalling[0];
         functionCallResult = {
           name: functionCall.name,
-          args: functionCall.args
+          args: functionCall.args,
         };
         content = JSON.stringify(functionCallResult);
       } else {
         // Handle regular text response
         content = result.text();
       }
-      
+
       // Estimate completion tokens
       const completionTokens = this.estimateTokens(content);
-      
+
       // Calculate cost
       const { cost } = this.calculateCost(
         options.model,
@@ -221,7 +245,7 @@ export class GeminiClient implements LLMClient {
         },
       };
     } catch (error) {
-      console.error('Gemini completion error:', error);
+      console.error("Gemini completion error:", error);
       throw new Error(`Gemini completion failed: ${(error as Error).message}`);
     }
   }
@@ -248,59 +272,74 @@ export class GeminiClient implements LLMClient {
           topP: options.topP,
         },
         // Configure tools/functions if provided
-        tools: options.functions ? [{
-          functionDeclarations: options.functions.map(func => ({
-            name: func.name,
-            description: func.description || '',
-            parameters: func.parameters
-          }))
-        }] : undefined,
+        tools: options.functions
+          ? [
+              {
+                functionDeclarations: options.functions.map((func) => ({
+                  name: func.name,
+                  description: func.description || "",
+                  parameters: func.parameters,
+                })),
+              },
+            ]
+          : undefined,
       });
 
       // Prepare messages
-      const parts = this.convertMessages([...options.messages], options.systemMessage);
-      
+      const parts = this.convertMessages(
+        [...options.messages],
+        options.systemMessage
+      );
+
       // Start token counting
-      const promptText = parts.map(part => 
-        part.parts.map(p => ('text' in p) ? p.text : '').join(' ')
-      ).join(' ');
+      const promptText = parts
+        .map((part) =>
+          part.parts.map((p) => ("text" in p ? p.text : "")).join(" ")
+        )
+        .join(" ");
       const promptTokens = this.estimateTokens(promptText);
-      
+
       // Make the streaming request
       const streamingResponse = await model.generateContentStream({
-        contents: [{ role: 'user', parts }],
-        tools: options.functions ? [{
-          functionDeclarations: options.functions.map(func => ({
-            name: func.name,
-            description: func.description || '',
-            parameters: func.parameters
-          }))
-        }] : undefined,
-        toolConfig: options.functionCall ? {
-          toolChoice: {
-            functionCalling: {
-              functionName: options.functionCall
+        contents: [{ role: "user", parts }],
+        tools: options.functions
+          ? [
+              {
+                functionDeclarations: options.functions.map((func) => ({
+                  name: func.name,
+                  description: func.description || "",
+                  parameters: func.parameters,
+                })),
+              },
+            ]
+          : undefined,
+        toolConfig: options.functionCall
+          ? {
+              toolChoice: {
+                functionCalling: {
+                  functionName: options.functionCall,
+                },
+              },
             }
-          }
-        } : undefined,
+          : undefined,
       });
-      
-      let fullContent = '';
+
+      let fullContent = "";
       let functionCallResult: GeminiFunctionCallResult | undefined;
-      
+
       // Process the stream chunks
       for await (const chunk of streamingResponse.stream) {
         const text = chunk.text();
-        
+
         // Check for function calls
         if (chunk.functionCalling) {
           // Process function call chunks
           const functionCall = chunk.functionCalling[0];
           functionCallResult = {
             name: functionCall.name,
-            args: functionCall.args
+            args: functionCall.args,
           };
-          
+
           // Send function call event
           callback({
             type: LLMStreamEventType.FunctionCall,
@@ -310,7 +349,7 @@ export class GeminiClient implements LLMClient {
         } else if (text) {
           // Process regular text chunks
           fullContent += text;
-          
+
           // Send content event
           callback({
             type: LLMStreamEventType.Content,
@@ -318,21 +357,21 @@ export class GeminiClient implements LLMClient {
           });
         }
       }
-      
+
       // Calculate completion tokens and cost
-      const completionContent = functionCallResult 
+      const completionContent = functionCallResult
         ? JSON.stringify(functionCallResult)
         : fullContent;
       const completionTokens = this.estimateTokens(completionContent);
-      
+
       const { cost } = this.calculateCost(
         options.model,
         promptTokens,
         completionTokens
       );
-      
+
       const timeTaken = Date.now() - startTime;
-      
+
       // Send end event with metadata
       callback({
         type: LLMStreamEventType.End,
@@ -347,12 +386,14 @@ export class GeminiClient implements LLMClient {
         },
       });
     } catch (error) {
-      console.error('Gemini stream error:', error);
-      
+      console.error("Gemini stream error:", error);
+
       // Send error event
       callback({
         type: LLMStreamEventType.Error,
-        error: new Error(`Gemini streaming failed: ${(error as Error).message}`),
+        error: new Error(
+          `Gemini streaming failed: ${(error as Error).message}`
+        ),
       });
     }
   }
@@ -361,7 +402,7 @@ export class GeminiClient implements LLMClient {
    * Estimate tokens for a string
    * @param text Text to estimate tokens for
    * @returns Estimated token count
-   * 
+   *
    * Note: This is a rough approximation as Gemini doesn't expose token counting
    */
   estimateTokens(text: string): number {
@@ -382,14 +423,15 @@ export class GeminiClient implements LLMClient {
     completionTokens: number
   ): { cost: number; completionTokens: number } {
     const model = this.getModelById(modelId);
-    
+
     if (!model) {
       return { cost: 0, completionTokens };
     }
-    
+
     const promptCost = (promptTokens / 1000) * model.inputCostPer1000Tokens;
-    const completionCost = (completionTokens / 1000) * model.outputCostPer1000Tokens;
-    
+    const completionCost =
+      (completionTokens / 1000) * model.outputCostPer1000Tokens;
+
     return {
       cost: promptCost + completionCost,
       completionTokens,

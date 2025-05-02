@@ -12,7 +12,7 @@ import {
 } from "./types.js";
 import OpenAI from "openai";
 import tiktoken from "tiktoken";
-import { env } from "../../env.js";
+import { env } from "../config/env.js";
 
 /**
  * OpenAI models configuration
