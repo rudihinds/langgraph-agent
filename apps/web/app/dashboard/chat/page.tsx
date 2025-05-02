@@ -21,12 +21,14 @@ export default function ChatPage(): React.ReactNode {
   }, [rfpId, setInitialRfpId]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden -mt-6 -ml-6 -mr-6">
       <Toaster />
       <ThreadProvider>
-        <ThreadHistory />
-        <div className="flex-1 overflow-hidden">
-          <Thread />
+        <div className="flex h-full w-full">
+          <ThreadHistory />
+          <div className="flex-1 h-full overflow-hidden">
+            <Thread />
+          </div>
         </div>
       </ThreadProvider>
     </div>

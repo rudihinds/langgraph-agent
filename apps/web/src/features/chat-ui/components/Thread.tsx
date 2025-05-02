@@ -149,18 +149,21 @@ export function Thread() {
   };
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden" ref={ref}>
+    <div
+      className="relative flex flex-col w-full h-full bg-background"
+      ref={ref}
+    >
       <div
         ref={containerRef}
         className={cn(
-          "scrollbar-pretty flex flex-1 flex-col overflow-y-auto overscroll-contain",
-          "pt-4 pb-0 h-full"
+          "scrollbar-pretty flex-1 overflow-y-auto overscroll-contain",
+          "pt-4 pb-0"
         )}
       >
         {!messages || messages.length === 0 ? (
           <NoMessagesView />
         ) : (
-          <div className="flex flex-col gap-8 px-4 pb-4">
+          <div className="flex flex-col gap-8 px-4 pb-4 max-w-4xl mx-auto w-full">
             {messagesWithToolResponses.map((message, idx) => (
               <ChatMessage
                 key={message.id || `msg-${idx}`}
@@ -209,8 +212,8 @@ export function Thread() {
           "border-t border-border/50 bg-background/80 backdrop-blur"
         )}
       >
-        <div className="mx-auto max-w-3xl">
-          <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
+        <div className="mx-auto max-w-4xl px-4 py-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <Textarea
               ref={inputRef}
               value={inputValue}
@@ -221,7 +224,7 @@ export function Thread() {
                 isStreaming ? "Waiting for response..." : "Type a message..."
               }
               className={cn(
-                "min-h-24 resize-none bg-background",
+                "min-h-12 max-h-32 resize-none bg-background",
                 "border-input"
               )}
             />
