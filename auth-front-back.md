@@ -168,7 +168,7 @@ Focus on correctly handling the transition from dashboard to chat interface with
     - Improve StreamProvider to handle errors gracefully
     - Add timeout handling to prevent hanging requests
 
-- [ ] **3.8 Update LangGraph server integration**
+- [x] **3.8 Update LangGraph server integration**
 
   - Path: `/apps/backend/lib/supabase/langgraph-server.ts`
   - Task: Ensure thread creation, state management, and proposal mapping work together
