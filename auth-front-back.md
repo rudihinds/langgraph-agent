@@ -20,7 +20,7 @@ Focus on connecting our Supabase authentication system to the LangGraph client t
 
 ### Steps:
 
-- [ ] **1.1 Update StreamProvider to use session token**
+- [x] **1.1 Update StreamProvider to use session token**
 
   - Path: `/apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
   - Task: Modify StreamProvider to extract the auth token from our session and pass it to the LangGraph client
@@ -29,7 +29,7 @@ Focus on connecting our Supabase authentication system to the LangGraph client t
     - Extract access_token from session
     - Pass token to createClient
 
-- [ ] **1.2 Add token refresh handling**
+- [x] **1.2 Add token refresh handling**
 
   - Path: `/apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
   - Task: Implement token refresh detection and handling for long chat sessions
@@ -38,7 +38,7 @@ Focus on connecting our Supabase authentication system to the LangGraph client t
     - Call refreshSession when token is close to expiration
     - Handle any errors during refresh
 
-- [ ] **1.3 Update LangGraph API proxy to forward auth headers**
+- [x] **1.3 Update LangGraph API proxy to forward auth headers**
   - Path: `/apps/web/app/api/langgraph/[...path]/route.ts`
   - Task: Ensure auth headers are properly forwarded to the LangGraph backend
   - Code changes:
@@ -56,7 +56,7 @@ Implement a custom authentication handler for LangGraph based on the official La
 
 ### Steps:
 
-- [ ] **2.1 Create custom auth handler**
+- [x] **2.1 Create custom auth handler**
 
   - Path: `/apps/backend/lib/middleware/langraph-auth.ts`
   - Task: Create a middleware that validates JWT tokens from Supabase
@@ -65,16 +65,16 @@ Implement a custom authentication handler for LangGraph based on the official La
     - Implement getUserFromToken for extracting user information
     - Export handler with authentication logic
 
-- [ ] **2.2 Update LangGraph server configuration**
+- [x] **2.2 Update LangGraph server configuration**
 
-  - Path: `/apps/backend/api/express-server.ts`
+  - Path: `/apps/backend/lib/supabase/langgraph-server.ts`
   - Task: Configure LangGraph server to use custom auth handler
   - Code changes:
     - Import auth handler from middleware
-    - Update TrustedHTTPServer configuration with custom auth
-    - Configure authContext to include userId and roles
+    - Update LangGraphServer configuration with custom auth
+    - Configure auth to include userId and owner metadata
 
-- [ ] **2.3 Implement token validation utility**
+- [x] **2.3 Implement token validation utility**
   - Path: `/apps/backend/lib/supabase/auth-utils.ts`
   - Task: Create utility to validate Supabase tokens
   - Code changes:

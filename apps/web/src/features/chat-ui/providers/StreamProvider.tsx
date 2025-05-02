@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useState,
   useEffect,
+  useRef,
 } from "react";
 import { useStream } from "@langchain/langgraph-sdk/react";
 import { type Message } from "@langchain/langgraph-sdk";
@@ -34,6 +35,9 @@ const useTypedStream = useStream<
 type StreamContextType = ReturnType<typeof useTypedStream>;
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
 
+// Token refresh buffer in seconds (refresh if less than 5 minutes left)
+const TOKEN_REFRESH_BUFFER = 300;
+
 export function StreamProvider({
   children,
   initialRfpId,
@@ -42,8 +46,9 @@ export function StreamProvider({
   initialRfpId?: string | null;
 }) {
   // Integrate with our auth system
-  const { session } = useAuth();
+  const { session, refreshSession } = useAuth();
   const [threadId, setThreadId] = useQueryState("threadId");
+  const clientRef = useRef<ReturnType<typeof useTypedStream> | null>(null);
 
   // Get environment variables for API URL and agent ID
   const apiUrl: string =
@@ -86,6 +91,59 @@ export function StreamProvider({
     }
   }, [initialRfpId, threadId]);
 
+  // Handle token refresh for long sessions
+  useEffect(() => {
+    if (!session) return;
+
+    let refreshTimer: NodeJS.Timeout;
+
+    const setupRefreshTimer = () => {
+      // Clear any existing timers
+      if (refreshTimer) clearTimeout(refreshTimer);
+
+      // Get expiration time from token if available
+      const expiresAt = session.expires_at; // Assumes this is in seconds since epoch
+
+      if (expiresAt) {
+        const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+        const timeUntilExpiry = expiresAt - currentTime;
+
+        // If token expires in less than buffer time, refresh immediately
+        if (timeUntilExpiry < TOKEN_REFRESH_BUFFER) {
+          handleRefresh();
+        } else {
+          // Otherwise, set timer to refresh just before expiration
+          const refreshTime = (timeUntilExpiry - TOKEN_REFRESH_BUFFER) * 1000; // Convert to ms
+          refreshTimer = setTimeout(handleRefresh, refreshTime);
+        }
+      }
+    };
+
+    const handleRefresh = async () => {
+      try {
+        await refreshSession();
+        toast.success("Session refreshed", { duration: 2000 });
+
+        // After refresh, setup the next refresh timer
+        setupRefreshTimer();
+      } catch (error) {
+        console.error("Failed to refresh session:", error);
+        toast.error("Session refresh failed", {
+          description: "Please sign in again.",
+          duration: 5000,
+        });
+      }
+    };
+
+    // Initial setup of refresh timer
+    setupRefreshTimer();
+
+    // Cleanup timer on component unmount
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+    };
+  }, [session, refreshSession]);
+
   // Setup the stream context with authentication
   const streamValue = useTypedStream({
     apiUrl,
@@ -104,6 +162,11 @@ export function StreamProvider({
       setThreadId(id);
     },
   });
+
+  // Store reference to the client for potential re-initialization after token refresh
+  useEffect(() => {
+    clientRef.current = streamValue;
+  }, [streamValue]);
 
   return (
     <StreamContext.Provider value={streamValue}>
