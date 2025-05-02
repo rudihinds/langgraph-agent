@@ -227,209 +227,74 @@ __tests__/
 
 ```
 apps/backend/
+├── __tests__/                              # Top-level tests
+│   └── integration/                        # Integration tests
 ├── agents/                                 # LangGraph agent implementations
 │   ├── __tests__/                          # Agent tests
 │   ├── evaluation/                         # Evaluation agent
-│   │   ├── __tests__/                      # Evaluation tests
-│   │   ├── criteriaLoader.ts               # Criteria loading
-│   │   ├── evaluationNodeFactory.ts        # Node factory
-│   │   ├── evaluationResult.ts             # Result handling
-│   │   ├── extractors.ts                   # Content extractors
-│   │   ├── index.ts                        # Main exports
-│   │   └── sectionEvaluators.ts            # Section evaluators
+│   │   └── __tests__/                      # Evaluation tests
 │   ├── orchestrator/                       # Orchestrator agent
 │   │   ├── __tests__/                      # Orchestrator tests
-│   │   ├── prompts/                        # Prompts
-│   │   ├── configuration.ts                # Configuration
-│   │   ├── graph.ts                        # Graph definition
-│   │   ├── nodes.ts                        # Node implementations
-│   │   ├── prompt-templates.ts             # Prompt templates
-│   │   └── state.ts                        # State definition
+│   │   └── prompts/                        # Orchestrator prompts
 │   ├── proposal-agent/                     # Legacy proposal agent
 │   │   ├── __tests__/                      # Tests
-│   │   ├── prompts/                        # Prompts
-│   │   ├── conditionals.ts                 # Edge conditionals
-│   │   ├── configuration.ts                # Configuration
-│   │   ├── graph-streaming.ts              # Streaming graph
-│   │   ├── graph.ts                        # Graph definition
-│   │   ├── index.ts                        # Main exports
-│   │   ├── nodes-streaming.ts              # Streaming nodes
-│   │   ├── nodes.ts                        # Node implementations
-│   │   ├── reducers.ts                     # Reducers
-│   │   ├── state.ts                        # State definition
-│   │   └── tools.ts                        # Tools
+│   │   └── prompts/                        # Prompts
 │   ├── proposal-generation/                # New proposal generation
 │   │   ├── __tests__/                      # Tests
 │   │   ├── nodes/                          # Node implementations
-│   │   │   ├── __tests__/                  # Node tests
-│   │   │   ├── chatAgent.ts                # Chat agent
-│   │   │   ├── document_loader.ts          # Document loader
-│   │   │   ├── problem_statement.ts        # Problem statement
-│   │   │   ├── processFeedback.ts          # Feedback processor
-│   │   │   ├── section_manager.ts          # Section manager
-│   │   │   ├── section_nodes.ts            # Section nodes
-│   │   │   └── toolProcessor.ts            # Tool processor
+│   │   │   └── __tests__/                  # Node tests
 │   │   ├── prompts/                        # Prompt templates
-│   │   ├── utils/                          # Utilities
-│   │   ├── conditionals.ts                 # Edge conditionals
-│   │   ├── evaluation_integration.ts       # Evaluation integration
-│   │   ├── graph.ts                        # Graph definition
-│   │   ├── index.ts                        # Main exports
-│   │   └── nodes.ts                        # Node definitions
-│   ├── research/                           # Research agent
-│   │   ├── __tests__/                      # Tests
-│   │   ├── prompts/                        # Prompts
-│   │   ├── agents.ts                       # Agent definitions
-│   │   ├── index.ts                        # Main exports
-│   │   ├── nodes.ts                        # Node implementations
-│   │   ├── state.ts                        # State definition
-│   │   └── tools.ts                        # Tools
-│   ├── README.md                           # Documentation
-│   └── index.ts                            # Main exports
-│
+│   │   └── utils/                          # Utilities
+│   └── research/                           # Research agent
+│       ├── __tests__/                      # Tests
+│       └── prompts/                        # Prompts
 ├── api/                                    # API routes and handlers
 │   ├── __tests__/                          # API tests
-│   ├── rfp/                                # RFP-related routes
-│   │   ├── __tests__/                      # RFP route tests
-│   │   ├── express-handlers/               # Express handlers
-│   │   ├── chat.ts                         # Chat endpoints
-│   │   ├── feedback.ts                     # Feedback handling
-│   │   ├── index.ts                        # Main exports
-│   │   ├── interrupt-status.ts             # Interrupt status
-│   │   ├── parse.ts                        # Document parsing
-│   │   └── resume.ts                       # Resume flow
-│   ├── README.md                           # Documentation
-│   ├── express-server.ts                   # Express server
-│   ├── index.ts                            # Main exports
-│   └── rfp.js                              # Legacy RFP handler
-│
+│   └── rfp/                                # RFP-related routes
+│       ├── __tests__/                      # RFP route tests
+│       └── express-handlers/               # Express handlers
 ├── config/                                 # Configuration
-│   ├── evaluation/                         # Evaluation criteria
-│   │   ├── connections.json                # Connections criteria
-│   │   ├── research.json                   # Research criteria
-│   │   ├── sections.json                   # Sections criteria
-│   │   └── solution.json                   # Solution criteria
-│   └── dependencies.json                   # Section dependencies
-│
+│   └── evaluation/                         # Evaluation criteria
 ├── docs/                                   # Documentation
-│   ├── IMPORTS_GUIDE.md                    # Import guide
-│   ├── PATH_ALIAS_RESOLUTION.md            # Path resolution
-│   ├── REDUNDANT_FILES.md                  # Redundant files
-│   └── backend-file-structure.md           # This document
-│
 ├── evaluation/                             # Evaluation framework
 │   ├── __tests__/                          # Evaluation tests
-│   ├── examples/                           # Examples
-│   ├── README.md                           # Documentation
-│   ├── extractors.ts                       # Content extractors
-│   ├── factory.ts                          # Evaluation factory
-│   └── index.ts                            # Main exports
-│
+│   └── examples/                           # Examples
 ├── lib/                                    # Shared libraries
 │   ├── __tests__/                          # Library tests
 │   ├── config/                             # Configuration
-│   │   └── env.ts                          # Environment variables
 │   ├── db/                                 # Database interactions
-│   │   ├── __tests__/                      # Database tests
-│   │   └── documents.ts                    # Document operations
+│   │   └── __tests__/                      # Database tests
 │   ├── llm/                                # LLM integration
 │   │   ├── __tests__/                      # LLM tests
-│   │   ├── streaming/                      # Streaming support
-│   │   ├── README.md                       # Documentation
-│   │   ├── anthropic-client.ts             # Anthropic client
-│   │   ├── context-window-manager.ts       # Context management
-│   │   ├── error-handlers.ts               # Error handling
-│   │   ├── loop-prevention.ts              # Loop prevention
-│   │   ├── message-truncation.ts           # Message truncation
-│   │   └── timeout-manager.ts              # Timeout management
+│   │   └── streaming/                      # Streaming support
 │   ├── middleware/                         # Express middleware
-│   │   ├── __tests__/                      # Middleware tests
-│   │   ├── README.md                       # Documentation
-│   │   ├── auth.js                         # Authentication
-│   │   └── rate-limit.js                   # Rate limiting
+│   │   └── __tests__/                      # Middleware tests
 │   ├── parsers/                            # Document parsers
-│   │   ├── __tests__/                      # Parser tests
-│   │   ├── README.md                       # Documentation
-│   │   ├── pdf-parser.ts                   # PDF parser
-│   │   └── rfp.ts                          # RFP parser
+│   │   └── __tests__/                      # Parser tests
 │   ├── persistence/                        # State persistence
 │   │   ├── __tests__/                      # Persistence tests
 │   │   ├── functions/                      # Database functions
-│   │   ├── migrations/                     # Database migrations
-│   │   ├── README.md                       # Documentation
-│   │   ├── ICheckpointer.ts                # Checkpointer interface
-│   │   ├── checkpointer-factory.ts         # Checkpointer factory
-│   │   ├── memory-checkpointer.ts          # In-memory checkpointer
-│   │   └── supabase-checkpointer.ts        # Supabase checkpointer
+│   │   └── migrations/                     # Database migrations
+│   ├── schema/                             # Database schema
+│   ├── state/                              # State utilities
 │   ├── supabase/                           # Supabase integration
-│   │   ├── README.md                       # Documentation
-│   │   ├── client.ts                       # Supabase client
-│   │   └── index.ts                        # Main exports
+│   │   └── migrations/                     # Supabase migrations
 │   ├── types/                              # Type definitions
-│   │   ├── auth.ts                         # Auth types
-│   │   └── feedback.ts                     # Feedback types
-│   ├── utils/                              # Utility functions
-│   │   ├── backoff.ts                      # Backoff utilities
-│   │   ├── files.ts                        # File utilities
-│   │   └── paths.ts                        # Path utilities
-│   ├── database.types.ts                   # Database types
-│   ├── logger.js                           # Logging utility
-│   ├── schema.sql                          # Database schema
-│   ├── state-serializer.ts                 # State serialization
-│   └── types.ts                            # Common types
-│
+│   └── utils/                              # Utility functions
 ├── prompts/                                # Prompt templates
 │   ├── evaluation/                         # Evaluation prompts
-│   │   ├── connectionPairsEvaluation.ts    # Connection evaluation
-│   │   ├── funderSolutionAlignment.ts      # Solution alignment
-│   │   ├── index.ts                        # Main exports
-│   │   ├── researchEvaluation.ts           # Research evaluation
-│   │   ├── sectionEvaluation.ts            # Section evaluation
-│   │   └── solutionEvaluation.ts           # Solution evaluation
 │   └── generation/                         # Generation prompts
-│       ├── budget.ts                       # Budget generation
-│       ├── conclusion.ts                   # Conclusion generation
-│       ├── index.ts                        # Main exports
-│       ├── methodology.ts                  # Methodology generation
-│       ├── problemStatement.ts             # Problem statement
-│       ├── solution.ts                     # Solution generation
-│       └── timeline.ts                     # Timeline generation
-│
 ├── scripts/                                # Utility scripts
-│   ├── setup-checkpointer.ts               # Setup script
-│   └── test-checkpointer.ts                # Test script
-│
 ├── services/                               # Business logic services
-│   ├── __tests__/                          # Service tests
-│   ├── DependencyService.ts                # Dependency management
-│   ├── checkpointer.service.ts             # Checkpointer service
-│   ├── orchestrator-factory.ts             # Orchestrator factory
-│   └── orchestrator.service.ts             # Orchestrator service
-│
+│   └── __tests__/                          # Service tests
 ├── state/                                  # State management
 │   ├── __tests__/                          # State tests
-│   │   ├── modules/                        # Module tests
-│   │   ├── proposal.state.test.ts          # Proposal state tests
-│   │   └── reducers.test.ts                # Reducer tests
-│   ├── modules/                            # State modules
-│   │   ├── annotations.ts                  # State annotations
-│   │   ├── constants.ts                    # Constants
-│   │   ├── reducers.ts                     # Reducer functions
-│   │   ├── schemas.ts                      # State schemas
-│   │   ├── types.ts                        # Type definitions
-│   │   └── utils.ts                        # Utilities
-│   ├── README.md                           # Documentation
-│   ├── proposal.state.ts                   # Proposal state
-│   └── reducers.ts                         # Reducers
-│
-├── tools/                                  # LangGraph tools
-│   └── interpretIntentTool.ts              # Intent interpretation
-│
-├── __tests__/                              # Top-level tests
-│   └── integration/                        # Integration tests
-│
+│   │   └── modules/                        # Module tests
+│   └── modules/                            # State modules
+├── test/                                   # Test utilities
+│   └── data/                               # Test data
 ├── tests/                                  # Test files (legacy)
-│
+├── tools/                                  # LangGraph tools
 ├── .env.example                            # Example environment variables
 ├── index.ts                                # Main entry point
 ├── langgraph-loader.mjs                    # LangGraph loader
