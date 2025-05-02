@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { DashboardLayoutProvider } from "@/features/layout/components/DashboardLayoutContext";
 import MainContent from "@/features/layout/components/MainContent";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { StreamProvider } from "@/features/chat-ui/providers/StreamProvider";
+import { InterruptProvider } from "@/features/chat-ui/providers/InterruptProvider";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -32,7 +34,11 @@ export default function RootLayout({
           <NuqsAdapter>
             <SessionProvider>
               <DashboardLayoutProvider>
-                <MainContent>{children}</MainContent>
+                <StreamProvider initialRfpId={null}>
+                  <InterruptProvider>
+                    <MainContent>{children}</MainContent>
+                  </InterruptProvider>
+                </StreamProvider>
               </DashboardLayoutProvider>
             </SessionProvider>
           </NuqsAdapter>
