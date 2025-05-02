@@ -129,49 +129,42 @@ apps/web/
 │   │   ├── diagnostics/                    # Diagnostic routes
 │   │   ├── langgraph/                      # LangGraph routes
 │   │   │   └── [...path]/                  # Catch-all route
-│   │   └── proposals/                      # Proposal API routes
-│   │       ├── [id]/                       # Proposal by ID routes
-│   │       │   └── upload/                 # Upload to proposal route
-│   │       └── actions[dep].ts             # Server actions (deprecated)
+│   │   ├── proposals/                      # Proposal API routes
+│   │   │   └── [id]/                       # Proposal by ID routes
+│   │   └── rfp/                            # RFP API routes
+│   │       ├── thread/                     # Thread endpoints
+│   │       └── threads/                    # Threads list endpoints
 │   ├── auth/                               # Authentication routes
 │   │   ├── callback/                       # OAuth callback handling
 │   │   └── login/                          # Login page
 │   ├── auth-test/                          # Auth testing page
 │   ├── dashboard/                          # Dashboard pages
+│   │   ├── chat/                           # Chat interface within dashboard
 │   │   ├── simple/                         # Simple dashboard variant
 │   │   ├── __tests__/                      # Dashboard tests
 │   │   ├── layout.tsx                      # Dashboard layout
-│   │   ├── metadata.ts                     # Dashboard metadata
-│   │   ├── page.tsx                        # Dashboard main page
-│   │   └── test-page.tsx                   # Test dashboard page
+│   │   └── page.tsx                        # Dashboard main page
 │   ├── debug/                              # Debug routes
 │   ├── login/                              # Login page
 │   ├── proposals/                          # Proposal routes
-│   │   ├── __tests__/                      # Proposal tests
 │   │   ├── create/                         # Proposal creation redirect
 │   │   ├── created/                        # Post-creation success page
 │   │   ├── new/                            # New proposal setup page
-│   │   │   ├── __tests__/                  # New proposal tests
 │   │   │   ├── application/                # Application proposal flow
-│   │   │   ├── rfp/                        # RFP proposal flow
-│   │   │   └── page.tsx                    # New proposal landing page
+│   │   │   └── rfp/                        # RFP proposal flow
 │   │   └── page.tsx                        # Proposals list page
-│   ├── favicon.ico                         # Site favicon
 │   ├── globals.css                         # Global CSS
 │   ├── layout.tsx                          # Root layout
 │   └── page.tsx                            # Home page
 │
 ├── docs/                                   # Documentation
-│   ├── frontend-file-structure.md          # This document
-│   └── routing.md                          # Routing documentation
+│   └── frontend-file-structure.md          # This document
 │
 ├── public/                                 # Static assets
-│   ├── favicon.ico                         # Favicon
 │   └── images/                             # Image assets
 │
 ├── src/                                    # Source code
 │   ├── components/                         # Shared UI components
-│   │   ├── common/                         # Basic UI elements
 │   │   ├── layouts/                        # Layout components
 │   │   └── ui/                             # shadcn/ui components
 │   │
@@ -179,65 +172,62 @@ apps/web/
 │   │   ├── auth/                           # Authentication feature
 │   │   │   ├── api/                        # Auth API calls
 │   │   │   ├── components/                 # Auth-specific components
-│   │   │   ├── hooks/                      # Auth hooks (useAuth, etc.)
-│   │   │   ├── types/                      # Auth types
-│   │   │   ├── utils/                      # Auth utilities
 │   │   │   ├── hoc/                        # Higher-order components
-│   │   │   ├── errors.ts                   # Auth error handling
-│   │   │   ├── middleware.ts               # Auth middleware
-│   │   │   └── FILE_ANALYSIS.md            # Feature documentation
+│   │   │   ├── hooks/                      # Auth hooks (useAuth, etc.)
+│   │   │   └── types/                      # Auth types
+│   │   │
+│   │   ├── chat/                           # Chat feature
+│   │   │   └── components/                 # Chat components
+│   │   │
+│   │   ├── chat-ui/                        # Chat UI feature
+│   │   │   ├── components/                 # Chat UI components
+│   │   │   ├── context/                    # Context providers
+│   │   │   ├── hooks/                      # Chat-related hooks
+│   │   │   ├── lib/                        # Chat-specific libraries
+│   │   │   ├── providers/                  # Stream and thread providers
+│   │   │   ├── types/                      # Chat type definitions
+│   │   │   └── utils/                      # Utility functions
+│   │   │
+│   │   ├── dashboard/                      # Dashboard feature
+│   │   │   └── components/                 # Dashboard components
+│   │   │
+│   │   ├── layout/                         # Layout feature
+│   │   │   └── components/                 # Layout components
 │   │   │
 │   │   ├── proposals/                      # Proposals feature
 │   │   │   ├── api/                        # Proposal API calls
 │   │   │   ├── components/                 # Proposal-specific components
-│   │   │   │   ├── creation/               # Creation flow components
-│   │   │   │   ├── display/                # Display components
-│   │   │   │   └── editing/                # Editing components
-│   │   │   ├── hooks/                      # Proposal hooks
-│   │   │   ├── types/                      # Proposal types
 │   │   │   └── utils/                      # Proposal utilities
 │   │   │
-│   │   └── users/                          # User management feature
-│   │       ├── api/                        # User API calls
-│   │       ├── components/                 # User-specific components
-│   │       ├── hooks/                      # User hooks
-│   │       ├── types/                      # User types
-│   │       └── utils/                      # User utilities
+│   │   ├── rfp/                            # RFP feature
+│   │   │   └── hooks/                      # RFP-related hooks
+│   │   │
+│   │   ├── shared/                         # Shared feature components
+│   │   │   └── components/                 # Shared UI components
+│   │   │
+│   │   ├── thread/                         # Thread feature
+│   │   │   └── components/                 # Thread-related components
+│   │   │
+│   │   └── ui/                             # UI feature
+│   │       └── components/                 # UI-specific components
 │   │
 │   ├── hooks/                              # Shared hooks
 │   │
 │   ├── lib/                                # Shared libraries
+│   │   ├── api/                            # API utilities
+│   │   ├── errors/                         # Error handling
+│   │   ├── forms/                          # Form utilities
+│   │   │   └── schemas/                    # Form validation schemas
+│   │   ├── logger/                         # Logging utilities
+│   │   ├── schema/                         # Schema definitions
 │   │   ├── supabase/                       # Supabase integration
 │   │   │   ├── auth/                       # Supabase auth utilities
-│   │   │   ├── types/                      # Supabase types
 │   │   │   ├── docs/                       # Supabase documentation
-│   │   │   ├── __tests__/                  # Supabase tests
-│   │   │   ├── client.ts                   # Browser client
-│   │   │   ├── server.ts                   # Server client
-│   │   │   ├── middleware.ts               # Auth middleware
-│   │   │   ├── errors.ts                   # Error handling
-│   │   │   ├── compatibility.ts            # Compatibility layer
-│   │   │   ├── index.ts                    # Main exports
-│   │   │   └── README.md                   # Documentation
-│   │   │
-│   │   ├── api/                            # API utilities
-│   │   ├── proposal-actions/               # Proposal action helpers
-│   │   ├── user-management/                # User management helpers
-│   │   ├── diagnostic-tools/               # Diagnostic utilities
+│   │   │   └── types/                      # Supabase type definitions
 │   │   └── utils/                          # General utilities
 │   │
 │   ├── providers/                          # Context providers
-│   ├── schemas/                            # Validation schemas
-│   ├── __tests__/                          # Source code tests
-│   ├── middleware.ts                       # Next.js middleware
-│   └── env.ts                              # Environment variables
-│
-├── .env.example                            # Example environment variables
-├── next.config.mjs                         # Next.js configuration
-├── package.json                            # Package dependencies
-├── postcss.config.js                       # PostCSS configuration
-├── tailwind.config.js                      # Tailwind CSS configuration
-└── tsconfig.json                           # TypeScript configuration
+│   └── schemas/                            # Validation schemas
 ```
 
 ## Guidelines for Adding New Code
