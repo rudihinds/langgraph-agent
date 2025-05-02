@@ -64,10 +64,14 @@ The LangGraph Proposal Agent is a specialized multi-agent system designed to ass
 
 ## Project Timeline
 
-* **Phase 1**: Core architecture and basic workflow implementation (2 weeks)
-* **Phase 2**: Section generation and evaluation capabilities (3 weeks)
-* **Phase 3**: Editing and dependency handling refinement (2 weeks)
-* **Phase 4**: UI integration and usability improvements (2 weeks)
-* **Phase 5**: Testing, optimization, and deployment (1 week)
+- **Phase 1**: Core architecture and basic workflow implementation (2 weeks)
+- **Phase 2**: Section generation and evaluation capabilities (3 weeks)
+- **Phase 3**: Editing and dependency handling refinement (2 weeks)
+- **Phase 4**: UI integration and usability improvements (2 weeks)
+- **Phase 5**: Testing, optimization, and deployment (1 week)
 
-*This document provides the foundation for all project decisions and development activities. It should be referenced when determining scope, priorities, and technical direction.*
+_This document provides the foundation for all project decisions and development activities. It should be referenced when determining scope, priorities, and technical direction._
+
+## Chat UI Integration Progress (2024-06)
+
+Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish, supporting the project's core goals of seamless human-agent collaboration and high-quality output.

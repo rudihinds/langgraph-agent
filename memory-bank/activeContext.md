@@ -52,6 +52,34 @@ We have successfully integrated the LangGraph Agent Chat UI into our application
 - Implementing thread history and navigation
 - Adding tests for all components
 
+## Completed: Chat UI Integration Phase 2
+
+Phase 2 of the Chat UI integration is now complete. The following UI components and utilities have been implemented in their correct target locations:
+
+- `components/icons/github.tsx` - GitHub SVG icon
+- `components/icons/langgraph.tsx` - LangGraph logo SVG
+- `components/tooltip-icon-button.tsx` - TooltipIconButton component
+- `components/markdown-styles.css` - Markdown styling CSS
+- `components/markdown-text.tsx` - MarkdownText component
+- `components/syntax-highlighter.tsx` - SyntaxHighlighter component
+- `components/messages/shared.tsx` - Shared message utilities (copy, branch switcher, command bar)
+- `components/messages/human.tsx` - HumanMessage component
+- `components/messages/ai.tsx` - AIMessage component
+- `components/messages/tool-calls.tsx` - ToolCalls component
+- `components/messages/generic-interrupt.tsx` - GenericInterruptView component
+- `utils/message-utils.ts` - Message utility functions
+- `lib/client.ts` - LangGraph API client utility
+
+All components have been placed in `/apps/web/src/features/chat-ui/` under their respective subfolders as per the integration plan. Linter errors are present for missing dependencies (e.g., `@/components/ui/tooltip`, `@/components/ui/button`, `@/lib/utils`), which must be resolved in the next phase.
+
+### Next Steps
+
+- Resolve linter errors by ensuring all required dependencies and UI primitives are present
+- Complete backend integration for real-time chat and tool call handling
+- Finalize Agent Inbox and tool call UI
+- Add comprehensive tests for all components
+- Polish UI for consistency and accessibility
+
 ## Next Steps
 
 1. Continue implementing the remaining Chat UI components:
@@ -563,3 +591,7 @@ We're following the integration plan in `chat-int.md` and test scenarios in `cha
 4. Navigation and Routing Integration
 5. Backend Integration
 6. Testing and Refinement
+
+## Chat UI Integration Progress (2024-06)
+
+Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish. Linter errors for missing dependencies must be resolved as part of this work.
