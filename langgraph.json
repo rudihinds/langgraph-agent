@@ -5,5 +5,6 @@
   },
   "env": ".env",
   "static_dir": "apps/backend/public",
-  "require": ["apps/backend/register-paths.ts"]
+  "require": ["apps/backend/register-paths.ts"],
+  "node_options": "--loader ./apps/backend/langgraph-loader.mjs"
 }

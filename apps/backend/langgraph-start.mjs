@@ -3,8 +3,8 @@
 /**
  * LangGraph Server Startup Script with Path Aliases (ESM Version)
  *
- * This script initializes path aliases before starting the LangGraph server.
- * It ensures that TypeScript path aliases like @/lib/* work at runtime.
+ * This script initializes path aliases and starts the LangGraph server.
+ * It ensures that TypeScript path aliases like @/lib/* work correctly at runtime.
  */
 import { register } from "tsconfig-paths";
 import { fileURLToPath } from "url";
@@ -16,6 +16,10 @@ import * as fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const tsconfigPath = resolve(__dirname, "tsconfig.json");
+
+console.log("🔧 Initializing LangGraph with path aliases...");
+console.log(`📂 Project root: ${resolve(__dirname, "../..")}`);
+console.log(`📄 Using tsconfig: ${tsconfigPath}`);
 
 try {
   // Load tsconfig.json
@@ -56,7 +60,7 @@ try {
 
 console.log("🚀 Starting LangGraph server...");
 
-// Start LangGraph server with the same arguments passed to this script
+// Start LangGraph server with the custom loader
 const serverProcess = spawn(
   "npx",
   [
@@ -73,7 +77,7 @@ const serverProcess = spawn(
     env: {
       ...process.env,
       NODE_OPTIONS:
-        "--experimental-specifier-resolution=node --experimental-modules",
+        "--loader ./apps/backend/langgraph-loader.mjs --experimental-specifier-resolution=node --experimental-modules",
     },
   }
 );
