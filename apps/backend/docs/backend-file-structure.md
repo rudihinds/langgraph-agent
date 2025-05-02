@@ -237,68 +237,65 @@ apps/backend/
 │   │   ├── __tests__/                      # Orchestrator tests
 │   │   └── prompts/                        # Orchestrator prompts
 │   ├── proposal-agent/                     # Legacy proposal agent
-│   │   ├── __tests__/                      # Proposal tests
-│   │   └── prompts/                        # Proposal prompts
-│   ├── proposal-generation/                # New proposal generation agent
-│   │   ├── __tests__/                      # Tests
-│   │   ├── nodes/                          # LangGraph nodes
+│   │   ├── __tests__/                      # Proposal agent tests
+│   │   └── prompts/                        # Proposal agent prompts
+│   ├── proposal-generation/                # Main proposal generation agent
+│   │   ├── __tests__/                      # Proposal generation tests
+│   │   ├── nodes/                          # Node implementations
 │   │   │   └── __tests__/                  # Node tests
-│   │   ├── prompts/                        # Prompt templates
-│   │   └── utils/                          # Utility functions
+│   │   ├── prompts/                        # Prompts templates
+│   │   └── utils/                          # Utilities
 │   └── research/                           # Research agent
-│       ├── __tests__/                      # Tests
-│       └── prompts/                        # Prompt templates
-├── api/                                    # API routes
+│       ├── __tests__/                      # Research tests
+│       └── prompts/                        # Research prompts
+├── api/                                    # API endpoints
 │   ├── __tests__/                          # API tests
-│   └── rfp/                                # RFP endpoints
-│       ├── __tests__/                      # RFP tests
+│   └── rfp/                                # RFP-related endpoints
+│       ├── __tests__/                      # RFP endpoint tests
 │   │   └── express-handlers/               # Express handlers
-│   ├── apps/                                   # App-specific code
-│   │   └── backend/                            # Main backend app
-│   │       └── config/                         # App configuration
-│   │           └── evaluation/                 # Evaluation config
-│   ├── config/                                 # Configuration
-│   │   └── evaluation/                         # Evaluation criteria
-│   ├── docs/                                   # Documentation
-│   ├── evaluation/                             # Evaluation framework
-│   │   ├── __tests__/                          # Tests
-│   │   └── examples/                           # Example evaluations
-│   ├── lib/                                    # Shared libraries
-│   │   ├── __tests__/                          # Library tests
-│   │   ├── config/                             # Configuration utilities
-│   │   ├── db/                                 # Database utilities
-│   │   │   └── __tests__/                      # DB tests
-│   │   ├── llm/                                # LLM utilities
-│   │   │   ├── __tests__/                      # LLM tests
-│   │   │   └── streaming/                      # Streaming utilities
-│   │   ├── middleware/                         # Express middleware
-│   │   │   └── __tests__/                      # Middleware tests
-│   │   ├── parsers/                            # Document parsers
-│   │   │   └── __tests__/                      # Parser tests
-│   │   ├── persistence/                        # State persistence
-│   │   │   ├── __tests__/                      # Persistence tests
-│   │   │   ├── functions/                      # Database functions
-│   │   │   └── migrations/                     # Database migrations
-│   │   ├── schema/                             # Schema definitions
-│   │   ├── state/                              # State management
-│   │   ├── supabase/                           # Supabase integration
-│   │   │   └── migrations/                     # Supabase migrations
-│   │   ├── types/                              # TypeScript types
-│   │   └── utils/                              # Utility functions
-│   ├── prompts/                                # Prompt templates
-│   │   ├── evaluation/                         # Evaluation prompts
-│   │   └── generation/                         # Generation prompts
-│   ├── scripts/                                # Utility scripts
-│   ├── services/                               # Service layer
-│   │   └── __tests__/                          # Service tests
-│   ├── src/                                    # Legacy source code
-│   ├── state/                                  # State definitions
-│   │   ├── __tests__/                          # State tests
-│   │   │   └── modules/                        # Module tests
-│   │   └── modules/                            # State modules
-│   ├── test/                                   # Test utilities
-│   │   └── data/                               # Test data
-│   └── tools/                                  # Tool implementations
+│   └── rfp/                                # RFP-related routes
+│       └── index.ts                        # Main RFP exports
+├── config/                                 # Configuration files
+│   └── evaluation/                         # Evaluation config
+├── docs/                                   # Backend documentation
+├── evaluation/                             # Evaluation framework
+│   ├── __tests__/                          # Evaluation tests
+│   └── examples/                           # Example evaluations
+├── lib/                                    # Shared libraries
+│   ├── __tests__/                          # Library tests
+│   ├── config/                             # Configuration utilities
+│   ├── db/                                 # Database utilities
+│   │   └── __tests__/                      # Database tests
+│   ├── llm/                                # LLM interaction utilities
+│   │   ├── __tests__/                      # LLM tests
+│   │   └── streaming/                      # Streaming utilities
+│   ├── middleware/                         # Middleware components
+│   │   └── __tests__/                      # Middleware tests
+│   ├── parsers/                            # Parsing utilities
+│   │   └── __tests__/                      # Parser tests
+│   ├── persistence/                        # Persistence layer
+│   │   ├── __tests__/                      # Persistence tests
+│   │   ├── functions/                      # Persistence functions
+│   │   └── migrations/                     # Persistence migrations
+│   ├── schema/                             # Schema definitions
+│   ├── state/                              # State management
+│   ├── supabase/                           # Supabase integration
+│   │   └── migrations/                     # Supabase migrations
+│   ├── types/                              # Type definitions
+│   └── utils/                              # Utility functions
+├── prompts/                                # Shared prompts
+│   ├── evaluation/                         # Evaluation prompts
+│   └── generation/                         # Generation prompts
+├── scripts/                                # Helper scripts
+├── services/                               # Service implementations
+│   └── __tests__/                          # Service tests
+├── state/                                  # State definitions
+│   ├── __tests__/                          # State tests
+│   │   └── modules/                        # Module tests
+│   └── modules/                            # State modules
+├── test/                                   # Test utilities
+│   └── data/                               # Test data
+└── tools/                                  # Tool implementations
 ```
 
 ## Guidelines for Adding New Code
