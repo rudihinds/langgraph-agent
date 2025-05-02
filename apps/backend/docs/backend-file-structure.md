@@ -227,75 +227,80 @@ __tests__/
 
 ```
 apps/backend/
-├── __tests__/                              # Top-level tests
-│   └── integration/                        # Integration tests
-├── agents/                                 # LangGraph agent implementations
-│   ├── __tests__/                          # Agent tests
-│   ├── evaluation/                         # Evaluation agent
-│   │   └── __tests__/                      # Evaluation tests
-│   ├── orchestrator/                       # Orchestrator agent
-│   │   ├── __tests__/                      # Orchestrator tests
-│   │   └── prompts/                        # Orchestrator prompts
-│   ├── proposal-agent/                     # Legacy proposal agent
-│   │   ├── __tests__/                      # Proposal agent tests
-│   │   └── prompts/                        # Proposal agent prompts
-│   ├── proposal-generation/                # Main proposal generation agent
-│   │   ├── __tests__/                      # Proposal generation tests
-│   │   ├── nodes/                          # Node implementations
-│   │   │   └── __tests__/                  # Node tests
-│   │   ├── prompts/                        # Prompts templates
-│   │   └── utils/                          # Utilities
-│   └── research/                           # Research agent
-│       ├── __tests__/                      # Research tests
-│       └── prompts/                        # Research prompts
-├── api/                                    # API endpoints
-│   ├── __tests__/                          # API tests
-│   └── rfp/                                # RFP-related endpoints
-│       ├── __tests__/                      # RFP endpoint tests
-│   │   └── express-handlers/               # Express handlers
-│   └── rfp/                                # RFP-related routes
-│       └── index.ts                        # Main RFP exports
-├── config/                                 # Configuration files
-│   └── evaluation/                         # Evaluation config
-├── docs/                                   # Backend documentation
-├── evaluation/                             # Evaluation framework
-│   ├── __tests__/                          # Evaluation tests
-│   └── examples/                           # Example evaluations
-├── lib/                                    # Shared libraries
-│   ├── __tests__/                          # Library tests
-│   ├── config/                             # Configuration utilities
-│   ├── db/                                 # Database utilities
-│   │   └── __tests__/                      # Database tests
-│   ├── llm/                                # LLM interaction utilities
-│   │   ├── __tests__/                      # LLM tests
-│   │   └── streaming/                      # Streaming utilities
-│   ├── middleware/                         # Middleware components
-│   │   └── __tests__/                      # Middleware tests
-│   ├── parsers/                            # Parsing utilities
-│   │   └── __tests__/                      # Parser tests
-│   ├── persistence/                        # Persistence layer
-│   │   ├── __tests__/                      # Persistence tests
-│   │   ├── functions/                      # Persistence functions
-│   │   └── migrations/                     # Persistence migrations
-│   ├── schema/                             # Schema definitions
-│   ├── state/                              # State management
-│   ├── supabase/                           # Supabase integration
-│   │   └── migrations/                     # Supabase migrations
-│   ├── types/                              # Type definitions
-│   └── utils/                              # Utility functions
-├── prompts/                                # Shared prompts
-│   ├── evaluation/                         # Evaluation prompts
-│   └── generation/                         # Generation prompts
-├── scripts/                                # Helper scripts
-├── services/                               # Service implementations
-│   └── __tests__/                          # Service tests
-├── state/                                  # State definitions
-│   ├── __tests__/                          # State tests
-│   │   └── modules/                        # Module tests
-│   └── modules/                            # State modules
-├── test/                                   # Test utilities
-│   └── data/                               # Test data
-└── tools/                                  # Tool implementations
+├── __tests__/
+│   └── integration/
+├── agents/
+│   ├── __tests__/
+│   ├── evaluation/
+│   │   └── __tests__/
+│   ├── orchestrator/
+│   │   ├── __tests__/
+│   │   └── prompts/
+│   ├── proposal-agent/             # Legacy
+│   │   ├── __tests__/
+│   │   └── prompts/
+│   ├── proposal-generation/        # Current proposal generation agent
+│   │   ├── __tests__/
+│   │   ├── nodes/
+│   │   │   └── __tests__/
+│   │   ├── prompts/
+│   │   └── utils/
+│   └── research/
+│       ├── __tests__/
+│       └── prompts/
+├── api/
+│   ├── __tests__/
+│   └── rfp/
+│       ├── __tests__/
+│       └── express-handlers/
+├── config/
+│   └── evaluation/
+├── docs/
+├── evaluation/
+│   ├── __tests__/
+│   └── examples/
+├── lib/
+│   ├── __tests__/
+│   ├── config/
+│   ├── db/
+│   │   └── __tests__/
+│   ├── llm/
+│   │   ├── __tests__/
+│   │   └── streaming/
+│   ├── middleware/
+│   │   └── __tests__/
+│   ├── parsers/
+│   │   └── __tests__/
+│   ├── persistence/
+│   │   ├── __tests__/
+│   │   ├── functions/
+│   │   └── migrations/
+│   ├── schema/
+│   ├── state/                  # Shared state utilities?
+│   ├── supabase/
+│   │   └── migrations/
+│   ├── types/
+│   └── utils/
+├── prompts/
+│   ├── evaluation/
+│   └── generation/
+├── scripts/
+├── services/
+│   └── __tests__/
+├── state/                      # Core state definitions
+│   ├── __tests__/
+│   │   └── modules/
+│   └── modules/
+├── tests/                      # Legacy/Other tests?
+├── tools/
+├── .env.example
+├── index.ts
+├── langgraph-loader.mjs
+├── package.json
+├── register-paths.ts
+├── server.ts
+├── tsconfig.json
+└── vitest.config.ts
 ```
 
 ## Guidelines for Adding New Code
