@@ -1,4 +1,4 @@
-import { useStreamContext } from "@/features/chat-ui/providers/Stream";
+import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { Message, Metadata } from "@langchain/langgraph-sdk";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { cn } from "@/lib/utils";
@@ -43,8 +43,8 @@ export function AIMessage({
   const isToolCalls = toolCalls?.length ?? 0 > 0;
 
   return (
-    <div className="group flex flex-col gap-2">
-      <div className="mr-auto flex max-w-xl flex-col gap-2 rounded-3xl bg-gray-100 p-4 text-black">
+    <div className="flex flex-col gap-2 group">
+      <div className="flex flex-col max-w-xl gap-2 p-4 mr-auto text-black bg-gray-100 rounded-3xl">
         <MarkdownText>{contentString}</MarkdownText>
         {isToolCalls && <ToolCalls toolCalls={toolCalls!} />}
       </div>

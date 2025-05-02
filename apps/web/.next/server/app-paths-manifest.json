@@ -1,7 +1,6 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/api/auth/login/route": "app/api/auth/login/route.js",
-  "/auth/callback/route": "app/auth/callback/route.js",
-  "/page": "app/page.js",
+  "/api/langgraph/[...path]/route": "app/api/langgraph/[...path]/route.js",
+  "/proposals/page": "app/proposals/page.js",
+  "/dashboard/chat/page": "app/dashboard/chat/page.js",
   "/dashboard/page": "app/dashboard/page.js"
 }

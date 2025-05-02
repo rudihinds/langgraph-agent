@@ -1,4 +1,4 @@
-import { useStreamContext } from "@/features/chat-ui/providers/Stream";
+import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { Message } from "@langchain/langgraph-sdk";
 import { useState } from "react";
 import { getContentString } from "../../utils/message-utils";
@@ -84,7 +84,7 @@ export function HumanMessage({
             onSubmit={handleSubmitEdit}
           />
         ) : (
-          <p className="bg-muted ml-auto w-fit rounded-3xl px-4 py-2 whitespace-pre-wrap">
+          <p className="px-4 py-2 ml-auto whitespace-pre-wrap bg-muted w-fit rounded-3xl">
             {contentString}
           </p>
         )}
