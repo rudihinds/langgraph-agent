@@ -9,6 +9,11 @@ export { ChatProvider, useChatContext } from "./context/ChatContext";
 export { Thread } from "./components/Thread";
 export { useMediaQuery } from "./hooks/useMediaQuery";
 
+// Export providers
+export { StreamProvider } from "./providers/StreamProvider";
+export { ThreadProvider } from "./providers/ThreadProvider";
+export { InterruptProvider } from "./providers/InterruptProvider";
+
 // Export utility functions
 export {
   formatMessageTime,

@@ -6,7 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils/utils";
 import { Button } from "@/features/ui/components/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/features/ui/components/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/features/ui/components/avatar";
 import { ModeToggle } from "@/features/ui/components/mode-toggle";
 import {
   DropdownMenu,
@@ -27,6 +31,7 @@ import {
   LogOut,
   User as UserIcon,
   Settings,
+  MessageSquare,
 } from "lucide-react";
 import { Separator } from "@/features/ui/components/separator";
 
@@ -171,6 +176,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               isCollapsed={isSidebarCollapsed}
             />
             <NavItem
+              href="/dashboard/chat"
+              icon={<MessageSquare size={20} />}
+              label="Chat"
+              isActive={pathname.startsWith("/dashboard/chat")}
+              isCollapsed={isSidebarCollapsed}
+            />
+            <NavItem
               href="/proposals/new"
               icon={<PlusIcon size={20} />}
               label="New Proposal"
@@ -216,6 +228,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {pathname === "/proposals" && "My Proposals"}
             {pathname === "/proposals/new" && "New Proposal"}
             {pathname === "/settings" && "Settings"}
+            {pathname.startsWith("/dashboard/chat") && "Chat"}
           </h1>
           <div className="flex items-center ml-auto space-x-2">
             <ModeToggle />

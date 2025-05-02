@@ -185,11 +185,21 @@ function ProposalCardView({
       </CardContent>
 
       <CardFooter className="p-4 pt-0 mt-auto">
-        <Link href={`/proposals/${proposal.id}`} className="w-full">
-          <Button variant="secondary" className="w-full" size="sm">
-            Continue
-          </Button>
-        </Link>
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <Link href={`/proposals/${proposal.id}`} className="w-full">
+            <Button variant="secondary" className="w-full" size="sm">
+              Continue
+            </Button>
+          </Link>
+          <Link
+            href={`/dashboard/chat?rfpId=${proposal.id}`}
+            className="w-full"
+          >
+            <Button variant="outline" className="w-full" size="sm">
+              Continue in Chat
+            </Button>
+          </Link>
+        </div>
       </CardFooter>
     </Card>
   );
