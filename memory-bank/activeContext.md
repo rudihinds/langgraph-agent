@@ -557,6 +557,7 @@ The comprehensive test suite for authentication is now passing, including:
 We are currently implementing the Chat UI integration following the plan in `chatui-integration.md`. Our progress:
 
 - **✅ Completed Phases**:
+
   - Phase 1: Core Utilities - All utility functions, providers and hooks
   - Phase 2: UI Components - All UI components (icons, buttons, markdown, syntax highlighting, messages)
   - Phase 3: Agent Inbox Components - All agent inbox components are implemented
@@ -568,6 +569,7 @@ We are currently implementing the Chat UI integration following the plan in `cha
   - Focus on integration testing with the backend APIs
 
 Key learnings from implementing the Chat UI integration:
+
 1. The Thread components require access to providers for proper state management
 2. The Next.js App Router structure works well with our feature-based organization
 3. Navigation integration is seamless with the existing layout components
@@ -588,3 +590,48 @@ We're following the integration plan in `chat-int.md` and test scenarios in `cha
 ## Chat UI Integration Progress (2024-06)
 
 Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish. Linter errors for missing dependencies must be resolved as part of this work.
+
+## Authentication and Thread Handoff Integration
+
+We are implementing a comprehensive authentication and thread handoff system between the frontend and LangGraph backend. The implementation plan is detailed in `auth-front-back.md` at the project root.
+
+### Current Progress
+
+The integration is organized into four phases:
+
+1. **Authentication Integration**
+
+   - Connecting Supabase authentication to LangGraph client via StreamProvider
+   - Implementing token refresh handling
+   - Setting up proper auth header forwarding in API proxy
+
+2. **Thread Management**
+
+   - Creating thread management API endpoints
+   - Updating ChatPage for proper threadId handling
+   - Modifying ThreadProvider for initial thread state
+
+3. **User-Thread Relationship**
+
+   - Implementing user-specific thread filtering
+   - Adding userId to thread creation flow
+   - Updating OrchestratorService for user context
+
+4. **Error Handling and Testing**
+   - Adding robust error handling to ChatPage
+   - Implementing loading states
+   - Adding authentication checks
+   - Creating integration tests
+
+### Implementation Timeline
+
+- Target Completion: June 30, 2024
+- Estimated Duration: 10 working days
+
+### Success Criteria
+
+1. Seamless transition from dashboard to chat with proper authentication
+2. Correct RFP ID to thread ID conversion
+3. User-specific thread access control
+4. Graceful error handling
+5. Comprehensive test coverage

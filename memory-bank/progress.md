@@ -45,15 +45,29 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 ### Next
 
-1. Implement section generation nodes:
-   - `generateProblemStatementNode` (Task 17.2)
-   - `generateMethodologyNode` (Task 17.3)
-   - `generateBudgetNode` (Task 17.4)
-   - `generateTimelineNode` (Task 17.5)
-   - `generateConclusionNode` (Task 17.6)
-2. Update `OverallProposalState` interface to fully support the evaluation pattern
-3. Create evaluation criteria configuration files for all content types
-4. Prepare for integration testing of the complete graph
+1. **Authentication Integration Phase**
+
+   - Update StreamProvider with session token handling
+   - Add token refresh logic
+   - Configure API proxy for auth headers
+
+2. **Thread Management Phase**
+
+   - Create thread management API endpoints
+   - Update ChatPage with thread initialization
+   - Modify ThreadProvider for initial state
+
+3. **User-Thread Relationship Phase**
+
+   - Implement user-specific thread filtering
+   - Add userId to thread creation
+   - Update OrchestratorService
+
+4. **Error Handling and Testing Phase**
+   - Add ChatPage error handling
+   - Implement loading states
+   - Add authentication checks
+   - Create integration tests
 
 ## Known Issues
 
@@ -61,6 +75,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 2. Some tests may be brittle due to complex regex patterns for extracting information from LLM responses.
 3. The `OverallProposalState` interface needs updating to fully support the standardized evaluation pattern.
 4. Evaluation criteria need to be formalized in configuration files for each content type.
+5. Authentication and thread handoff integration needs to be completed according to the plan in `auth-front-back.md`
 
 ## Evolution of Project Decisions
 
@@ -100,11 +115,18 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - Consistent state updates to track document status
 
 8. **Authentication and Token Refresh Strategy**: We've implemented a comprehensive approach for authentication:
+
    - Token validation with detailed error handling for different failure modes
    - Proactive token expiration detection with a 10-minute threshold
    - Token refresh recommendations for tokens nearing expiration
    - Special handling for expired tokens with clear client guidance
    - Standardized error response structure for authentication failures
+
+9. **Authentication and Thread Handoff Strategy**: We've created a comprehensive plan for integrating frontend authentication with the LangGraph backend:
+   - Clear separation of concerns between authentication and thread management
+   - Proper token refresh handling for long-running sessions
+   - User-specific thread access control
+   - Graceful error handling and loading states
 
 ## Completed Tasks
 
@@ -512,4 +534,5 @@ Based on the implementation plan in `chatui-integration.md`, the following compo
 - **✅ Phase 5 - Chat Page & Navigation**: Created the Chat page component, updated sidebar navigation, and added "Continue in Chat" button to proposal cards
 
 Currently in progress:
+
 - **❌ Phase 6 - Testing**: No tests have been created yet for the Chat UI components

@@ -2,25 +2,25 @@ import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useStreamContext } from "../providers/StreamProvider";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
-import { ensureToolCallsHaveResponses } from "../lib/ensure-tool-responses";
-import { isAgentInboxInterruptSchema } from "../lib/agent-inbox-interrupt";
+import { ensureToolCallsHaveResponses } from "@/lib/ensure-tool-responses";
+import { isAgentInboxInterruptSchema } from "@/lib/agent-inbox-interrupt";
 import { AgentInbox } from "./agent-inbox";
 import { useInterrupt } from "../providers/InterruptProvider";
 import { Textarea } from "@/components/ui/textarea";
 import { useStickToBottom } from "use-stick-to-bottom";
-import { LayoutHorizontalIcon } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import useResizeObserver from "use-resize-observer";
 
 const NoMessagesView = () => (
   <div className="my-4 px-4 py-12 flex flex-col items-center w-full max-w-2xl gap-4 mx-auto">
     <div className="w-12 h-12 rounded-full border border-slate-300 flex items-center justify-center">
-      <LayoutHorizontalIcon className="h-6 w-6 text-slate-400" />
+      <LayoutGrid className="h-6 w-6 text-slate-400" />
     </div>
     <div className="text-xl font-medium">No messages yet</div>
     <div className="text-slate-500 text-center">
@@ -32,29 +32,16 @@ const NoMessagesView = () => (
 interface ChatMessageProps {
   message: Message;
   isLoading: boolean;
-  onHuman?: {
-    onResend: (message: Message) => void;
-    onEdit: (message: Message, newContent: string) => void;
-    onDelete: (message: Message) => void;
-  };
 }
 
-const ChatMessage = ({ message, isLoading, onHuman }: ChatMessageProps) => {
+const ChatMessage = ({ message, isLoading }: ChatMessageProps) => {
   if (message.type === "human") {
-    return (
-      <HumanMessage
-        message={message}
-        onResend={onHuman?.onResend}
-        onEdit={onHuman?.onEdit}
-        onDelete={onHuman?.onDelete}
-      />
-    );
+    return <HumanMessage message={message} isLoading={isLoading} />;
   } else if (message.type === "ai") {
     return <AIMessage message={message} isLoading={isLoading} />;
   } else if (message.type === "tool") {
-    return null; // Tool messages are currently rendered as part of AI messages
+    return null; // Tool messages are rendered as part of AI messages
   }
-
   return null;
 };
 
@@ -70,23 +57,40 @@ function hasUnhandledInterrupts(
   );
 }
 
+type StreamContextType = {
+  messages?: Message[];
+  threadId?: string;
+  checkpoint?: Checkpoint;
+  isStreaming?: boolean;
+  addMessage?: (content: string) => Promise<void>;
+  stream?: any;
+  stateValue?: Record<string, unknown>;
+  patchCheckpoint?: (patch: any) => Promise<void>;
+  clearCache?: () => void;
+  urlThreadId?: string;
+  setUrlThreadId?: (id: string) => void;
+  client?: any;
+  deploymentUrl?: string;
+  assistantId?: string;
+};
+
 export function Thread() {
   const {
-    messages,
-    threadId,
+    messages = [],
+    threadId = "",
     checkpoint,
-    isStreaming,
+    isStreaming = false,
     addMessage,
     stream,
-    stateValue,
+    stateValue = {},
     patchCheckpoint,
     clearCache,
     urlThreadId,
     setUrlThreadId,
     client,
-    deploymentUrl,
+    deploymentUrl = "",
     assistantId,
-  } = useStreamContext();
+  } = useStreamContext() as StreamContextType;
 
   const { isInterrupted, handleInterrupt } = useInterrupt();
 
@@ -96,53 +100,36 @@ export function Thread() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const { height, ref } = useResizeObserver();
-
   // Handle interrupts
   useEffect(() => {
     if (!stateValue) return;
 
     // Check for interrupt in state and handle it
     const interrupt =
-      stateValue?.config_interrupts || stateValue?.interrupts || null;
+      (stateValue as any)?.config_interrupts ||
+      (stateValue as any)?.interrupts ||
+      null;
 
     if (interrupt && !isInterrupted) {
-      if (isAgentInboxInterruptSchema(interrupt)) {
-        console.log("Interrupt detected:", interrupt);
-        // Pass to interrupt handler
-        handleInterrupt(interrupt);
-      }
+      console.log("Interrupt detected:", interrupt);
+      // Pass to interrupt handler
+      handleInterrupt(interrupt);
     }
   }, [stateValue, isInterrupted, handleInterrupt]);
 
   // Make sure we stay scrolled to the bottom
   const containerRef = useRef<HTMLDivElement>(null);
-  const { stickToBottom } = useStickToBottom(containerRef, {
-    deps: [messages, isStreaming, isInterrupted],
-  });
+  const { ref } = useResizeObserver<HTMLDivElement>();
 
   // Process messages to ensure all tool calls have responses
-  const messagesWithToolResponses = ensureToolCallsHaveResponses(messages);
-
-  const handleResendMessage = (message: Message) => {
-    // TODO: Implement resend functionality
-    console.log("Resend message:", message);
-  };
-
-  const handleEditMessage = (message: Message, newContent: string) => {
-    // TODO: Implement edit functionality
-    console.log("Edit message:", message, "New content:", newContent);
-  };
-
-  const handleDeleteMessage = (message: Message) => {
-    // TODO: Implement delete functionality
-    console.log("Delete message:", message);
-  };
+  const messagesWithToolResponses = ensureToolCallsHaveResponses(
+    messages || []
+  );
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
 
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || !addMessage) return;
 
     const messageContent = inputValue;
     setInputValue("");
@@ -169,11 +156,8 @@ export function Thread() {
           "scrollbar-pretty flex flex-1 flex-col overflow-y-auto overscroll-contain",
           "pt-4 pb-0 h-full"
         )}
-        onScroll={(e) => {
-          // Handle scroll events if needed
-        }}
       >
-        {messages.length === 0 ? (
+        {!messages || messages.length === 0 ? (
           <NoMessagesView />
         ) : (
           <div className="flex flex-col gap-8 px-4 pb-4">
@@ -186,11 +170,6 @@ export function Thread() {
                   idx === messagesWithToolResponses.length - 1 &&
                   message.type === "ai"
                 }
-                onHuman={{
-                  onResend: handleResendMessage,
-                  onEdit: handleEditMessage,
-                  onDelete: handleDeleteMessage,
-                }}
               />
             ))}
           </div>
@@ -200,8 +179,11 @@ export function Thread() {
       {isInterrupted && stateValue && (
         <AgentInbox
           interrupts={[
-            stateValue.interrupts || stateValue.config_interrupts,
-          ].flat()}
+            (stateValue as any).interrupts ||
+              (stateValue as any).config_interrupts,
+          ]
+            .flat()
+            .filter(Boolean)}
           onSubmit={(interrupt, response, type) => {
             console.log(
               "Submit interrupt response:",
@@ -217,7 +199,7 @@ export function Thread() {
           }}
           threadId={threadId || ""}
           deploymentUrl={deploymentUrl || ""}
-          state={stateValue}
+          state={stateValue as Record<string, unknown>}
         />
       )}
 
@@ -246,7 +228,12 @@ export function Thread() {
             <div className="flex w-full justify-end">
               <Button
                 type="submit"
-                disabled={!inputValue.trim() || isStreaming || isInterrupted}
+                disabled={
+                  !inputValue.trim() ||
+                  isStreaming ||
+                  isInterrupted ||
+                  !addMessage
+                }
               >
                 Send
               </Button>
