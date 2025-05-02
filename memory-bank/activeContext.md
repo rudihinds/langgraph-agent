@@ -78,7 +78,6 @@ All components have been placed in `/apps/web/src/features/chat-ui/` under their
 - Complete backend integration for real-time chat and tool call handling
 - Finalize Agent Inbox and tool call UI
 - Add comprehensive tests for all components
-- Polish UI for consistency and accessibility
 
 ## Next Steps
 
@@ -553,33 +552,34 @@ The comprehensive test suite for authentication is now passing, including:
 
 ## Active Development Context
 
-## Chat UI Integration (Current Focus)
+## Current Focus: Chat UI Integration
 
-We're implementing a direct port of the existing standalone LangGraph Chat UI app (`../agent-chat-ui`) into our application. The Chat UI is already a working app, so our focus is on integrating it rather than building from scratch.
+We are currently implementing the Chat UI integration following the plan in `chatui-integration.md`. Our progress:
 
-Key progress so far:
+- **✅ Completed Phases**:
 
-- Created the test infrastructure for TDD approach
-- Set up the core component structure for the Thread component
-- Implemented the basic providers (Stream, Thread) with the necessary functionality
-- Added message components for human and AI messages
-- All basic tests are now passing
+  - Phase 1: Core Utilities - All utility functions, providers and hooks
+  - Phase 2: UI Components - All UI components (icons, buttons, markdown, syntax highlighting, messages)
+  - Phase 3: Agent Inbox Components - All agent inbox components are implemented
+  - Phase 4: Thread Components - Thread and ThreadHistory components are implemented
 
-The directory structure we've established mirrors the source Chat UI app:
+- **🚧 Current Work: Phase 5 - Chat Page & Navigation**
 
-- `/apps/web/src/components/chat-ui/thread` - Main Thread component and message rendering
-- `/apps/web/src/components/chat-ui/providers` - Stream and Thread context providers
-- `/apps/web/src/components/chat-ui/lib` - Shared types and utilities
-- `/apps/web/src/__tests__/chat-ui` - Tests for the Chat UI components
+  - Creating the `/app/dashboard/chat` route and page component
+  - Implementing sidebar navigation integration with Chat link
+  - Adding "Continue in Chat" button to proposal cards
+  - Ensuring all routing and state management works properly
 
-Additional integration work remains to connect the UI with our backend services, authentication system, and navigation. We're taking a test-driven approach to ensure components work correctly before connecting to real data sources.
+- **Next Up: Phase 6 - Testing**
+  - Will involve creating tests for all chat UI components
+  - Focus on integration testing with the backend APIs
 
-Next steps:
+Key learnings from implementing the Thread components:
 
-- Create the Chat page to host the Thread component
-- Set up the API proxy for LangGraph
-- Integrate with authentication
-- Connect with the navigation and routing
+1. The Thread components require access to providers for proper state management
+2. We need to ensure the component structure follows the Next.js App Router patterns
+3. Authentication integration is critical for the Chat functionality
+4. Message streaming and tool call handling are key aspects of the implementation
 
 ## Current Tasks and Focus
 

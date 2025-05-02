@@ -54,20 +54,19 @@ Based on a thorough assessment of the codebase, the following components of the 
   - `components/agent-inbox/tool-call-table.tsx` - ToolCallTable component
   - `components/agent-inbox/inbox-item-input.tsx` - InboxItemInput component
   - `components/agent-inbox/index.tsx` - Main AgentInbox component
-- **Main Thread Component**: The main Thread component (`components/Thread.tsx`) has been implemented
+- **Thread Components (Phase 4)**: All Thread components have been implemented:
+  - `components/Thread.tsx` - Main Thread component
+  - `components/ThreadHistory.tsx` - Thread history and navigation component
 
 ### 🚧 In Progress (Current Focus)
 
-- **Thread History Component (Phase 4)**:
-  - Setting up thread history and navigation
-  - Implementing thread list UI
-  - Implementing thread selection functionality
+- **Dashboard/Chat Page (Phase 5)**:
+  - Setting up the `/app/dashboard/chat` route and page
+  - Implementing navigation integration with sidebar
+  - Adding "Continue in Chat" button to proposal cards
 
 ### ❌ Not Started
 
-- **Dashboard/Chat Page**: The `/app/dashboard/chat` route doesn't exist yet
-- **Navigation Integration**: Chat link in sidebar navigation hasn't been added
-- **Proposal Card Integration**: "Continue in Chat" button for proposal cards hasn't been added
 - **Testing**: No tests have been created yet
 - **UI Polish**: Consistency, accessibility, and mobile responsiveness improvements
 
@@ -502,7 +501,7 @@ Based on the current state and original plan, here is the consolidated implement
    // Copy and adapt from source
    ```
 
-### Phase 4: Thread Components (🚧 In Progress)
+### Phase 4: Thread Components (✅ Completed)
 
 1. Create Thread History component:
 

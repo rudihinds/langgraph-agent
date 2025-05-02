@@ -501,49 +501,16 @@ export async function documentLoaderNode(state: Partial<OverallProposalState>) {
 }
 ```
 
-## Chat UI Implementation (Updated)
+## Chat UI Integration
 
-### Completed
+Based on the implementation plan in `chatui-integration.md`, the following components of the Chat UI integration have been completed:
 
-- ✅ Created core type definitions for `Message`, `Thread`, and related interfaces
-- ✅ Established directory structure for Chat UI features
-- ✅ Implemented `StreamProvider` for real-time communication with LangGraph
-- ✅ Set up authentication integration with Supabase for secure chat sessions
-- ✅ Defined state management patterns using React Context
-- ✅ Documented Chat UI architecture in system patterns
-- ✅ Created interface for thread history and message interactions
-- ✅ Implemented error handling for network and server issues
+- **✅ Phase 1 - Core Utilities**: All core utility functions, providers and hooks have been implemented
+- **✅ Phase 2 - UI Components**: All UI components including icon components, tooltip-icon-button, markdown rendering, syntax highlighter, and message components
+- **✅ Phase 3 - Agent Inbox Components**: All agent inbox components including state-view, thread-actions-view, thread-id, tool-call-table, and inbox-item-input
+- **✅ Phase 4 - Thread Components**: The Thread and ThreadHistory components have been implemented successfully
 
-### In Progress
+Currently in progress:
 
-- 🔄 Integration testing with LangGraph backend
-- 🔄 Implementing tool call handling interface
-- 🔄 Optimizing streaming performance for long-running agent processes
-- 🔄 Building thread management persistence with Supabase
-
-### Pending
-
-- ⏳ UI polish for specific agent interaction patterns
-- ⏳ Deployment pipeline for Chat UI features
-- ⏳ Analytics integration for tracking conversation metrics
-- ⏳ Mobile-specific UI optimizations
-
-### Challenges & Solutions
-
-| Challenge                       | Solution                                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------------------------- |
-| Real-time state synchronization | Implemented EventSource with React state reducers to handle streaming responses efficiently |
-| Authentication across services  | Used JWT tokens from Supabase session for LangGraph authorization headers                   |
-| Error handling for streaming    | Created recoverable error states and reconnection logic in `StreamProvider`                 |
-| Thread history persistence      | Designed dual-storage strategy with LocalStorage and Supabase for offline capabilities      |
-
-### Next Steps
-
-1. Complete integration testing with LangGraph backend
-2. Finalize tool call handling interface for interactive agent capabilities
-3. Optimize streaming performance with chunked message processing
-4. Implement thread persistence with Supabase storage
-
-## Chat UI Integration Progress (2024-06)
-
-Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish. Linter errors for missing dependencies must be resolved as part of this work.
+- **🚧 Phase 5 - Chat Page & Navigation**: Setting up the `/app/dashboard/chat` route and page, implementing navigation integration with sidebar, and adding "Continue in Chat" button to proposal cards
+- **❌ Phase 6 - Testing**: No tests have been created yet for the Chat UI components
