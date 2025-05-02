@@ -212,7 +212,7 @@ export function Thread() {
           "border-t border-border/50 bg-background/80 backdrop-blur"
         )}
       >
-        <div className="mx-auto max-w-4xl px-4 py-3">
+        <div className="mx-auto max-w-4xl px-4 py-2">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <Textarea
               ref={inputRef}
@@ -224,13 +224,14 @@ export function Thread() {
                 isStreaming ? "Waiting for response..." : "Type a message..."
               }
               className={cn(
-                "min-h-12 max-h-32 resize-none bg-background",
+                "min-h-10 max-h-24 resize-none bg-background",
                 "border-input"
               )}
             />
             <div className="flex w-full justify-end">
               <Button
                 type="submit"
+                size="sm"
                 disabled={
                   !inputValue.trim() ||
                   isStreaming ||

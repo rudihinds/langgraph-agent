@@ -14,6 +14,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PanelRightOpen, PanelRightClose } from "lucide-react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { cn } from "@/lib/utils";
 
 function ThreadList({
   threads,
@@ -70,8 +71,9 @@ function ThreadHistoryLoading() {
 }
 
 export function ThreadHistory() {
-  const isLargeScreen = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [isOpen, setIsOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [chatHistoryOpen, setChatHistoryOpen] = useQueryState(
     "chatHistoryOpen",
     parseAsBoolean.withDefault(false)
@@ -94,37 +96,54 @@ export function ThreadHistory() {
     setChatHistoryOpen(!chatHistoryOpen);
   };
 
+  const handleThreadClick = (threadId: string) => {
+    if (!isDesktop) {
+      setMobileOpen(false);
+    }
+  };
+
   return (
     <>
+      {/* Desktop sidebar */}
       <div
-        className={`shadow-inner-right h-full border-r border-slate-200 transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen && isLargeScreen ? "w-64" : "w-0"
-        } flex-shrink-0 flex flex-col`}
+        className={cn(
+          "h-full border-r border-slate-200 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 flex flex-col",
+          isOpen && isDesktop ? "w-64" : "w-0"
+        )}
       >
-        <div className="flex w-full items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h1 className="text-xl font-semibold tracking-tight">
-            Thread History
-          </h1>
-          <Button
-            className="hover:bg-gray-100"
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-          >
-            <PanelRightClose className="size-5" />
-          </Button>
-        </div>
-        {threadsLoading ? (
-          <ThreadHistoryLoading />
-        ) : (
-          <ThreadList threads={threads} />
+        {isOpen && (
+          <>
+            <div className="flex w-full items-center justify-between px-4 py-3 border-b border-slate-200">
+              <h1 className="text-xl font-semibold tracking-tight">
+                Thread History
+              </h1>
+              <Button
+                className="hover:bg-gray-100"
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+              >
+                <PanelRightClose className="size-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {threadsLoading ? (
+                <ThreadHistoryLoading />
+              ) : (
+                <ThreadList
+                  threads={threads}
+                  onThreadClick={handleThreadClick}
+                />
+              )}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Toggle button when sidebar is closed */}
-      {(!isOpen || !isLargeScreen) && (
+      {/* Toggle button when sidebar is closed on desktop */}
+      {!isOpen && isDesktop && (
         <Button
-          className="absolute top-20 left-0 z-10 rounded-r-full rounded-l-none hover:bg-gray-100 border border-l-0 border-slate-200"
+          className="absolute top-16 left-0 z-10 rounded-r-full rounded-l-none hover:bg-gray-100 border border-l-0 border-slate-200"
           variant="ghost"
           size="sm"
           onClick={toggleSidebar}
@@ -133,26 +152,37 @@ export function ThreadHistory() {
         </Button>
       )}
 
-      {/* Mobile sheet */}
-      <div className="lg:hidden">
-        <Sheet
-          open={!!chatHistoryOpen && !isLargeScreen}
-          onOpenChange={(open) => {
-            if (isLargeScreen) return;
-            setChatHistoryOpen(open);
-          }}
-        >
-          <SheetContent side="left" className="flex lg:hidden">
-            <SheetHeader>
-              <SheetTitle>Thread History</SheetTitle>
-            </SheetHeader>
-            <ThreadList
-              threads={threads}
-              onThreadClick={() => setChatHistoryOpen((o) => !o)}
-            />
-          </SheetContent>
-        </Sheet>
-      </div>
+      {/* Mobile toggle and sheet */}
+      {!isDesktop && (
+        <>
+          <Button
+            className="absolute top-16 left-0 z-10 rounded-r-full rounded-l-none hover:bg-gray-100 border border-l-0 border-slate-200"
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileOpen(true)}
+          >
+            <PanelRightOpen className="size-5" />
+          </Button>
+
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetContent side="left" className="w-80 p-0">
+              <SheetHeader className="px-4 py-3 border-b border-slate-200">
+                <SheetTitle>Thread History</SheetTitle>
+              </SheetHeader>
+              <div className="overflow-auto p-2">
+                {threadsLoading ? (
+                  <ThreadHistoryLoading />
+                ) : (
+                  <ThreadList
+                    threads={threads}
+                    onThreadClick={handleThreadClick}
+                  />
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
     </>
   );
 }

@@ -21,7 +21,7 @@ export default function ChatPage(): React.ReactNode {
   }, [rfpId, setInitialRfpId]);
 
   return (
-    <div className="flex h-full w-full overflow-hidden -mt-6 -ml-6 -mr-6">
+    <div className="flex h-[calc(100vh-10rem)] w-full overflow-hidden -mt-6 -ml-6 -mr-6">
       <Toaster />
       <ThreadProvider>
         <div className="flex h-full w-full">
