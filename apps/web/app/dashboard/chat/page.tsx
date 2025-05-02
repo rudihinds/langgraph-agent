@@ -5,6 +5,7 @@ import { ThreadHistory } from "@/features/chat-ui/components/ThreadHistory";
 import { Toaster } from "sonner";
 import React from "react";
 import { useSearchParams } from "next/navigation";
+import { InterruptProvider } from "@/features/chat-ui/providers/InterruptProvider";
 
 export default function ChatPage(): React.ReactNode {
   const searchParams = useSearchParams();
@@ -15,10 +16,12 @@ export default function ChatPage(): React.ReactNode {
       <Toaster />
       <ThreadProvider>
         <StreamProvider initialRfpId={rfpId}>
-          <ThreadHistory />
-          <div className="flex-1 overflow-hidden">
-            <Thread />
-          </div>
+          <InterruptProvider>
+            <ThreadHistory />
+            <div className="flex-1 overflow-hidden">
+              <Thread />
+            </div>
+          </InterruptProvider>
         </StreamProvider>
       </ThreadProvider>
     </div>
