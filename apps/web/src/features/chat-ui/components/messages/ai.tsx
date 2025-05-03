@@ -15,9 +15,14 @@ export function AIMessage({
   isLoading: boolean;
 }) {
   const thread = useStreamContext();
-  const meta: Metadata | undefined = thread.getMessagesMetadata(message);
-  const parentCheckpoint = meta?.firstSeenState?.parent_checkpoint;
+  const meta = undefined;
+  const parentCheckpoint = undefined;
   const contentString = getContentString(message.content);
+
+  console.log(
+    `[AIMessage] Rendering contentString:`,
+    JSON.stringify(contentString)
+  );
 
   const handleRegenerate = () => {
     if (!parentCheckpoint) return;
@@ -28,7 +33,7 @@ export function AIMessage({
         checkpoint: parentCheckpoint,
         streamMode: ["values"],
         optimisticValues: (prev) => {
-          const values = meta?.firstSeenState?.values;
+          const values = undefined;
           if (!values) return prev;
           return {
             ...values,
@@ -46,7 +51,7 @@ export function AIMessage({
     <div className="flex flex-col gap-2 group">
       <div className="flex flex-col max-w-xl gap-2 p-4 mr-auto text-black bg-gray-100 rounded-3xl">
         <MarkdownText>{contentString}</MarkdownText>
-        {isToolCalls && <ToolCalls toolCalls={toolCalls!} />}
+        {isToolCalls ? <ToolCalls toolCalls={toolCalls!} /> : null}
       </div>
 
       <div
@@ -56,8 +61,8 @@ export function AIMessage({
         )}
       >
         <BranchSwitcher
-          branch={meta?.branch}
-          branchOptions={meta?.branchOptions}
+          branch={undefined}
+          branchOptions={undefined}
           onSelect={(branch) => thread.setBranch(branch)}
           isLoading={isLoading}
         />

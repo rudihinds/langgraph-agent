@@ -211,6 +211,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
   - All tests passing, including edge cases
 
 - **Chat UI Connection**: Refactored to use direct connection to LangGraph (`http://localhost:2024`). Basic message sending and receiving is functional. UI correctly isolated to the chat page.
+- **Chat UI Rendering**: Basic message rendering (human and AI) is working correctly after resolving issues with `react-markdown` and conditional rendering logic.
 
 ## Next Steps
 
@@ -251,6 +252,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 - **Chat UI Integration**: Successfully integrated Agent Chat UI components with authentication and LangGraph API proxy. Components include Thread, Message renderers, Stream provider, and Thread provider, all properly connected to the backend.
 - **Checkpointer Persistence**: **Thread creation successfully persists the initial checkpoint to the Supabase `proposal_checkpoints` table using the correct user ID and schema (`checkpoint_data` column).**
 - **Chat UI Connection**: Basic chat interaction via direct connection to LangGraph is working. Messages are sent, and initial state/value updates are received.
+- **Chat UI Rendering**: Basic message rendering is working correctly.
 
 ## Current Development Status
 
@@ -272,7 +274,9 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 - **Authentication for Direct Connection**: Verification and implementation if needed.
 - **Core Agent Nodes**: Completion of remaining proposal section generation nodes.
 - **Error Handling**: Enhanced error handling in frontend and backend.
+- **Debugging Code Cleanup**: Remove temporary logs and comments added during debugging.
 
 ## Current Status
 
 - The core architecture is stable, with successful integration of authentication, basic persistence, and a simplified, functional chat UI connection. Focus shifts to completing agent logic and hardening the UI.
+- **Basic message rendering in the Chat UI is now confirmed working.**

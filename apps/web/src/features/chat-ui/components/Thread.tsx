@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
-import { ensureToolCallsHaveResponses } from "@/lib/ensure-tool-responses";
 import { Textarea } from "@/components/ui/textarea";
 import { LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
@@ -45,7 +44,7 @@ export function Thread() {
   const {
     messages = [],
     threadId = "",
-    isStreaming = false,
+    isLoading = false,
     submit,
     stop,
   } = useStreamContext();
@@ -78,9 +77,16 @@ export function Thread() {
   }, [messages]);
 
   // Process messages to ensure all tool calls have responses
-  const messagesWithToolResponses = ensureToolCallsHaveResponses(
-    messages || []
-  );
+  // const messagesWithToolResponses = ensureToolCallsHaveResponses(
+  //   messages || []
+  // );
+
+  // <<< ADD LOGGING HERE >>>
+  // console.log(
+  //   `[Thread] messagesWithToolResponses length before map: ${
+  //     messagesWithToolResponses?.length ?? "undefined"
+  //   }`
+  // );
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -132,29 +138,6 @@ export function Thread() {
     }
   };
 
-  // *** ADDED LOGGING INSIDE MAP ***
-  const renderMessages = () => {
-    console.log(
-      "[Thread] Rendering messages. Count:",
-      messagesWithToolResponses.length
-    );
-    return messagesWithToolResponses.map((message, idx) => {
-      console.log(`[Thread] Rendering message ${idx + 1}:`, message);
-      return (
-        <ChatMessage
-          key={message.id || `msg-${idx}`}
-          message={message}
-          isLoading={
-            isStreaming &&
-            idx === messagesWithToolResponses.length - 1 &&
-            message.type === "ai"
-          }
-        />
-      );
-    });
-  };
-  // *** END ADDED LOGGING INSIDE MAP ***
-
   return (
     <div
       className="relative flex flex-col w-full h-full bg-background"
@@ -171,7 +154,22 @@ export function Thread() {
           <NoMessagesView />
         ) : (
           <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
-            {renderMessages()} {/* Call the rendering function */}
+            {(messages || []).map((message, idx) => {
+              console.log(
+                `[Thread] Inline Rendering message ${idx + 1}, ID: ${message.id}, Type: ${message.type}`
+              );
+              return (
+                <ChatMessage
+                  key={message.id || `msg-${idx}`}
+                  message={message}
+                  isLoading={
+                    isLoading &&
+                    idx === messages.length - 1 &&
+                    message.type === "ai"
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -189,9 +187,9 @@ export function Thread() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isStreaming}
+              disabled={isLoading}
               placeholder={
-                isStreaming ? "Waiting for response..." : "Type a message..."
+                isLoading ? "Waiting for response..." : "Type a message..."
               }
               className={cn(
                 "min-h-10 max-h-24 resize-none bg-background",
@@ -202,7 +200,7 @@ export function Thread() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={!inputValue.trim() || isStreaming || !submit}
+                disabled={!inputValue.trim() || isLoading || !submit}
               >
                 Send
               </Button>
