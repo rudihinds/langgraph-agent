@@ -4,6 +4,7 @@ import feedbackRouter from "./feedback.js";
 import resumeRouter from "./resume.js";
 import interruptStatusRouter from "./interrupt-status.js";
 import chatRouter from "./chat.js";
+import threadRouter from "./thread.js";
 import { startProposalGeneration } from "./express-handlers/start.js";
 
 // Initialize logger
@@ -20,5 +21,6 @@ router.use("/feedback", feedbackRouter);
 router.use("/resume", resumeRouter);
 router.use("/interrupt-status", interruptStatusRouter);
 router.use("/chat", chatRouter);
+router.use("/thread", threadRouter);
 
 export default router;

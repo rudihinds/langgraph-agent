@@ -95,32 +95,32 @@ function ProposalCardView({
 
   return (
     <Card
-      className="overflow-hidden flex flex-col transition-all hover:shadow-md"
+      className="flex flex-col overflow-hidden transition-all hover:shadow-md"
       data-testid="proposal-card"
     >
       <CardHeader className="p-4 pb-2 space-y-1">
-        <div className="flex justify-between items-start">
+        <div className="flex items-start justify-between">
           <Badge variant={status.variant}>{status.label}</Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="w-8 h-8 p-0"
                 aria-label="More options"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onEdit?.(proposal.id)}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <Pencil className="w-4 h-4 mr-2" />
                 <span>Edit</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onExport?.(proposal.id)}>
-                <FileText className="mr-2 h-4 w-4" />
+                <FileText className="w-4 h-4 mr-2" />
                 <span>Export</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -128,28 +128,28 @@ function ProposalCardView({
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete?.(proposal.id)}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="w-4 h-4 mr-2" />
                 <span>Delete</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
         <Link href={`/proposals/${proposal.id}`} className="block">
-          <CardTitle className="line-clamp-2 hover:text-primary transition-colors">
+          <CardTitle className="transition-colors line-clamp-2 hover:text-primary">
             {proposal.title}
           </CardTitle>
         </Link>
         {proposal.organization && (
-          <CardDescription className="line-clamp-1 flex items-center gap-1 mt-1">
+          <CardDescription className="flex items-center gap-1 mt-1 line-clamp-1">
             <Building className="h-3.5 w-3.5" />
             {proposal.organization}
           </CardDescription>
         )}
       </CardHeader>
 
-      <CardContent className="p-4 pt-0 flex-grow">
+      <CardContent className="flex-grow p-4 pt-0">
         <div className="mt-2">
-          <div className="flex justify-between text-sm mb-1">
+          <div className="flex justify-between mb-1 text-sm">
             <span className="text-muted-foreground">Progress</span>
             <span className="font-medium">{proposal.progress}%</span>
           </div>
@@ -158,7 +158,7 @@ function ProposalCardView({
 
         <div className="grid grid-cols-1 gap-2 mt-4">
           {dueDateInfo && (
-            <div className="flex items-center text-xs justify-between">
+            <div className="flex items-center justify-between text-xs">
               <div className="flex items-center">
                 <Clock className="h-3.5 w-3.5 mr-1" />
                 <span>{dueDateInfo.label}:</span>
@@ -177,7 +177,7 @@ function ProposalCardView({
             <span>Updated {lastUpdated}</span>
           </div>
 
-          <div className="flex items-center text-xs text-muted-foreground justify-end">
+          <div className="flex items-center justify-end text-xs text-muted-foreground">
             <BarChart className="h-3.5 w-3.5 mr-1" />
             <span>Phase: {formatPhase(phase)}</span>
           </div>
@@ -185,11 +185,21 @@ function ProposalCardView({
       </CardContent>
 
       <CardFooter className="p-4 pt-0 mt-auto">
-        <Link href={`/proposals/${proposal.id}`} className="w-full">
-          <Button variant="secondary" className="w-full" size="sm">
-            Continue
-          </Button>
-        </Link>
+        <div className="grid w-full grid-cols-2 gap-2">
+          <Link href={`/proposals/${proposal.id}`} className="w-full">
+            <Button variant="secondary" className="w-full" size="sm">
+              Continue
+            </Button>
+          </Link>
+          <Link
+            href={`/dashboard/chat?rfpId=${proposal.id}`}
+            className="w-full"
+          >
+            <Button variant="outline" className="w-full" size="sm">
+              Continue in Chat
+            </Button>
+          </Link>
+        </div>
       </CardFooter>
     </Card>
   );

@@ -26,7 +26,7 @@ export function ensureToolCallsHaveResponses(messages: Message[]): Message[] {
         id: `${DO_NOT_RENDER_ID_PREFIX}${uuidv4()}`,
         name: tc.name,
         content: "Successfully handled tool call.",
-      })) ?? []),
+      })) ?? [])
     );
   });
 

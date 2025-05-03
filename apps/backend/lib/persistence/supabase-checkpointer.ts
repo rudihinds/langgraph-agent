@@ -108,9 +108,8 @@ export class SupabaseCheckpointer {
         thread_id: threadId,
         user_id: userId,
         proposal_id: proposalId,
-        data: checkpoint,
+        checkpoint_data: checkpoint,
         updated_at: new Date().toISOString(),
-        size_bytes: sizeBytes,
       },
       { onConflict: "thread_id" }
     );
@@ -133,7 +132,7 @@ export class SupabaseCheckpointer {
 
     const { data, error } = await this.client
       .from(this.tableName)
-      .select("data")
+      .select("checkpoint_data")
       .eq("thread_id", threadId)
       .eq("user_id", userId)
       .single();
@@ -146,7 +145,7 @@ export class SupabaseCheckpointer {
       throw new Error(`Failed to retrieve checkpoint: ${error.message}`);
     }
 
-    return data?.data || null;
+    return data?.checkpoint_data || null;
   }
 
   /**

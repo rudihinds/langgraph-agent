@@ -64,10 +64,23 @@ The LangGraph Proposal Agent is a specialized multi-agent system designed to ass
 
 ## Project Timeline
 
-* **Phase 1**: Core architecture and basic workflow implementation (2 weeks)
-* **Phase 2**: Section generation and evaluation capabilities (3 weeks)
-* **Phase 3**: Editing and dependency handling refinement (2 weeks)
-* **Phase 4**: UI integration and usability improvements (2 weeks)
-* **Phase 5**: Testing, optimization, and deployment (1 week)
+- **Phase 1**: Core architecture and basic workflow implementation (2 weeks)
+- **Phase 2**: Section generation and evaluation capabilities (3 weeks)
+- **Phase 3**: Editing and dependency handling refinement (2 weeks)
+- **Phase 4**: UI integration and usability improvements (2 weeks)
+- **Phase 5**: Testing, optimization, and deployment (1 week)
 
-*This document provides the foundation for all project decisions and development activities. It should be referenced when determining scope, priorities, and technical direction.*
+_This document provides the foundation for all project decisions and development activities. It should be referenced when determining scope, priorities, and technical direction._
+
+## Chat UI Integration Progress (2024-06)
+
+Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish, supporting the project's core goals of seamless human-agent collaboration and high-quality output.
+
+## Recent Updates (2024-06)
+
+- Chat UI integration Phase 2 is complete: all UI components and utilities are implemented in their correct locations. Linter errors remain due to missing dependencies (e.g., @/components/ui/tooltip, @/components/ui/button, @/lib/utils), to be resolved in the next phase.
+- Backend integration, tool call handling, and UI polish are the next focus areas.
+- Orchestrator and graph now support rfpId and userId for multi-tenant, document-specific workflows.
+- Supabase Auth SSR integration is robust and follows best practices (getAll/setAll, getUser()).
+- Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes.
+- Project is on track for backend integration and final polish phases.

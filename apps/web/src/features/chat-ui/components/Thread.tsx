@@ -1,113 +1,213 @@
-import { useState, useRef, useEffect } from "react";
-import { useChatContext } from "../context/ChatContext";
-import { Message as MessageType } from "../types";
+import { v4 as uuidv4 } from "uuid";
+import { ReactNode, useRef, useEffect } from "react";
+import { useStreamContext } from "../providers/StreamProvider";
+import { cn } from "@/lib/utils";
+import { useState, FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Message } from "@langchain/langgraph-sdk";
+import { AIMessage } from "./messages/ai";
+import { HumanMessage } from "./messages/human";
+import { ensureToolCallsHaveResponses } from "@/lib/ensure-tool-responses";
+import { Textarea } from "@/components/ui/textarea";
+import { LayoutGrid } from "lucide-react";
+import { toast } from "sonner";
 
-// Message component to display a single message
-function Message({ message }: { message: MessageType }) {
-  return (
-    <div
-      className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} mb-4`}
-    >
-      <div
-        className={`max-w-[80%] rounded-lg px-4 py-2 ${
-          message.role === "user"
-            ? "bg-blue-500 text-white"
-            : "bg-gray-200 text-gray-800"
-        }`}
-      >
-        <p className="text-sm">{message.content}</p>
-        <div className="mt-1 text-xs text-right opacity-70">
-          {new Date(message.createdAt).toLocaleTimeString()}
-        </div>
-      </div>
+const NoMessagesView = () => (
+  <div className="flex flex-col items-center w-full max-w-2xl gap-4 px-4 py-12 mx-auto my-4">
+    <div className="flex items-center justify-center w-12 h-12 border rounded-full border-slate-300">
+      <LayoutGrid className="w-6 h-6 text-slate-400" />
     </div>
-  );
+    <div className="text-xl font-medium">No messages yet</div>
+    <div className="text-center text-slate-500">
+      Start a conversation by typing a message below
+    </div>
+  </div>
+);
+
+interface ChatMessageProps {
+  message: Message;
+  isLoading: boolean;
 }
 
-// Thread component that displays all messages and input field
+const ChatMessage = ({ message, isLoading }: ChatMessageProps) => {
+  if (message.type === "human") {
+    return <HumanMessage message={message} isLoading={isLoading} />;
+  } else if (message.type === "ai") {
+    return <AIMessage message={message} isLoading={isLoading} />;
+  } else if (message.type === "tool") {
+    return null; // Tool messages are rendered as part of AI messages
+  }
+  return null;
+};
+
 export function Thread() {
-  const { threads, activeThreadId, isLoading, addMessage } = useChatContext();
-  const [inputValue, setInputValue] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Use the streamContext directly from our provider
+  const {
+    messages = [],
+    threadId = "",
+    isStreaming = false,
+    submit,
+    stop,
+  } = useStreamContext();
 
-  // Find active thread
-  const activeThread = threads.find((thread) => thread.id === activeThreadId);
-
-  // Scroll to bottom when messages update
+  // *** ADDED LOGGING ***
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    console.log("[Thread] Received messages from context:", messages);
+  }, [messages]);
+  // *** END ADDED LOGGING ***
+
+  const [inputValue, setInputValue] = useState("");
+
+  // Ref for the scrollable messages container
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  // Ref for the outer container
+  const outerContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Log availability of submit function
+  useEffect(() => {
+    console.log("[Thread] submit function available:", !!submit);
+  }, [submit]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
-  }, [activeThread?.messages]);
+  }, [messages]);
 
-  // Handle sending a new message
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || !activeThreadId) return;
+  // Process messages to ensure all tool calls have responses
+  const messagesWithToolResponses = ensureToolCallsHaveResponses(
+    messages || []
+  );
 
-    await addMessage({
-      role: "user",
-      content: inputValue,
-    });
+  const handleSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
 
+    if (!inputValue.trim()) {
+      return;
+    }
+
+    const messageContent = inputValue;
     setInputValue("");
+
+    try {
+      console.log("[Thread] Sending message:", messageContent);
+
+      // Use the submit method from our context
+      if (submit) {
+        console.log("[Thread] Using submit to send message");
+
+        // Pass message in the format expected by LangGraph
+        await submit({
+          messages: [
+            {
+              type: "human",
+              content: messageContent,
+              id: uuidv4(),
+            },
+          ],
+        });
+      } else {
+        console.error("[Thread] No method available to send messages");
+        toast.error("Failed to send message", {
+          description:
+            "The chat connection is not ready. Please refresh the page.",
+        });
+      }
+    } catch (error) {
+      console.error("[Thread] Error sending message:", error);
+      toast.error("Failed to send message", {
+        description:
+          "There was an error communicating with the AI service. Please try again.",
+      });
+    }
   };
 
-  // Handle key press (Enter to send)
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSubmit();
     }
   };
 
-  // No active thread
-  if (!activeThread) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500">
-          No active thread. Create a new one to start chatting.
-        </p>
-      </div>
+  // *** ADDED LOGGING INSIDE MAP ***
+  const renderMessages = () => {
+    console.log(
+      "[Thread] Rendering messages. Count:",
+      messagesWithToolResponses.length
     );
-  }
+    return messagesWithToolResponses.map((message, idx) => {
+      console.log(`[Thread] Rendering message ${idx + 1}:`, message);
+      return (
+        <ChatMessage
+          key={message.id || `msg-${idx}`}
+          message={message}
+          isLoading={
+            isStreaming &&
+            idx === messagesWithToolResponses.length - 1 &&
+            message.type === "ai"
+          }
+        />
+      );
+    });
+  };
+  // *** END ADDED LOGGING INSIDE MAP ***
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages container */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        {activeThread.messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">
-              No messages yet. Start a conversation!
-            </p>
-          </div>
-        ) : (
-          activeThread.messages.map((message) => (
-            <Message key={message.id} message={message} />
-          ))
+    <div
+      className="relative flex flex-col w-full h-full bg-background"
+      ref={outerContainerRef}
+    >
+      <div
+        ref={messagesContainerRef}
+        className={cn(
+          "scrollbar-pretty flex-1 overflow-y-auto overscroll-contain",
+          "pt-4 pb-0"
         )}
-        <div ref={messagesEndRef} />
+      >
+        {!messages || messages.length === 0 ? (
+          <NoMessagesView />
+        ) : (
+          <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
+            {renderMessages()} {/* Call the rendering function */}
+          </div>
+        )}
       </div>
 
-      {/* Input area */}
-      <div className="p-4 border-t">
-        <div className="flex items-center">
-          <textarea
-            className="flex-1 p-2 border border-gray-300 rounded-md resize-none focus:border-blue-500 focus:outline-none"
-            placeholder="Type a message..."
-            rows={1}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyPress}
-            disabled={isLoading}
-          />
-          <button
-            className="px-4 py-2 ml-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none disabled:opacity-50"
-            onClick={handleSendMessage}
-            disabled={isLoading || !inputValue.trim()}
-          >
-            {isLoading ? "Sending..." : "Send"}
-          </button>
+      <div
+        className={cn(
+          "sticky bottom-0 z-10 w-full",
+          "border-t border-border/50 bg-background/80 backdrop-blur"
+        )}
+      >
+        <div className="max-w-4xl px-4 py-2 mx-auto">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+            <Textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isStreaming}
+              placeholder={
+                isStreaming ? "Waiting for response..." : "Type a message..."
+              }
+              className={cn(
+                "min-h-10 max-h-24 resize-none bg-background",
+                "border-input"
+              )}
+            />
+            <div className="flex justify-end w-full">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!inputValue.trim() || isStreaming || !submit}
+              >
+                Send
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

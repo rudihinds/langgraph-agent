@@ -1,7 +1,6 @@
 import { createServer } from "http";
 // import { createCustomAgent } from "./agents/basic-agent"; // Removed import
 // import { runMultiAgentExample } from "./agents/multi-agent"; // Removing multi-agent import
-import { runProposalAgent } from "./agents/proposal-generation/graph.js";
 import { runStreamingProposalAgent } from "./agents/proposal-generation/graph-streaming.js";
 import "dotenv/config";
 
@@ -52,7 +51,8 @@ const server = createServer(async (req, res) => {
 
       req.on("end", async () => {
         const { query } = JSON.parse(body);
-        const result = await runProposalAgent(query);
+        // Use streaming proposal agent here as well
+        const result = await runStreamingProposalAgent(query);
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(result));

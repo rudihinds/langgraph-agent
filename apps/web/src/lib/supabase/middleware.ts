@@ -89,14 +89,14 @@ export async function updateSession(request: NextRequest) {
       }
     );
 
-    // Refresh the session
+    // Use getUser() instead of getSession() as recommended for better security
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error("[Supabase Middleware] Session error:", sessionError);
+    if (userError) {
+      console.error("[Supabase Middleware] User error:", userError);
     }
 
     // Check if the path requires authentication
@@ -104,11 +104,11 @@ export async function updateSession(request: NextRequest) {
     const isPublic = isPublicPath(path);
 
     console.log(
-      `[Supabase Middleware] Auth check - needsAuth: ${needsAuth}, isPublic: ${isPublic}, hasSession: ${!!session}`
+      `[Supabase Middleware] Auth check - needsAuth: ${needsAuth}, isPublic: ${isPublic}, hasUser: ${!!user}`
     );
 
     // Handle protected routes that require authentication
-    if (needsAuth && !session) {
+    if (needsAuth && !user) {
       console.log(
         `[Supabase Middleware] Redirecting unauthenticated user from protected path: ${path}`
       );
@@ -125,7 +125,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Redirect authenticated users from login page to dashboard
-    if (session && path === "/login") {
+    if (user && path === "/login") {
       console.log(
         "[Supabase Middleware] Redirecting authenticated user from login to dashboard"
       );

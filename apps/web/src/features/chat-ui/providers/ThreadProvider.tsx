@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   createContext,
   useContext,
@@ -7,12 +9,11 @@ import React, {
   useEffect,
 } from "react";
 import { Thread, ThreadStatus } from "@langchain/langgraph-sdk";
-import { useQueryState } from "nuqs";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 import { createClient } from "../lib/client";
-import { AgentInbox } from "../types";
 
 interface ThreadContextType {
   threads: Thread[];
@@ -22,6 +23,8 @@ interface ThreadContextType {
   deleteThread: (threadId: string) => Promise<boolean>;
   loading: boolean;
   error: Error | null;
+  threadsLoading: boolean;
+  setThreadsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ThreadContext = createContext<ThreadContextType | undefined>(undefined);
@@ -31,11 +34,42 @@ const ThreadContext = createContext<ThreadContextType | undefined>(undefined);
  */
 export function ThreadProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  const [apiUrl] = useQueryState("apiUrl");
-  const [assistantId] = useQueryState("assistantId");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Get API URL and assistant ID from search params
+  const apiUrl =
+    searchParams.get("apiUrl") ||
+    process.env.NEXT_PUBLIC_LANGGRAPH_API_URL ||
+    "http://localhost:2024";
+  const assistantId = searchParams.get("assistantId") || "proposal-agent";
+
   const [loading, setLoading] = useState(false);
+  const [threadsLoading, setThreadsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
+
+  // Update URL params helper function
+  const updateUrlParams = useCallback(
+    (params: Record<string, string>) => {
+      const newParams = new URLSearchParams(searchParams.toString());
+
+      // Update or add provided params
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+          newParams.set(key, value);
+        } else {
+          newParams.delete(key);
+        }
+      });
+
+      // Construct and update URL
+      const newUrl = `${pathname}?${newParams.toString()}`;
+      router.replace(newUrl, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   /**
    * Get threads for the current assistant/agent
@@ -115,7 +149,8 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
         // Refresh the threads list
         await getThreads();
 
-        return threadId;
+        // Convert to string if needed
+        return typeof threadId === "string" ? threadId : threadId.thread_id;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         console.error("Error creating thread:", error);
@@ -151,7 +186,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
         // Update the local state to remove the deleted thread
         setThreads((prevThreads) =>
-          prevThreads.filter((t) => t.id !== threadId)
+          prevThreads.filter((t) => t.thread_id !== threadId)
         );
 
         toast.success("Thread deleted");
@@ -186,6 +221,8 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     deleteThread,
     loading,
     error,
+    threadsLoading,
+    setThreadsLoading,
   };
 
   return (

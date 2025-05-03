@@ -1,7 +1,14 @@
+// Remove 'use client' directive if present
+
+// Keep these imports for server-side logic
 import { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+
+// Remove imports related to client-side providers (QueryClientProvider, DashboardProvider, DashboardLayoutContent)
+
+// Keep the ClientDashboardLayout import
 import ClientDashboardLayout from "@/features/layout/components/ClientDashboardLayout";
 
 /**
@@ -15,10 +22,8 @@ export default async function DashboardLayout({
 }) {
   // Server-side authentication check
   const cookieStore = cookies();
-  // Make sure to await the client creation
   const supabase = await createClient(cookieStore);
 
-  // Get the session server-side
   const {
     data: { session },
     error,
@@ -26,13 +31,12 @@ export default async function DashboardLayout({
 
   console.log("[Server] Dashboard layout - session check:", !!session);
 
-  // If no session, redirect to login
   if (!session) {
     console.log("[Server] No session found, redirecting to login");
     redirect("/login?from=dashboard-layout");
   }
 
-  // If we have a session, render the dashboard layout
-  // Use a separate client component for the dashboard layout UI
+  // If we have a session, render the ClientDashboardLayout component
+  // Pass children to it. The client providers will be inside ClientDashboardLayout.
   return <ClientDashboardLayout>{children}</ClientDashboardLayout>;
 }

@@ -53,7 +53,8 @@
 
 - **Supabase:**
 
-  - Auth: User authentication and session management
+  - Auth: User authentication and session management.
+    - **Express Integration:** Requires `cookie-parser` middleware in `server.ts` for server-side authentication using `@supabase/ssr`'s `createServerClient`. The client needs custom `cookies` options using `req.cookies` and `res.cookie`/`res.clearCookie`.
   - Database: PostgreSQL for persistent storage
   - Row-Level Security: Ensures users can only access their own data
   - Used for storing LangGraph checkpoints and proposal data
@@ -119,7 +120,7 @@
   - **LangGraph Adapters:**
     - `LangGraphCheckpointer`: Adapts `SupabaseCheckpointer` to implement `BaseCheckpointSaver`
     - `MemoryLangGraphCheckpointer`: Adapts `InMemoryCheckpointer` to implement `BaseCheckpointSaver`
-  - **Factory Function:** `createCheckpointer()` in `checkpointer.service.ts` creates properly configured checkpointer instances based on environment
+  - **Factory Function:** `createCheckpointer()` in `lib/persistence/checkpointer-factory.ts` MUST be used to create properly configured checkpointer instances based on environment (Supabase or in-memory fallback) and user context.
   - **This adapter pattern isolates our storage logic from LangGraph's interface requirements, making our system more resilient to API changes**
 
 - **Checkpointer Usage:** Passed during graph compilation: `graph.compile({ checkpointer })`
@@ -178,5 +179,17 @@
 - **EventSource**: For server-sent events
 - **LocalStorage**: For caching thread data
 - **Fetch API**: For non-streaming HTTP requests
+
+## Chat UI Integration Progress (2024-06)
+
+Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. Linter errors for missing dependencies (e.g., '@/components/ui/tooltip', '@/components/ui/button', '@/lib/utils') must be resolved in the next phase, which will focus on backend integration, tool call handling, and UI polish.
+
+## Recent Updates (2024-06)
+
+- Chat UI integration Phase 2 is complete: all UI components and utilities are implemented in their correct locations. Linter errors remain due to missing dependencies (e.g., @/components/ui/tooltip, @/components/ui/button, @/lib/utils), to be resolved in the next phase.
+- Backend integration, tool call handling, and UI polish are the next focus areas.
+- Supabase Auth SSR integration is robust and follows best practices (getAll/setAll, getUser()).
+- Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes.
+- Project is on track for backend integration and final polish phases.
 
 _This document provides the technical landscape for the project, essential for onboarding and understanding the development environment._

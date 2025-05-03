@@ -42,18 +42,33 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ Created comprehensive documentation and README.md for the middleware
    - ✅ All authentication tests are now passing, including edge cases
    - ✅ Implemented client-side integration guidance
+7. **Chat UI Integration & Refactoring**: Integrated core chat UI components and refactored the connection to use a direct LangGraph endpoint, removing the API proxy. Provider structure corrected.
 
 ### Next
 
-1. Implement section generation nodes:
-   - `generateProblemStatementNode` (Task 17.2)
-   - `generateMethodologyNode` (Task 17.3)
-   - `generateBudgetNode` (Task 17.4)
-   - `generateTimelineNode` (Task 17.5)
-   - `generateConclusionNode` (Task 17.6)
-2. Update `OverallProposalState` interface to fully support the evaluation pattern
-3. Create evaluation criteria configuration files for all content types
-4. Prepare for integration testing of the complete graph
+1. **Authentication Integration Phase**
+
+   - Update StreamProvider with session token handling
+   - Add token refresh logic
+   - Configure API proxy for auth headers
+
+2. **Thread Management Phase**
+
+   - Create thread management API endpoints
+   - Update ChatPage with thread initialization
+   - Modify ThreadProvider for initial state
+
+3. **User-Thread Relationship Phase**
+
+   - Implement user-specific thread filtering
+   - Add userId to thread creation
+   - Update OrchestratorService
+
+4. **Error Handling and Testing Phase**
+   - Add ChatPage error handling
+   - Implement loading states
+   - Add authentication checks
+   - Create integration tests
 
 ## Known Issues
 
@@ -61,6 +76,9 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 2. Some tests may be brittle due to complex regex patterns for extracting information from LLM responses.
 3. The `OverallProposalState` interface needs updating to fully support the standardized evaluation pattern.
 4. Evaluation criteria need to be formalized in configuration files for each content type.
+5. Authentication and thread handoff integration needs to be completed according to the plan in `auth-front-back.md`
+6. TypeScript linter error in `server.ts` related to `app.use(cookieParser())` (code functions correctly at runtime).
+7. Need to verify authentication handling for the direct LangGraph stream connection.
 
 ## Evolution of Project Decisions
 
@@ -100,11 +118,19 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - Consistent state updates to track document status
 
 8. **Authentication and Token Refresh Strategy**: We've implemented a comprehensive approach for authentication:
+
    - Token validation with detailed error handling for different failure modes
    - Proactive token expiration detection with a 10-minute threshold
    - Token refresh recommendations for tokens nearing expiration
    - Special handling for expired tokens with clear client guidance
    - Standardized error response structure for authentication failures
+
+9. **Authentication and Thread Handoff Strategy**: We've created a comprehensive plan for integrating frontend authentication with the LangGraph backend:
+   - Clear separation of concerns between authentication and thread management
+   - Proper token refresh handling for long-running sessions
+   - User-specific thread access control
+   - Graceful error handling and loading states
+10. **Chat UI Connection**: Moved from an API passthrough proxy to a direct connection from the frontend (`StreamProvider`) to the LangGraph streaming endpoint, simplifying the architecture and aligning with reference examples.
 
 ## Completed Tasks
 
@@ -137,12 +163,15 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
   - All tests are now passing
 
 - Implemented Authentication Middleware Enhancements
+
   - Added token refresh handling in auth middleware
   - Created token expiration detection and metadata
   - Implemented standardized error responses for different auth scenarios
   - Added comprehensive JSDoc documentation
   - Created README.md for middleware directory
   - All authentication tests are now passing
+
+- **Chat UI Refactoring**: Simplified frontend connection by removing API proxy and using direct LangGraph stream. Corrected placement of `StreamProvider` and `InterruptProvider` to be chat-page-specific.
 
 ## Current Status
 
@@ -171,6 +200,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
   - All tests passing
 
 - The authentication middleware has been enhanced:
+
   - Token refresh handling with expiration detection and calculation
   - Proactive refresh recommendations for tokens nearing expiration (10-minute threshold)
   - Special handling for expired tokens with refresh_required flag
@@ -180,27 +210,22 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
   - Comprehensive documentation with client-side integration patterns
   - All tests passing, including edge cases
 
+- **Chat UI Connection**: Refactored to use direct connection to LangGraph (`http://localhost:2024`). Basic message sending and receiving is functional. UI correctly isolated to the chat page.
+
 ## Next Steps
 
-- Implement Section Generation Phase:
+1. Test Chat UI thoroughly (tool calls, interrupts, long conversations).
+2. Verify message display for all types in the UI.
+3. Confirm authentication flow for direct LangGraph connection.
+4. Improve error handling in `StreamProvider`.
+5. Continue implementation of core `ProposalGenerationGraph` nodes.
 
-  - Develop `sectionManagerNode` to coordinate section generation
-  - Implement individual section generation nodes
-  - Integrate evaluation nodes for each section
-  - Create section-specific evaluation criteria
+## Insights
 
-- Complete Checkpoint Integration & Interrupt Handling
-  - Create Supabase Checkpointer
-  - Standardize interrupt metadata
-  - Enhance Orchestrator's resume logic
-
-## Known Issues
-
-- Section generation nodes need to be implemented according to the established patterns
-- Evaluation criteria for sections need to be defined
-- Graph routing logic needs to be updated to support the complete workflow
-
-_This document should be updated whenever significant progress is made on the project._
+- Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes
+- Robust state management, HITL, and persistence are in place
+- Project is on track for backend integration and final polish phases
+- Simplifying the chat connection aligns better with LangGraph examples and reduces potential points of failure.
 
 # Progress
 
@@ -208,8 +233,12 @@ _This document should be updated whenever significant progress is made on the pr
 
 - **Document Loading**: The document loader node successfully extracts content from RFP documents using the provided `rfpId`.
 - **Research Integration**: Deep research node with document context works correctly.
-- **Authentication**: Supabase authentication is integrated with token refresh handling.
+- **Authentication**: Supabase authentication is integrated with token refresh handling. **Server-side auth in Express API using `createServerClient` and `cookie-parser` is functional.**
 - **API Endpoints**: Express API endpoints for proposal lifecycle management are implemented.
+  - **`POST /api/langgraph/threads`**: **Successfully creates new threads and persists initial state using the Supabase checkpointer.**
+  - **`GET /api/langgraph/info`**: Working.
+  - **`GET /api/langgraph/threads/:thread_id/state`**: Implemented, needs testing.
+  - **`POST /api/langgraph/threads/:thread_id/runs`**: Stubbed, needs implementation.
 - **Core Generation Flow**: Basic flow from document loading to section generation functions correctly.
 - **Human Review**: Human-in-the-loop approval/review process for sections is working.
 - **Conditional Routing**: LangGraph conditional routing based on evaluation results is working.
@@ -220,6 +249,8 @@ _This document should be updated whenever significant progress is made on the pr
 - **Error Handling**: Comprehensive error handling for document loading issues with clear error messages.
 - **Token Refresh**: Authentication middleware now handles token expiration and refresh requirements.
 - **Chat UI Integration**: Successfully integrated Agent Chat UI components with authentication and LangGraph API proxy. Components include Thread, Message renderers, Stream provider, and Thread provider, all properly connected to the backend.
+- **Checkpointer Persistence**: **Thread creation successfully persists the initial checkpoint to the Supabase `proposal_checkpoints` table using the correct user ID and schema (`checkpoint_data` column).**
+- **Chat UI Connection**: Basic chat interaction via direct connection to LangGraph is working. Messages are sent, and initial state/value updates are received.
 
 ## Current Development Status
 
@@ -237,299 +268,11 @@ _This document should be updated whenever significant progress is made on the pr
 
 ## What's Left to Build
 
-### Phase 1: RFP Document Integration (Completed)
+- **Chat UI Robustness**: Thorough testing and refinement of message display, tool call handling, and interruption flow.
+- **Authentication for Direct Connection**: Verification and implementation if needed.
+- **Core Agent Nodes**: Completion of remaining proposal section generation nodes.
+- **Error Handling**: Enhanced error handling in frontend and backend.
 
-- [x] Update document loader to accept rfpId
-- [x] Implement state interface with rfpId
-- [x] Create API endpoints for RFP document handling
-- [x] Update Orchestrator Service for rfpId support
-- [x] Enhance chat agent with document guidance
-- [x] Complete API authentication for document access
-- [x] Create continue endpoint for existing proposals
-- [x] Implement comprehensive testing for RFP integration
+## Current Status
 
-### Phase 2: Authentication Enhancement (Completed)
-
-- [x] Implement token refresh detection in authentication middleware
-- [x] Add token expiration metadata to request object
-- [x] Create special handling for expired tokens with refresh_required flag
-- [x] Add comprehensive JSDoc documentation
-- [x] Create README.md for middleware directory
-- [x] Implement comprehensive testing for auth middleware
-
-### Phase 3: User Flow Enhancement
-
-- [ ] Implement unified proposal listing with RFP details
-- [ ] Create document selection interface
-- [ ] Add progress tracking for proposal generation
-- [ ] Implement section editing interface
-- [ ] Add proposal export functionality
-
-### Phase 4: Quality Improvements
-
-- [x] Implement comprehensive test cases outlined in init-rfp.md
-- [x] Enhance error recovery suggestions
-- [ ] Implement comprehensive logging
-- [ ] Add performance optimizations
-- [ ] Implement user feedback collection
-
-## Recent Implementation Details
-
-### Enhanced Chat Agent with Document Status Detection
-
-```typescript
-// Enhanced document status check with more detailed state detection
-let documentStatus = "";
-if (state.rfpDocument) {
-  switch (state.rfpDocument.status) {
-    case "loaded":
-      documentStatus =
-        "The document has been successfully loaded and is ready for analysis.";
-      break;
-    case "loading":
-      documentStatus =
-        "The document is currently being loaded. The user should wait until it completes.";
-      break;
-    case "error":
-      documentStatus = `There was an error loading the document: ${(state.rfpDocument as any).error || "Unknown error"}. The user may need to try again or provide a different document.`;
-      break;
-    default:
-      documentStatus =
-        "No document has been loaded yet. The user needs to provide an RFP document ID or upload one.";
-  }
-} else {
-  documentStatus =
-    "No document information is available. The user needs to provide an RFP document ID or upload one.";
-}
-
-// Include document status in system prompt
-const systemPrompt = `You are a helpful assistant for a proposal generation system. 
-
-DOCUMENT STATUS:
-${documentStatus}
-
-// Rest of the prompt...
-`;
-```
-
-### Authentication Middleware with Token Refresh Handling
-
-```javascript
-/**
- * Calculates token expiration information and attaches it to the request
- *
- * @param {Object} req - Express request object
- * @param {Object} session - User session containing expiration timestamp
- * @param {Object} logger - Logger instance
- * @param {string} requestId - Request identifier for logging
- * @param {string} userId - User ID for logging
- */
-function processTokenExpiration(req, session, logger, requestId, userId) {
-  if (!session || !session.expires_at) return;
-
-  const currentTimeSeconds = Math.floor(Date.now() / 1000);
-  const expiresAtSeconds = session.expires_at;
-  const timeRemainingSeconds = expiresAtSeconds - currentTimeSeconds;
-
-  // Attach expiration metadata to request for downstream handlers
-  req.tokenExpiresIn = timeRemainingSeconds;
-  req.tokenRefreshRecommended =
-    timeRemainingSeconds <= TOKEN_REFRESH_THRESHOLD_SECONDS;
-
-  // Log appropriate message based on expiration proximity
-  if (req.tokenRefreshRecommended) {
-    logger.warn("Token close to expiration", {
-      requestId,
-      timeRemaining: timeRemainingSeconds,
-      expiresAt: expiresAtSeconds,
-      userId,
-    });
-  } else {
-    logger.info("Valid authentication", {
-      requestId,
-      userId,
-      tokenExpiresIn: timeRemainingSeconds,
-    });
-  }
-}
-```
-
-### Special Handling for Expired Tokens
-
-```javascript
-// Special handling for expired tokens
-if (error.message && error.message.includes("expired")) {
-  logger.warn("Auth error: expired token", { requestId, error });
-  return res.status(401).json({
-    error: "Token expired",
-    message: "Token has expired",
-    refresh_required: true,
-  });
-}
-```
-
-### Route Handler Usage Example
-
-```javascript
-app.get("/api/data", authMiddleware, (req, res) => {
-  // If token is close to expiration, suggest a refresh
-  if (req.tokenRefreshRecommended) {
-    res.set("X-Token-Refresh-Recommended", "true");
-  }
-
-  // Proceed with normal request handling
-  res.json({ data: "Your data" });
-});
-```
-
-### Graph Edge for Document Flow
-
-```typescript
-// Add edge from DOC_LOADER to CHAT_AGENT to return to chat after document loading
-console.log("Adding edge from DOC_LOADER to CHAT_AGENT");
-(proposalGenerationGraph as any).addEdge(NODES.DOC_LOADER, NODES.CHAT_AGENT);
-```
-
-### Continue API Endpoint
-
-```typescript
-/**
- * GET /api/rfp/chat/continue/:proposalId
- *
- * Resume an existing proposal conversation
- *
- * @param {string} proposalId - The ID of the proposal to continue
- * @returns {object} The thread ID and proposal status information
- */
-```
-
-### Document Loader Node Implementation
-
-```typescript
-/**
- * Document loader node that retrieves and processes RFP documents
- *
- * @param state - The current proposal state
- * @returns Updated state with document information
- */
-export async function documentLoaderNode(state: Partial<OverallProposalState>) {
-  try {
-    // Use rfpId from state, or fallback to env var for testing
-    const rfpId =
-      state.rfpDocument?.id ||
-      state.rfpId ||
-      process.env.TEST_RFP_ID ||
-      "f3001786-9f37-437e-814e-170c77b9b748";
-
-    // Update state to show loading status
-    const updatedState = {
-      ...state,
-      rfpDocument: {
-        ...state.rfpDocument,
-        status: LoadingStatus.LOADING,
-        id: rfpId,
-      },
-    };
-
-    // Get document from storage
-    const document = await downloadFileWithRetry.invoke({
-      bucketName: "proposal-documents",
-      path: `${rfpId}/document.pdf`,
-    });
-
-    // Process document
-    if (document) {
-      const parsedDocument = await parseRfpFromBuffer(
-        await document.arrayBuffer()
-      );
-
-      return {
-        ...updatedState,
-        rfpDocument: {
-          status: LoadingStatus.LOADED,
-          id: rfpId,
-          text: parsedDocument.text,
-          metadata: parsedDocument.metadata,
-        },
-      };
-    }
-
-    // Handle not found case with helpful error
-    return {
-      ...updatedState,
-      rfpDocument: {
-        status: LoadingStatus.ERROR,
-        id: rfpId,
-        metadata: {
-          error: "Document not found. Check if document exists in storage.",
-          suggestions: [
-            "Upload the document again",
-            "Verify the document ID is correct",
-            "Contact support if the issue persists",
-          ],
-        },
-      },
-    };
-  } catch (error) {
-    // Provide helpful error information
-    return {
-      ...state,
-      rfpDocument: {
-        status: LoadingStatus.ERROR,
-        id: state.rfpDocument?.id || state.rfpId,
-        metadata: {
-          error: error.message,
-          suggestions: [
-            "Check if document exists in storage",
-            "Verify file format is supported",
-            "Try uploading the document again",
-          ],
-        },
-      },
-    };
-  }
-}
-```
-
-## Chat UI Implementation (Updated)
-
-### Completed
-
-- ✅ Created core type definitions for `Message`, `Thread`, and related interfaces
-- ✅ Established directory structure for Chat UI features
-- ✅ Implemented `StreamProvider` for real-time communication with LangGraph
-- ✅ Set up authentication integration with Supabase for secure chat sessions
-- ✅ Defined state management patterns using React Context
-- ✅ Documented Chat UI architecture in system patterns
-- ✅ Created interface for thread history and message interactions
-- ✅ Implemented error handling for network and server issues
-
-### In Progress
-
-- 🔄 Integration testing with LangGraph backend
-- 🔄 Implementing tool call handling interface
-- 🔄 Optimizing streaming performance for long-running agent processes
-- 🔄 Building thread management persistence with Supabase
-
-### Pending
-
-- ⏳ UI polish for specific agent interaction patterns
-- ⏳ Deployment pipeline for Chat UI features
-- ⏳ Analytics integration for tracking conversation metrics
-- ⏳ Mobile-specific UI optimizations
-
-### Challenges & Solutions
-
-| Challenge                       | Solution                                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------------------------- |
-| Real-time state synchronization | Implemented EventSource with React state reducers to handle streaming responses efficiently |
-| Authentication across services  | Used JWT tokens from Supabase session for LangGraph authorization headers                   |
-| Error handling for streaming    | Created recoverable error states and reconnection logic in `StreamProvider`                 |
-| Thread history persistence      | Designed dual-storage strategy with LocalStorage and Supabase for offline capabilities      |
-
-### Next Steps
-
-1. Complete integration testing with LangGraph backend
-2. Finalize tool call handling interface for interactive agent capabilities
-3. Optimize streaming performance with chunked message processing
-4. Implement thread persistence with Supabase storage
+- The core architecture is stable, with successful integration of authentication, basic persistence, and a simplified, functional chat UI connection. Focus shifts to completing agent logic and hardening the UI.
