@@ -13,23 +13,45 @@ import React, {
   ReactNode,
   useState,
   useEffect,
+  useMemo,
 } from "react";
-import { useQueryState } from "nuqs"; // Assuming nuqs is used for URL state
-import { Message, Interrupt } from "@langchain/langgraph-sdk";
+import { useSearchParams } from "next/navigation";
 import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
 import { toast } from "sonner";
-// Removed UI message imports for now, focus on core streaming
+import { useQueryState } from "nuqs";
+import { Message } from "@langchain/langgraph-sdk";
 
 // Define the StateType *without* the optional 'ui' channel initially
 export type StateType = { messages: Message[] };
 
 // Use the standard useStream hook, typed only for messages
+// Explicitly provide BagTemplate to avoid potential generic issues
 const useTypedStream = useStream<StateType>;
 
 // Context Type remains largely the same, but uses the standard hook's return type
-export type StreamContextType = ReturnType<typeof useTypedStream>;
+// export type StreamContextType = ReturnType<typeof useTypedStream>; // <<< REMOVE THIS LINE
 
-// Create context with default values matching the hook's return shape
+// Define the context type explicitly with known properties from useStream
+export interface StreamContextType {
+  messages: Message[];
+  isLoading: boolean;
+  error: Error | null | undefined;
+  submit: (
+    values: Partial<StateType>,
+    options?:
+      | {
+          config?: Record<string, unknown>;
+          toolChoice?: string | undefined;
+        }
+      | undefined
+  ) => void;
+  stop: () => void;
+  // We will manage threadId separately via useQueryState for now
+  threadId: string | null; // Keep this for context consumers, but populate from useQueryState
+  // isStreaming might be implicitly handled by isLoading or not directly exposed
+}
+
+// Create context with default values matching the explicit interface
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
 
 // Props for the provider component
@@ -38,233 +60,198 @@ export interface StreamProviderProps {
 }
 
 export function StreamProvider({ children }: StreamProviderProps) {
-  // Use rfpId from URL as the primary key
-  const [rfpId] = useQueryState("rfpId");
-  // threadId is specific to a LangGraph conversation for a given rfpId
-  const [threadId, setThreadId] = useQueryState("threadId");
+  const searchParams = useSearchParams();
+  const rfpId = searchParams.get("rfpId");
 
-  const [isThreadInitialized, setIsThreadInitialized] = useState(!!threadId); // Initial state depends only on threadId presence
-  const [initError, setInitError] = useState<string | null>(null);
+  // State to track if the thread is initialized (has messages or a valid ID)
+  const [isThreadInitialized, setIsThreadInitialized] = useState(false);
 
-  // *** Use DIRECT environment variables ***
+  // Use query state for threadId, only if rfpId is present
+  const [threadId, setThreadId] = useQueryState("threadId", {
+    // history: "push", // Consider adding history management if needed
+  });
+
+  // Log environment variables
+  console.log(
+    "[StreamProvider] NEXT_PUBLIC_API_URL:",
+    process.env.NEXT_PUBLIC_API_URL
+  );
+  console.log(
+    "[StreamProvider] NEXT_PUBLIC_ASSISTANT_ID:",
+    process.env.NEXT_PUBLIC_ASSISTANT_ID
+  );
+
+  // Use the direct API URL from env
   const directApiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const assistantId = process.env.NEXT_PUBLIC_ASSISTANT_ID || "proposal-agent"; // Default if not set
+  const assistantId = process.env.NEXT_PUBLIC_ASSISTANT_ID;
 
-  // Effect to find or create the LangGraph thread based on rfpId
+  // Log the URLs being used
+  if (directApiUrl) {
+    console.log(
+      "[StreamProvider] Using Direct LangGraph API URL:",
+      directApiUrl
+    );
+  } else {
+    console.warn("[StreamProvider] NEXT_PUBLIC_API_URL is not set!");
+    // Consider throwing an error or showing a persistent warning in the UI
+  }
+  if (assistantId) {
+    console.log("[StreamProvider] Using Assistant ID:", assistantId);
+  } else {
+    console.warn("[StreamProvider] NEXT_PUBLIC_ASSISTANT_ID is not set!");
+  }
+
+  console.log(
+    `[StreamProvider] Initial state - rfpId: ${rfpId}, threadId: ${threadId}`
+  );
+
+  // Effect to handle missing rfpId - This is the primary flow control
   useEffect(() => {
-    // Case 1: No rfpId selected - reset state
     if (!rfpId) {
       console.log("[StreamProvider] No rfpId provided. Resetting thread.");
       if (threadId) setThreadId(null); // Clear threadId if rfpId is removed
       setIsThreadInitialized(false);
-      setInitError(null);
-      return; // Stop further processing
     }
-
-    // Case 2: rfpId exists, but threadId is missing OR initialization hasn't occurred/failed
-    if (rfpId && (!threadId || (!isThreadInitialized && !initError))) {
+    // Mark as initialized if we have rfpId and threadId from the start
+    else if (rfpId && threadId && !isThreadInitialized) {
       console.log(
-        `[StreamProvider] rfpId ${rfpId} present, but no threadId. Attempting fetch/creation...`
-      );
-      setIsThreadInitialized(false); // Ensure we show loading state
-      setInitError(null); // Clear previous errors
-
-      if (!directApiUrl) {
-        const errorMessage = "NEXT_PUBLIC_API_URL is not configured.";
-        console.error(`[StreamProvider] ${errorMessage}`);
-        setInitError(errorMessage);
-        toast.error("Chat Configuration Error", {
-          description: errorMessage,
-        });
-        return;
-      }
-
-      const findOrCreateThread = async () => {
-        console.log(`[StreamProvider] Creating new thread for rfpId: ${rfpId}`);
-        try {
-          // *** Use DIRECT API URL ***
-          const response = await fetch(`${directApiUrl}/threads`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            // Include assistant_id and potentially rfpId in metadata
-            body: JSON.stringify({
-              assistant_id: assistantId, // Use configured assistant ID
-              metadata: { rfpId: rfpId }, // Pass rfpId in metadata
-            }),
-          });
-
-          if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(
-              `Failed to create thread (${response.status}): ${errorBody || response.statusText}`
-            );
-          }
-
-          const newThreadData = await response.json();
-          if (newThreadData?.thread_id) {
-            console.log(
-              "[StreamProvider] Thread creation successful, new threadId:",
-              newThreadData.thread_id,
-              "for rfpId:",
-              rfpId
-            );
-            setThreadId(newThreadData.thread_id); // Update URL state
-            setIsThreadInitialized(true);
-          } else {
-            throw new Error("Thread ID not found in creation response");
-          }
-        } catch (error: any) {
-          console.error(
-            "[StreamProvider] Error during thread fetch/creation:",
-            error
-          );
-          setInitError(error.message || "Failed to initialize thread for RFP");
-          toast.error("Chat Initialization Failed", {
-            description:
-              error.message ||
-              "Could not create/find chat thread for this RFP.",
-            duration: 7000,
-          });
-        }
-      };
-
-      findOrCreateThread();
-    }
-    // Case 3: Both rfpId and threadId exist, ensure initialized state is set
-    else if (rfpId && threadId && !isThreadInitialized && !initError) {
-      console.log(
-        `[StreamProvider] Initializing with existing rfpId ${rfpId} and threadId ${threadId}`
+        "[StreamProvider] Initializing with existing rfpId and threadId."
       );
       setIsThreadInitialized(true);
-      setInitError(null); // Clear error if we successfully got IDs
     }
+  }, [rfpId, threadId, setThreadId, isThreadInitialized]); // Added threadId and isThreadInitialized dependencies
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    rfpId,
-    threadId,
-    isThreadInitialized,
-    initError,
-    directApiUrl, // Add dependency
-    assistantId, // Add dependency
-    setThreadId,
-  ]); // Rerun if rfpId/threadId changes
+  console.log(
+    `[StreamProvider] Before useStream - rfpId: ${rfpId}, threadId: ${threadId}, isThreadInitialized: ${isThreadInitialized}`
+  );
 
-  // Initialize the useStream hook with DIRECT values
-  const thread = useTypedStream({
-    apiUrl: directApiUrl || "", // Use direct API URL, fallback to empty string if unset
-    assistantId: assistantId,
-    messagesKey: "messages",
-    // Only pass threadId if it's known and the thread is initialized
-    threadId: isThreadInitialized ? threadId || undefined : undefined,
+  // Always call useStream, passing potentially undefined values
+  // The hook should handle missing apiUrl/assistantId internally
+  const streamValue = useTypedStream({
+    apiUrl: directApiUrl, // Pass directly (might be undefined)
+    assistantId: assistantId, // Pass directly (might be undefined)
+    streamMode: "values", // Explicitly set streamMode
+    // Only pass threadId if it's known (from URL) and we have an rfpId
+    // The hook handles thread creation if threadId is omitted or invalid
+    // threadId: rfpId && threadId ? threadId : undefined, // <<< Let useStream handle thread ID internally based on config
   });
 
-  // Effect to handle missing API URL *after* hook initialization attempt
-  useEffect(() => {
-    if (!directApiUrl) {
-      const errorMessage = "NEXT_PUBLIC_API_URL is not configured.";
-      console.error(`[StreamProvider] ${errorMessage}`);
-      // Don't set initError here again if already set during thread creation attempt
-      if (!initError) {
-        setInitError(errorMessage);
-        toast.error("Chat Configuration Error", {
-          description: errorMessage,
-        });
-      }
-    }
-  }, [directApiUrl, initError]);
+  // State for the effective threadId (from URL or hook response if needed later)
+  const [effectiveThreadId, setEffectiveThreadId] = useState<string | null>(
+    threadId
+  );
 
-  // Logging for the API URL being used
+  // Log updates from useStream
   useEffect(() => {
-    if (directApiUrl) {
-      console.log(
-        "[StreamProvider] Using Direct LangGraph API URL:",
-        directApiUrl
-      );
-    } else {
-      console.warn("[StreamProvider] NEXT_PUBLIC_API_URL is not set!");
-    }
-    if (threadId) {
-      console.log(
-        "[StreamProvider] Initializing with threadId from URL:",
-        threadId
-      );
-    } else {
-      console.log(
-        "[StreamProvider] No threadId in URL, useStream will attempt to create one if API URL is set."
-      );
-    }
-  }, [directApiUrl, threadId]);
-
-  // Handle operational errors from the hook (after initialization)
-  useEffect(() => {
-    if (thread.error) {
-      console.error("[StreamProvider] Operational Error:", thread.error);
-      toast.error("Chat Error", {
-        description:
-          thread.error instanceof Error
-            ? thread.error.message
-            : String(thread.error),
-      });
-    }
-  }, [thread.error]);
-
-  const contextValue = thread;
-
-  // Logging for context value updates
-  useEffect(() => {
-    const currentThreadId =
-      "threadId" in contextValue && contextValue.threadId
-        ? contextValue.threadId
-        : threadId;
     console.log(
-      "[StreamProvider] Context Value updated - isLoading:",
-      contextValue.isLoading,
-      "messages count:",
-      contextValue.messages?.length,
-      "threadId:",
-      currentThreadId || "(Not set yet)",
-      "rfpId:",
-      rfpId || "(Not set)"
+      "[StreamProvider] useStream update:",
+      `isLoading: ${streamValue.isLoading},`,
+      // `isStreaming: ${streamValue.isStreaming},`, // <<< REMOVE isStreaming if not available
+      `error: ${streamValue.error},`,
+      // `threadId: ${streamValue.threadId},`, // <<< REMOVE threadId if not available directly
+      `messages count: ${streamValue.messages?.length ?? 0}`
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // Update threadId in URL if useStream provides one and it differs
+    // THIS LOGIC MIGHT NEED REVISITING - useStream might not directly expose threadId
+    // if (rfpId && streamValue.threadId && streamValue.threadId !== threadId) {
+    //   console.log(
+    //     `[StreamProvider] Updating threadId in URL to: ${streamValue.threadId}`
+    //   );
+    //   setThreadId(streamValue.threadId);
+    //   setEffectiveThreadId(streamValue.threadId);
+    // } else {
+    // Ensure effectiveThreadId tracks the URL threadId
+    if (threadId !== effectiveThreadId) {
+      setEffectiveThreadId(threadId);
+    }
+    // }
+
+    // Mark thread as initialized if we receive messages or have a threadId
+    if (
+      !isThreadInitialized &&
+      (effectiveThreadId ||
+        (streamValue.messages && streamValue.messages.length > 0))
+    ) {
+      console.log("[StreamProvider] Marking thread as initialized.");
+      setIsThreadInitialized(true);
+    }
   }, [
-    contextValue.isLoading,
-    contextValue.messages,
-    contextValue,
-    threadId,
     rfpId,
+    streamValue.isLoading,
+    // streamValue.isStreaming,
+    streamValue.error,
+    // streamValue.threadId,
+    streamValue.messages,
+    threadId, // From useQueryState
+    setThreadId,
+    isThreadInitialized,
+    effectiveThreadId, // Add dependency
   ]);
 
-  // Render loading/error/prompt state during initialization or if no RFP
-  if (!rfpId) {
-    return <div>Please select an RFP to start chatting.</div>; // Prompt user
-  }
-  if (!isThreadInitialized && !initError) {
-    return <div>Initializing Chat for RFP {rfpId}...</div>; // Show loading specific to RFP
-  }
-  if (initError) {
-    return (
-      <div>
-        Error initializing chat for RFP {rfpId}: {initError}
-      </div>
-    );
-  }
+  // Create the context value, ensuring defaults match useStream's return type
+  const contextValue: StreamContextType = useMemo(
+    () => ({
+      // Pass through known properties from useStream
+      messages: rfpId ? streamValue.messages : [],
+      isLoading: streamValue.isLoading,
+      // Safely handle the error type
+      error: streamValue.error instanceof Error ? streamValue.error : undefined,
+      submit: streamValue.submit,
+      stop: streamValue.stop,
+      // Provide the effectiveThreadId (from URL state)
+      threadId: rfpId ? effectiveThreadId : null,
+    }),
+    [
+      rfpId,
+      effectiveThreadId, // Depend on effectiveThreadId
+      streamValue.messages,
+      streamValue.isLoading,
+      streamValue.error,
+      streamValue.submit,
+      streamValue.stop,
+      // No longer depend on the whole streamValue object if parts are unused/unstable
+    ]
+  );
 
-  // Render children only after thread is initialized for the current rfpId
+  // Log the final context value being provided
+  useEffect(() => {
+    console.log(
+      "[StreamProvider] Context Value updated -",
+      `isLoading: ${contextValue.isLoading},`,
+      `messages count: ${contextValue.messages?.length ?? 0},`,
+      `threadId: ${contextValue.threadId ?? "(Not set)"},`,
+      `rfpId: ${rfpId ?? "(Not set)"}`
+    );
+  }, [contextValue, rfpId]);
+
+  // Render children only if rfpId is present, otherwise show placeholder
+  // Also check if API URL AND assistantId are configured before rendering chat
+  const canRenderChat = rfpId && directApiUrl && assistantId;
+
   return (
     <StreamContext.Provider value={contextValue}>
-      {children}
+      {canRenderChat ? (
+        children
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-lg text-gray-500">
+            {!rfpId
+              ? "Please select an RFP to start chatting."
+              : "Chat service is not configured. Please check environment variables."}
+          </p>
+        </div>
+      )}
     </StreamContext.Provider>
   );
 }
 
-// Export the hook for accessing the context
+// Removed useStreamCondition helper
+
+// Custom hook to use the stream context
 export function useStreamContext() {
   const context = useContext(StreamContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useStreamContext must be used within a StreamProvider");
   }
   return context;

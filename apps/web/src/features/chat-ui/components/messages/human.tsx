@@ -40,8 +40,7 @@ export function HumanMessage({
   isLoading: boolean;
 }) {
   const thread = useStreamContext();
-  const meta = thread.getMessagesMetadata(message);
-  const parentCheckpoint = meta?.firstSeenState?.parent_checkpoint;
+  const parentCheckpoint = undefined;
 
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -57,7 +56,7 @@ export function HumanMessage({
         checkpoint: parentCheckpoint,
         streamMode: ["values"],
         optimisticValues: (prev) => {
-          const values = meta?.firstSeenState?.values;
+          const values = undefined;
           if (!values) return prev;
 
           return {
@@ -97,8 +96,8 @@ export function HumanMessage({
           )}
         >
           <BranchSwitcher
-            branch={meta?.branch}
-            branchOptions={meta?.branchOptions}
+            branch={undefined}
+            branchOptions={undefined}
             onSelect={(branch) => thread.setBranch(branch)}
             isLoading={isLoading}
           />

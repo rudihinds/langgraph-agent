@@ -584,7 +584,7 @@ We're following the integration plan in `chat-int.md` and test scenarios in `cha
 
 ## Chat UI Integration Progress (2024-06)
 
-Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish. Linter errors for missing dependencies must be resolved as part of this work.
+Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish. Linter errors for missing dependencies must be resolved as part of this work. Basic message rendering is now functional.
 
 ## Authentication and Thread Handoff Integration
 
@@ -694,6 +694,7 @@ We successfully resolved several critical errors preventing the creation of Lang
 
 - **Thread Creation:** The `POST /api/langgraph/threads` endpoint is now **working correctly**. It successfully authenticates the user (via cookies), creates a new thread ID, and persists the initial checkpoint state to the Supabase `proposal_checkpoints` table using the correct user ID and schema.
 - **Frontend Connection:** The frontend (`StreamProvider`) successfully connects to the `/api/langgraph/info` endpoint and receives the new `thread_id` from the successful `POST /threads` call.
+- **Chat Rendering:** Basic message rendering (human and AI) is now **working correctly** in the UI via the direct LangGraph connection. The issue with the extra "0" has been resolved by using a ternary operator for conditional `ToolCalls` rendering. The `react-markdown` `className` issue has also been fixed.
 - **Remaining Issue:** There's a persistent TypeScript linter error in `apps/backend/server.ts` related to the `app.use(cookieParser())` line, despite the code functioning correctly at runtime. This needs investigation but isn't currently blocking functionality.
 
 ## Next Steps
@@ -702,6 +703,7 @@ We successfully resolved several critical errors preventing the creation of Lang
 2.  Implement the frontend logic to call the `/runs` endpoint when the user sends a message.
 3.  Implement frontend handling of state updates received from the graph (likely via SSE or WebSockets, which needs defining in the backend `/runs` endpoint or a separate streaming endpoint).
 4.  Investigate and resolve the lingering TypeScript linter error in `server.ts`.
+5.  **Cleanup Debugging Code**: Remove temporary `console.log` statements and commented-out code added during the chat rendering debug process.
 
 ## Refactoring Chat UI Connection (Completed)
 
@@ -716,7 +718,7 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 
 ### Current Status
 
-- Basic chat functionality is operational. Messages sent from the UI are received by the LangGraph backend, and initial state/value updates are streamed back.
+- Basic chat functionality is operational. Messages sent from the UI are received by the LangGraph backend, and initial state/value updates are streamed back. **Basic rendering of human and AI messages is working.**
 - The UI correctly displays the chat interface only on the `/dashboard/chat` route, resolving the previous issue of providers being active globally.
 
 ### Next Steps
@@ -726,3 +728,4 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 3. **Authentication**: Ensure that if the direct LangGraph endpoint requires authentication, the necessary tokens are being passed correctly (needs verification based on backend setup).
 4. **Error Handling**: Improve error handling within `StreamProvider` for connection issues or backend errors.
 5. **Continue Core Agent Implementation**: Resume work on the `ProposalGenerationGraph` nodes (Problem Statement, Methodology, etc.).
+6. **Cleanup Debugging Code**: Remove temporary `console.log` statements and commented-out code added during the chat rendering debug process.
