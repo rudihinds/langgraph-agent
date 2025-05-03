@@ -34,10 +34,14 @@ export const createClient = cache(
       // Use provided cookie store or get from next/headers
       let cookieJar;
       try {
-        cookieJar =
-          cookieStore instanceof Promise
-            ? await cookieStore
-            : cookieStore || cookies();
+        if (cookieStore instanceof Promise) {
+          cookieJar = await cookieStore;
+        } else if (cookieStore) {
+          cookieJar = cookieStore;
+        } else {
+          // Always await cookies() to ensure it's properly resolved
+          cookieJar = await cookies();
+        }
       } catch (cookieError) {
         console.error("[SupabaseClient] Error accessing cookies:", cookieError);
         throw new Error("Cookie access error");
@@ -55,6 +59,7 @@ export const createClient = cache(
         {
           cookies: {
             getAll() {
+              // Now cookieJar is guaranteed to be resolved
               return cookieJar.getAll();
             },
             setAll(cookiesToSet) {
