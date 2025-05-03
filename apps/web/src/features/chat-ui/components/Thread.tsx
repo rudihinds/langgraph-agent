@@ -1,21 +1,15 @@
 import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useStreamContext } from "../providers/StreamProvider";
-import { cn } from "@/lib/utils/utils";
+import { cn } from "@/lib/utils";
 import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkpoint, Message } from "@langchain/langgraph-sdk";
+import { Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
 import { ensureToolCallsHaveResponses } from "@/lib/ensure-tool-responses";
-import { isAgentInboxInterruptSchema } from "@/lib/agent-inbox-interrupt";
-import { AgentInbox } from "./agent-inbox";
-import { useInterrupt } from "../providers/InterruptProvider";
 import { Textarea } from "@/components/ui/textarea";
-import { useStickToBottom } from "use-stick-to-bottom";
 import { LayoutGrid } from "lucide-react";
-import useResizeObserver from "use-resize-observer";
 import { toast } from "sonner";
 
 const NoMessagesView = () => (
@@ -46,86 +40,42 @@ const ChatMessage = ({ message, isLoading }: ChatMessageProps) => {
   return null;
 };
 
-function hasUnhandledInterrupts(
-  messages: Message[],
-  messagesWithToolResponses: Message[]
-) {
-  // Check if there's a gap between messages and messagesWithToolResponses
-  return (
-    messagesWithToolResponses.length > 0 &&
-    messagesWithToolResponses[messagesWithToolResponses.length - 1] !==
-      messages[messages.length - 1]
-  );
-}
-
-type StreamContextType = {
-  messages?: Message[];
-  threadId?: string;
-  checkpoint?: Checkpoint;
-  isStreaming?: boolean;
-  addMessage?: (content: string) => Promise<void>;
-  stream?: any;
-  stateValue?: Record<string, unknown>;
-  patchCheckpoint?: (patch: any) => Promise<void>;
-  clearCache?: () => void;
-  urlThreadId?: string;
-  setUrlThreadId?: (id: string) => void;
-  client?: any;
-  deploymentUrl?: string;
-  assistantId?: string;
-};
-
 export function Thread() {
+  // Use the streamContext directly from our provider
   const {
     messages = [],
     threadId = "",
-    checkpoint,
     isStreaming = false,
-    addMessage,
-    stream,
-    stateValue = {},
-    patchCheckpoint,
-    clearCache,
-    urlThreadId,
-    setUrlThreadId,
-    client,
-    deploymentUrl = "",
-    assistantId,
-  } = useStreamContext() as StreamContextType;
+    submit,
+    stop,
+  } = useStreamContext();
 
-  const { isInterrupted, handleInterrupt } = useInterrupt();
+  // *** ADDED LOGGING ***
+  useEffect(() => {
+    console.log("[Thread] Received messages from context:", messages);
+  }, [messages]);
+  // *** END ADDED LOGGING ***
 
   const [inputValue, setInputValue] = useState("");
-  const [lastHumanMessageRef, setLastHumanMessageRef] =
-    useState<Message | null>(null);
-  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Ref for the scrollable messages container
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  // Ref for the outer container
+  const outerContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Log availability of addMessage function
+  // Log availability of submit function
   useEffect(() => {
-    console.log("[Thread] addMessage function available:", !!addMessage);
-  }, [addMessage]);
+    console.log("[Thread] submit function available:", !!submit);
+  }, [submit]);
 
-  // Handle interrupts
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (!stateValue) return;
-
-    // Check for interrupt in state and handle it
-    const interrupt =
-      (stateValue as any)?.config_interrupts ||
-      (stateValue as any)?.interrupts ||
-      null;
-
-    if (interrupt && !isInterrupted) {
-      console.log("Interrupt detected:", interrupt);
-      // Pass to interrupt handler
-      handleInterrupt(interrupt);
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
-  }, [stateValue, isInterrupted, handleInterrupt]);
-
-  // Make sure we stay scrolled to the bottom
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { ref } = useResizeObserver<HTMLDivElement>();
+  }, [messages]);
 
   // Process messages to ensure all tool calls have responses
   const messagesWithToolResponses = ensureToolCallsHaveResponses(
@@ -145,20 +95,22 @@ export function Thread() {
     try {
       console.log("[Thread] Sending message:", messageContent);
 
-      // Use the stream.submit method directly
-      if (stream && typeof stream.submit === "function") {
-        console.log("[Thread] Using stream.submit to send message");
+      // Use the submit method from our context
+      if (submit) {
+        console.log("[Thread] Using submit to send message");
 
-        // Pass message as an object for the Stream API
-        await stream.submit({
-          message: messageContent,
-          type: "human",
+        // Pass message in the format expected by LangGraph
+        await submit({
+          messages: [
+            {
+              type: "human",
+              content: messageContent,
+              id: uuidv4(),
+            },
+          ],
         });
       } else {
-        console.error("[Thread] No method available to send messages", {
-          streamAvailable: !!stream,
-          submitAvailable: stream && typeof stream.submit === "function",
-        });
+        console.error("[Thread] No method available to send messages");
         toast.error("Failed to send message", {
           description:
             "The chat connection is not ready. Please refresh the page.",
@@ -180,13 +132,36 @@ export function Thread() {
     }
   };
 
+  // *** ADDED LOGGING INSIDE MAP ***
+  const renderMessages = () => {
+    console.log(
+      "[Thread] Rendering messages. Count:",
+      messagesWithToolResponses.length
+    );
+    return messagesWithToolResponses.map((message, idx) => {
+      console.log(`[Thread] Rendering message ${idx + 1}:`, message);
+      return (
+        <ChatMessage
+          key={message.id || `msg-${idx}`}
+          message={message}
+          isLoading={
+            isStreaming &&
+            idx === messagesWithToolResponses.length - 1 &&
+            message.type === "ai"
+          }
+        />
+      );
+    });
+  };
+  // *** END ADDED LOGGING INSIDE MAP ***
+
   return (
     <div
       className="relative flex flex-col w-full h-full bg-background"
-      ref={ref}
+      ref={outerContainerRef}
     >
       <div
-        ref={containerRef}
+        ref={messagesContainerRef}
         className={cn(
           "scrollbar-pretty flex-1 overflow-y-auto overscroll-contain",
           "pt-4 pb-0"
@@ -196,47 +171,10 @@ export function Thread() {
           <NoMessagesView />
         ) : (
           <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
-            {messagesWithToolResponses.map((message, idx) => (
-              <ChatMessage
-                key={message.id || `msg-${idx}`}
-                message={message}
-                isLoading={
-                  isStreaming &&
-                  idx === messagesWithToolResponses.length - 1 &&
-                  message.type === "ai"
-                }
-              />
-            ))}
+            {renderMessages()} {/* Call the rendering function */}
           </div>
         )}
       </div>
-
-      {isInterrupted && stateValue && (
-        <AgentInbox
-          interrupts={[
-            (stateValue as any).interrupts ||
-              (stateValue as any).config_interrupts,
-          ]
-            .flat()
-            .filter(Boolean)}
-          onSubmit={(interrupt, response, type) => {
-            console.log(
-              "Submit interrupt response:",
-              interrupt,
-              response,
-              type
-            );
-            // TODO: Implement interrupt response handling
-          }}
-          onDiscard={(interrupt) => {
-            console.log("Discard interrupt:", interrupt);
-            // TODO: Implement interrupt discard handling
-          }}
-          threadId={threadId || ""}
-          deploymentUrl={deploymentUrl || ""}
-          state={stateValue as Record<string, unknown>}
-        />
-      )}
 
       <div
         className={cn(
@@ -251,7 +189,7 @@ export function Thread() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isStreaming || isInterrupted}
+              disabled={isStreaming}
               placeholder={
                 isStreaming ? "Waiting for response..." : "Type a message..."
               }
@@ -264,12 +202,7 @@ export function Thread() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={
-                  !inputValue.trim() ||
-                  isStreaming ||
-                  isInterrupted ||
-                  !addMessage
-                }
+                disabled={!inputValue.trim() || isStreaming || !submit}
               >
                 Send
               </Button>

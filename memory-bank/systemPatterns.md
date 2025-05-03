@@ -68,12 +68,20 @@ We've implemented a layered adapter pattern for checkpointer functionality that 
 
 ### Factory Pattern
 
-- **`createCheckpointer()`**: Factory function that:
-  - Checks environment for valid Supabase credentials
-  - Creates SupabaseCheckpointer + adapter if credentials exist and are valid
-  - Falls back to InMemoryCheckpointer + adapter if credentials missing/invalid
-  - Logs appropriate warnings when falling back to in-memory storage
-  - Can be configured with specific user ID for multi-tenant isolation
+- **`createCheckpointer()`**: Factory function located in `lib/persistence/checkpointer-factory.ts` that:
+  - **MUST be used** to obtain checkpointer instances for the graph.
+  - Checks environment for valid Supabase credentials.
+  - Creates `SupabaseCheckpointer` + `LangGraphCheckpointer` adapter if credentials exist and are valid.
+  - Falls back to `InMemoryCheckpointer` + `MemoryLangGraphCheckpointer` adapter if credentials missing/invalid.
+  - Logs appropriate warnings when falling back to in-memory storage.
+  - Can be configured with specific user ID (UUID from Supabase Auth) for multi-tenant isolation.
+
+### Checkpointer Implementation Details
+
+- The `SupabaseCheckpointer` interacts directly with the database.
+- It assumes a table named `proposal_checkpoints` (or as configured via `ENV.CHECKPOINTER_TABLE_NAME`).
+- It uses a column named `checkpoint_data` (type `jsonb`) to store the serialized LangGraph state.
+- RLS policies ensure users only access their own data based on the `user_id` column.
 
 ### Key Advantages
 
@@ -173,45 +181,63 @@ The LangGraph Proposal Agent employs a multi-component architecture centered aro
 
 ```mermaid
 graph TD
-    UI[User Interface] <--> API[API Layer - Express.js]
-    API <--> OR[Orchestrator Service]
-    OR <--> CK[Persistent Checkpointer]
-    OR <--> PG[ProposalGenerationGraph]
-    OR <--> EA[EditorAgent]
-
-    subgraph "LangGraph StateGraph"
-        PG --> LD[documentLoaderNode]
-        PG --> DR[deepResearchNode]
-        PG --> ER[evaluateResearchNode]
-        PG --> SS[solutionSoughtNode]
-        PG --> ES[evaluateSolutionNode]
-        PG --> CP[connectionPairsNode]
-        PG --> EC[evaluateConnectionsNode]
-        PG --> SM[sectionManagerNode]
-        PG --> SG[Section Generator Nodes]
-        PG --> SE[Section Evaluator Nodes]
+    subgraph "Frontend (Next.js)"
+        UI[User Interface]
+        SP[StreamProvider]
+        IP[InterruptProvider]
     end
+
+    subgraph "Backend (Node.js/Express)"
+        API[API Layer - Express.js]
+        OR[Orchestrator Service]
+        CK[Persistent Checkpointer]
+        EA[EditorAgent]
+    end
+
+    subgraph "LangGraph Agent (Separate Process/Server)"
+        LG_API[LangGraph API Endpoint]
+        PG[ProposalGenerationGraph]
+    end
+
+    UI <--> SP
+    SP <--> IP
+    SP <-->|Direct Stream| LG_API
+
+    UI -->|HTTP API Calls| API
+    API <--> OR
+    API <--> CK // Via Orchestrator or direct?
+    API <--> EA // Via Orchestrator
+
+    OR <--> CK
+    OR <-->|Manages| LG_API // Invokes runs, handles state outside graph flow
+
+    LG_API --> PG
 
     CK <--> DB[(PostgreSQL/Supabase)]
 
     classDef core fill:#f9f,stroke:#333;
     classDef graph fill:#bbf,stroke:#333;
     classDef storage fill:#bfb,stroke:#333;
+    classDef frontend fill:#ccf,stroke:#333;
+    classDef backend fill:#ffc,stroke:#333;
+    classDef langgraph fill:#cfc,stroke:#333;
 
-    class OR,CK,PG core;
-    class LD,DR,ER,SS,ES,CP,EC,SM,SG,SE graph;
+    class UI,SP,IP frontend;
+    class API,OR,CK,EA backend;
+    class LG_API,PG langgraph;
     class DB storage;
 ```
 
 ### Key Components
 
-1. **User Interface (UI)**: Frontend for user interactions (not part of this implementation).
-2. **API Layer**: Express.js REST API handling HTTP requests and authentication.
-3. **Orchestrator Service**: Core control unit managing workflow, state, and agent coordination.
-4. **Persistent Checkpointer**: State persistence layer using PostgreSQL/Supabase.
-5. **ProposalGenerationGraph**: LangGraph StateGraph defining the workflow.
-6. **EditorAgent**: Specialized service for handling revisions and edits.
-7. **Specialized Nodes**: Graph nodes for specific tasks (research, evaluation, generation).
+1.  **User Interface (UI)**: Frontend Next.js application.
+2.  **StreamProvider/InterruptProvider**: Frontend components managing the direct connection to the LangGraph stream.
+3.  **API Layer**: Express.js REST API handling HTTP requests, authentication, and calls to backend services _other than_ the chat stream.
+4.  **Orchestrator Service**: Core control unit managing workflow state (via Checkpointer), invoking agent runs, and coordinating non-stream actions.
+5.  **Persistent Checkpointer**: State persistence layer using PostgreSQL/Supabase.
+6.  **LangGraph API Endpoint**: The actual LangGraph server endpoint (`http://localhost:2024` currently) that handles stream requests.
+7.  **ProposalGenerationGraph**: LangGraph StateGraph defining the workflow, running within the LangGraph server process.
+8.  **EditorAgent**: Specialized service for handling revisions and edits, called via the Express API.
 
 ## 2. Key Technical Decisions
 

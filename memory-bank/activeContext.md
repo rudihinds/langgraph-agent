@@ -120,9 +120,12 @@ All components have been placed in `/apps/web/src/features/chat-ui/` under their
    - Integrated with authentication system for secure connections
 
 3. **Documentation**
+
    - Updated technical documentation to reflect Chat UI technologies
    - Added progress tracking for completed and in-progress tasks
    - Documented challenges and solutions for key integration points
+
+4. **Chat UI Connection Refactor**: Simplified the frontend-backend connection for chat streaming by adopting the direct connection pattern from `agent-chat-ui`, removing the API proxy layer. Corrected the placement of `StreamProvider` and `InterruptProvider` to be specific to the chat page.
 
 ### Active Decisions
 
@@ -143,21 +146,13 @@ All components have been placed in `/apps/web/src/features/chat-ui/` under their
    - Efficient DOM updates through key-based rendering
    - Debounced operations for frequent state changes
 
-### Next Steps
-
-Our immediate priorities are:
-
-1. Complete the integration testing with the LangGraph backend
-2. Finalize the tool call handling interface
-3. Optimize streaming performance for long-running processes
-4. Implement persistent thread storage with Supabase
-
 ### Key Insights
 
 - Real-time communication between frontend and LangGraph requires careful state synchronization
 - Authentication must be handled consistently across both systems
 - Error recovery strategies are essential for streaming connections
 - Thread history persistence needs both local and server-side storage for optimal user experience
+- Direct connection to the LangGraph streaming endpoint simplifies the frontend architecture compared to the API passthrough pattern, aligning with reference examples.
 
 ## Node Status
 
@@ -661,3 +656,73 @@ The integration is organized into four phases:
 - Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes
 - Robust state management, HITL, and persistence are in place
 - Project is on track for backend integration and final polish phases
+
+## Recent Changes & Learnings (Backend - LangGraph Checkpointer & Auth)
+
+We successfully resolved several critical errors preventing the creation of LangGraph threads via the backend API:
+
+1.  **Checkpointer Factory Usage:**
+
+    - **Problem:** Incorrect `SupabaseCheckpointer` instantiation in `checkpointer.service.ts` and potentially other places, bypassing the factory.
+    - **Solution:** Modified the `POST /api/langgraph/threads` handler in `api/langgraph/index.ts` to exclusively use the `createCheckpointer` function from `lib/persistence/checkpointer-factory.ts`.
+    - **Learning:** The factory pattern is crucial for ensuring correct checkpointer setup (Supabase client initialization, adapter wrapping, env checks).
+
+2.  **Supabase Schema Mismatch (`data` vs `checkpoint_data`):**
+
+    - **Problem:** The code (`SupabaseCheckpointer`) attempted to write to a `data` column, but the database migration (`create_persistence_tables.sql`) defined it as `checkpoint_data`.
+    - **Solution:** Updated `SupabaseCheckpointer.put` and `SupabaseCheckpointer.get` to use the correct `checkpoint_data` column name.
+    - **Learning:** Code interacting with the database must strictly adhere to the column names defined in the SQL migration scripts.
+
+3.  **Supabase Schema Mismatch (`size_bytes` column):**
+
+    - **Problem:** The code (`SupabaseCheckpointer.put`) attempted to write to a `size_bytes` column which was not defined in the database migration.
+    - **Solution:** Removed the `size_bytes` field from the `upsert` operation in `SupabaseCheckpointer.put`.
+    - **Learning:** Ensure all database columns used in code are present in the corresponding migration scripts.
+
+4.  **Incorrect User ID for Checkpointer:**
+
+    - **Problem:** The `POST /threads` API handler was passing the string `assistant_id` ("proposal-agent") as the `userId` to the checkpointer factory, causing a UUID type error during database insertion.
+    - **Solution:** Implemented logic in the `POST /threads` handler to retrieve the _actual_ authenticated user's UUID using `@supabase/ssr` (`createServerClient`) and pass _that_ UUID to the checkpointer factory.
+    - **Learning:** The checkpointer requires the _authenticated user's UUID_ for RLS and proper data association, not an arbitrary identifier like `assistant_id`.
+
+5.  **Missing `cookie-parser` Middleware:**
+    - **Problem:** The server-side Supabase Auth client (`createServerClient`) failed because it couldn't read cookies from the Express request (`req.cookies` was undefined).
+    - **Solution:** Installed `cookie-parser` and added `app.use(cookieParser())` to the middleware stack in `server.ts` _before_ the API routes.
+    - **Learning:** Express requires the `cookie-parser` middleware to populate `req.cookies`, which is essential for server-side cookie-based authentication flows like Supabase SSR.
+
+## Current Status
+
+- **Thread Creation:** The `POST /api/langgraph/threads` endpoint is now **working correctly**. It successfully authenticates the user (via cookies), creates a new thread ID, and persists the initial checkpoint state to the Supabase `proposal_checkpoints` table using the correct user ID and schema.
+- **Frontend Connection:** The frontend (`StreamProvider`) successfully connects to the `/api/langgraph/info` endpoint and receives the new `thread_id` from the successful `POST /threads` call.
+- **Remaining Issue:** There's a persistent TypeScript linter error in `apps/backend/server.ts` related to the `app.use(cookieParser())` line, despite the code functioning correctly at runtime. This needs investigation but isn't currently blocking functionality.
+
+## Next Steps
+
+1.  Implement the `POST /threads/:thread_id/runs` endpoint in `apps/backend/api/langgraph/index.ts` to handle sending messages/inputs to the LangGraph instance.
+2.  Implement the frontend logic to call the `/runs` endpoint when the user sends a message.
+3.  Implement frontend handling of state updates received from the graph (likely via SSE or WebSockets, which needs defining in the backend `/runs` endpoint or a separate streaming endpoint).
+4.  Investigate and resolve the lingering TypeScript linter error in `server.ts`.
+
+## Refactoring Chat UI Connection (Completed)
+
+We have successfully refactored the Chat UI connection mechanism to align with the simpler pattern demonstrated in the `agent-chat-ui` reference implementation.
+
+### Key Changes
+
+✅ **Direct LangGraph Connection**: The frontend `StreamProvider` now connects directly to the LangGraph API endpoint specified by `NEXT_PUBLIC_API_URL` (currently `http://localhost:2024`).
+✅ **API Proxy Route Removed**: The intermediate Next.js API passthrough route (`/api/langgraph/[...path]/route.ts`) has been commented out as it's no longer needed for chat streaming. It might be repurposed later for other authenticated LangGraph interactions if necessary.
+✅ **Provider Structure Corrected**: The `StreamProvider` and `InterruptProvider` are now correctly nested within the `/dashboard/chat` page component (`apps/web/app/dashboard/chat/page.tsx`), ensuring they are only active when viewing the chat interface. They have been removed from the root layout (`apps/web/app/layout.tsx`).
+✅ **Configuration Updated**: The `.env.local` file has been updated with `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_ASSISTANT_ID`.
+
+### Current Status
+
+- Basic chat functionality is operational. Messages sent from the UI are received by the LangGraph backend, and initial state/value updates are streamed back.
+- The UI correctly displays the chat interface only on the `/dashboard/chat` route, resolving the previous issue of providers being active globally.
+
+### Next Steps
+
+1. **Thorough Testing**: Test various chat interactions, including long conversations, tool calls, and interruptions, to ensure the direct connection is robust.
+2. **Message Display**: Verify that all message types (human, AI, tool calls, tool results, interrupts) are correctly parsed and displayed by the `Thread` component using the streamed data.
+3. **Authentication**: Ensure that if the direct LangGraph endpoint requires authentication, the necessary tokens are being passed correctly (needs verification based on backend setup).
+4. **Error Handling**: Improve error handling within `StreamProvider` for connection issues or backend errors.
+5. **Continue Core Agent Implementation**: Resume work on the `ProposalGenerationGraph` nodes (Problem Statement, Methodology, etc.).

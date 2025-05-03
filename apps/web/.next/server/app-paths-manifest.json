@@ -1,5 +1,6 @@
 {
-  "/api/langgraph/[...path]/route": "app/api/langgraph/[...path]/route.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/chat/page": "app/dashboard/chat/page.js"
 }

@@ -53,7 +53,8 @@
 
 - **Supabase:**
 
-  - Auth: User authentication and session management
+  - Auth: User authentication and session management.
+    - **Express Integration:** Requires `cookie-parser` middleware in `server.ts` for server-side authentication using `@supabase/ssr`'s `createServerClient`. The client needs custom `cookies` options using `req.cookies` and `res.cookie`/`res.clearCookie`.
   - Database: PostgreSQL for persistent storage
   - Row-Level Security: Ensures users can only access their own data
   - Used for storing LangGraph checkpoints and proposal data
@@ -119,7 +120,7 @@
   - **LangGraph Adapters:**
     - `LangGraphCheckpointer`: Adapts `SupabaseCheckpointer` to implement `BaseCheckpointSaver`
     - `MemoryLangGraphCheckpointer`: Adapts `InMemoryCheckpointer` to implement `BaseCheckpointSaver`
-  - **Factory Function:** `createCheckpointer()` in `checkpointer.service.ts` creates properly configured checkpointer instances based on environment
+  - **Factory Function:** `createCheckpointer()` in `lib/persistence/checkpointer-factory.ts` MUST be used to create properly configured checkpointer instances based on environment (Supabase or in-memory fallback) and user context.
   - **This adapter pattern isolates our storage logic from LangGraph's interface requirements, making our system more resilient to API changes**
 
 - **Checkpointer Usage:** Passed during graph compilation: `graph.compile({ checkpointer })`
