@@ -269,3 +269,98 @@ Implement more granular permissions for different graph operations:
 - [LangGraph Authentication Documentation](https://langchain-ai.github.io/langgraphjs/how-tos/auth/custom_auth/)
 - [Supabase JWT Documentation](https://supabase.com/docs/learn/auth-deep-dive/auth-deep-dive-jwts)
 - [JSON Web Token Best Practices](https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/)
+
+## Frontend Interaction
+
+- The frontend uses Supabase client-side libraries (`@supabase/supabase-js`) to manage login, signup, and session state.
+- Authenticated requests from the frontend should automatically include the necessary cookies (`sb-*-auth-token`) managed by the Supabase client library.
+
+## Backend API (Express)
+
+### Token Verification & User ID Extraction
+
+- The backend Express server needs to read the auth token cookie sent by the frontend.
+- **Crucially, the `cookie-parser` middleware must be used in `server.ts` _before_ any routes that require authentication.**
+  ```typescript
+  // server.ts
+  import cookieParser from "cookie-parser";
+  // ... other imports
+  const app = express();
+  app.use(cookieParser()); // Use BEFORE your API routes
+  // ... mount routes ...
+  ```
+- The `@supabase/ssr` package provides `createServerClient` to handle cookie-based auth verification on the server.
+- In route handlers (e.g., `apps/backend/api/langgraph/index.ts`), create a server client instance, passing helper functions to access cookies from the Express `req` and `res` objects:
+
+  ```typescript
+  // Example in an Express route handler
+  import { createServerClient } from "@supabase/ssr";
+  import { Request, Response } from "express";
+  import { ENV } from "@/lib/config/env.js"; // Assuming ENV setup
+
+  async function handleRequest(req: Request, res: Response) {
+    let userId = "anonymous"; // Default
+    try {
+      const supabase = createServerClient(
+        ENV.SUPABASE_URL!,
+        ENV.SUPABASE_ANON_KEY!, // Use anon key for server client
+        {
+          cookies: {
+            get(key: string) {
+              return req.cookies[key];
+            },
+            set(key: string, value: string, options: any) {
+              res.cookie(key, value, options);
+            },
+            remove(key: string, options: any) {
+              res.clearCookie(key, options);
+            },
+          },
+        }
+      );
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        console.warn("Auth error getting user:", authError.message);
+      } else if (user?.id) {
+        userId = user.id; // Successfully retrieved the authenticated user's UUID
+        console.info(`Authenticated user ID found: ${userId}`);
+      } else {
+        console.warn("No authenticated user found.");
+      }
+    } catch (error: any) {
+      console.error(
+        "Error initializing Supabase client or getting user:",
+        error.message
+      );
+    }
+
+    // Now use the retrieved 'userId' (which is a UUID) for subsequent operations
+    // like creating checkpointers...
+    // const checkpointer = await createCheckpointer({ userId, ... });
+
+    // ... rest of route logic ...
+  }
+  ```
+
+### Protecting Routes
+
+- Implement middleware to verify authentication before allowing access to protected API endpoints.
+- This middleware would use the same `createServerClient` pattern to check for a valid user session.
+
+## Checkpointer Integration
+
+- The `SupabaseCheckpointer` (accessed via the `checkpointer-factory.ts`) requires the authenticated user's UUID.
+- The `userIdGetter` function passed during checkpointer creation should provide this UUID.
+- The factory and the API routes (like `POST /threads`) must correctly retrieve the UUID using the server-side auth flow described above before creating/using the checkpointer.
+- **Row Level Security (RLS)** policies are configured on the `proposal_checkpoints` table in Supabase (`create_persistence_tables.sql`) to ensure users can only access their own checkpoint data based on the `user_id` column matching `auth.uid()`.
+
+## Important Notes
+
+- Ensure `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment variables are correctly set for the backend.
+- The `SUPABASE_SERVICE_ROLE_KEY` is used by the checkpointer factory _internally_ when creating its own client for database writes, but the API routes should use the `ANON_KEY` for user session verification.
+- Mismatched or missing `cookie-parser` middleware will lead to errors when `createServerClient` tries to read cookies.

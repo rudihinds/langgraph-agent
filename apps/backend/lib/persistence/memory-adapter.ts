@@ -9,10 +9,15 @@ import {
   BaseCheckpointSaver,
   Checkpoint,
   CheckpointMetadata,
+  CheckpointSaved,
   type SupportedSerializers,
 } from "@langchain/langgraph";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { InMemoryCheckpointer } from "./memory-checkpointer.js";
+
+// Placeholder for ChannelVersions until import path is resolved
+// We will use 'any' for now
+type ChannelVersions = any;
 
 /**
  * MemoryLangGraphCheckpointer adapter class
@@ -36,10 +41,25 @@ export class MemoryLangGraphCheckpointer extends BaseCheckpointSaver {
    * Get a checkpoint by thread_id from config
    *
    * @param config The runnable configuration containing thread_id
-   * @returns The checkpoint if found, undefined otherwise
+   * @returns The checkpoint data wrapped as CheckpointSaved, or null if not found
    */
-  async get(config: RunnableConfig): Promise<Checkpoint | undefined> {
-    return this.checkpointer.get(config);
+  async get(config: RunnableConfig): Promise<CheckpointSaved | null> {
+    const checkpoint = await this.checkpointer.get(config);
+    const threadId = config.configurable?.thread_id;
+
+    if (checkpoint && threadId) {
+      return {
+        checkpoint: checkpoint,
+        metadata: {
+          source: "memory",
+          ts: new Date().toISOString(),
+          thread_id: threadId,
+        },
+        versions_seen: {},
+        pending_sends: [],
+      };
+    }
+    return null;
   }
 
   /**
@@ -55,20 +75,20 @@ export class MemoryLangGraphCheckpointer extends BaseCheckpointSaver {
     config: RunnableConfig,
     checkpoint: Checkpoint,
     metadata: CheckpointMetadata,
-    newVersions: unknown
+    newVersions: ChannelVersions
   ): Promise<RunnableConfig> {
     return this.checkpointer.put(config, checkpoint, metadata, newVersions);
   }
 
   /**
-   * List checkpoint namespaces matching a pattern
+   * List checkpoint namespaces (thread IDs) as RunnableConfig stubs.
    *
-   * @param match Optional pattern to match
-   * @param matchType Optional type of matching to perform
-   * @returns Array of namespace strings
+   * @param config Optional config (currently unused by underlying listNamespaces)
+   * @returns Array of RunnableConfig stubs containing thread IDs.
    */
-  async list(match?: string, matchType?: string): Promise<string[]> {
-    return this.checkpointer.listNamespaces(match, matchType);
+  async list(config?: RunnableConfig): Promise<RunnableConfig[]> {
+    const threadIds = await this.checkpointer.listNamespaces();
+    return threadIds.map((tid) => ({ configurable: { thread_id: tid } }));
   }
 
   /**
@@ -103,15 +123,12 @@ export class MemoryLangGraphCheckpointer extends BaseCheckpointSaver {
   }
 
   /**
-   * Delete a checkpoint
+   * Delete a checkpoint by thread_id from config.
    *
-   * @param config Config or thread ID
+   * @param config Config containing the thread_id
    */
-  async delete(config: RunnableConfig | string): Promise<void> {
-    const threadId =
-      typeof config === "string"
-        ? config
-        : (config?.configurable?.thread_id as string);
+  async delete(config: RunnableConfig): Promise<void> {
+    const threadId = config.configurable?.thread_id as string;
 
     if (threadId) {
       await this.checkpointer.delete(threadId);

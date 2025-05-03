@@ -157,7 +157,10 @@ lib/
 │   ├── __tests__/              # Persistence tests
 │   ├── migrations/             # Database migrations
 │   ├── supabase-checkpointer.ts # Supabase checkpointer
-│   └── memory-checkpointer.ts  # In-memory checkpointer
+│   ├── memory-checkpointer.ts  # In-memory checkpointer
+│   ├── langgraph-adapter.ts    # LangGraph adapter for SupabaseCheckpointer
+│   ├── memory-adapter.ts       # LangGraph adapter for InMemoryCheckpointer
+│   └── checkpointer-factory.ts # *** IMPORTANT: Use this factory to get checkpointer instances ***
 ├── supabase/                   # Supabase integration
 ├── types/                      # Shared type definitions
 └── utils/                      # Utility functions
@@ -561,25 +564,31 @@ apps/backend/
    - Use relative imports within a module
    - Use path aliases (`@/`) for importing from other modules or shared code
 
-2. **Testing**:
+2. **Checkpointer Usage**:
+
+   - **Always use the `createCheckpointer` factory function** located in `lib/persistence/checkpointer-factory.ts` to obtain checkpointer instances.
+   - Do not instantiate `SupabaseCheckpointer` or `LangGraphCheckpointer` directly outside the factory or its tests.
+   - The factory handles correct client setup and adapter wrapping.
+
+3. **Testing**:
 
    - Write tests for all components
    - Place tests in `__tests__/` directories next to the components they test
    - Use descriptive test names that explain the behavior being tested
 
-3. **Error Handling**:
+4. **Error Handling**:
 
    - Implement proper error handling and retries for LLM calls
    - Use the error handling utilities in `lib/llm/error-handlers.ts`
    - Log errors with appropriate context
 
-4. **State Management**:
+5. **State Management**:
 
    - Follow immutable patterns for state updates
    - Use typed interfaces for all state objects
    - Implement and test custom reducers thoroughly
 
-5. **Documentation**:
+6. **Documentation**:
    - Document complex functions with JSDoc comments
    - Maintain README files for each major directory
    - Update this document when making significant structural changes

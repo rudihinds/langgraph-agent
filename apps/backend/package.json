@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx --import ./register-paths.ts index.ts",
-    "dev:api": "tsx --import ./register-paths.ts server.js",
+    "dev": "tsx --import ./register-paths.ts server.ts",
+    "dev:api": "tsx --import ./register-paths.ts server.ts",
     "build": "tsc --project tsconfig.build.json && tsc-alias",
     "start": "node -r ./dist/src/register.js ../../dist/apps/backend/server.js",
     "langgraph": "node langgraph-start.mjs",
@@ -29,13 +29,17 @@
     "@langchain/mistralai": "^0.1.1",
     "@langchain/openai": "^0.5.5",
     "@supabase/supabase-js": "^2.49.4",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/uuid": "^10.0.0",
     "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "helmet": "^7.1.0",
     "supertest": "^6.3.3",
     "tsconfig-paths": "^4.2.0",
+    "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

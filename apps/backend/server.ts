@@ -1,115 +1,154 @@
 /**
  * Express server for the proposal generation API
+ * Manually implements endpoints compatible with LangGraph SDK
  */
 
-import express from "express";
+import express, { RequestHandler } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import fs from "fs";
+import { Request, Response, NextFunction } from "express"; // Import Express types
+import { BaseCheckpointSaver } from "@langchain/langgraph"; // Needed for type checking
+import type { CompiledStateGraph } from "@langchain/langgraph"; // Needed for type checking
+import { createServer } from "http";
 import { Logger } from "./lib/logger.js";
-import rfpRouter from "./api/rfp/index.js";
 import { createProposalGenerationGraph } from "./agents/proposal-generation/graph.js";
+import { createCheckpointer } from "./services/checkpointer.service.js";
+import rfpRouter from "./api/rfp/index.js";
+import { createLangGraphRouter } from "./api/langgraph/index.js"; // Import the factory function
+import { LangGraphCheckpointer } from "./lib/persistence/langgraph-adapter.js"; // For type checking
+import { MemoryLangGraphCheckpointer } from "./lib/persistence/memory-adapter.js"; // For type checking
+import cookieParser from "cookie-parser"; // Import cookie-parser
+import helmet from "helmet";
 
 // Initialize logger
 const logger = Logger.getInstance();
 
-// Set up file paths for configuration
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const configPath = join(__dirname, "..", "..", "langgraph.json");
+// --- Global instances (will be initialized async) ---
+let graphInstance: CompiledStateGraph<any, any, any> | null = null;
+let checkpointerInstance:
+  | LangGraphCheckpointer
+  | MemoryLangGraphCheckpointer
+  | null = null;
+// ------------------------------------------
 
 // Create Express application
 const app = express();
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+app.use(helmet());
 
-// Logging middleware
+// Enable CORS
+// TODO: Configure allowed origins properly for production
+app.use(cors({ origin: true, credentials: true }));
+
+// Parse cookies
+app.use(cookieParser());
+
+// Logging middleware (before body parsing)
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`);
+  // Log basic request info and headers
+  logger.info(`Request Received: ${req.method} ${req.url}`);
+  logger.debug("Request Headers:", req.headers);
+  // Cannot easily log body here without consuming the stream
   next();
 });
 
-// Mount routers
-app.use("/api/rfp", rfpRouter);
+// Body Parsing Middleware
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+// Logging middleware (after body parsing)
+app.use((req, res, next) => {
+  // Log the parsed body (if any)
+  logger.debug("Request Body (after bodyParser.json):", req.body);
+  next();
 });
 
-// ===== LangGraph Integration =====
-try {
-  // Read the LangGraph configuration
-  const configExists = fs.existsSync(configPath);
-  if (configExists) {
-    const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-    logger.info(`LangGraph configuration loaded from: ${configPath}`);
+// ===== Initialize LangGraph Components =====
+async function initializeLangGraph() {
+  try {
+    logger.info("Initializing LangGraph components...");
+    graphInstance = await createProposalGenerationGraph();
+    logger.info("Proposal generation graph initialized.");
+    checkpointerInstance = await createCheckpointer("proposal-agent");
+    logger.info("Checkpointer service initialized.");
+    logger.info("LangGraph components initialized successfully.");
 
-    // Create the proposal generation graph
-    const graph = createProposalGenerationGraph();
+    // Ensure instances are not null before proceeding
+    if (!graphInstance || !checkpointerInstance) {
+      throw new Error("Graph or Checkpointer failed to initialize.");
+    }
 
-    // Add LangGraph endpoints
-    app.post("/api/langgraph/run", async (req, res) => {
-      try {
-        const { input } = req.body;
-        logger.info("Running LangGraph with input:", input);
-        const result = await graph.invoke(input);
-        res.json({ output: result });
-      } catch (error) {
-        logger.error("Error running graph:", error);
-        res.status(500).json({ error: error.message });
+    // --- Mount Routers AFTER initialization ---
+    logger.info("Mounting API routers...");
+
+    // Mount other specific routers first
+    app.use("/api/rfp", rfpRouter);
+    logger.info("Mounted /api/rfp router.");
+
+    // Create and mount the LangGraph router using the factory
+    const langgraphRouter = createLangGraphRouter({
+      graphInstance,
+      checkpointerInstance,
+    });
+    app.use("/api/langgraph", langgraphRouter);
+    logger.info("Mounted /api/langgraph router.");
+
+    // Health check can be mounted any time
+    app.get("/api/health", (req, res) => {
+      logger.info("GET /api/health called");
+      res.status(200).json({ status: "ok" });
+    });
+    logger.info("Mounted /api/health route.");
+
+    // --- Setup Catch-all and Error Handling AFTER routers ---
+    // Catch-all for 404 Not Found (should be after all other routes)
+    app.use((req, res, next) => {
+      if (!res.headersSent) {
+        logger.warn(`404 Not Found: ${req.method} ${req.originalUrl}`);
+        res.status(404).json({ error: "Not Found" });
       }
     });
 
-    logger.info("LangGraph routes initialized at /api/langgraph/run");
-  } else {
-    logger.warn(`LangGraph configuration not found at: ${configPath}`);
+    // Error Handling Middleware (should be last)
+    app.use(
+      (
+        err: Error,
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction
+      ) => {
+        logger.error("Unhandled Express error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Internal Server Error" });
+        }
+      }
+    );
+    logger.info("Error handling middleware configured.");
+  } catch (error) {
+    logger.error("FATAL: Failed during initialization or router setup:", error);
+    process.exit(1);
   }
-} catch (error) {
-  logger.error(`Error initializing LangGraph: ${error.message}`);
 }
 
-// Error handler
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    logger.error(`Error processing request: ${err.stack || err.message}`);
-    res.status(500).json({
-      error: "Internal Server Error",
-      message:
-        process.env.NODE_ENV === "production"
-          ? "An unexpected error occurred"
-          : err.message,
-    });
-  }
-);
+// --- Start Server AFTER Initialization ---
+async function startServer() {
+  await initializeLangGraph(); // Wait for initialization to complete
 
-// 404 handler
-app.use((req, res) => {
-  logger.info(`Route not found: ${req.method} ${req.path}`);
-  res.status(404).json({
-    error: "Not Found",
-    message: "The requested endpoint does not exist",
+  const PORT = process.env.PORT || 3001;
+  const server = createServer(app); // Use Express app with http server
+
+  server.listen(PORT, () => {
+    logger.info(`Server running at http://localhost:${PORT}`);
+    logger.info("Available base API paths:");
+    logger.info("- /api/health");
+    logger.info("- /api/rfp");
+    logger.info("- /api/langgraph");
   });
-});
+}
 
-// Start server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  logger.info(`Server running at http://localhost:${PORT}`);
-  logger.info("Available endpoints:");
-  logger.info("  GET /api/health");
-  logger.info("  POST /api/rfp/start");
-  logger.info("  POST /api/rfp/feedback");
-  logger.info("  POST /api/rfp/resume");
-  logger.info("  GET /api/rfp/interrupt-status");
-  logger.info("  POST /api/langgraph/run");
+// --- Run the Server Start Process ---
+startServer().catch((err) => {
+  logger.error("Failed to start server:", err);
+  process.exit(1);
 });

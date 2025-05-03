@@ -1,6 +1,33 @@
 {
   "version": 3,
   "middleware": {},
-  "functions": {},
+  "functions": {
+    "/api/langgraph/[...path]/route": {
+      "files": [
+        "server/server-reference-manifest.js",
+        "server/app/api/langgraph/[...path]/route_client-reference-manifest.js",
+        "server/middleware-build-manifest.js",
+        "server/middleware-react-loadable-manifest.js",
+        "server/next-font-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/app/api/langgraph/[...path]/route.js"
+      ],
+      "name": "app/api/langgraph/[...path]/route",
+      "page": "/api/langgraph/[...path]/route",
+      "matchers": [
+        {
+          "regexp": "^/api/langgraph/(?<path>.+?)$",
+          "originalSource": "/api/langgraph/[...path]"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "development",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "6d07AbNTVScsLLJmXT33+GdW/hXDV8iNmUQU7a3PIzQ="
+      }
+    }
+  },
   "sortedMiddleware": []
 }
