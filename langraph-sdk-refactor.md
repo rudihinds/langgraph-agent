@@ -10,6 +10,49 @@ Modify the `apps/backend` API to align with the standard endpoints expected by t
 2.  **API Passthrough:** The Next.js passthrough route proxies `/api/langgraph/*` to `LANGGRAPH_API_URL`, assuming standard endpoints at the backend's root.
 3.  **Current Backend:** Serves relevant logic under `/rfp`, which is incompatible with SDK/passthrough expectations.
 
+## Required Resources
+
+To implement this refactor, the following files and information are needed:
+
+**Backend (`apps/backend`):**
+
+- **Express Server Setup:**
+  - `server.ts`
+  - `api/express-server.ts` (if exists, else check `server.ts`/`api/index.ts`)
+  - `api/index.ts`
+- **Current API Implementation (`/rfp` routes):**
+  - `api/rfp/index.ts`
+  - `api/rfp/express-handlers/start.js`
+  - `api/rfp/feedback.ts`
+  - `api/rfp/resume.ts`
+  - `api/rfp/interrupt-status.ts`
+  - `api/rfp/chat.ts`
+  - `api/rfp/thread.ts`
+- **LangGraph Graph Instance:**
+  - `agents/proposal-generation/graph.ts`
+  - `register-agent-graphs.ts` (if exists)
+  - `services/orchestrator.service.ts` (or wherever graph is instantiated/used)
+- **Checkpointer Implementation:**
+  - `services/checkpointer.service.ts`
+  - `lib/persistence/checkpointer-factory.ts` (if exists)
+  - `lib/persistence/supabase-checkpointer.ts`
+  - `lib/persistence/ICheckpointer.ts`
+- **Authentication/Middleware:**
+  - `lib/middleware/langraph-auth.ts` (if exists)
+  - `lib/supabase/auth-utils.ts`
+  - `lib/supabase/server.ts`
+- **LangGraph Documentation:**
+  - Latest official LangGraph.js documentation on integrating with existing Express servers (confirm function like `createLangGraphServer`, `addRoutes`, etc.).
+
+**Frontend (`apps/web`):**
+
+- **Environment Configuration:**
+  - `.env.*` files (for `NEXT_PUBLIC_API_URL`)
+- **API Passthrough Route:**
+  - `app/api/langgraph/[...path]/route.ts`
+- **Streaming Hook Usage:**
+  - `src/features/chat-ui/providers/StreamProvider.tsx`
+
 ## Refactoring Plan
 
 1.  **Integrate Standard LangGraph Server:**
@@ -27,8 +70,8 @@ Modify the `apps/backend` API to align with the standard endpoints expected by t
 
 3.  **Verify Environment Variables:**
 
-    - **Action:** Ensure `LANGGRAPH_API_URL` in `apps/web/.env` points to the backend _root_ (e.g., `http://localhost:8000`), not `/rfp`.
-    - **Rationale:** Correct configuration for the passthrough.
+    - **Action:** Ensure `NEXT_PUBLIC_API_URL` in `apps/web` (used by the passthrough) points to the backend _root_ (e.g., `http://localhost:3001`), not a subpath.
+    - **Rationale:** Correct configuration for the passthrough and SDK.
 
 4.  **Testing:**
     - **Action:** Test frontend (`apps/web`) against the refactored backend. Verify thread creation, streaming, state updates, HITL, and any remaining custom logic.
@@ -40,5 +83,5 @@ Modify the `apps/backend` API to align with the standard endpoints expected by t
 
 ## Alternatives (Not Recommended)
 
-- **Configuring Passthrough Prefix:** Setting `LANGGRAPH_API_URL` to include `/rfp` for the passthrough.
+- **Configuring Passthrough Prefix:** Setting `NEXT_PUBLIC_API_URL`'s _path_ to include `/rfp` for the passthrough.
   - **Downsides:** Still requires backend implementation of standard endpoints under `/rfp`, potentially brittle if SDK expects root paths for some operations (like `/info`), deviates from standard practice.
