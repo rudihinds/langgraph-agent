@@ -204,25 +204,21 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 ## Next Steps
 
-- Implement Section Generation Phase:
+1. Backend integration for real-time chat and tool call handling
+2. Finalize Agent Inbox and tool call UI
+3. Integrate Supabase Auth for API access
+4. Add comprehensive tests for all chat UI components
+5. Implement error handling and loading states in the chat UI
+6. Resolve linter errors and ensure design consistency
+7. Improve responsiveness and accessibility
+8. Formalize and implement section-specific evaluation criteria
+9. Implement user-specific thread filtering and management
 
-  - Develop `sectionManagerNode` to coordinate section generation
-  - Implement individual section generation nodes
-  - Integrate evaluation nodes for each section
-  - Create section-specific evaluation criteria
+## Insights
 
-- Complete Checkpoint Integration & Interrupt Handling
-  - Create Supabase Checkpointer
-  - Standardize interrupt metadata
-  - Enhance Orchestrator's resume logic
-
-## Known Issues
-
-- Section generation nodes need to be implemented according to the established patterns
-- Evaluation criteria for sections need to be defined
-- Graph routing logic needs to be updated to support the complete workflow
-
-_This document should be updated whenever significant progress is made on the project._
+- Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes
+- Robust state management, HITL, and persistence are in place
+- Project is on track for backend integration and final polish phases
 
 # Progress
 

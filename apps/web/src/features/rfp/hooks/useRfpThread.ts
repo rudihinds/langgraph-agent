@@ -66,8 +66,16 @@ export function useRfpThread() {
   const authFetch = useCallback(
     async (url: string, options: RequestInit = {}) => {
       if (!session?.access_token) {
+        console.log(
+          "[RFP Thread] Auth fetch failed: No access token available"
+        );
         throw new Error("No authentication token available");
       }
+
+      console.log(`[RFP Thread] Making authenticated request to: ${url}`);
+      console.log(
+        `[RFP Thread] Auth token present: ${session.access_token ? "Yes (first 10 chars: " + session.access_token.substring(0, 10) + "...)" : "No"}`
+      );
 
       return fetch(url, {
         ...options,
@@ -87,17 +95,26 @@ export function useRfpThread() {
   const getOrCreateThread = useCallback(
     async (rfpId: string): Promise<ThreadResponse> => {
       try {
+        console.log(
+          `[RFP Thread] Getting or creating thread for RFP: ${rfpId}`
+        );
         setError(null);
         setIsLoading(true);
 
         // Check cache first
         if (threadCache[rfpId]) {
+          console.log(
+            `[RFP Thread] Using cached thread ID: ${threadCache[rfpId]}`
+          );
           return {
             threadId: threadCache[rfpId],
             isNew: false,
           };
         }
 
+        console.log(
+          `[RFP Thread] No cache hit, calling API: ${API_ENDPOINTS.THREAD_BY_ID(rfpId)}`
+        );
         const response = await authFetch(API_ENDPOINTS.THREAD_BY_ID(rfpId));
 
         // Check for token refresh header
@@ -106,25 +123,35 @@ export function useRfpThread() {
         );
         if (refreshRecommended === "true") {
           // We should notify that token needs refresh
-          console.warn("Token refresh recommended");
+          console.warn("[RFP Thread] Token refresh recommended");
           // Implement token refresh logic here if needed
         }
 
         if (!response.ok) {
           const errorData = await response.json();
+          console.error(
+            `[RFP Thread] API error: ${errorData.message || "Failed to get thread"}`
+          );
           throw new Error(errorData.message || "Failed to get thread");
         }
 
         const result = await response.json();
+        console.log(`[RFP Thread] Thread API response:`, result);
 
         // Cache the result
         threadCache[rfpId] = result.threadId;
+        console.log(
+          `[RFP Thread] Cached thread ID: ${result.threadId} for RFP: ${rfpId}`
+        );
 
         return result;
       } catch (err: unknown) {
         // If we get an error, generate a fallback thread ID to prevent loops
-        console.warn("Could not get thread, using fallback:", err);
+        console.warn("[RFP Thread] Could not get thread, using fallback:", err);
         const fallbackThreadId = generateDummyThreadId(rfpId);
+        console.log(
+          `[RFP Thread] Generated fallback thread ID: ${fallbackThreadId}`
+        );
 
         // Add to cache to prevent further requests
         threadCache[rfpId] = fallbackThreadId;

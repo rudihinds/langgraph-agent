@@ -41,6 +41,16 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Info endpoint for LangGraph client
+app.get("/info", (req, res) => {
+  res.json({
+    status: "ok",
+    name: "LangGraph Agent API",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Global error handler
 app.use(
   (
@@ -69,7 +79,7 @@ app.use((req, res) => {
     error: "Not found",
     message: "The requested endpoint does not exist",
   });
-  });
+});
 
 // Export the configured app
 export { app };

@@ -11,71 +11,11 @@ import ProposalTypeModal, {
 import { ProposalGrid } from "@/features/dashboard/components/ProposalGrid";
 import { ProposalCard } from "@/features/dashboard/components/ProposalCard";
 import NewProposalCard from "@/features/dashboard/components/NewProposalCard";
-import {
-  getUserProposals,
-  Proposal,
-} from "@/features/proposals/api/proposals";
-import DashboardSkeleton from "@/features/dashboard/components/DashboardSkeleton";  
+import { getUserProposals, Proposal } from "@/features/proposals/api/proposals";
+import { calculateProgress } from "@/features/proposals/utils/calculations";
+import DashboardSkeleton from "@/features/dashboard/components/DashboardSkeleton";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
-
-// Dummy proposal data for testing
-const dummyProposals: Proposal[] = [
-  {
-    id: "1",
-    title: "Community Health Initiative",
-    organization: "Health Foundation",
-    status: "in_progress",
-    progress: 65,
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    phase: "research",
-    dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "2",
-    title: "Youth Education Program",
-    organization: "Education for All",
-    status: "draft",
-    progress: 25,
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    phase: "planning",
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    title: "Environmental Conservation Project",
-    organization: "Green Earth",
-    status: "completed",
-    progress: 100,
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    phase: "final",
-  },
-  {
-    id: "4",
-    title: "Tech Innovation Grant",
-    organization: "Future Tech Foundation",
-    status: "submitted",
-    progress: 100,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    phase: "review",
-    dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "5",
-    title: "Urban Development Initiative",
-    organization: "City Planning Commission",
-    status: "in_progress",
-    progress: 45,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    phase: "development",
-    dueDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -86,8 +26,6 @@ export default function DashboardPage() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
-  // Toggle for testing empty vs populated states
-  const [showDummyData, setShowDummyData] = useState(true);
   // State for announcement banner visibility
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
@@ -107,33 +45,43 @@ export default function DashboardPage() {
       async function fetchProposals() {
         try {
           setIsDataLoading(true);
-          // Simulate API call
-          setTimeout(() => {
-            setProposals(showDummyData ? dummyProposals : []);
-            setDataError(null);
-            setIsDataLoading(false);
-          }, 1000);
+          // Fetch real proposals from the API
+          const data = await getUserProposals();
 
-          // Uncomment to use real API once it's working
-          // const data = await getUserProposals();
-          // setProposals(data);
-          // setDataError(null);
+          // Map the API response to match the Proposal type used in the UI
+          const formattedProposals = data.map((proposal: any) => {
+            return {
+              id: proposal.id,
+              title: proposal.title || "Untitled Proposal",
+              organization: proposal.organization || undefined,
+              status: proposal.status || "draft",
+              progress: calculateProgress(proposal) || 0,
+              createdAt: proposal.created_at,
+              updatedAt: proposal.updated_at || proposal.created_at,
+              phase: proposal.phase || "planning",
+              dueDate: proposal.due_date || undefined,
+            };
+          });
+
+          setProposals(formattedProposals);
+          setDataError(null);
         } catch (err) {
           console.error("Error fetching proposals:", err);
           setDataError("Failed to load proposals");
+        } finally {
           setIsDataLoading(false);
         }
       }
 
       fetchProposals();
     }
-  }, [user, showDummyData]);
+  }, [user]);
 
   // Handlers for proposal actions
   const handleEditProposal = (id: string) => {
     console.log(`Edit proposal ${id}`);
     // Navigate to edit page
-    window.location.href = `/proposals/${id}`;
+    router.push(`/proposals/${id}`);
   };
 
   const handleDeleteProposal = (id: string) => {
@@ -144,11 +92,6 @@ export default function DashboardPage() {
   const handleExportProposal = (id: string) => {
     console.log(`Export proposal ${id}`);
     // Implement export functionality
-  };
-
-  // Toggle between empty and populated states
-  const toggleDummyData = () => {
-    setShowDummyData(!showDummyData);
   };
 
   // Handle proposal type selection
@@ -204,13 +147,6 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={toggleDummyData}
-              className="gap-1"
-            >
-              {showDummyData ? "Show Empty State" : "Show Proposals"}
-            </Button>
             <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
               <PlusIcon className="w-4 h-4" />
               New Proposal
@@ -273,13 +209,6 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={toggleDummyData}
-              className="gap-1"
-            >
-              {showDummyData ? "Show Empty State" : "Show Proposals"}
-            </Button>
             <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
               <PlusIcon className="w-4 h-4" />
               New Proposal
@@ -341,9 +270,6 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={toggleDummyData} className="gap-1">
-            {showDummyData ? "Show Empty State" : "Show Proposals"}
-          </Button>
           <Button className="gap-1" onClick={() => setIsTypeModalOpen(true)}>
             <PlusIcon className="w-4 h-4" />
             New Proposal

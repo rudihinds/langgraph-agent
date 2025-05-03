@@ -635,3 +635,29 @@ The integration is organized into four phases:
 3. User-specific thread access control
 4. Graceful error handling
 5. Comprehensive test coverage
+
+## Chat UI Integration and Backend Progress (2024-06)
+
+- Phase 2 of Chat UI integration is complete: all UI components and utilities are implemented in their correct locations. Linter errors remain due to missing dependencies (e.g., @/components/ui/tooltip, @/components/ui/button, @/lib/utils), to be resolved in the next phase.
+- Backend integration, tool call handling, and UI polish are the next focus areas.
+- Core research and section generation nodes are implemented and tested, following AGENT_ARCHITECTURE.md and AGENT_BASESPEC.md.
+- Orchestrator and graph now support rfpId and userId for multi-tenant, document-specific workflows.
+- Supabase Auth SSR integration is robust and follows best practices (getAll/setAll, getUser()).
+
+## Next Steps
+
+1. Backend integration for real-time chat and tool call handling
+2. Finalize Agent Inbox and tool call UI
+3. Integrate Supabase Auth for API access
+4. Add comprehensive tests for all chat UI components
+5. Implement error handling and loading states in the chat UI
+6. Resolve linter errors and ensure design consistency
+7. Improve responsiveness and accessibility
+8. Formalize and implement section-specific evaluation criteria
+9. Implement user-specific thread filtering and management
+
+## Insights
+
+- Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes
+- Robust state management, HITL, and persistence are in place
+- Project is on track for backend integration and final polish phases

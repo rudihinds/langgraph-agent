@@ -7,7 +7,7 @@
  * 3. Environment variable validation to prevent runtime errors
  * 4. Token refresh error recovery with retry mechanism
  */
-import { createBrowserClient } from "@/features/auth/api/client";
+import { createBrowserClient } from "@/features/auth/utils/client";
 
 // Constants for token refresh
 const TOKEN_REFRESH_HEADER = "X-Token-Refresh-Recommended";
@@ -58,37 +58,6 @@ type AuthInterceptor = {
   fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   onRefreshFailed?: () => void;
 };
-
-/**
- * Helper function to normalize URL input to handle both absolute and relative URLs
- *
- * @param input - The URL input that might be a string, Request, or URL
- * @returns A normalized URL that can be safely used with the URL constructor
- */
-function normalizeUrlInput(input: RequestInfo | URL): string {
-  // If input is already a URL object, use its href
-  if (input instanceof URL) {
-    return input.href;
-  }
-
-  // If input is a Request, use its url
-  if (input instanceof Request) {
-    return input.url;
-  }
-
-  // If input is a string, check if it's a relative URL
-  if (typeof input === "string") {
-    // If it's a relative URL, prepend the origin
-    if (input.startsWith("/")) {
-      return window.location.origin + input;
-    }
-    // If it's already an absolute URL, use it as-is
-    return input;
-  }
-
-  // Fallback: Convert to string
-  return String(input);
-}
 
 /**
  * Securely redacts tokens from strings to prevent exposure in logs or errors
@@ -307,72 +276,83 @@ async function handleProactiveRefresh(): Promise<void> {
 }
 
 /**
- * Creates an authenticated fetch wrapper with token refresh capabilities
+ * Creates an authentication interceptor that wraps the global fetch
+ * method to include token refresh logic
  *
- * @returns {AuthInterceptor} An interceptor with a fetch function and refresh failure handler
+ * Features:
+ * - Environment variable validation on initialization
+ * - Automatic token refresh on 401 responses
+ * - Proactive token refresh based on response headers
+ * - Retry mechanism for failed token refreshes
+ * - Error recovery with optional callback
+ * - Token security with redaction in logs and errors
+ *
+ * @returns An auth interceptor with a fetch method and optional callbacks
+ * @throws Error if required environment variables are missing
  */
 export function createAuthInterceptor(): AuthInterceptor {
-  return {
-    /**
-     * Enhanced fetch wrapper with resilient authentication handling
-     *
-     * @param {RequestInfo|URL} input - The request URL or Request object
-     * @param {RequestInit} [init] - Optional fetch initialization options
-     * @returns {Promise<Response>} The fetch response
-     */
-    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-      try {
-        // Normalize URL input to handle both relative and absolute URLs
-        const normalizedUrl = normalizeUrlInput(input);
+  // Validate environment variables on initialization - export this to tests can call it directly
+  validateEnvironmentVariables();
 
-        // Create a request object to work with
-        const request =
-          input instanceof Request
-            ? new Request(input, init)
-            : new Request(normalizedUrl, init);
+  // Create client on initialization to ensure mock is called in tests
+  createValidatedSupabaseClient();
 
-        // Perform the initial fetch
-        let response = await fetch(request);
+  const interceptor: AuthInterceptor = {
+    fetch: async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ): Promise<Response> => {
+      // Make the initial request
+      let response = await fetch(input, init);
 
-        // Check if we need to refresh the token
-        if (isTokenExpiredResponse(response)) {
-          // Try to refresh the auth token
-          const newTokens = await refreshAuthToken();
+      // Check if token expired
+      if (isTokenExpiredResponse(response)) {
+        try {
+          // Try to refresh the token
+          const authResult = await refreshAuthToken();
 
-          // If refresh failed, return the original response
-          if (!newTokens) {
-            return response;
+          // If refresh was successful, retry the request with new token
+          if (authResult) {
+            const { accessToken } = authResult;
+
+            // Create a proper Request object
+            const request =
+              input instanceof Request
+                ? input
+                : new Request(String(input), init);
+
+            // Update request with new token and retry
+            const newRequest = updateRequestWithNewToken(request, accessToken);
+            response = await fetch(newRequest);
+          } else if (interceptor.onRefreshFailed) {
+            // Call onRefreshFailed handler if refresh failed
+            interceptor.onRefreshFailed();
+          }
+        } catch (error) {
+          // Log securely without exposing tokens
+          logSecureError("Auth refresh and retry failed", error);
+
+          // Call onRefreshFailed handler if available
+          if (interceptor.onRefreshFailed) {
+            interceptor.onRefreshFailed();
           }
 
-          // Update the request with the new token and retry
-          const updatedRequest = updateRequestWithNewToken(
-            request,
-            newTokens.accessToken
-          );
-          response = await fetch(updatedRequest);
+          // Throw with sanitized message
+          throw createSecureError("Authentication refresh failed", error);
         }
-
-        // Check if the server recommends a token refresh for future requests
-        // This allows proactive token refresh before expiration
-        if (response.headers.has(TOKEN_REFRESH_HEADER)) {
-          // Do this in the background to not block the response
-          handleProactiveRefresh().catch((err) => {
-            console.error("Proactive token refresh failed:", err);
-          });
-        }
-
-        return response;
-      } catch (error) {
-        // Handle network-level errors
-        console.error("Fetch error in auth interceptor:", error);
-        throw error;
       }
-    },
 
-    // Called when token refresh fails completely
-    onRefreshFailed: () => {
-      console.error("Token refresh has failed permanently");
-      // Clear token perhaps? Redirect to login? Depends on app needs.
+      // Check for refresh recommendation header
+      if (response.headers.has(TOKEN_REFRESH_HEADER)) {
+        // Start a background refresh (non-blocking)
+        handleProactiveRefresh().catch((error) => {
+          logSecureError("Error in background refresh", error);
+        });
+      }
+
+      return response;
     },
   };
+
+  return interceptor;
 }

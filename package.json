@@ -6,17 +6,18 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd apps/backend && tsx watch --import ./register-paths.ts server.ts",
-    "dev:frontend": "cd apps/web && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
+    "dev:backend": "npm run dev -w @proposal-writer/backend",
+    "dev:web": "npm run dev -w @proposal-writer/web",
     "dev:agents": "NODE_OPTIONS=\"--loader ./apps/backend/langgraph-loader.mjs\" npx @langchain/langgraph-cli dev --port 2024 --config langgraph.json",
     "dev:agents:custom": "node apps/backend/langgraph-start.mjs",
     "dev:agents:auth": "cd apps/backend && tsx --import ./register-paths.ts langgraph-custom.ts",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "tsc -p apps/backend/tsconfig.json",
-    "build:frontend": "cd apps/web && npm run build",
+    "build": "npm run build -w @proposal-writer/backend && npm run build -w @proposal-writer/web",
+    "build:backend": "npm run build -w @proposal-writer/backend",
+    "build:web": "npm run build -w @proposal-writer/web",
     "start": "node dist/server.js",
-    "test": "vitest",
+    "start:all": "concurrently \"npm run langgraph\" \"cd apps/backend && npm run dev:api\"",
+    "test": "npm run test -w @proposal-writer/backend && npm run test -w @proposal-writer/web",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run --exclude '**/*.int.test.ts'",
     "test:integration": "exit 0 && echo 'Integration tests are currently disabled - to be fixed in a future PR'",
@@ -28,7 +29,8 @@
     "list": "node scripts/dev.js list",
     "generate": "node scripts/dev.js generate",
     "parse-prd": "node scripts/dev.js parse-prd",
-    "knip": "knip"
+    "knip": "knip",
+    "langgraph": "cd apps/backend && npm run langgraph"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

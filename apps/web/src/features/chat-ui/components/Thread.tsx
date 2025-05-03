@@ -16,14 +16,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { LayoutGrid } from "lucide-react";
 import useResizeObserver from "use-resize-observer";
+import { toast } from "sonner";
 
 const NoMessagesView = () => (
-  <div className="my-4 px-4 py-12 flex flex-col items-center w-full max-w-2xl gap-4 mx-auto">
-    <div className="w-12 h-12 rounded-full border border-slate-300 flex items-center justify-center">
-      <LayoutGrid className="h-6 w-6 text-slate-400" />
+  <div className="flex flex-col items-center w-full max-w-2xl gap-4 px-4 py-12 mx-auto my-4">
+    <div className="flex items-center justify-center w-12 h-12 border rounded-full border-slate-300">
+      <LayoutGrid className="w-6 h-6 text-slate-400" />
     </div>
     <div className="text-xl font-medium">No messages yet</div>
-    <div className="text-slate-500 text-center">
+    <div className="text-center text-slate-500">
       Start a conversation by typing a message below
     </div>
   </div>
@@ -100,6 +101,11 @@ export function Thread() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // Log availability of addMessage function
+  useEffect(() => {
+    console.log("[Thread] addMessage function available:", !!addMessage);
+  }, [addMessage]);
+
   // Handle interrupts
   useEffect(() => {
     if (!stateValue) return;
@@ -129,15 +135,41 @@ export function Thread() {
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
 
-    if (!inputValue.trim() || !addMessage) return;
+    if (!inputValue.trim()) {
+      return;
+    }
 
     const messageContent = inputValue;
     setInputValue("");
 
     try {
-      await addMessage(messageContent);
+      console.log("[Thread] Sending message:", messageContent);
+
+      // Use the stream.submit method directly
+      if (stream && typeof stream.submit === "function") {
+        console.log("[Thread] Using stream.submit to send message");
+
+        // Pass message as an object for the Stream API
+        await stream.submit({
+          message: messageContent,
+          type: "human",
+        });
+      } else {
+        console.error("[Thread] No method available to send messages", {
+          streamAvailable: !!stream,
+          submitAvailable: stream && typeof stream.submit === "function",
+        });
+        toast.error("Failed to send message", {
+          description:
+            "The chat connection is not ready. Please refresh the page.",
+        });
+      }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("[Thread] Error sending message:", error);
+      toast.error("Failed to send message", {
+        description:
+          "There was an error communicating with the AI service. Please try again.",
+      });
     }
   };
 
@@ -163,7 +195,7 @@ export function Thread() {
         {!messages || messages.length === 0 ? (
           <NoMessagesView />
         ) : (
-          <div className="flex flex-col gap-8 px-4 pb-4 max-w-4xl mx-auto w-full">
+          <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
             {messagesWithToolResponses.map((message, idx) => (
               <ChatMessage
                 key={message.id || `msg-${idx}`}
@@ -212,7 +244,7 @@ export function Thread() {
           "border-t border-border/50 bg-background/80 backdrop-blur"
         )}
       >
-        <div className="mx-auto max-w-4xl px-4 py-2">
+        <div className="max-w-4xl px-4 py-2 mx-auto">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <Textarea
               ref={inputRef}
@@ -228,7 +260,7 @@ export function Thread() {
                 "border-input"
               )}
             />
-            <div className="flex w-full justify-end">
+            <div className="flex justify-end w-full">
               <Button
                 type="submit"
                 size="sm"

@@ -11,7 +11,7 @@ import { z } from "zod";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ThreadService } from "../../services/thread.service.js";
 import { Logger } from "../../lib/logger.js";
-import { requireAuth } from "../../lib/middleware/auth.js";
+import { authMiddleware } from "../../lib/middleware/auth.js";
 
 // Extend the Express Request type to include auth properties
 interface AuthenticatedRequest extends Request {
@@ -88,7 +88,7 @@ function validateRfpId(req: Request, res: Response, next: NextFunction) {
  */
 router.get(
   "/:rfpId",
-  requireAuth,
+  authMiddleware,
   validateRfpId,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -133,7 +133,7 @@ router.get(
  */
 router.get(
   "/",
-  requireAuth,
+  authMiddleware,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       // Get authenticated user and Supabase client from request
@@ -170,7 +170,7 @@ router.get(
  */
 router.delete(
   "/:threadId",
-  requireAuth,
+  authMiddleware,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { threadId } = req.params;

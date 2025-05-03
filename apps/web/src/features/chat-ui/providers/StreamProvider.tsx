@@ -13,8 +13,6 @@ import React, {
   ReactNode,
   useState,
   useEffect,
-  useRef,
-  useCallback,
 } from "react";
 import { useStream } from "@langchain/langgraph-sdk/react";
 import { type Message } from "@langchain/langgraph-sdk";
@@ -25,332 +23,256 @@ import {
 } from "@langchain/langgraph-sdk/react-ui";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
-import { useAuth } from "@/features/auth/hooks/useAuth"; // Our auth hook
-import { useRfpThread } from "@/features/rfp/hooks/useRfpThread"; // Import our thread hook
-import { usePathname } from "next/navigation";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { usePathname, useSearchParams } from "next/navigation";
 import { getApiKey } from "@/lib/api-key";
-import { useSession } from "@/hooks/useSession";
 
-// Number of milliseconds to wait before refreshing
-const REFRESH_INTERVAL = 60000;
+export type StateType = { messages: Message[]; ui?: UIMessage[] };
 
-// Maximum number of initialization attempts
-const MAX_INIT_ATTEMPTS = 3;
+type StreamContextType = ReturnType<
+  typeof useStream<
+    StateType,
+    {
+      UpdateType: {
+        messages?: Message[] | Message | string;
+        ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
+      };
+      CustomEventType: UIMessage | RemoveUIMessage;
+    }
+  >
+>;
 
-// Token refresh buffer in seconds (refresh if less than 5 minutes left)
-const TOKEN_REFRESH_BUFFER = 300;
+// Create a context for the stream data
+export const StreamContext = createContext<StreamContextType | null>(null);
 
-export type StateType = {
-  messages: Message[];
-  ui?: UIMessage[];
-  rfpId?: string | null;
+// Create a custom hook to access the context
+export const useStreamContext = () => {
+  const context = useContext(StreamContext);
+  if (!context) {
+    throw new Error("useStreamContext must be used within a StreamProvider");
+  }
+  return context;
 };
 
-// Helper for typed stream
-function useTypedStream({
-  apiUrl,
-  assistantId,
-  apiKey,
-  threadId,
-  onThreadId,
-}: {
-  apiUrl: string;
-  assistantId: string;
-  apiKey: string | null;
-  threadId: string | null;
-  onThreadId?: (id: string) => void;
-}) {
-  return useStream<StateType>({
-    apiUrl,
-    assistantId,
-    threadId,
-    apiKey: apiKey ?? undefined,
-    onThreadId,
-  });
+// Helper to check if the API is available
+async function checkGraphStatus(apiUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${apiUrl}/info`);
+    return response.ok;
+  } catch (error) {
+    console.error("[StreamProvider] API check failed with error:", error);
+    return false;
+  }
 }
 
-type StreamContextType = ReturnType<typeof useTypedStream> & {
-  setInitialRfpId?: (id: string | null) => void;
-};
+// Props for the StreamProvider component
+interface StreamProviderProps {
+  children: ReactNode;
+  apiUrl?: string;
+  assistantId?: string;
+}
 
-const StreamContext = createContext<StreamContextType | undefined>(undefined);
-
+/**
+ * StreamProvider component
+ */
 export function StreamProvider({
   children,
-  initialRfpId,
-}: {
-  children: ReactNode;
-  initialRfpId?: string | null;
-}) {
-  // Add pathname check for chat pages
-  const pathname = usePathname();
-  const isChatPage =
-    pathname?.includes("/chat") ||
-    pathname?.includes("/proposal") ||
-    pathname?.includes("/rfp");
-
-  // Track the initialRfpId in state to allow updates from children
-  const [rfpId, setRfpId] = useState<string | null>(initialRfpId ?? null);
-
-  const { session } = useSession();
-  const [apiUrl] = useQueryState("apiUrl");
-  const [assistantId] = useQueryState("assistantId");
+  apiUrl: propApiUrl,
+  assistantId: propAssistantId,
+}: StreamProviderProps) {
+  // State for thread ID from URL
   const [threadId, setThreadId] = useQueryState("threadId");
-  const [threadInitialized, setThreadInitialized] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
-  const apiKey = getApiKey();
+  const [rfpId, setRfpId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
-  // Refs to track initialization state
-  const initialized = useRef(false);
-  const initializationCompletedRef = useRef(false);
-  const initAttemptCountRef = useRef(0);
-  const lastRefreshRef = useRef<null | number>(null);
-  const refresherRef = useRef<NodeJS.Timeout | null>(null);
+  // Check if we're on the chat page
+  const pathname = usePathname();
+  const isChatPage = pathname === "/dashboard/chat";
 
-  const stream = useTypedStream({
-    apiUrl: apiUrl ?? window.location.origin,
-    assistantId: assistantId ?? "agent",
-    apiKey: apiKey,
+  // Get API URL and assistant ID from props, environment variables, or defaults
+  const apiUrl =
+    propApiUrl || process.env.NEXT_PUBLIC_API_URL || "/api/langgraph";
+
+  const assistantId =
+    propAssistantId || process.env.NEXT_PUBLIC_ASSISTANT_ID || "proposal-agent";
+
+  // Check for rfpId in URL parameters when the component mounts
+  useEffect(() => {
+    const rfpIdFromUrl = searchParams.get("rfpId");
+    if (rfpIdFromUrl && !rfpId) {
+      console.log(`[ChatPage] Setting RFP ID from URL: ${rfpIdFromUrl}`);
+      setRfpId(rfpIdFromUrl);
+    }
+  }, [searchParams, rfpId]);
+
+  // Initialize the useStream hook with the LangGraph configuration
+  const stream = useStream<
+    StateType,
+    {
+      UpdateType: {
+        messages?: Message[] | Message | string;
+        ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
+      };
+      CustomEventType: UIMessage | RemoveUIMessage;
+    }
+  >({
+    apiUrl,
+    assistantId,
     threadId: threadId || null,
+    onCustomEvent: (event, options) => {
+      options.mutate((prev) => {
+        const ui = uiMessageReducer(prev.ui ?? [], event);
+        return { ...prev, ui };
+      });
+    },
     onThreadId: (id) => {
       if (id !== threadId) {
-        console.log(`Setting thread ID to ${id}`);
+        console.log(`[StreamProvider] Setting thread ID to ${id}`);
         setThreadId(id);
       }
     },
   });
 
-  async function checkStatus() {
-    try {
-      const url = apiUrl ?? window.location.origin;
-      const res = await fetch(`${url}/info`, {
-        method: "GET",
-        headers: {
-          ...(apiKey && {
-            Authorization: `Bearer ${apiKey}`,
-          }),
-        },
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      const body = await res.json();
-      console.log(`API status check: OK`, body);
-      return true;
-    } catch (error) {
-      console.error("Error checking API status:", error);
-      return false;
-    }
-  }
-
-  async function initializeThread() {
-    if (!isChatPage) {
-      // Skip initialization for non-chat pages
-      return;
-    }
-
-    if (!session?.access_token || !rfpId) {
-      console.log(
-        "Missing access token or RFP ID, skipping thread initialization"
-      );
-      return;
-    }
-
-    if (isInitializing) {
-      console.log("Already initializing thread, skipping");
-      return;
-    }
-
-    if (initializationCompletedRef.current) {
-      console.log("Thread initialization already completed, skipping");
-      return;
-    }
-
-    if (initAttemptCountRef.current >= MAX_INIT_ATTEMPTS) {
-      console.log("Max initialization attempts reached, skipping");
-      toast.error("Failed to initialize chat thread after multiple attempts.", {
-        description: "Please try refreshing the page.",
-      });
-      return;
-    }
-
-    initAttemptCountRef.current += 1;
-    setIsInitializing(true);
-
-    try {
-      console.log("Initializing chat thread...");
-      const statusOk = await checkStatus();
-      if (!statusOk) {
-        throw new Error("API status check failed");
-      }
-
-      console.log("Initializing with RFP ID:", rfpId);
-      const response = await stream.submit(
-        { messages: [], rfpId: rfpId },
-        {
-          streamMode: ["values"],
+  // Check API status on initialization
+  useEffect(() => {
+    if (isChatPage) {
+      console.log(`[StreamProvider] Checking API status for ${apiUrl}`);
+      checkGraphStatus(apiUrl).then((ok) => {
+        if (!ok) {
+          console.error(
+            `[StreamProvider] Failed to connect to LangGraph server at ${apiUrl}`
+          );
+          toast.error("Failed to connect to AI server", {
+            description:
+              "Please check that the server is running and try again",
+          });
+        } else {
+          console.log(
+            `[StreamProvider] Successfully connected to LangGraph server at ${apiUrl}`
+          );
         }
-      );
-
-      console.log("Thread initialized with response:", response);
-      setThreadInitialized(true);
-      initializationCompletedRef.current = true;
-    } catch (error) {
-      console.error("Error initializing thread:", error);
-      toast.error("Failed to initialize chat thread.", {
-        description: "Please try again or refresh the page.",
       });
-    } finally {
-      setIsInitializing(false);
     }
-  }
+  }, [apiUrl, isChatPage]);
 
-  const setupRefreshTimer = () => {
-    if (!isChatPage) {
-      // Skip refresh timer for non-chat pages
-      return;
-    }
-
-    if (refresherRef.current) {
-      clearInterval(refresherRef.current);
-    }
-
-    refresherRef.current = setInterval(() => {
-      const shouldRefresh =
-        initialized.current &&
-        initializationCompletedRef.current &&
-        session?.access_token &&
-        threadId && // Use the threadId from state instead of stream object
-        (!lastRefreshRef.current ||
-          Date.now() - lastRefreshRef.current > REFRESH_INTERVAL);
-
-      if (shouldRefresh) {
-        console.log("Auto-refreshing thread...");
-        handleRefresh();
-      }
-    }, REFRESH_INTERVAL);
-
-    return () => {
-      if (refresherRef.current) {
-        clearInterval(refresherRef.current);
-        refresherRef.current = null;
-      }
-    };
-  };
-
-  const handleRefresh = async () => {
-    if (!isChatPage) {
-      // Skip refresh for non-chat pages
-      return;
-    }
-
-    if (!session?.access_token || !threadId) {
-      // Use the threadId from state
-      console.log("Missing access token or thread ID, skipping refresh");
-      return;
-    }
-
-    try {
-      if (stream.isLoading) {
-        console.log("Stream is already loading, skipping refresh");
-        return;
-      }
-
-      console.log("Refreshing thread...");
-      const response = await stream.submit(undefined);
-      console.log("Thread refreshed with response:", response);
-      lastRefreshRef.current = Date.now();
-    } catch (error) {
-      console.error("Error refreshing thread:", error);
-    }
-  };
-
-  // Use rfpId instead of initialRfpIdRef.current in all useEffect dependencies
+  // Initialize thread with rfpId if available
   useEffect(() => {
-    const shouldInitialize =
-      Boolean(session?.access_token) && // Have an authenticated session
-      Boolean(rfpId) && // Have an RFP ID
-      !threadId && // Don't have a thread ID yet
-      !threadInitialized && // Haven't already initialized
-      !isInitializing && // Not in the process of initializing
-      !initializationCompletedRef.current && // Haven't completed initialization
-      initAttemptCountRef.current < MAX_INIT_ATTEMPTS && // Haven't maxed out attempts
-      isChatPage; // Only initialize on chat pages
+    if (isChatPage && rfpId && !threadId && !stream.isLoading) {
+      console.log(`[StreamProvider] Initializing thread with RFP ID: ${rfpId}`);
+      try {
+        // Get API key if available
+        const apiKey = getApiKey();
 
-    if (shouldInitialize) {
-      console.log("Triggering thread initialization...");
-      initializeThread();
-    }
-  }, [session, rfpId, threadId, threadInitialized, isInitializing, isChatPage]);
+        // Prepare headers with authentication if needed
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
 
-  useEffect(() => {
-    if (!isChatPage) {
-      return; // Skip for non-chat pages
-    }
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
 
-    if (
-      !initialized.current &&
-      typeof window !== "undefined" &&
-      session?.access_token
-    ) {
-      initialized.current = true;
-      initAttemptCountRef.current = 0;
-      initializationCompletedRef.current = false;
-      setupRefreshTimer();
-    }
+        // Log the URL we're attempting to connect to
+        console.log(
+          `[StreamProvider] Creating thread at URL: ${apiUrl}/threads`
+        );
 
-    return () => {
-      if (refresherRef.current) {
-        clearInterval(refresherRef.current);
-        refresherRef.current = null;
+        // Create a new thread with the rfpId in metadata
+        fetch(`${apiUrl}/threads`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            assistant_id: assistantId,
+            metadata: {
+              rfpId: rfpId,
+            },
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              // Log more detailed error information
+              console.error(
+                `[StreamProvider] HTTP Error: ${response.status} ${response.statusText}`
+              );
+              return response.text().then((text) => {
+                try {
+                  // Try to parse as JSON for more error details
+                  const errorJson = JSON.parse(text);
+                  console.error("[StreamProvider] Error response:", errorJson);
+                  throw new Error(
+                    `API Error (${response.status}): ${errorJson.message || "Unknown error"}`
+                  );
+                } catch (e) {
+                  // If not JSON, use the raw text
+                  console.error("[StreamProvider] Error response text:", text);
+                  throw new Error(
+                    `API Error (${response.status}): ${text || response.statusText}`
+                  );
+                }
+              });
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.thread_id) {
+              console.log(
+                `[StreamProvider] Created thread with ID: ${data.thread_id}`
+              );
+              setThreadId(data.thread_id);
+            } else {
+              console.error("[StreamProvider] No thread_id in response:", data);
+              throw new Error("No thread_id in response");
+            }
+          })
+          .catch((error) => {
+            console.error("[StreamProvider] Error creating thread:", error);
+
+            // Provide more specific error messages based on error type
+            if (
+              error.message.includes("Failed to fetch") ||
+              error.message.includes("NetworkError")
+            ) {
+              toast.error("Network error", {
+                description:
+                  "Could not connect to the LangGraph server. Check your network connection and server availability.",
+              });
+            } else if (error.message.includes("API Error")) {
+              toast.error("Server error", {
+                description: error.message,
+              });
+            } else {
+              toast.error("Failed to initialize chat", {
+                description: error.message,
+              });
+            }
+          });
+      } catch (error) {
+        console.error("[StreamProvider] Error initializing thread:", error);
+        toast.error("Failed to initialize chat", {
+          description:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
-    };
-  }, [session, isChatPage]);
+    }
+  }, [
+    isChatPage,
+    rfpId,
+    threadId,
+    stream.isLoading,
+    apiUrl,
+    assistantId,
+    setThreadId,
+  ]);
 
-  // Cleanup the thread refresher when the component unmounts
-  useEffect(() => {
-    return () => {
-      if (refresherRef.current) {
-        clearInterval(refresherRef.current);
-        refresherRef.current = null;
-      }
-    };
-  }, []);
-
-  // Provide a method to update the RFP ID from child components
+  // Add the setInitialRfpId method to the context
   const streamValue = {
     ...stream,
     setInitialRfpId: setRfpId,
   };
 
-  // For non-chat pages, we won't show the "Initializing chat thread..." message
-  // Just return the children wrapped in the context
-  if (!isChatPage) {
-    return (
-      <StreamContext.Provider value={streamValue}>
-        {children}
-      </StreamContext.Provider>
-    );
-  }
-
-  // For chat pages, conditionally show loading state only for chat UI
   return (
     <StreamContext.Provider value={streamValue}>
-      {isInitializing && !threadInitialized ? (
-        <div className="flex items-center justify-center w-full h-full">
-          <p className="text-muted-foreground">Initializing chat thread...</p>
-        </div>
-      ) : (
-        children
-      )}
+      {children}
     </StreamContext.Provider>
   );
-}
-
-export function useStreamContext(): StreamContextType {
-  const context = useContext(StreamContext);
-  if (context === undefined) {
-    throw new Error("useStreamContext must be used within a StreamProvider");
-  }
-  return context;
 }
