@@ -1,12 +1,28 @@
+/**
+ * Thread Component
+ * 
+ * A real-time chat interface component that handles message display, user input, and interaction with an AI service.
+ * 
+ * Features:
+ * - Displays chat messages in a scrollable container with auto-scroll on new messages
+ * - Supports multiple message types (human, AI, tool)
+ * - Handles message submission and error states
+ * - Provides real-time loading states and feedback
+ * - Auto-focuses input after AI responses
+ * - Responsive layout with sticky input area
+ * 
+ * Uses StreamProvider context for message state management and AI service communication.
+ */
+
 import { v4 as uuidv4 } from "uuid";
-import { ReactNode, useRef, useEffect } from "react";
+import { ReactNode, useRef, useEffect, useState, FormEvent } from "react";
 import { useStreamContext } from "../providers/StreamProvider";
 import { cn } from "@/lib/utils";
-import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
+import { ToolMessageComponent } from "./messages/tool";
 import { Textarea } from "@/components/ui/textarea";
 import { LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
@@ -34,7 +50,7 @@ const ChatMessage = ({ message, isLoading }: ChatMessageProps) => {
   } else if (message.type === "ai") {
     return <AIMessage message={message} isLoading={isLoading} />;
   } else if (message.type === "tool") {
-    return null; // Tool messages are rendered as part of AI messages
+    return <ToolMessageComponent message={message} />;
   }
   return null;
 };
@@ -63,6 +79,10 @@ export function Thread() {
   const outerContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // *** ADDED FOR AUTOFOCUS ***
+  const prevIsLoadingRef = useRef<boolean>(isLoading);
+  // *** END ADDED FOR AUTOFOCUS ***
+
   // Log availability of submit function
   useEffect(() => {
     console.log("[Thread] submit function available:", !!submit);
@@ -75,6 +95,17 @@ export function Thread() {
         messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // *** ADDED FOR AUTOFOCUS ***
+  useEffect(() => {
+    // If loading just finished
+    if (prevIsLoadingRef.current && !isLoading) {
+      inputRef.current?.focus();
+    }
+    // Update previous loading state
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading]);
+  // *** END ADDED FOR AUTOFOCUS ***
 
   // Process messages to ensure all tool calls have responses
   // const messagesWithToolResponses = ensureToolCallsHaveResponses(
@@ -147,7 +178,7 @@ export function Thread() {
         ref={messagesContainerRef}
         className={cn(
           "scrollbar-pretty flex-1 overflow-y-auto overscroll-contain",
-          "pt-4 pb-0"
+          "pt-4 pb-12"
         )}
       >
         {!messages || messages.length === 0 ? (
@@ -177,7 +208,7 @@ export function Thread() {
       <div
         className={cn(
           "sticky bottom-0 z-10 w-full",
-          "border-t border-border/50 bg-background/80 backdrop-blur"
+          "bg-background/80 backdrop-blur"
         )}
       >
         <div className="max-w-4xl px-4 py-2 mx-auto">

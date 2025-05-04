@@ -43,32 +43,22 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ All authentication tests are now passing, including edge cases
    - ✅ Implemented client-side integration guidance
 7. **Chat UI Integration & Refactoring**: Integrated core chat UI components and refactored the connection to use a direct LangGraph endpoint, removing the API proxy. Provider structure corrected.
+8. **Frontend Thread Logic Planning**: Finalized the plan (`thread-logic.md`) for managing RFP-contextualized chat threads in the frontend.
 
 ### Next
 
-1. **Authentication Integration Phase**
-
-   - Update StreamProvider with session token handling
-   - Add token refresh logic
-   - Configure API proxy for auth headers
-
-2. **Thread Management Phase**
-
-   - Create thread management API endpoints
-   - Update ChatPage with thread initialization
-   - Modify ThreadProvider for initial state
-
-3. **User-Thread Relationship Phase**
-
-   - Implement user-specific thread filtering
-   - Add userId to thread creation
-   - Update OrchestratorService
-
-4. **Error Handling and Testing Phase**
-   - Add ChatPage error handling
-   - Implement loading states
-   - Add authentication checks
-   - Create integration tests
+1.  **Frontend Thread Logic Implementation (Phase 1)**
+    - Implement URL parameter handling (`rfpId`, `threadId`) in `ChatPage`.
+    - Implement conditional rendering for "No Context" scenario.
+    - Pass context props (`rfpId`, `initialThreadId`) to `StreamProvider`.
+2.  **Frontend Thread Logic Implementation (Phase 2)**
+    - Update `StreamProvider` to manage `activeThreadId` state.
+    - Implement new thread ID generation logic.
+    - Adapt `useStream` hook initialization.
+    - Update `submit` function to pass `configurable: { thread_id }`.
+3.  **Frontend Thread Logic Implementation (Phase 3)**
+    - Create `SelectProposalPrompt` component.
+    - Conduct thorough testing.
 
 ## Known Issues
 
@@ -79,6 +69,8 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 5. Authentication and thread handoff integration needs to be completed according to the plan in `auth-front-back.md`
 6. TypeScript linter error in `server.ts` related to `app.use(cookieParser())` (code functions correctly at runtime).
 7. Need to verify authentication handling for the direct LangGraph stream connection.
+8. Need to verify authentication handling (`userId` in `configurable`?) for the direct LangGraph stream connection, especially concerning checkpointer RLS.
+9. `StreamProvider`'s interaction with `useQueryState` for `threadId` might need removal or adjustment to align with the new plan of managing `activeThreadId` internally based on props.
 
 ## Evolution of Project Decisions
 
@@ -280,3 +272,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 - The core architecture is stable, with successful integration of authentication, basic persistence, and a simplified, functional chat UI connection. Focus shifts to completing agent logic and hardening the UI.
 - **Basic message rendering in the Chat UI is now confirmed working.**
+
+## Recent Updates (2024-06)
+
+- Project is on track for frontend thread logic implementation.

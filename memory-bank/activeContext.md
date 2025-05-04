@@ -126,6 +126,7 @@ All components have been placed in `/apps/web/src/features/chat-ui/` under their
    - Documented challenges and solutions for key integration points
 
 4. **Chat UI Connection Refactor**: Simplified the frontend-backend connection for chat streaming by adopting the direct connection pattern from `agent-chat-ui`, removing the API proxy layer. Corrected the placement of `StreamProvider` and `InterruptProvider` to be specific to the chat page.
+5. **Frontend Thread Logic Planning**: Developed a detailed plan (`thread-logic.md`) for handling RFP-specific chat threads based on URL parameters, including new thread generation and loading existing threads.
 
 ### Active Decisions
 
@@ -142,9 +143,13 @@ All components have been placed in `/apps/web/src/features/chat-ui/` under their
    - Designing reconnection strategies for token refreshes
 
 3. **Streaming Performance**
+
    - Chunk-based message processing to prevent UI blocking
    - Efficient DOM updates through key-based rendering
    - Debounced operations for frequent state changes
+
+4. **Frontend Thread ID Management**: The `StreamProvider` will manage the `activeThreadId`. For new threads (only `rfpId` in URL), the provider generates a UUID client-side. This ID is then passed in the `configurable` object when submitting messages, associating the stream with the correct persistence record via the checkpointer.
+5. **Context Passing (rfpId/userId)**: For MVP, initial context like `rfpId` or `userId` needed by the backend graph on thread _creation_ will rely on the checkpointer's ability to associate the `thread_id` with the user context (`userId` likely passed in `configurable` for RLS) and potentially infer `rfpId` based on related data structures managed by the Orchestrator/backend. Direct injection into the first message is deferred.
 
 ### Key Insights
 
@@ -547,29 +552,31 @@ The comprehensive test suite for authentication is now passing, including:
 
 ## Active Development Context
 
-## Current Focus: Chat UI Integration
+## Current Focus: Frontend Thread Logic
 
-We are currently implementing the Chat UI integration following the plan in `chatui-integration.md`. Our progress:
+Following the completion of Chat UI Phase 2 (component placement) and the direct streaming refactor, the immediate focus is on implementing the frontend logic for handling RFP-contextualized chat threads as detailed in `thread-logic.md`.
 
-- **✅ Completed Phases**:
+### Phase 1: Preparation & Context Handling
 
-  - Phase 1: Core Utilities - All utility functions, providers and hooks
-  - Phase 2: UI Components - All UI components (icons, buttons, markdown, syntax highlighting, messages)
-  - Phase 3: Agent Inbox Components - All agent inbox components are implemented
-  - Phase 4: Thread Components - Thread and ThreadHistory components are implemented
-  - Phase 5: Chat Page & Navigation - Created the Chat page component, updated sidebar navigation, and added "Continue in Chat" button to proposal cards
+- Define URL routing strategy for chat page (`/dashboard/chat`).
+- Update `ChatPage` component (`apps/web/app/dashboard/chat/page.tsx`) to:
+  - Read `rfpId` and `threadId` from URL parameters using `useSearchParams`.
+  - Conditionally render the chat UI or a `SelectProposalPrompt` based on parameter presence.
+  - Pass `rfpId` and `initialThreadId` props to `StreamProvider`.
 
-- **🚧 Next Up: Phase 6 - Testing**
-  - Will involve creating tests for all chat UI components
-  - Focus on integration testing with the backend APIs
+### Phase 2: Stream Provider Logic (Next)
 
-Key learnings from implementing the Chat UI integration:
+- Modify `StreamProvider` (`apps/web/src/features/chat-ui/providers/StreamProvider.tsx`) to:
+  - Accept `rfpId` and `initialThreadId` props.
+  - Manage `activeThreadId` state internally.
+  - Implement logic to generate a new `activeThreadId` (using `uuidv4`) when `rfpId` is present but `initialThreadId` is not.
+  - Adapt `useStream` hook initialization (removing `threadId` arg).
+  - Wrap the `submit` function to include the `configurable: { thread_id: activeThreadId }` object.
 
-1. The Thread components require access to providers for proper state management
-2. The Next.js App Router structure works well with our feature-based organization
-3. Navigation integration is seamless with the existing layout components
-4. The "Continue in Chat" flow provides a natural extension of the proposal workflow
-5. Authentication integration will be critical for the final implementation
+### Phase 3: UI & Finalization (Following)
+
+- Implement the `SelectProposalPrompt` component.
+- Conduct thorough testing of all scenarios (No Context, New Thread, Existing Thread).
 
 ## Current Tasks and Focus
 
