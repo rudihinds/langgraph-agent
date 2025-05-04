@@ -44,19 +44,22 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ Implemented client-side integration guidance
 7. **Chat UI Integration & Refactoring**: Integrated core chat UI components and refactored the connection to use a direct LangGraph endpoint, removing the API proxy. Provider structure corrected.
 8. **Frontend Thread Logic Planning**: Finalized the plan (`thread-logic.md`) for managing RFP-contextualized chat threads in the frontend.
+9. **Definitive Thread History Loading Plan**: Created `fix-thread-streams.md` outlining the LangGraph-aligned approach for loading persisted chat history in the UI.
 
 ### Next
 
-1.  **Frontend Thread Logic Implementation (Phase 1)**
-    - Implement URL parameter handling (`rfpId`, `threadId`) in `ChatPage`.
-    - Implement conditional rendering for "No Context" scenario.
-    - Pass context props (`rfpId`, `initialThreadId`) to `StreamProvider`.
-2.  **Frontend Thread Logic Implementation (Phase 2)**
+1.  **Implement Thread History Loading (Phase 1)**
+    - Add state fetching logic to `StreamProvider` to hydrate the UI with messages from `/threads/:thread_id/state` before connecting to the stream.
+    - Store and expose initial messages to the chat UI.
+    - Ensure error handling and loading states are in place.
+2.  **Verify Stream Connection Logic (Phase 2)**
+    - Confirm that the stream endpoint is correctly targeted and that new messages are appended to the hydrated history.
+3.  **Frontend Thread Logic Implementation (Phase 2)**
     - Update `StreamProvider` to manage `activeThreadId` state.
     - Implement new thread ID generation logic.
     - Adapt `useStream` hook initialization.
     - Update `submit` function to pass `configurable: { thread_id }`.
-3.  **Frontend Thread Logic Implementation (Phase 3)**
+4.  **Frontend Thread Logic Implementation (Phase 3)**
     - Create `SelectProposalPrompt` component.
     - Conduct thorough testing.
 
