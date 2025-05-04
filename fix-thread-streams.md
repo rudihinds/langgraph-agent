@@ -1,75 +1,91 @@
-# Definitive Plan: Fix Chat Thread History Loading
+# Definitive Plan: Fix Chat Thread History Loading (useStream Convention)
 
-This plan outlines the steps to correctly load persisted chat history for existing threads in the frontend, adhering strictly to LangGraph principles and utilizing existing backend endpoints.
+This plan outlines the steps to correctly load persisted chat history using the built-in mechanisms of the LangGraph `useStream` hook and its expected backend endpoints.
 
-**Overall Goal:** Ensure that when a user navigates to the chat UI with an existing `threadId`, the complete message history for that thread is displayed immediately, and subsequent interactions correctly append to that thread's state via the stream.
+**Overall Goal:** Ensure that when a user navigates to the chat UI with an existing `threadId`, the `useStream` hook automatically fetches the history via the standard `POST /threads/:thread_id/history` endpoint, displays it, and subsequent interactions correctly use the `POST /threads/:thread_id/runs/stream` endpoint.
 
-## Phase 1: Frontend State Hydration
+## Phase 1: Frontend Configuration (`useStream` Alignment) - COMPLETE
 
-**Goal:** Fetch the initial state (specifically message history) for an existing thread from the backend _before_ initializing the stream connection for updates.
+**Goal:** Ensure the frontend `StreamProvider` correctly configures and uses the `useStream` hook according to LangGraph conventions for history and streaming.
 
-- [ ] **Step 1.1: Add State Fetching Logic to `StreamProvider`**
+- [x] **Step 1.1: Configure `useStream` Correctly**
 
   - **File:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-  - **Goal:** Introduce logic to call the backend's `GET /threads/:thread_id/state` endpoint when `initialThreadId` is provided on component mount.
+  - **Goal:** Initialize `useStream` with the necessary parameters for it to handle history and streaming automatically.
+  - **Action:** Ensured `useStream` is called with:
+    - `apiUrl`: The base URL pointing to the LangGraph API endpoint (e.g., `http://localhost:2024/api/langgraph`).
+    - `assistantId`: The ID of the deployed assistant/graph (used potentially by the hook or backend).
+    - `threadId`: The `activeThreadId` state variable.
+    - `messagesKey: "messages"`: Specifies the key within the state where messages are stored.
+  - **Status:** Completed.
+
+- [x] **Step 1.2: Configure `submit` Correctly**
+
+  - **File:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
+  - **Goal:** Ensure messages are submitted correctly via the hook's `submit` function.
+  - **Action:** The `handleSubmitWrapper` correctly calls `streamValue.submit` and passes the `thread_id` within the `configurable` property of the `config` object.
+  - **Status:** Completed.
+
+- [x] **Step 1.3: Expose Context Correctly**
+  - **File:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
+  - **Goal:** The provider's context value directly uses the `messages`, `isLoading`, `isError`, etc., returned by the `useStream` hook.
+  - **Action:** The `contextValue` is correctly mapping the hook's return values.
+  - **Status:** Completed.
+
+## Phase 2: Backend Express Router Implementation (LangGraph Standard Endpoints)
+
+**Goal:** Implement the standard POST endpoints expected by `useStream` within the existing Express router that handles LangGraph interactions.
+
+- [ ] **Step 2.1: Implement `POST /threads/:thread_id/history`**
+
+  - **File:** `apps/backend/api/langgraph/index.ts`
+  - **Goal:** Create an Express route handler that retrieves the thread's state history using the checkpointer and returns it in the format expected by `useStream`.
   - **Action:**
-    - Create a new `useEffect` hook that runs when `initialThreadId` changes (and is not null).
-    - Inside the effect, construct the URL: `${process.env.NEXT_PUBLIC_API_URL}/threads/${initialThreadId}/state`.
-    - Use `fetch` to make a GET request to this URL.
-    - Handle potential errors during the fetch (network issues, 404 if thread not found, etc.) and display appropriate toasts/logs.
-    - On success, parse the JSON response. Expect it to match the `OverallProposalState` structure (or at least contain a `values.messages` array).
+    1. Define a new route: `router.post("/threads/:thread_id/history", async (req, res, next) => { ... });`
+    2. Extract `thread_id` from `req.params`.
+    3. Access the `checkpointerInstance` passed into `createLangGraphRouter` (ensure it's passed correctly from `server.ts`).
+    4. Call `checkpointerInstance.get({ configurable: { thread_id } });` to fetch the latest checkpoint.
+    5. If a checkpoint exists, send it back as JSON: `res.json(checkpoint);` (The hook likely expects the full checkpoint object containing `channel_values`).
+    6. If no checkpoint exists (thread not found), return an empty object or appropriate response (e.g., `res.json({ channel_values: { messages: [] } });` or potentially a 404, though `useStream` might handle empty responses gracefully).
+    7. Include robust error handling (try/catch) and logging.
 
-- [ ] **Step 1.2: Store Initial Messages**
+- [ ] **Step 2.2: Implement `POST /threads/:thread_id/runs/stream`**
 
-  - **File:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-  - **Goal:** Store the fetched historical messages in a way that the `useStream` hook or the `Thread` component can access them.
+  - **File:** `apps/backend/api/langgraph/index.ts`
+  - **Goal:** Create an Express route handler that receives input, invokes the LangGraph stream, and pipes the Server-Sent Events (SSE) back to the client.
   - **Action:**
-    - Introduce a new state variable within `StreamProvider`, e.g., `const [initialMessages, setInitialMessages] = useState<Message[] | null>(null);`.
-    - In the `useEffect` from Step 1.1, upon successfully fetching the state, extract the `messages` array from the response (`response.values.messages`) and update the `initialMessages` state using `setInitialMessages`.
-    - Add a loading state (e.g., `isFetchingHistory`) managed within this effect to potentially disable UI elements while history loads.
+    1. Define a new route: `router.post("/threads/:thread_id/runs/stream", async (req, res, next) => { ... });`
+    2. Extract `thread_id` from `req.params`.
+    3. Extract `input` and `config` from `req.body`. **Crucially, ensure the `config` from the request body (which includes `configurable: { thread_id }`) is correctly passed to `graphInstance.stream`.**
+    4. Access the `graphInstance` passed into `createLangGraphRouter` (ensure it's passed correctly from `server.ts`).
+    5. **Validate `input`:** Check if the `input` structure matches what the graph expects to prevent 422 Unprocessable Entity errors. Log a warning or return a 400/422 if invalid.
+    6. Set SSE Headers: `res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('Cache-Control', 'no-cache'); res.setHeader('Connection', 'keep-alive');`
+    7. Invoke the graph stream: `const stream = await graphInstance.stream(input, config);`
+    8. Iterate through the stream chunks: `for await (const chunk of stream) { ... }`
+    9. Format each chunk as an SSE event: `res.write(\`data: ${JSON.stringify(chunk)}\\n\\n\`);`
+    10. Flush data to the client if necessary (`res.flushHeaders()` or similar depending on Express setup).
+    11. End the response when the stream finishes: `res.end();`
+    12. Include robust error handling (try/catch) for both stream invocation and iteration. Send an error event if issues occur during streaming.
 
-- [ ] **Step 1.3: Pass Initial Messages to `useStream` or Context**
-  - **File:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-  - **Goal:** Make the fetched `initialMessages` available to the rest of the chat UI.
-  - **Action:**
-    - **Option A (Modify `useStream` - Preferred if possible):** If the `useStream` hook can be modified to accept an `initialMessages` option, pass the `initialMessages` state to it. This would allow the hook itself to manage the merging of initial and streamed messages. (Requires inspecting/modifying `useStream`).
-    - **Option B (Modify Context Value):** If modifying `useStream` is not feasible/desired, update the `StreamContext.Provider`'s `value`. The `messages` property exposed by the context should combine the `initialMessages` (if loaded) with the messages received from the `streamValue` hook. Ensure duplicates are handled correctly (e.g., only show initial messages until the stream connects and potentially sends overlapping messages).
-    - The context value logic might look something like: `const displayedMessages = initialMessages ? [...initialMessages, ...streamValue.messages.slice(initialMessages.length)] : streamValue.messages;` (This logic needs careful implementation to avoid duplicates based on message IDs if the stream _also_ sends history). A safer initial approach might be: `const displayedMessages = streamValue.messages.length > 0 ? streamValue.messages : initialMessages ?? [];`
+## Phase 3: Testing & Validation
 
-## Phase 2: Stream Connection (No Change Needed - Verification Only)
+**Goal:** Verify the end-to-end flow works as expected.
 
-**Goal:** Verify that the existing stream connection logic correctly targets the thread-specific endpoint for receiving _new_ updates after the initial history load.
-
-- [ ] **Step 2.1: Verify `apiUrl` Construction**
-
-  - **File:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-  - **Goal:** Confirm the `apiUrl` passed to `useTypedStream` correctly points to the backend's streaming endpoint _including_ the `thread_id`.
-  - **Action:** Double-check the logic that sets the `apiUrl`. It should dynamically construct the URL like `${directApiUrl}/threads/${activeThreadId}/stream` (or the appropriate endpoint) only when `activeThreadId` is present and configuration is valid.
-
-- [ ] **Step 2.2: Verify `useStream` Hook Connection**
-  - **File:** `apps/web/src/features/chat-ui/hooks/useStream.ts` (or equivalent)
-  - **Goal:** Confirm the hook uses the provided `apiUrl` to establish its `EventSource` or other streaming connection.
-  - **Action:** Briefly review the hook's implementation to ensure `apiUrl` is used as the connection target.
+- [ ] **Step 3.1: Test History Loading**
+  - **Action:** Navigate to `/dashboard/chat?rfpId=X&threadId=Y` (where Y is a thread with existing history). Verify the UI loads with the previous messages. Check browser network tools to confirm a successful `POST /api/langgraph/threads/Y/history` request.
+- [ ] **Step 3.2: Test Message Submission**
+  - **Action:** Send a new message in an existing thread. Verify the message appears, and a response is streamed back. Check network tools for a successful `POST /api/langgraph/threads/Y/runs/stream` request and subsequent SSE events. Check backend logs for confirmation.
+- [ ] **Step 3.3: Test New Thread**
+  - **Action:** Navigate to `/dashboard/chat?rfpId=X`. Verify the chat starts empty. Send a message. Verify it works and subsequent interactions use the new `thread_id`.
 
 ## Success Criteria
 
-1.  When navigating to `/dashboard/chat?rfpId=X&threadId=Y`:
-    - A GET request is made to `/api/threads/Y/state`.
-    - The chat UI initially displays all historical messages retrieved from the `/state` endpoint.
-    - A stream connection is established to `/api/threads/Y/stream` (or equivalent).
-    - Sending a new message uses the `submit` function, correctly passing the input and `thread_id: Y` via the POST request payload's `configurable` object to the stream endpoint.
-    - New messages/responses received via the stream are appended correctly to the displayed history.
-2.  When navigating to `/dashboard/chat?rfpId=X` (no `threadId`):
-    - No request is made to `/state`.
-    - The chat UI shows the "No messages yet" view.
-    - Sending the first message generates a _new_ `thread_id` (handled by `StreamProvider`'s `useEffect` for `initialThreadId` being null).
-    - Subsequent interactions use this new `thread_id`.
-3.  Error handling: Appropriate feedback (toasts, console logs) is provided if fetching the initial state fails.
+1.  Navigating to an existing thread (`threadId` in URL) correctly displays the full message history fetched via `POST /history`.
+2.  Sending messages in an existing thread correctly uses `POST /runs/stream` and appends messages/responses.
+3.  Starting a new chat (no `threadId`) works correctly, generating a new ID and allowing interaction.
+4.  The 404 (`/history`) and 422 (`/runs/stream`) errors are resolved.
 
 ## Deferred
 
-- Optimizing the merging logic between `initialMessages` and `streamValue.messages` if the stream sends overlapping history.
-- Adding sophisticated loading indicators while initial history is fetched.
-- Handling the "new thread" scenario more elegantly if the backend requires an initial POST to create a thread before streaming.
-
-This plan leverages the existing backend structure and aligns with LangGraph's separation of state retrieval (`getState`) and state update streaming (`stream`).
+- Advanced error handling on the backend endpoints.
+- UI optimizations for loading states.

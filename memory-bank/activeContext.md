@@ -737,17 +737,10 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 5. **Continue Core Agent Implementation**: Resume work on the `ProposalGenerationGraph` nodes (Problem Statement, Methodology, etc.).
 6. **Cleanup Debugging Code**: Remove temporary `console.log` statements and commented-out code added during the chat rendering debug process.
 
-## Current Work Focus: Thread History Loading (LangGraph-Aligned)
+## Current Work Focus: Backend LangGraph Standard Endpoints
 
-- Implementing the definitive plan for chat thread history loading as described in `fix-thread-streams.md`.
-- Approach is strictly based on LangGraph best practices:
-  - Fetch initial state (including messages) for an existing thread from `/threads/:thread_id/state` on the backend.
-  - Hydrate the chat UI with this history before connecting to the stream.
-  - Connect to the stream endpoint for real-time updates and new messages.
-- This ensures that users see the full persisted conversation immediately when opening an existing thread, and that new messages are appended in real time.
-- Previous approaches that attempted to load history via the stream endpoint alone have been superseded by this explicit two-step process.
-
-### Next Steps
-
-- Implement Phase 1, Steps 1.1–1.3 in `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`.
-- Verify stream connection logic as per Phase 2.
+- Implementing the standard POST endpoints required by the LangGraph useStream convention in `apps/backend/api/langgraph/index.ts`:
+  - `POST /threads/:thread_id/history` (returns thread state for history loading)
+  - `POST /threads/:thread_id/runs/stream` (streams updates for new messages)
+- This aligns the backend with the frontend's useStream-based chat UI and resolves the 404/422 errors.
+- See `fix-thread-streams.md` for the definitive implementation plan.
