@@ -32,7 +32,7 @@ import {
 } from "./conditionals.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 import { createSectionEvaluators } from "../../agents/evaluation/sectionEvaluators.js";
-import { createCheckpointer } from "../../lib/persistence/checkpointer-factory.js";
+import { createRobustCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
 import { sectionNodes } from "./nodes/section_nodes.js";
 import { ENV } from "../../lib/config/env.js";
 import { processFeedbackNode } from "./nodes/processFeedback.js";
@@ -411,17 +411,19 @@ const feedbackRoutingMap: Record<string, string> = {
  * @param proposalId The proposal ID
  * @returns The configured StateGraph
  */
-function createProposalGenerationGraph(
+async function createProposalGenerationGraph(
   userId: string = ENV.TEST_USER_ID,
   proposalId?: string
 ) {
-  // Create a persistent checkpointer based on environment
+  // Create a persistent checkpointer based on environment using the ROBUST factory
   // In development: In-memory checkpointer (unless Supabase is configured)
   // In production: Supabase checkpointer (falls back to in-memory if not configured)
-  const checkpointer = createCheckpointer({
-    userId,
-    proposalId,
-    // Let the factory determine which implementation to use based on environment
+  // Ensure createRobustCheckpointer is awaited as it returns a Promise
+  const checkpointer = await createRobustCheckpointer({
+    // Pass necessary options if robust checkpointer expects them, e.g., threadId
+    // For now, assuming it doesn't require specific options beyond environment checks
+    // userId, // Not directly needed by robust-checkpointer factory itself
+    // proposalId, // Not directly needed by robust-checkpointer factory itself
   });
 
   if (ENV.isDevelopment()) {

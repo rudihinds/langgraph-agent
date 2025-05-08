@@ -2,11 +2,17 @@
 
 ## Overview
 
-This document outlines a step-by-step approach to addressing TypeScript errors found when upgrading to LangGraph 0.2.68 and related dependencies. Instead of updating all packages at once, we'll take an incremental approach to minimize disruption and make errors more manageable.
+This document outlines a step-by-step approach to addressing TypeScript errors found after upgrading to LangGraph 0.2.65 (current version in package.json) and related dependencies. To be clear, **we are NOT downgrading back to 0.0.63** - that version had severe checkpointer issues which is why we upgraded in the first place. Instead, this plan focuses on fixing the TypeScript errors while maintaining the upgraded versions.
+
+## Current Status
+
+- **Already Upgraded**: LangGraph has already been upgraded from 0.0.63 to 0.2.65
+- **Build Errors**: Running `npm run build` with the upgraded packages produced 406 TypeScript errors across 48 files
+- **Runtime Success**: Despite build errors, the application still runs, especially with our new robust fallback checkpointer
 
 ## Current Issues
 
-Running `npm run build` after upgrading multiple packages (LangGraph and related dependencies) produced 406 TypeScript errors across 48 files. Most errors are related to:
+Most errors are related to:
 
 1. Changes in type definitions between versions
 2. Import path requirements (explicit `.js` extensions needed)
@@ -27,41 +33,31 @@ Running `npm run build` after upgrading multiple packages (LangGraph and related
    ```
 4. Fix imports systematically, file by file
 
-### Phase 2: Core Package Updates
+### Phase 2: Core Package Type Fixes
 
-**Goal:** Upgrade LangGraph and core packages one at a time
+**Goal:** Address TypeScript issues with LangGraph and core packages one at a time
 
-1. **LangGraph Core Update**
+1. **LangGraph Type Fixes**
 
-   ```bash
-   npm install @langchain/langgraph@0.2.68 --save-exact
-   ```
+   - Identify and fix StateGraph instantiation patterns
+   - Fix checkpointer-related type errors
+   - Update imports to match new module paths
 
-   - Run `npm run build` to identify specific errors
-   - Address only the LangGraph-related errors
+2. **LangChain Core Type Fixes**
 
-2. **LangChain Core Update**
+   - Fix message type imports and usages
+   - Update tool definitions to match new API
+   - Address any core utility type errors
 
-   ```bash
-   npm install @langchain/core@latest --save
-   ```
+3. **OpenAI Package Type Fixes**
 
-   - Run `npm run build` to identify specific errors
-   - Address the core-related errors
+   - Fix model instantiation and call patterns
+   - Update message formatting for the API
+   - Fix any streaming implementation errors
 
-3. **OpenAI Package Update**
-
-   ```bash
-   npm install @langchain/openai@latest --save
-   ```
-
-   - Fix any OpenAI-specific type errors
-
-4. **Community Package Update**
-   ```bash
-   npm install @langchain/community@latest --save
-   ```
-   - Address community package errors
+4. **Community Package Type Fixes**
+   - Address any type errors for community components
+   - Fix deprecated method usages
 
 ### Phase 3: Address API Changes
 

@@ -23,9 +23,20 @@ export const ENV = {
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || "",
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
 
+  // Database Configuration for Checkpointer
+  DATABASE_URL: process.env.DATABASE_URL || "",
+  SUPABASE_DB_HOST:
+    process.env.SUPABASE_DB_HOST || "db.rqwgqyhonjnzvgwxbrvh.supabase.co",
+  SUPABASE_DB_PORT: process.env.SUPABASE_DB_PORT || "5432",
+  SUPABASE_DB_NAME: process.env.SUPABASE_DB_NAME || "postgres",
+  SUPABASE_DB_USER: process.env.SUPABASE_DB_USER || "postgres",
+  SUPABASE_DB_PASSWORD: process.env.SUPABASE_DB_PASSWORD || "",
+  SUPABASE_SCHEMA: process.env.SUPABASE_SCHEMA || "public",
+
   // Checkpointer Configuration
   CHECKPOINTER_TABLE_NAME:
-    process.env.CHECKPOINTER_TABLE_NAME || "proposal_checkpoints",
+    process.env.CHECKPOINTER_TABLE_NAME || "checkpoints",
+  CHECKPOINTER_TYPE: process.env.CHECKPOINTER_TYPE || "auto", // "auto", "memory", or "postgres"
 
   // Node Environment
   NODE_ENV: process.env.NODE_ENV || "development",
@@ -69,7 +80,17 @@ export const ENV = {
    * Check if Supabase credentials are configured
    */
   isSupabaseConfigured(): boolean {
-    return Boolean(this.SUPABASE_URL && this.SUPABASE_SERVICE_ROLE_KEY);
+    // If we have a direct DATABASE_URL, use that
+    if (this.DATABASE_URL) return true;
+
+    // Otherwise check for individual database connection parameters
+    return Boolean(
+      this.SUPABASE_DB_HOST &&
+        this.SUPABASE_DB_PORT &&
+        this.SUPABASE_DB_NAME &&
+        this.SUPABASE_DB_USER &&
+        this.SUPABASE_DB_PASSWORD
+    );
   },
 
   /**
@@ -83,6 +104,29 @@ export const ENV = {
       return "Missing SUPABASE_SERVICE_ROLE_KEY environment variable";
     }
     return null;
+  },
+
+  /**
+   * Check if database connection is configured for checkpointer
+   */
+  isDatabaseConfigured(): boolean {
+    return (
+      Boolean(this.DATABASE_URL) ||
+      (Boolean(this.SUPABASE_DB_HOST) &&
+        Boolean(this.SUPABASE_DB_USER) &&
+        Boolean(this.SUPABASE_DB_PASSWORD))
+    );
+  },
+
+  /**
+   * Determine if we should use PostgreSQL for checkpointing
+   */
+  shouldUsePostgresCheckpointer(): boolean {
+    if (this.CHECKPOINTER_TYPE === "memory") return false;
+    if (this.CHECKPOINTER_TYPE === "postgres") return true;
+
+    // For "auto", check if we have the necessary configuration
+    return this.isDatabaseConfigured();
   },
 
   /**
@@ -126,6 +170,13 @@ export const ENV = {
     if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
       console.warn(
         "Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_ANON_KEY environment variables."
+      );
+    }
+
+    // Check for database configuration if PostgreSQL checkpointer is explicitly requested
+    if (this.CHECKPOINTER_TYPE === "postgres" && !this.isDatabaseConfigured()) {
+      console.warn(
+        "PostgreSQL checkpointer is configured, but database connection details are missing. Please set DATABASE_URL or the individual SUPABASE_DB_* environment variables."
       );
     }
 

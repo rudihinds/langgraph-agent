@@ -1,3 +1,20 @@
+/**
+ * This file implements the chat agent functionality for the proposal generation system.
+ * It handles the conversation flow between the user and the AI, interprets user intents,
+ * and routes the workflow to appropriate handlers based on those intents.
+ *
+ * Key components:
+ * 1. chatAgentNode - The main function that processes messages and generates responses
+ * 2. shouldContinueChat - Determines the next step in the workflow based on message state
+ * 3. Helper functions for parsing and processing messages
+ *
+ * The system follows a structured workflow:
+ * - Load an RFP document
+ * - Perform research on the RFP
+ * - Develop a solution approach
+ * - Generate and refine proposal sections
+ */
+
 import {
   AIMessage,
   BaseMessage,
@@ -14,7 +31,13 @@ import {
 } from "../../../tools/interpretIntentTool.js";
 import { z } from "zod";
 
-// Helper
+/**
+ * Safely parses JSON from a string input.
+ * If parsing fails, returns a fallback object with an 'other' command.
+ *
+ * @param input - String to parse as JSON or any other value
+ * @returns Parsed JSON object or fallback object
+ */
 function safeJSON(input: unknown): any {
   if (typeof input === "string") {
     try {
@@ -32,6 +55,9 @@ function safeJSON(input: unknown): any {
  * Primary chat agent node. Acts differently on first vs second pass:
  *  1. If last message is HumanMessage → call LLM with bound tools (may emit tool_call)
  *  2. If last message is ToolMessage → parse tool result, craft friendly reply, update intent
+ *
+ * @param state - The current state of the proposal workflow
+ * @returns Updated state with new messages and/or intent
  */
 export async function chatAgentNode(
   state: typeof ProposalStateAnnotation.State
@@ -114,7 +140,6 @@ export async function chatAgentNode(
 
     // Parse tool result content
     const toolContent = last.content;
-    // Extract the parsed command - handle both string and object content
     const parsed: CommandSchemaType =
       typeof toolContent === "string"
         ? safeJSON(toolContent)
@@ -122,141 +147,23 @@ export async function chatAgentNode(
 
     console.log("Parsed intent:", JSON.stringify(parsed));
 
-    // Craft human‑friendly reply confirming/acting on intent
-    const replyModel = new ChatOpenAI({
-      modelName: "gpt-4o-mini",
-      temperature: 0.7,
-    });
+    // ** CORRECTED LOGIC: **
+    // This node's responsibility ends after processing the tool result
+    // and setting the intent. It should NOT generate a user-facing reply here.
+    // The graph routing logic (shouldContinueChat) will use the updated intent
+    // to determine the next step, and *that* step will handle the next user interaction.
 
-    // Create a filtered message history without ToolMessages for the reply generation
-    const filteredMessages = messages.filter(
-      (m) => !(m instanceof ToolMessage)
-    );
     console.log(
-      `Using ${filteredMessages.length} messages for reply generation`
+      "ChatAgentNode END (tool response): Returning intent update only"
     );
-
-    // Check state for context awareness
-    const rfpLoaded =
-      state.rfpDocument &&
-      state.rfpDocument.status === "loaded" &&
-      state.rfpDocument.text;
-
-    const researchStarted =
-      state.researchStatus && state.researchStatus !== "not_started";
-
-    const solutionStarted =
-      state.solutionStatus && state.solutionStatus !== "not_started";
-
-    const sectionsGenerated = state.sections && state.sections.size > 0;
-
-    try {
-      // Enhanced system prompt with specific guidance based on intent AND workflow state
-      let systemPrompt = `You are a helpful proposal‑workflow assistant. Your goal is to guide users through creating effective business proposals.
-      
-Respond to the user based on their intent shown below. Be conversational, specific, and action-oriented.
-
-DO NOT mention any internal tools, parsing, or intent recognition in your response.
-
-IMPORTANT: You must guide the user through our specific proposal generation workflow:
-1. First, we need an RFP (Request For Proposal) document to analyze
-2. Then we perform research on the RFP
-3. Then we develop a solution approach 
-4. Finally, we generate proposal sections
-
-Based on the current state of the workflow, guide the user to take the appropriate next steps.`;
-
-      // Add specific workflow state context
-      if (!rfpLoaded) {
-        systemPrompt += `\n\nThe workflow hasn't started yet. We need the user to provide an RFP document first. Ask them to provide an RFP document ID or text. This is a required first step for our proposal generation process.`;
-      } else if (!researchStarted) {
-        systemPrompt += `\n\nAn RFP document has been loaded, but research hasn't started yet. Guide the user to start the research phase.`;
-      } else if (!solutionStarted) {
-        systemPrompt += `\n\nResearch has been performed, but a solution approach hasn't been developed yet. Guide the user to start the solution development phase.`;
-      } else if (!sectionsGenerated) {
-        systemPrompt += `\n\nResearch and solution development are complete, but we haven't generated proposal sections yet. Guide the user to start generating specific sections.`;
-      } else {
-        systemPrompt += `\n\nWe're in the section generation and refinement phase. Help the user modify, approve, or regenerate specific sections.`;
-      }
-
-      // Add intent-specific context
-      if (parsed.command === "regenerate_section") {
-        systemPrompt += `\n\nFor regenerate_section intent: Explain how you can help them regenerate the section. Ask for confirmation if they want to proceed with regeneration.`;
-      } else if (parsed.command === "modify_section") {
-        systemPrompt += `\n\nFor modify_section intent: Ask what specific changes they want to make to the section. Offer suggestions for improvement if appropriate.`;
-      } else if (parsed.command === "approve_section") {
-        systemPrompt += `\n\nFor approve_section intent: Confirm that the section will be marked as approved. Thank them for their review.`;
-      } else if (parsed.command === "load_document") {
-        systemPrompt += `\n\nFor load_document intent: Guide the user through loading an RFP document. Ask them to provide the RFP ID or text.`;
-      } else if (parsed.command === "ask_question") {
-        systemPrompt += `\n\nFor ask_question intent: Provide a helpful answer, but be sure to guide them back to the main workflow afterward.`;
-      } else if (parsed.command === "help") {
-        systemPrompt += `\n\nFor help intent: Explain our proposal generation workflow and guide them to the appropriate next step based on their current state in the process.`;
-      } else {
-        systemPrompt += `\n\nFor other or general intents: Guide the user to the most appropriate next action in the workflow process.`;
-      }
-
-      const reply = await replyModel.invoke([
-        new SystemMessage(systemPrompt),
-        ...filteredMessages,
-        new HumanMessage(
-          `The user's message was: "${filteredMessages[filteredMessages.length - 1]?.content || "Unknown"}"
-           
-Their interpreted intent is: ${JSON.stringify(parsed)}. 
-
-Current workflow state:
-- RFP Document: ${rfpLoaded ? "Loaded" : "Not loaded"}
-- Research: ${researchStarted ? "Started" : "Not started"}
-- Solution: ${solutionStarted ? "Started" : "Not started"}
-- Sections: ${sectionsGenerated ? "Some generated" : "None generated"}
-           
-Respond conversationally and helpfully based on this intent, offering specific guidance for their next step in the proposal workflow.`
-        ),
-      ]);
-
-      console.log("Successfully generated reply:", reply.content);
-
-      // Return both the reply and update the intent
-      console.log(
-        "ChatAgentNode END (tool response): Returning reply and intent"
-      );
-      return {
-        messages: [reply],
-        intent: {
-          command: parsed.command,
-          targetSection: parsed.target_section,
-          details: parsed.request_details,
-        },
-      };
-    } catch (error) {
-      console.error("Error generating reply:", error);
-      // More process-aware fallback messages
-      let fallbackMessage =
-        "To start our proposal process, we need an RFP (Request For Proposal) document. Could you provide an RFP document ID or text?";
-
-      if (rfpLoaded) {
-        fallbackMessage =
-          "I see we have an RFP loaded. How would you like to proceed with your proposal? We can start research, develop a solution approach, or generate specific sections.";
-      }
-
-      if (parsed.command === "help") {
-        fallbackMessage =
-          "Our proposal writing system follows a structured workflow: first load an RFP document, then research, develop a solution, and finally generate proposal sections. What would you like to do next?";
-      }
-
-      const fallbackReply = new AIMessage(fallbackMessage);
-      console.log(
-        "ChatAgentNode END (error fallback): Returning fallback reply"
-      );
-      return {
-        messages: [fallbackReply],
-        intent: {
-          command: parsed.command,
-          targetSection: parsed.target_section,
-          details: parsed.request_details,
-        },
-      };
-    }
+    // Return ONLY the intent update to be merged into the state.
+    return {
+      intent: {
+        command: parsed.command,
+        targetSection: parsed.target_section,
+        details: parsed.request_details,
+      },
+    };
   }
 
   // ------------- CASE 2: new human message -------------
@@ -372,8 +279,15 @@ Be helpful, conversational and concise while keeping them on the right path in o
 }
 
 /**
- * shouldContinueChat – returns next node key: "chatTools" when tool calls pending, or
- * maps intent→handler after tool processed, else "__end__".
+ * Determines the next node in the workflow based on the current state.
+ *
+ * Routes to:
+ * - "chatTools" when tool calls are pending
+ * - Specific handlers based on the intent (regenerateSection, modifySection, etc.)
+ * - "__end__" when no further action is needed
+ *
+ * @param state - The current state of the proposal workflow
+ * @returns The key of the next node to execute
  */
 export function shouldContinueChat(
   state: typeof ProposalStateAnnotation.State
