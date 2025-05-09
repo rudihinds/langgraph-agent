@@ -161,7 +161,7 @@ export async function chatAgentNode(
       intent: {
         command: parsed.command,
         targetSection: parsed.target_section,
-        details: parsed.request_details,
+        request_details: parsed.request_details,
       },
     };
   }

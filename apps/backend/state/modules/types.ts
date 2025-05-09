@@ -147,7 +147,7 @@ export type UserCommand =
 export interface UserIntent {
   command: UserCommand;
   targetSection?: string;
-  details?: string;
+  request_details?: string;
 }
 
 /**

@@ -96,8 +96,16 @@ export const documentLoaderNode = async (
   state: OverallProposalState,
   context?: { supabase?: StorageClient; user?: { id: string } }
 ): Promise<Partial<OverallProposalState>> => {
-  // Extract rfpId from state
-  const rfpId = state.rfpDocument?.id;
+  console.log("!!!! DOCUMENT LOADER NODE REACHED !!!!");
+  console.log("!!!! STATE: ", state);
+  console.log("!!!! CONTEXT: ", context);
+  console.log("!!!! STATE.INTENT: ", state.intent);
+  console.log(
+    "!!!! STATE.INTENT.REQUEST_DETAILS: ",
+    state.intent?.request_details
+  );
+  // Extract rfpId from state OR from the intent details if available
+  const rfpId = state.rfpDocument?.id || state.intent?.request_details;
 
   // Validate that we have an rfpId to work with
   if (!rfpId) {
@@ -189,20 +197,25 @@ export const documentLoaderNode = async (
       };
     } catch (e) {
       // Handle parsing errors separately
+      logger.error(
+        "[DocumentLoaderNode] Raw parsing/conversion error object:",
+        e
+      );
+      const detailMessage =
+        e instanceof Error
+          ? e.message
+          : typeof e === "string"
+            ? e
+            : JSON.stringify(e);
       return createErrorState(
         state,
         ErrorType.PARSING_ERROR,
-        e.message || "Error parsing document content",
+        detailMessage || "Error parsing document content or converting data",
         clientType
       );
     }
   } catch (error) {
-    // Handle unexpected errors
-    return createErrorState(
-      state,
-      ErrorType.UNKNOWN,
-      error.message || "Unknown error during document loading",
-      clientType
-    );
+    console.error("!!!! MINIMAL OUTER CATCH REACHED !!!!"); // Simplest possible log
+    throw error; // Re-throw to get a stack trace
   }
 };

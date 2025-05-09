@@ -4,7 +4,7 @@ import {
   calculateMaxTokens,
 } from "@langchain/core/language_models/count_tokens";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
-import { logger } from "../../agents/logger";
+import { logger } from "../../agents/logger.js";
 import { ChatOpenAI } from "@langchain/openai";
 
 interface PruneMessageHistoryOptions {

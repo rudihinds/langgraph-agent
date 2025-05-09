@@ -8,7 +8,7 @@
 import { BaseCheckpointSaver, MemorySaver } from "@langchain/langgraph";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { ENV } from "../config/env.js";
-import pg from "pg"; // Import the pg Pool
+import { Pool as PgPoolClass } from "pg"; // Import Pool class, aliasing to avoid confusion if needed
 
 /**
  * Options for creating a checkpoint
@@ -59,7 +59,7 @@ export async function createRobustCheckpointer(
 
   // Attempt to use PostgresSaver
   console.log("[RobustCheckpointer]: Attempting to use PostgresSaver.");
-  let pool: pg.Pool | undefined;
+  let pool: InstanceType<typeof PgPoolClass> | undefined;
   try {
     const connectionString =
       ENV.DATABASE_URL ||
@@ -70,8 +70,8 @@ export async function createRobustCheckpointer(
       connectionString.replace(/:[^:]*@/, ":***@")
     );
 
-    // Explicitly create a pg Pool
-    pool = new pg.Pool({
+    // Explicitly create a pg Pool instance
+    pool = new PgPoolClass({
       connectionString: connectionString,
       // Add sensible timeouts
       connectionTimeoutMillis: 15000, // 15 seconds for acquiring connection
@@ -137,7 +137,7 @@ export async function createRobustCheckpointer(
     }
   } catch (connectionError) {
     console.error(
-      "[RobustCheckpointer]: Failed during pg.Pool creation or initial connection attempt:", // Updated log message
+      "[RobustCheckpointer]: Failed during pg.Pool creation or initial connection attempt:",
       connectionError
     );
     // Attempt to close the pool if created before error
