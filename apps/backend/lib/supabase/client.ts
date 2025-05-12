@@ -67,6 +67,9 @@ function createSupabaseClient(config?: Partial<SupabaseConfig>) {
   const supabaseKey =
     config?.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  // Log the URL being used
+  console.log("[SupabaseClientFactory] Creating client with URL:", supabaseUrl);
+
   // Validate required configuration
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(

@@ -16,22 +16,37 @@ This document outlines the file structure of the backend application, focusing o
 
 ```
 apps/backend/
-├── agents/             # LangGraph agent implementation
-├── api/                # API routes and handlers
-├── config/             # Configuration files
-├── docs/               # Documentation
-├── evaluation/         # Evaluation framework
-├── lib/                # Shared libraries and utilities
-├── prompts/            # Prompt templates
-├── services/           # Business logic services
-├── state/              # State definitions and reducers
-├── tools/              # LangGraph tools
-├── __tests__/          # Top-level tests
-├── tests/              # Test files (legacy structure)
-├── scripts/            # Utility scripts
-├── server.ts           # Server entry point
-├── index.ts            # Main exports
-└── package.json        # Package dependencies
+├── __tests__/              # Top-level tests
+├── agents/                 # LangGraph agent implementation
+├── api/                    # API routes and handlers
+├── config/                 # Configuration files
+├── docs/                   # Documentation
+├── evaluation/             # Evaluation framework
+├── lib/                    # Shared libraries and utilities
+├── prompts/                # Prompt templates
+├── scripts/                # Utility scripts
+├── services/               # Business logic services
+├── src/                    # Source directory (often for build outputs or specific entry points)
+├── state/                  # State definitions and reducers
+├── tests/                  # Test files (legacy structure)
+├── tools/                  # LangGraph tools
+├── .env.example
+├── .env.local
+├── index.ts                # Main exports or entry point for the backend app
+├── langgraph-custom.ts     # Custom LangGraph configurations
+├── langgraph-loader.mjs    # Loader for LangGraph components
+├── langgraph-start.mjs     # Startup script for LangGraph
+├── package.json            # Package dependencies
+├── README.md
+├── register-agent-graphs.ts # Script to register agent graphs
+├── register-paths.ts       # Script for path alias registration (e.g., for tsconfig-paths)
+├── repomix-backend.xml     # RepoMix file for structure analysis (meta-file)
+├── server.js               # Server entry point (JavaScript version, potentially for production builds)
+├── server.ts               # Server entry point (TypeScript source)
+├── tsconfig.build.json     # TypeScript configuration for building
+├── tsconfig.json           # Main TypeScript configuration
+├── vitest.config.ts        # Vitest test runner configuration
+└── vitest.setup.ts         # Vitest setup file
 ```
 
 ## Agents Structure
@@ -90,10 +105,14 @@ The `services/` directory contains business logic services and high-level orches
 ```
 services/
 ├── __tests__/                  # Service tests
+│   ├── DependencyService.test.ts
+│   ├── orchestrator-dependencies.test.ts
+│   └── orchestrator.service.test.ts
+├── checkpointer.service.ts     # Checkpointer service for state persistence (now primarily uses robust-checkpointer)
 ├── DependencyService.ts        # Manages dependencies between proposal sections
-├── checkpointer.service.ts     # Checkpointer service for state persistence
 ├── orchestrator-factory.ts     # Factory for creating orchestrators
-└── orchestrator.service.ts     # Main orchestration service
+├── orchestrator.service.ts     # Main orchestration service
+└── thread.service.ts           # Service for managing thread-specific logic (e.g. thread_id generation)
 ```
 
 ## API Structure
@@ -143,7 +162,11 @@ The `lib/` directory contains shared code used across the application:
 ```
 lib/
 ├── config/                     # Configuration utilities
+│   └── env.ts
 ├── db/                         # Database interactions
+│   ├── __tests__/              # LLM tests
+│   │   └── documents.test.ts
+│   └── documents.ts
 ├── llm/                        # LLM integration
 │   ├── __tests__/              # LLM tests
 │   ├── streaming/              # Streaming support
@@ -152,21 +175,75 @@ lib/
 │   ├── error-handlers.ts       # Error handling utilities
 │   └── llm-factory.ts          # LLM factory
 ├── middleware/                 # Express middleware
+│   ├── __tests__/              # Middleware tests
+│   │   ├── auth-edge-cases.test.js
+│   │   ├── auth-refresh-headers.test.js
+│   │   ├── auth-refresh.test.js
+│   │   ├── auth.test.js
+│   │   └── rate-limit.test.js
+│   ├── auth.js
+│   ├── langraph-auth.ts
+│   ├── rate-limit.js
+│   └── README.md
 ├── parsers/                    # Document parsers
+│   ├── __tests__/              # Parser tests
+│   │   ├── manual-test.js
+│   │   ├── manual-test.ts
+│   │   ├── rfp.test.ts
+│   │   └── test-helpers.ts
+│   ├── pdf-parser.ts
+│   ├── README.md
+│   └── rfp.ts
 ├── persistence/                # State persistence
 │   ├── __tests__/              # Persistence tests
+│   │   └── supabase-checkpointer.test.ts # (Note: supabase-checkpointer.ts was deleted, test might be outdated or for robust-checkpointer now)
+│   ├── functions/              # Database functions (e.g., SQL functions for Supabase)
+│   │   └── setup-functions.sql
 │   ├── migrations/             # Database migrations
-│   ├── supabase-checkpointer.ts # Supabase checkpointer
-│   ├── memory-checkpointer.ts  # In-memory checkpointer
-│   ├── langgraph-adapter.ts    # LangGraph adapter for SupabaseCheckpointer
-│   ├── memory-adapter.ts       # LangGraph adapter for InMemoryCheckpointer
-│   └── checkpointer-factory.ts # *** IMPORTANT: Use this factory to get checkpointer instances ***
-├── supabase/                   # Supabase integration
-├── types/                      # Shared type definitions
-└── utils/                      # Utility functions
-    ├── backoff.ts              # Backoff utilities
-    ├── files.ts                # File utilities
-    └── paths.ts                # Path resolution
+│   │   ├── add_proposal_id_constraint.sql
+│   │   ├── create_persistence_tables.sql
+│   │   └── enhance_checkpoint_tables.sql
+│   ├── apply-migrations.ts     # Script to apply database migrations
+│   ├── robust-checkpointer.ts  # Robust checkpointer (Primary factory: PostgresSaver w/ Memory fallback)
+│   ├── db-schema.sql           # Database schema SQL file (potentially for reference or manual setup)
+│   ├── ICheckpointer.ts        # Base Interface (if still used, review relevance)
+│   ├── index.ts                # Main exports for persistence module
+│   ├── MIGRATION_GUIDE.md      # Guide for database migrations
+│   ├── README.md               # Readme for persistence module
+│   ├── run-tests.sh            # Shell script to run tests for this module
+│   └── supabase-store.ts       # Supabase specific store (if different from checkpointer, e.g. for BaseStore)
+│   # memory-checkpointer.ts, langgraph-adapter.ts, memory-adapter.ts are likely removed or implicitly part of MemorySaver from @langchain/langgraph
+├── schema/                     # General DB schema files
+│   └── proposal_states.sql
+├── state/                      # Shared state utilities (if any, distinct from main /state dir)
+│   └── messages.ts
+├── supabase/                   # Supabase specific utilities and client setup
+│   ├── migrations/             # Supabase specific migrations (if different from lib/persistence/migrations)
+│   │   └── thread-rfp-mapping.sql
+│   ├── auth-utils.ts
+│   ├── client.ts
+│   ├── index.ts
+│   ├── langgraph-server.ts     # Utilities for running LangGraph with Supabase server features
+│   ├── README.md
+│   ├── server.js               # Supabase server-side client (JS version)
+│   ├── storage.js              # Supabase storage utilities
+│   └── supabase-runnable.ts    # LangChain runnable for Supabase
+├── types/                      # Shared type definitions for lib/
+│   ├── auth.ts
+│   └── feedback.ts
+├── utils/                      # General utility functions
+│   ├── backoff.ts
+│   ├── files.ts
+│   └── paths.ts
+├── database.types.ts         # Auto-generated Supabase types for DB schema
+├── logger.d.ts               # Logger type definitions
+├── logger.js                 # Logger implementation
+├── MANUAL_SETUP_STEPS.md
+├── schema.sql                # Main or aggregated DB schema
+├── state-serializer.ts       # Utilities for serializing/deserializing state
+├── storage-policies.sql      # RLS policies for Supabase storage
+├── SUPABASE_SETUP.md
+└── types.ts                  # Other common types for lib/
 ```
 
 ## Prompts Structure
@@ -566,9 +643,9 @@ apps/backend/
 
 2. **Checkpointer Usage**:
 
-   - **Always use the `createCheckpointer` factory function** located in `lib/persistence/checkpointer-factory.ts` to obtain checkpointer instances.
-   - Do not instantiate `SupabaseCheckpointer` or `LangGraphCheckpointer` directly outside the factory or its tests.
-   - The factory handles correct client setup and adapter wrapping.
+   - **Always use the `createCheckpointer` function** from `services/checkpointer.service.ts` to obtain checkpointer instances for graph compilation. This service now internally uses `lib/persistence/robust-checkpointer.ts`.
+   - `lib/persistence/robust-checkpointer.ts` is the primary factory for creating `PostgresSaver` instances (connected to Supabase) with a `MemorySaver` fallback.
+   - Direct instantiation of `PostgresSaver` or `MemorySaver` outside of `lib/persistence/robust-checkpointer.ts` should generally be avoided for consistency in application code, unless for specific low-level needs or isolated tests.
 
 3. **Testing**:
 

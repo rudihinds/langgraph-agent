@@ -43,6 +43,11 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ All authentication tests are now passing, including edge cases
    - ✅ Implemented client-side integration guidance
 7. **Chat UI Integration & Refactoring**: Integrated core chat UI components and refactored the connection to use a direct LangGraph endpoint, removing the API proxy. Provider structure corrected.
+8. **Server Architecture and Checkpointing Refactor**:
+   - Consolidated server startup to use `apps/backend/server.ts` as the main entry point, which initializes LangGraph components and then starts the Express application configured in `apps/backend/api/express-server.ts`.
+   - Simplified persistence by removing custom checkpointer adapters and factory. Now exclusively using the official `@langchain/langgraph-checkpoint-postgres` (`PostgresSaver`) via `createRobustCheckpointer` (which also handles DB schema setup), with a fallback to `MemorySaver`.
+   - Centralized `thread_id` management within the `OrchestratorService` and API layer for all graph operations.
+   - Removed redundant server startup files (`apps/backend/index.ts`, `apps/backend/server.js`) and custom persistence components.
 
 ### Next
 
@@ -79,6 +84,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 5. Authentication and thread handoff integration needs to be completed according to the plan in `auth-front-back.md`
 6. TypeScript linter error in `server.ts` related to `app.use(cookieParser())` (code functions correctly at runtime).
 7. Need to verify authentication handling for the direct LangGraph stream connection.
+8. Unit testing persistence side-effects for methods like `OrchestratorService.addUserMessage` is challenging with current mocking strategies and may require integration testing for full verification.
 
 ## Evolution of Project Decisions
 
@@ -131,6 +137,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - User-specific thread access control
    - Graceful error handling and loading states
 10. **Chat UI Connection**: Moved from an API passthrough proxy to a direct connection from the frontend (`StreamProvider`) to the LangGraph streaming endpoint, simplifying the architecture and aligning with reference examples.
+11. **Server Architecture & Persistence**: Shifted from custom checkpointer adapters to the official `PostgresSaver` from `@langchain/langgraph-checkpoint-postgres` to improve maintainability, reduce custom code, and leverage official schema management. Streamlined server startup by designating `server.ts` as the primary entry point that orchestrates asynchronous initialization and utilizes a separately configured Express app from `express-server.ts`.
 
 ## Completed Tasks
 
@@ -173,6 +180,8 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 - **Chat UI Refactoring**: Simplified frontend connection by removing API proxy and using direct LangGraph stream. Corrected placement of `StreamProvider` and `InterruptProvider` to be chat-page-specific.
 
+- **Server & Checkpointer Refactor**: Streamlined server startup logic, consolidated checkpointer implementation to use official `PostgresSaver`, and removed redundant files.
+
 ## Current Status
 
 - The dependency chain management system is now working correctly:
@@ -212,6 +221,8 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 - **Chat UI Connection**: Refactored to use direct connection to LangGraph (`http://localhost:2024`). Basic message sending and receiving is functional. UI correctly isolated to the chat page.
 - **Chat UI Rendering**: Basic message rendering (human and AI) is working correctly after resolving issues with `react-markdown` and conditional rendering logic.
+
+- **Server Architecture**: The backend server now has a clear startup sequence managed by `server.ts`, leveraging a configured Express app from `express-server.ts`. Persistence is handled by `PostgresSaver`.
 
 ## Next Steps
 
@@ -253,6 +264,19 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 - **Checkpointer Persistence**: **Thread creation successfully persists the initial checkpoint to the Supabase `proposal_checkpoints` table using the correct user ID and schema (`checkpoint_data` column).**
 - **Chat UI Connection**: Basic chat interaction via direct connection to LangGraph is working. Messages are sent, and initial state/value updates are received.
 - **Chat UI Rendering**: Basic message rendering is working correctly.
+- **Core Persistence:** Refactored backend uses `@langchain/langgraph-checkpoint-postgres` (`PostgresSaver`) for checkpointing via Supabase.
+- **Deterministic Thread IDs:** `user-[userId]::rfp-[rfpId]::proposal` format implemented and used for thread identification.
+- **Centralized Orchestration:** `OrchestratorService` handles workflow initialization (`initOrGetProposalWorkflow`, `startProposalGeneration`) and uses `RunnableConfig` with `thread_id` for graph interactions.
+- **API Endpoints:**
+  - `/api/rfp/workflow/init`: Correctly initializes/retrieves threads and returns `threadId`.
+  - `/api/rfp/feedback`, `/resume`, `/interrupt-status`: Refactored to use `threadId` and `OrchestratorService`.
+- **Frontend Integration:**
+  - `StreamProvider` uses the official LangGraph SDK (`useTypedStream`).
+  - Correctly calls `/api/rfp/workflow/init` to get `threadId`.
+  - Passes `threadId` to `useTypedStream` for persistent chat sessions.
+- **Basic Persistence Tests:**
+  - Test 1 (New Thread Init) in `thread-persistence.test.ts` passes.
+  - Test 2 (Existing Thread Retrieval) in `thread-persistence.test.ts` passes.
 
 ## Current Development Status
 
@@ -268,15 +292,27 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 | Token Refresh                      | Complete | 100%                |
 | Chat UI Integration                | Complete | 100%                |
 
-## What's Left to Build
+## What's Left to Build / Fix
 
-- **Chat UI Robustness**: Thorough testing and refinement of message display, tool call handling, and interruption flow.
-- **Authentication for Direct Connection**: Verification and implementation if needed.
-- **Core Agent Nodes**: Completion of remaining proposal section generation nodes.
-- **Error Handling**: Enhanced error handling in frontend and backend.
-- **Debugging Code Cleanup**: Remove temporary logs and comments added during debugging.
+- **Resolve Test 3 Failure:** Fix the failing test for `addUserMessage` persistence in `thread-persistence.test.ts`. This requires addressing the challenge of verifying state after `graph.invoke` in a unit test context.
+- **Implement Test 4:** Write and run the test for thread isolation.
+- **Database Schema/RLS Verification (Phase 5.4.6):** Connect to Supabase, confirm `checkpoints` table schema, and configure Row Level Security.
+- **End-to-End Testing (Phase 5.4.7):** Manually test the full user flow (new proposal, chat, refresh, resume).
+- **Documentation (Phase 5.5):** Update API docs, developer guidelines, UI docs, deployment checklist, performance recommendations.
 
 ## Current Status
 
-- The core architecture is stable, with successful integration of authentication, basic persistence, and a simplified, functional chat UI connection. Focus shifts to completing agent logic and hardening the UI.
-- **Basic message rendering in the Chat UI is now confirmed working.**
+- Checkpoint refactoring (Phase 5) is nearing completion.
+- Backend persistence layer is modernized using `PostgresSaver`.
+- Frontend is integrated with the new backend API for thread management.
+- **Currently Blocked/Working On:** Resolving the unit testing challenge for state persistence verification in `thread-persistence.test.ts` (Test 3).
+
+## Known Issues
+
+- Unit testing the final persisted state after orchestrator methods like `addUserMessage` is unreliable with the current mocking strategy.
+
+## Evolution of Project Decisions
+
+- **Shifted from custom `SupabaseCheckpointer` to official `PostgresSaver`:** Reduces maintenance and aligns with LangGraph standards.
+- **Adopted deterministic `thread_id` pattern:** Simplifies thread lookup and management compared to previous UUID mapping (`ThreadService` is now deprecated).
+- **Centralized workflow logic in `OrchestratorService`:** Provides a clear control point for graph interactions.

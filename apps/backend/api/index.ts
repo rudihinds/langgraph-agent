@@ -4,7 +4,7 @@ import { Logger } from "../lib/logger.js";
 import rfpRouter from "./rfp/index.js";
 
 // Initialize logger
-const logger = new Logger("api");
+const logger = Logger.getInstance();
 
 // Create Express app
 const app = express();

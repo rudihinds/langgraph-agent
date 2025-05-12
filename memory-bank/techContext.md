@@ -112,20 +112,14 @@
   - **Documentation Adherence:** Verify state definition patterns against the **latest official LangGraph.js documentation**.
   - **Clarification via Search:** If confusion persists regarding `StateGraph` initialization, state definition, or related type errors, **use the web search tool (e.g., Brave Search)** to find current examples, best practices, or issue discussions relevant to the LangGraph version.
 
-- **Persistence with Adapter Pattern:**
-
-  - **Basic Storage Implementations:**
-    - `InMemoryCheckpointer`: Simple in-memory implementation for testing and development
-    - `SupabaseCheckpointer`: Postgres-based implementation using Supabase for production use
-  - **LangGraph Adapters:**
-    - `LangGraphCheckpointer`: Adapts `SupabaseCheckpointer` to implement `BaseCheckpointSaver`
-    - `MemoryLangGraphCheckpointer`: Adapts `InMemoryCheckpointer` to implement `BaseCheckpointSaver`
-  - **Factory Function:** `createCheckpointer()` in `lib/persistence/checkpointer-factory.ts` MUST be used to create properly configured checkpointer instances based on environment (Supabase or in-memory fallback) and user context.
-  - **This adapter pattern isolates our storage logic from LangGraph's interface requirements, making our system more resilient to API changes**
-
-- **Checkpointer Usage:** Passed during graph compilation: `graph.compile({ checkpointer })`
+- **Checkpointer Usage:** Checkpointer instances (`PostgresSaver` or `MemorySaver`) are obtained via `createRobustCheckpointer`. Thread isolation is managed by passing `thread_id` in `RunnableConfig` to graph operations.
 
 - **Nodes:** Defined as TypeScript functions or LangChain Runnables, interacting with state.
+
+## Server Entry Point
+
+- The backend server is started via `apps/backend/server.ts`.
+- This script handles initialization of LangGraph components and starts the Express server (configured in `apps/backend/api/express-server.ts`).
 
 ## Chat UI Technologies
 

@@ -61,7 +61,7 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Get orchestrator service
-    const orchestratorService = getOrchestrator(threadId);
+    const orchestratorService = await getOrchestrator();
 
     // Process the chat message using the orchestrator
     const { response, commandExecuted } =

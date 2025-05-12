@@ -32,7 +32,7 @@ import {
 } from "./conditionals.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 import { createSectionEvaluators } from "../../agents/evaluation/sectionEvaluators.js";
-import { createCheckpointer } from "../../lib/persistence/checkpointer-factory.js";
+import { createRobustCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
 import { sectionNodes } from "./nodes/section_nodes.js";
 import { ENV } from "../../lib/config/env.js";
 import { processFeedbackNode } from "./nodes/processFeedback.js";
@@ -407,22 +407,14 @@ const feedbackRoutingMap: Record<string, string> = {
 /**
  * Creates the proposal generation graph with all nodes and edges
  *
- * @param userId The user ID for the proposal
- * @param proposalId The proposal ID
- * @returns The configured StateGraph
+ * @returns The configured StateGraph with checkpointer
  */
-function createProposalGenerationGraph(
-  userId: string = ENV.TEST_USER_ID,
-  proposalId?: string
-) {
-  // Create a persistent checkpointer based on environment
+async function createProposalGenerationGraph() {
+  // Create a persistent checkpointer based on environment using the ROBUST factory
   // In development: In-memory checkpointer (unless Supabase is configured)
   // In production: Supabase checkpointer (falls back to in-memory if not configured)
-  const checkpointer = createCheckpointer({
-    userId,
-    proposalId,
-    // Let the factory determine which implementation to use based on environment
-  });
+  // Ensure createRobustCheckpointer is awaited as it returns a Promise
+  const checkpointer = await createRobustCheckpointer();
 
   if (ENV.isDevelopment()) {
     console.info(
@@ -431,6 +423,8 @@ function createProposalGenerationGraph(
   }
 
   // Compile the graph with checkpointer
+  // The thread_id will be provided at invocation time via RunnableConfig
+  // This allows the same compiled graph to be reused across different threads
   const compiledGraph = proposalGenerationGraph.compile({
     checkpointer,
   });

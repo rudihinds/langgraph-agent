@@ -10,39 +10,28 @@ import { Request, Response, NextFunction } from "express"; // Import Express typ
 import { BaseCheckpointSaver } from "@langchain/langgraph"; // Needed for type checking
 import type { CompiledStateGraph } from "@langchain/langgraph"; // Needed for type checking
 import { createServer } from "http";
-import { Logger } from "./lib/logger.js";
-import { createProposalGenerationGraph } from "./agents/proposal-generation/graph.js";
-import { createCheckpointer } from "./services/checkpointer.service.js";
+import { Logger } from "@/lib/logger.js";
+import { createProposalGenerationGraph } from "@/agents/proposal-generation/graph.js";
+import { createCheckpointer } from "@/services/checkpointer.service.js";
 import rfpRouter from "./api/rfp/index.js";
 import { createLangGraphRouter } from "./api/langgraph/index.js"; // Import the factory function
-import { LangGraphCheckpointer } from "./lib/persistence/langgraph-adapter.js"; // For type checking
-import { MemoryLangGraphCheckpointer } from "./lib/persistence/memory-adapter.js"; // For type checking
 import cookieParser from "cookie-parser"; // Import cookie-parser
 import helmet from "helmet";
+import { app } from "./api/express-server.js"; // Import the configured app
 
 // Initialize logger
 const logger = Logger.getInstance();
 
 // --- Global instances (will be initialized async) ---
 let graphInstance: CompiledStateGraph<any, any, any> | null = null;
-let checkpointerInstance:
-  | LangGraphCheckpointer
-  | MemoryLangGraphCheckpointer
-  | null = null;
+let checkpointerInstance: BaseCheckpointSaver | null = null;
 // ------------------------------------------
 
-// Create Express application
-const app = express();
-
 // Middleware
-app.use(helmet());
 
 // Enable CORS
 // TODO: Configure allowed origins properly for production
 app.use(cors({ origin: true, credentials: true }));
-
-// Parse cookies
-app.use(cookieParser());
 
 // Logging middleware (before body parsing)
 app.use((req, res, next) => {
@@ -101,8 +90,9 @@ async function initializeLangGraph() {
     });
     logger.info("Mounted /api/health route.");
 
-    // --- Setup Catch-all and Error Handling AFTER routers ---
-    // Catch-all for 404 Not Found (should be after all other routes)
+    // --- Mount Final Middleware AFTER all other routes ---
+
+    // Catch-all for 404 Not Found (should be after all specific routers)
     app.use((req, res, next) => {
       if (!res.headersSent) {
         logger.warn(`404 Not Found: ${req.method} ${req.originalUrl}`);
@@ -110,13 +100,13 @@ async function initializeLangGraph() {
       }
     });
 
-    // Error Handling Middleware (should be last)
+    // Global Error Handling Middleware (should be the very last middleware)
     app.use(
       (
         err: Error,
-        req: express.Request,
-        res: express.Response,
-        next: express.NextFunction
+        req: Request,
+        res: Response,
+        next: NextFunction // Although unused, it's required for Express error middleware signature
       ) => {
         logger.error("Unhandled Express error:", err);
         if (!res.headersSent) {
@@ -124,26 +114,26 @@ async function initializeLangGraph() {
         }
       }
     );
-    logger.info("Error handling middleware configured.");
+    logger.info("Final 404 and error handling middleware configured.");
   } catch (error) {
     logger.error("FATAL: Failed during initialization or router setup:", error);
-    process.exit(1);
+    process.exit(1); // Exit if critical initialization fails
   }
 }
 
 // --- Start Server AFTER Initialization ---
 async function startServer() {
-  await initializeLangGraph(); // Wait for initialization to complete
+  await initializeLangGraph(); // Wait for initialization and router mounting
 
-  const PORT = process.env.PORT || 3001;
-  const server = createServer(app); // Use Express app with http server
+  const PORT = process.env.PORT || 3001; // Use a single consistent port
+  const server = createServer(app); // Use the imported and augmented Express app
 
   server.listen(PORT, () => {
     logger.info(`Server running at http://localhost:${PORT}`);
     logger.info("Available base API paths:");
-    logger.info("- /api/health");
-    logger.info("- /api/rfp");
-    logger.info("- /api/langgraph");
+    logger.info("- /api/health (from express-server)");
+    logger.info("- /api/rfp (from express-server)");
+    logger.info("- /api/langgraph (mounted in server.ts)");
   });
 }
 

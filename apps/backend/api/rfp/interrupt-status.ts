@@ -10,19 +10,19 @@ const router = express.Router();
 
 /**
  * @description Get route to check if a proposal generation has been interrupted
- * @param proposalId - The ID of the proposal to check
+ * @param threadId - The ID of the thread to check (from URL path)
  * @returns {Object} - Object indicating if the proposal generation is interrupted and the state if interrupted
  */
-router.get("/", async (req, res) => {
+router.get("/:threadId", async (req, res) => {
   try {
-    // Validate proposalId
-    const querySchema = z.object({
-      proposalId: z.string().min(1, "ProposalId is required"),
+    // Validate threadId from path parameters
+    const paramSchema = z.object({
+      threadId: z.string().min(1, "ThreadId is required"),
     });
 
-    const result = querySchema.safeParse(req.query);
+    const result = paramSchema.safeParse(req.params);
     if (!result.success) {
-      logger.error("Invalid proposalId in interrupt status request", {
+      logger.error("Invalid threadId in interrupt status request", {
         error: result.error.issues,
       });
       return res.status(400).json({
@@ -31,14 +31,14 @@ router.get("/", async (req, res) => {
       });
     }
 
-    const { proposalId } = result.data;
-    logger.info("Checking interrupt status for proposal", { proposalId });
+    const { threadId } = result.data;
+    logger.info("Checking interrupt status for thread", { threadId });
 
     // Get the orchestrator
-    const orchestrator = getOrchestrator(proposalId);
+    const orchestrator = await getOrchestrator();
 
-    // Get the interrupt status and return it directly - the test expects this exact format
-    const status = await orchestrator.getInterruptStatus(proposalId);
+    // Get the interrupt status and return it directly - use threadId
+    const status = await orchestrator.getInterruptStatus(threadId);
     return res.status(200).json(status);
   } catch (error) {
     logger.error("Failed to check interrupt status", { error });

@@ -12,35 +12,36 @@ const router = express.Router();
 // Validation schema for feedback
 const feedbackSchema = z
   .object({
-  proposalId: z.string().min(1, "ProposalId is required"),
-  feedbackType: z.enum(
-      [FeedbackType.APPROVE, FeedbackType.REVISE, FeedbackType.EDIT],
-    {
-      errorMap: () => ({ message: "Invalid feedback type" }),
-    }
-  ),
+    threadId: z.string().min(1, "ThreadId is required"),
+    feedbackType: z.enum(
+      [FeedbackType.APPROVE, FeedbackType.REVISE, FeedbackType.REGENERATE],
+      {
+        errorMap: () => ({ message: "Invalid feedback type" }),
+      }
+    ),
     // Comments are required for REVISE, optional for others
     comments: z.string().optional(),
-    // Edited content is required for EDIT type
-    editedContent: z.string().optional(),
-    // Optional custom instructions for revisions
+    // Edited content is conceptually removed, REVISE/REGENERATE use comments/guidance
+    // editedContent: z.string().optional(),
+    // Optional custom instructions for revisions/regeneration
     customInstructions: z.string().optional(),
   })
   .refine(
     (data) => {
-      // If type is EDIT, editedContent must be provided
-      if (data.feedbackType === FeedbackType.EDIT && !data.editedContent) {
+      // If type is REVISE, comments should be provided (or customInstructions)
+      if (
+        data.feedbackType === FeedbackType.REVISE &&
+        !data.comments &&
+        !data.customInstructions
+      ) {
         return false;
       }
-      // If type is REVISE, comments should be provided
-      if (data.feedbackType === FeedbackType.REVISE && !data.comments) {
-        return false;
-      }
+      // Removed check for editedContent
       return true;
     },
     {
       message:
-        "Edited content is required for EDIT feedback or comments are required for REVISE feedback",
+        "Comments or custom instructions are required for REVISE feedback",
       path: ["feedbackType"],
     }
   );
@@ -69,24 +70,22 @@ router.post("/", async (req, res) => {
     }
 
     const {
-      proposalId,
+      threadId,
       feedbackType,
       comments = "",
-      editedContent,
       customInstructions,
     } = result.data;
 
     logger.info("Processing feedback submission", {
-      proposalId,
+      threadId,
       feedbackType,
-      hasEditedContent: !!editedContent,
     });
 
     // Get orchestrator
-    const orchestrator = getOrchestrator(proposalId);
+    const orchestrator = await getOrchestrator();
 
     // Get interrupt details to retrieve the correct contentReference
-    const interruptStatus = await orchestrator.getInterruptStatus(proposalId);
+    const interruptStatus = await orchestrator.getInterruptStatus(threadId);
     const contentReference =
       interruptStatus.interruptData?.contentReference || "";
 
@@ -96,13 +95,12 @@ router.post("/", async (req, res) => {
       comments: comments,
       timestamp: new Date().toISOString(),
       contentReference: contentReference,
-      specificEdits: editedContent ? { content: editedContent } : undefined,
       customInstructions: customInstructions,
     };
 
     // Submit feedback using the updated orchestrator method
     const feedbackResult = await orchestrator.submitFeedback(
-      proposalId,
+      threadId,
       feedbackPayload
     );
 

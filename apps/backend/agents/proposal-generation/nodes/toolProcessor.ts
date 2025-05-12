@@ -105,7 +105,19 @@ export async function processToolsNode(
 
         toolResponseMessages.push(toolResponse);
       } else {
-        console.warn(`ToolProcessor: Unknown tool '${toolName}', skipping`);
+        console.warn(
+          `ToolProcessor: Unknown tool '${toolName}' (ID: ${toolCall.id}), providing a generic error response.`
+        );
+        const unknownToolResponse = new ToolMessage({
+          tool_call_id: toolCall.id, // CRITICAL: Use the original toolCall.id
+          name: toolName || "unknown_tool",
+          content: JSON.stringify({
+            error: `Tool '${toolName}' is not recognized or supported by this agent.`,
+            command: "other", // Fallback command
+            details: `The AI requested an unsupported tool: ${toolName}`,
+          }),
+        });
+        toolResponseMessages.push(unknownToolResponse);
       }
     } catch (error) {
       console.error(`ToolProcessor: Error processing tool call:`, error);
