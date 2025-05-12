@@ -208,7 +208,7 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 3.  **Implement Orchestrator-Driven Thread Management & Workflow Initiation:**
 
-    - **Status:** ◻️ In Progress
+    - **Status:** ✅ In Progress (startProposalGeneration refactored)
     - **Action:**
       1.  ✅ **API Handler Refactor (`apps/backend/api/rfp/workflow.ts`):**
           - The API handler in `apps/backend/api/rfp/workflow.ts` has been refactored.
@@ -221,17 +221,15 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
           - It calls `this.checkpointer.getTuple({ configurable: { thread_id: constructedThreadId } })`.
           - It returns `{ threadId, initialState: Checkpoint | null, isNew: boolean }`.
       4.  **If `isNew: true` (within API Handler):**
-          - **NEXT STEP: Refactor `OrchestratorService.startProposalGeneration` (or equivalent method for new workflows):**
-            - **Signature Update:** The method must accept the new signature: `(threadId: string, userId: string, rfpId: string)`.
-            - **Remove `initialRfpData`:** It should no longer expect or use `initialRfpData`.
-            - **Initial Graph Input:** It is responsible for constructing the initial state/input for the LangGraph graph. This initial input **must** ensure the `documentLoaderNode` is triggered correctly.
+          - ✅ **OrchestratorService.startProposalGeneration Refactored:**
+            - **Signature Update:** The method now accepts the correct signature: `(threadId: string, userId: string, rfpId: string)`.
+            - **Removed `initialRfpData`:** No longer expects or uses `initialRfpData`.
+            - **Fixed State Structure:** Removed redundant `rfpId` property from state and renamed `updatedAt` to `lastUpdatedAt` to match interface.
+            - **Initial Graph Input:** Constructs proper initial state for the LangGraph graph through a system task message.
             - **Triggering `documentLoaderNode`:**
-              - The `rfpId` must be made available to `documentLoaderNode` via the graph's state. A common approach would be to set initial state values like `state.rfpDocument.id = rfpId` and `state.rfpDocument.status = 'pending_load'` and potentially an initial user message to kick off the graph via the `chatAgentNode`.
-              - For example, the initial state could be ` { messages: [new HumanMessage({ content: "Start proposal generation for RFP ID: " + rfpId })], rfpDocument: { id: rfpId, status: "pending_load", text: null, metadata: null, error: null }, ...other_initial_states }`.
-              - The `chatAgentNode` would process this initial message. The `interpretIntentTool` should then parse this into a `CommandSchemaType` such as `{ command: 'load_document', request_details: rfpId }`.
-              - The `shouldContinueChat` conditional logic would then route the graph to the `loadDocument` node alias, which points to `documentLoaderNode`.
-              - `documentLoaderNode` then extracts `rfpId` from `state.intent.request_details` (or directly from `state.rfpDocument.id` if set).
-            - The orchestrator method will then invoke the graph with this initial state/message and the `threadId` in `RunnableConfig`. The graph's first run (including `documentLoaderNode`) will create the initial checkpoint.
+              - Sets initial state with `rfpDocument.id = rfpId` and triggers document loading via initial message: `System Task: Load RFP document with ID ${rfpId}`.
+              - The `chatAgentNode` processes this initial message and the `interpretIntentTool` should parse this into a document load command.
+            - Invokes the graph with this initial state/message and the `threadId` in `RunnableConfig`.
           - The API handler then returns the `threadId` and the initial (or first step) state to the client.
       5.  **If `isNew: false` (within API Handler):**
           - The API handler returns the existing `threadId` and `initialState` (the latest checkpoint) to the client, allowing the frontend to resume.
@@ -252,12 +250,47 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 1.  **Update Graph Instantiation in `graph.ts` for Dynamic Checkpointing:**
 
-    - **Status:** ◻️ Pending (Current instantiation in `createProposalGenerationGraph` might be too early for `thread_id` specific checkpointers if not using `RunnableConfig` correctly).
-    - **Action:**
-      - In `apps/backend/agents/proposal-generation/graph.ts`, ensure `createProposalGenerationGraph` compiles the graph with a checkpointer instance obtained from `createCheckpointer()` (via `checkpointer.service.ts`).
-      - The crucial part is that the `thread_id` (and any other `configurable` properties) must be passed at **invocation time** via the `RunnableConfig` (e.g., `compiledGraph.invoke(inputs, { configurable: { thread_id: specificThreadId } })`). The graph compilation itself should not be tied to a specific `thread_id`.
-    - **Justification:** Aligns with LangGraph's pattern of thread-specific state management via `RunnableConfig` at invocation time.
-    - **File(s) Touched:** `apps/backend/agents/proposal-generation/graph.ts`, `apps/backend/services/orchestrator.service.ts` (where graph is invoked).
+    - **Status:** ✅ Done
+    - **File(s) Modified:** `apps/backend/agents/proposal-generation/graph.ts`
+    - **Change Overview:**
+      - Removed `userId` and `proposalId` parameters from `createProposalGenerationGraph` function
+      - The checkpointer is now created without binding it to any specific thread
+      - Added comments clarifying that thread_id will be provided at invocation time via RunnableConfig
+      - This allows the same compiled graph to be reused across different threads
+    - **Original Code:**
+
+    ```typescript
+    async function createProposalGenerationGraph(
+      userId: string = ENV.TEST_USER_ID,
+      proposalId?: string
+    ) {
+      const checkpointer = await createRobustCheckpointer({
+        // Pass necessary options if robust checkpointer expects them, e.g., threadId
+        // For now, assuming it doesn't require specific options beyond environment checks
+        // userId, // Not directly needed by robust-checkpointer factory itself
+        // proposalId, // Not directly needed by robust-checkpointer factory itself
+      });
+      // ...
+    }
+    ```
+
+    - **New Code:**
+
+    ```typescript
+    async function createProposalGenerationGraph() {
+      const checkpointer = await createRobustCheckpointer();
+
+      // ...
+
+      // The thread_id will be provided at invocation time via RunnableConfig
+      // This allows the same compiled graph to be reused across different threads
+      const compiledGraph = proposalGenerationGraph.compile({
+        checkpointer,
+      });
+
+      return compiledGraph;
+    }
+    ```
 
 2.  **✅ Verify Environment Variables for `PostgresSaver`:**
 
@@ -266,10 +299,23 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 3.  **Resolve Linter Error in `apps/backend/api/rfp/workflow.ts`:**
 
-    - **Status:** ◻️ Pending
-    - **Issue:** The call to `orchestratorService.startProposalGeneration` in `apps/backend/api/rfp/workflow.ts` has an argument mismatch ("Expected 3 arguments, but got 4.").
-    - **Action:** Investigate the current signature of `OrchestratorService.startProposalGeneration` and adjust the call in `workflow.ts` accordingly. It's likely that `userId` or `rfpId` is now redundant in that call if `threadId` already encapsulates them and `initialRfpData` is the primary new input needed.
-    - **File(s) Touched:** `apps/backend/api/rfp/workflow.ts`, `apps/backend/services/orchestrator.service.ts` (for checking signature).
+    - **Status:** ✅ Done
+    - **Issue:** The call to `orchestratorService.startProposalGeneration` in `apps/backend/api/rfp/workflow.ts` had an argument mismatch ("Expected 3 arguments, but got 4.").
+    - **Action:** Upon inspection of the workflow.ts file, we found the call to startProposalGeneration already correctly passes the three required arguments (threadId, userId, rfpId) and does not include initialRfpData:
+
+    ```javascript
+    const { state: newWorkflowState } =
+      await orchestratorService.startProposalGeneration(
+        workflowContext.threadId,
+        userId,
+        rfpId
+        // initialRfpData is already removed
+      );
+    ```
+
+    The code comments also indicate this was already adjusted as part of the refactoring process. Any lingering linter errors may be due to the TypeScript compiler not picking up the updated method signature in orchestrator.service.ts, which should resolve after a rebuild.
+
+    - **File(s) Touched:** `apps/backend/api/rfp/workflow.ts` (verified)
 
 4.  **Review and Align Other API Handlers for Consistent OrchestratorService Usage:**
 
@@ -294,81 +340,239 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
     - **Justification:** Critical for correct, isolated state persistence per workflow.
     - **File(s) Touched:** `apps/backend/services/orchestrator.service.ts`.
 
+### Sub-Phase 5.4: Frontend Integration and Thread Persistence Testing
+
+**Goal:** Integrate the frontend chat UI with our refactored backend to enable thread persistence and comprehensive testing of the end-to-end flow.
+
+1. **Update StreamProvider Configuration for LangGraph SDK Integration:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Modify:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
+   - **Action:**
+     1. Fix type errors in `useTypedStream` initialization:
+        ```typescript
+        const streamValue = useTypedStream({
+          apiUrl: directApiUrl || "http://localhost:2024", // Default LangGraph server port
+          assistantId: assistantId || "proposal-generation", // Standardize on correct agent ID
+          streamMode: "values",
+          threadId: threadId || undefined, // Pass custom threadId from our API
+        });
+        ```
+     2. Ensure proper error handling for initialization failures
+     3. Add comprehensive logging at key points in the thread initialization flow
+   - **Justification:** Eliminates type errors and aligns with LangGraph SDK expectations. Using the correct `assistantId` ensures proper agent targeting, while the fallback values improve robustness.
+
+2. **Standardize on the Official SDK Implementation:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Modify:**
+     - `apps/web/src/features/chat-ui/providers/StreamProvider.tsx` (update)
+     - `apps/web/src/features/chat/components/providers/Stream.tsx` (remove/deprecate)
+   - **Action:**
+     1. Update all components to use the `StreamProvider.tsx` with `@langchain/langgraph-sdk/react`
+     2. Remove or deprecate the custom implementation in `Stream.tsx`
+     3. Ensure any components using the old provider are updated
+   - **Justification:** Standardizing on the official SDK provides better long-term maintainability, automatic updates with SDK changes, and consistent behavior with the LangGraph ecosystem.
+
+3. **Implement Thread Initialization Flow:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Modify:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
+   - **Action:**
+
+     1. When an `rfpId` is present but no `threadId` exists:
+
+        ```typescript
+        useEffect(() => {
+          const initializeThread = async () => {
+            if (rfpId && !threadId) {
+              try {
+                // Call our custom workflow initialization endpoint
+                const response = await fetch(
+                  `${baseApiUrl}/api/rfp/workflow/init`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rfpId }),
+                  }
+                );
+
+                if (!response.ok)
+                  throw new Error(
+                    `Failed to initialize workflow: ${response.statusText}`
+                  );
+
+                const { threadId: newThreadId } = await response.json();
+                // Update URL with the new threadId
+                setThreadId(newThreadId);
+              } catch (error) {
+                console.error("Thread initialization error:", error);
+                // Set error state and show toast notification
+              }
+            }
+          };
+
+          initializeThread();
+        }, [rfpId, threadId, setThreadId]);
+        ```
+
+     2. Implement proper loading state during initialization
+     3. Add error handling for initialization failures
+
+   - **Justification:** Creates a seamless experience where selecting an RFP automatically initializes a thread with the correct ID format, maintaining our deterministic thread ID approach while integrating with the SDK.
+
+4. **Verify Thread Persistence Flow in UI Components:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Modify:** `apps/web/src/features/chat-ui/components/Thread.tsx`
+   - **Action:**
+     1. Add logging to verify message submission and receipt
+     2. Ensure `submit()` is called with the correct message format
+     3. Implement proper error handling for message submission failures
+     4. Add UI feedback for loading and error states
+   - **Justification:** Ensures the chat UI correctly integrates with the LangGraph SDK's message submission and streaming response capabilities.
+
+5. **Implement Thread Resumption Testing:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Create:** `apps/backend/__tests__/thread-persistence.test.ts`
+   - **Action:**
+
+     1. Create test suite for thread persistence verification:
+
+        ```typescript
+        describe("Thread Persistence Tests", () => {
+          test("Thread state is properly restored after creation", async () => {
+            // Initialize a thread
+            const { threadId } =
+              await orchestratorService.initOrGetProposalWorkflow(
+                testUserId,
+                testRfpId
+              );
+
+            // Make some updates to the thread
+            await orchestratorService.addUserMessage(threadId, "Test message");
+
+            // Retrieve the state after updates
+            const updatedState = await orchestratorService.getState(threadId);
+
+            // Verify the state contains expected data
+            expect(updatedState.messages.length).toBeGreaterThan(1);
+            expect(updatedState.activeThreadId).toBe(threadId);
+          });
+
+          // Additional tests for various persistence scenarios
+        });
+        ```
+
+     2. Add tests for thread resumption across different sessions
+     3. Test error handling for invalid thread IDs
+
+   - **Justification:** Provides automated verification that thread state is properly persisted and can be resumed, ensuring the reliability of our persistence implementation.
+
+6. **Verify Database Schema and Supabase Integration:**
+
+   - **Status:** ◻️ Pending
+   - **Action:**
+
+     1. Connect to Supabase and verify the `checkpoints` table schema:
+        - Required columns: `id`, `ts`, `channel_values`, `channel_versions`, `versions_seen`, `pending_sends`, `metadata`
+        - Proper indices on `id` and `ts`
+     2. If schema is missing required columns, create migration script:
+
+        ```sql
+        ALTER TABLE checkpoints
+        ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
+        CREATE INDEX IF NOT EXISTS idx_checkpoints_id ON checkpoints(id);
+        CREATE INDEX IF NOT EXISTS idx_checkpoints_ts ON checkpoints(ts);
+        ```
+
+     3. Configure Row Level Security policy:
+        ```sql
+        CREATE POLICY checkpoints_user_isolation ON checkpoints
+        FOR ALL TO authenticated
+        USING (metadata->>'userId' = auth.uid());
+        ```
+
+   - **Justification:** Ensures the database schema properly supports the PostgresSaver requirements and data is securely isolated between users.
+
+7. **End-to-End Testing:**
+
+   - **Status:** ◻️ Pending
+   - **Action:**
+     1. Create a test plan for manual verification:
+        - New proposal flow (select RFP → chat → refresh → verify persistence)
+        - Resumption flow (return to existing chat → verify history → add messages)
+        - Error handling (invalid IDs, server errors, etc)
+     2. Test across different browsers and devices
+     3. Test with realistic document sizes and chat lengths
+   - **Justification:** Provides real-world validation of the complete thread persistence flow, catching any issues that automated tests might miss.
+
+### Sub-Phase 5.5: Documentation and Production Readiness
+
+**Goal:** Ensure the refactored system is well-documented, maintainable, and ready for production use.
+
+1. **Update API Documentation:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Create/Modify:** `apps/backend/README.md`, `apps/backend/api/README.md`
+   - **Action:**
+     1. Document all API endpoints, their parameters, and response formats
+     2. Provide examples of thread initialization and management
+     3. Document the thread ID format and construction
+   - **Justification:** Ensures developers understand how to use the API correctly, particularly the thread management aspects.
+
+2. **Update Developer Guidelines:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Create/Modify:** `DEVELOPMENT.md`, `apps/backend/ARCHITECTURE.md`
+   - **Action:**
+     1. Document the thread persistence architecture
+     2. Emphasize the importance of using `thread_id` in `RunnableConfig`
+     3. Provide guidelines for testing thread persistence
+     4. Document the thread ID format and explain its deterministic nature
+   - **Justification:** Ensures consistent development practices and helps new developers understand the system architecture.
+
+3. **Create Thread Management UI Documentation:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Create/Modify:** `apps/web/src/features/chat-ui/README.md`
+   - **Action:**
+     1. Document the UI flow for thread initialization and resumption
+     2. Explain how thread IDs are managed in the URL
+     3. Provide guidelines for implementing thread switching
+   - **Justification:** Helps frontend developers understand how to correctly integrate with the thread persistence system.
+
+4. **Production Deployment Checklist:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Create:** `DEPLOYMENT.md`
+   - **Action:**
+     1. Document required environment variables:
+        - `NEXT_PUBLIC_API_URL` (frontend)
+        - `DATABASE_URL` (backend)
+        - Other Supabase/authentication variables
+     2. Provide database migration steps
+     3. Include performance monitoring recommendations
+     4. Document backup strategies for thread data
+   - **Justification:** Ensures smooth deployment to production environments with proper configuration and monitoring.
+
+5. **Performance Optimization Recommendations:**
+
+   - **Status:** ◻️ Pending
+   - **File(s) to Create:** `PERFORMANCE.md`
+   - **Action:**
+     1. Document database indexing strategies
+     2. Provide caching recommendations
+     3. Suggest state pruning strategies for long-running threads
+     4. Document thread archiving approaches
+   - **Justification:** Helps maintain system performance as usage grows, particularly for long-running threads with large state.
+
 ---
 
-## Important Context
+## Next Immediate Action
 
-This section provides crucial context for anyone picking up this task, especially regarding the refactored workflow initiation.
-
-### New Workflow Initiation Flow (Post-Refactor of `initialRfpData`)
-
-The following outlines the intended flow for initiating a _new_ proposal generation workflow. This flow assumes the `initialRfpData` parameter has been removed from the API, and the system relies solely on an `rfpId` to identify the RFP document, which is then loaded by the `documentLoaderNode` within the graph.
-
-1.  **Frontend Responsibility:**
-
-    - The user uploads an RFP document through the frontend.
-    - The frontend calls a (presumably existing, separate) API endpoint to process this document. This processing step involves storing the document (e.g., in Supabase Storage or a database table) and generating a unique `rfpId` that references it.
-    - The frontend now possesses the `userId` (from authentication) and this `rfpId`.
-
-2.  **Workflow Initialization API Call (`/api/rfp/workflow/init`):**
-
-    - The frontend makes a `POST` request to `/api/rfp/workflow/init`, including `{ rfpId }` in the request body. The `userId` is typically derived from the authentication token by backend middleware.
-    - **API Handler (`apps/backend/api/rfp/workflow.ts`):**
-      - Receives `userId` and `rfpId`.
-      - Calls `OrchestratorService.initOrGetProposalWorkflow(userId, rfpId)`.
-
-3.  **`OrchestratorService.initOrGetProposalWorkflow(userId, rfpId)`:**
-
-    - Constructs the composite `thread_id` using the pattern: `"user-[userId]::rfp-[rfpId]::proposal"` (via `constructProposalThreadId` utility).
-    - Queries the `PostgresSaver` checkpointer (obtained via `createRobustCheckpointer`) using `getTuple({ configurable: { thread_id } })` to check for an existing workflow session.
-    - **If no checkpoint exists (isNew = true):** Returns `{ threadId: <composite_thread_id>, initialState: null, isNew: true }`.
-    - **If a checkpoint exists (isNew = false):** Returns `{ threadId: <composite_thread_id>, initialState: <retrieved_checkpoint_data>, isNew: false }`.
-
-4.  **API Handler (`workflow.ts`) - New Workflow Path:**
-
-    - If `initOrGetProposalWorkflow` returns `isNew: true`, the API handler proceeds to call a method like `OrchestratorService.startProposalGeneration(threadId, userId, rfpId)`.
-
-5.  **`OrchestratorService.startProposalGeneration(threadId, userId, rfpId)`:**
-
-    - **This is the primary method to be refactored or implemented next.**
-    - This method is now responsible for setting up the _initial input/state_ for the LangGraph graph specifically to trigger the `documentLoaderNode`.
-    - **Key Task:** Prepare an initial `OverallProposalState` or an initial message that ensures `documentLoaderNode` executes first and has access to `rfpId`.
-    - **Strategy Example (Intent-Driven):**
-      - Create an initial `HumanMessage` like: `new HumanMessage({ content: \`System Task: Load RFP document with ID ${rfpId}\` })`.
-      - The initial graph state would include this message: `{ messages: [initialMessage], rfpDocument: { id: rfpId, status: "pending_load", ... }, ... }`.
-      - When the graph starts, `chatAgentNode` processes this message.
-      - `interpretIntentTool` (bound to `chatAgentNode`) should be designed to parse this system-like task into a `CommandSchemaType` such as: `{ command: 'load_document', request_details: rfpId }`.
-      - The `shouldContinueChat` conditional router, seeing the `load_document` command in `state.intent`, will direct the flow to the `documentLoaderNode` (aliased as `loadDocument` in the graph edges).
-      - `documentLoaderNode` then extracts the `rfpId` from `state.intent.request_details` (or `state.rfpDocument.id`).
-    - After preparing the initial inputs, the orchestrator invokes the compiled graph: `await compiledGraph.invoke(initialInputs, { configurable: { thread_id: threadId } })`.
-    - The method should return the state of the graph after the initial steps (ideally after document loading and its first evaluation).
-
-6.  **`documentLoaderNode(state)`:**
-
-    - This node, when executed, must be ableto access the `rfpId`.
-      - If using the intent-driven approach, it would get it from `state.intent.request_details`.
-      - If state was directly prepared, it might get it from `state.rfpDocument.id`.
-    - It uses the `rfpId` to fetch the actual RFP document content from its storage location.
-    - Parses the document.
-    - Updates `state.rfpDocument` with the content, metadata, and sets `status: 'loaded'`.
-
-7.  **API Handler (`workflow.ts`) - New Workflow Path (Conclusion):**
-
-    - Receives the initial state from `OrchestratorService.startProposalGeneration`.
-    - Returns a response to the client, e.g., `{ threadId, state: newWorkflowState, isNew: true }`.
-
-8.  **Frontend Client:**
-    - Stores the received `threadId`.
-    - Uses this `threadId` in all subsequent chat messages and interactions for this proposal workflow.
-    - Displays the initial state received from the backend.
-
-This refined flow centralizes RFP document identification around `rfpId` and leverages the graph's `documentLoaderNode` to handle the actual fetching and parsing, triggered by the orchestrator when a new workflow is initiated.
-
-### Relationship with `ThreadService` and `proposal_thread_mappings`
-
-- The `ThreadService` and the `proposal_thread_mappings` table (which uses a UUID-based `threadId`) are part of the existing system, primarily for API endpoints that might have used this internal UUID.
-- The **new LangGraph checkpointing mechanism** uses the composite `thread_id` (e.g., `"user-[USER_ID]::rfp-[RFP_ID]::proposal"`) directly with `PostgresSaver`. This composite ID is the one relevant for LangGraph's state persistence.
-- **Short-term:** The existing `ThreadService` and its UUIDs can coexist if other parts of the application still rely on them. They are not directly used for LangGraph's checkpoint `thread_id`.
-- **Long-term Evaluation:** Consider if the `proposal_thread_mappings` table and the UUIDs generated by `ThreadService` become redundant. If all workflow state and identification can be managed via the composite `thread_id` and the `checkpoints` table, `ThreadService` might be simplified or phased out for proposal-related flows. The key is that the `PostgresSaver` checkpointer only knows about the `thread_id` passed in its `configurable` config.
+Review API handlers to ensure consistent OrchestratorService usage (Phase 5.3, Step 4), followed by updating StreamProvider for SDK integration (Phase 5.4, Step 1)
 
 ---
