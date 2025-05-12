@@ -127,6 +127,12 @@ All components have been placed in `/apps/web/src/features/chat-ui/` under their
 
 4. **Chat UI Connection Refactor**: Simplified the frontend-backend connection for chat streaming by adopting the direct connection pattern from `agent-chat-ui`, removing the API proxy layer. Corrected the placement of `StreamProvider` and `InterruptProvider` to be specific to the chat page.
 
+5. **Server Architecture and Checkpointing Refactor**:
+   - **Consolidated Server Startup**: The backend now uses a streamlined startup process. `apps/backend/server.ts` is the main entry point, handling asynchronous initialization (like LangGraph components) and starting the HTTP server. It imports and uses the configured Express application instance from `apps/backend/api/express-server.ts`, which sets up core middleware (CORS, helmet, body-parser, cookie-parser) and mounts primary API routers (like `/api/rfp`). The dedicated LangGraph API router (`/api/langgraph`) is mounted within `server.ts` after the graph and checkpointer are initialized.
+   - **Simplified Checkpointing**: Removed custom checkpointer implementations (`SupabaseCheckpointer`, `MemoryLangGraphCheckpointer`, `checkpointer-factory.ts`). The system now relies solely on the official `@langchain/langgraph-checkpoint-postgres` package's `PostgresSaver` (instantiated via `createRobustCheckpointer` in `lib/persistence/robust-checkpointer.ts`, which also handles DB schema setup via `checkpointer.setup()`) for interacting with the Supabase database. An in-memory fallback (`MemorySaver`) is used if DB connection fails.
+   - **Centralized Thread Management**: The `OrchestratorService` now manages all interactions with the checkpointer, using deterministic `thread_id`s constructed from `userId` and `rfpId` for all graph operations (`invoke`, `updateState`, `getState`). API handlers delegate thread initiation and state management to the `OrchestratorService`.
+   - **Removed Redundant Files**: Deleted `apps/backend/index.ts`, `apps/backend/server.js`, `apps/backend/langgraph-custom.ts`, and custom persistence adapters/factories.
+
 ### Active Decisions
 
 1. **State Management Approach**

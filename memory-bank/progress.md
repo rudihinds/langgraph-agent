@@ -43,6 +43,11 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ All authentication tests are now passing, including edge cases
    - ✅ Implemented client-side integration guidance
 7. **Chat UI Integration & Refactoring**: Integrated core chat UI components and refactored the connection to use a direct LangGraph endpoint, removing the API proxy. Provider structure corrected.
+8. **Server Architecture and Checkpointing Refactor**:
+   - Consolidated server startup to use `apps/backend/server.ts` as the main entry point, which initializes LangGraph components and then starts the Express application configured in `apps/backend/api/express-server.ts`.
+   - Simplified persistence by removing custom checkpointer adapters and factory. Now exclusively using the official `@langchain/langgraph-checkpoint-postgres` (`PostgresSaver`) via `createRobustCheckpointer` (which also handles DB schema setup), with a fallback to `MemorySaver`.
+   - Centralized `thread_id` management within the `OrchestratorService` and API layer for all graph operations.
+   - Removed redundant server startup files (`apps/backend/index.ts`, `apps/backend/server.js`) and custom persistence components.
 
 ### Next
 
@@ -79,6 +84,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 5. Authentication and thread handoff integration needs to be completed according to the plan in `auth-front-back.md`
 6. TypeScript linter error in `server.ts` related to `app.use(cookieParser())` (code functions correctly at runtime).
 7. Need to verify authentication handling for the direct LangGraph stream connection.
+8. Unit testing persistence side-effects for methods like `OrchestratorService.addUserMessage` is challenging with current mocking strategies and may require integration testing for full verification.
 
 ## Evolution of Project Decisions
 
@@ -131,6 +137,7 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - User-specific thread access control
    - Graceful error handling and loading states
 10. **Chat UI Connection**: Moved from an API passthrough proxy to a direct connection from the frontend (`StreamProvider`) to the LangGraph streaming endpoint, simplifying the architecture and aligning with reference examples.
+11. **Server Architecture & Persistence**: Shifted from custom checkpointer adapters to the official `PostgresSaver` from `@langchain/langgraph-checkpoint-postgres` to improve maintainability, reduce custom code, and leverage official schema management. Streamlined server startup by designating `server.ts` as the primary entry point that orchestrates asynchronous initialization and utilizes a separately configured Express app from `express-server.ts`.
 
 ## Completed Tasks
 
@@ -173,6 +180,8 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 - **Chat UI Refactoring**: Simplified frontend connection by removing API proxy and using direct LangGraph stream. Corrected placement of `StreamProvider` and `InterruptProvider` to be chat-page-specific.
 
+- **Server & Checkpointer Refactor**: Streamlined server startup logic, consolidated checkpointer implementation to use official `PostgresSaver`, and removed redundant files.
+
 ## Current Status
 
 - The dependency chain management system is now working correctly:
@@ -212,6 +221,8 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 
 - **Chat UI Connection**: Refactored to use direct connection to LangGraph (`http://localhost:2024`). Basic message sending and receiving is functional. UI correctly isolated to the chat page.
 - **Chat UI Rendering**: Basic message rendering (human and AI) is working correctly after resolving issues with `react-markdown` and conditional rendering logic.
+
+- **Server Architecture**: The backend server now has a clear startup sequence managed by `server.ts`, leveraging a configured Express app from `express-server.ts`. Persistence is handled by `PostgresSaver`.
 
 ## Next Steps
 

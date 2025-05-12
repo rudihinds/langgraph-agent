@@ -5,17 +5,13 @@ import {
   Checkpoint,
   CheckpointMetadata,
 } from "@langchain/langgraph";
-// import { ChannelVersions } from "@langchain/langgraph/checkpoint"; // Incorrect path
-// import type { ChannelVersions } from "@langchain/langgraph"; // Also incorrect
-import type { CompiledStateGraph } from "@langchain/langgraph"; // Needed for type checking
+import type { CompiledStateGraph } from "@langchain/langgraph";
 import { v4 as uuidv4 } from "uuid";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { LangGraphCheckpointer } from "../../lib/persistence/langgraph-adapter.js";
-import { MemoryLangGraphCheckpointer } from "../../lib/persistence/memory-adapter.js";
-import { createCheckpointer } from "@/lib/persistence/checkpointer-factory.js"; // <-- Add correct import
-import { createServerClient } from "@supabase/ssr"; // Add if not already imported
-import { Request, Response } from "express"; // Import Express types if not already present
-import { ENV } from "@/lib/config/env.js"; // Ensure ENV is imported
+import { createCheckpointer } from "@/services/checkpointer.service.js";
+import { createServerClient } from "@supabase/ssr";
+import { Request, Response } from "express";
+import { ENV } from "@/lib/config/env.js";
 
 // Initialize logger using the singleton pattern
 const logger = Logger.getInstance();
@@ -23,7 +19,7 @@ const logger = Logger.getInstance();
 // Define types for the instances passed in
 interface LangGraphRouterDependencies {
   graphInstance: CompiledStateGraph<any, any, any>;
-  checkpointerInstance: LangGraphCheckpointer | MemoryLangGraphCheckpointer;
+  checkpointerInstance: BaseCheckpointSaver;
 }
 
 // Placeholder for ChannelVersions until import path is resolved
@@ -142,10 +138,9 @@ export function createLangGraphRouter({
       const initialChannelVersions: ChannelVersions = {}; // Using placeholder type
 
       // Use the correct factory function to create the checkpointer
-      const checkpointer = await createCheckpointer({
-        userId: userId, // Use the retrieved or default UUID
-        proposalId: threadMetadataFromRequest.rfpId,
-      });
+      const checkpointer = await createCheckpointer(
+        "langgraph-api-thread-init"
+      ); // Use a descriptive name
 
       // Use the standardized 4-argument put() method for all checkpointers
       await checkpointer.put(
@@ -191,8 +186,9 @@ export function createLangGraphRouter({
 
       if (checkpointSaved) {
         logger.info(`${endpoint}: State found`);
-        // Respond with just the checkpoint object as expected by SDK
-        res.json(checkpointSaved.checkpoint);
+        // Respond with the channel_values from the checkpoint, or the whole checkpoint if SDK expects it
+        // LangGraph SDK typically expects the full Checkpoint object for /state endpoint.
+        res.json(checkpointSaved); // Send the whole Checkpoint object
       } else {
         logger.warn(`${endpoint}: Thread state not found`);
         res.status(404).json({ error: "Thread state not found" });

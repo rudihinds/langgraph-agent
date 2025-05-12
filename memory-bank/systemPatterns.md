@@ -39,78 +39,49 @@ The system incorporates HITL at key decision points:
 
 HITL integration is implemented through special conditional edges that route execution based on user feedback.
 
-## Persistence: Checkpointer Adapter Pattern
+## Persistence: Official `PostgresSaver` with Robust Factory
 
-We've implemented a layered adapter pattern for checkpointer functionality that separates storage implementation from LangGraph interface requirements:
+We now utilize the official `@langchain/langgraph-checkpoint-postgres` package's `PostgresSaver` for persistent checkpointing to our Supabase PostgreSQL database. This replaces the previous custom adapter pattern.
 
-### Storage Layer
+### Key Implementation Details:
 
-- **ICheckpointer Interface**: Defines a common contract with methods:
+- **Factory Function (`createRobustCheckpointer`)**: Located in `apps/backend/lib/persistence/robust-checkpointer.ts`, this function:
+  - Attempts to create and configure a `PostgresSaver` instance using environment variables (`DATABASE_URL`, etc.).
+  - **Critically, it calls `await checkpointer.setup()` to ensure the necessary `langgraph.checkpoints` table and schema exist in the database.** This method handles DB migrations automatically.
+  - If `PostgresSaver` setup fails (e.g., missing env vars, connection error), it falls back to using LangGraph's `MemorySaver` for resilience during development or in environments without a DB connection.
+  - Returns a `BaseCheckpointSaver` compatible instance (either `PostgresSaver` or `MemorySaver`).
+- **Thread ID Management**: Thread isolation is achieved by passing a uniquely constructed `thread_id` (typically `user-[userId]::rfp-[rfpId]::proposal`) within the `RunnableConfig` during graph invocations (`invoke`, `updateState`, `getState`). The checkpointer instance itself is thread-agnostic.
+- **`OrchestratorService`**: This service is responsible for constructing the `thread_id` and managing all interactions with the checkpointer instance obtained from `createRobustCheckpointer`.
+- **Removed Components**: Custom `SupabaseCheckpointer`, `LangGraphCheckpointer`, `MemoryLangGraphCheckpointer`, and `checkpointer-factory.ts` have been removed.
 
-  - `put(threadId: string, key: string, value: any): Promise<void>`
-  - `get(threadId: string, key: string): Promise<any>`
-  - `list(threadId: string): Promise<string[]>`
-  - `delete(threadId: string): Promise<void>`
+### Key Advantages:
 
-- **Implementations**:
-  - `InMemoryCheckpointer`: Uses a Map-based in-memory storage for development/testing
-  - `SupabaseCheckpointer`: Persists to Supabase database with proper tenant isolation
+1.  **Alignment with LangGraph**: Uses the official, maintained persistence mechanism.
+2.  **Reduced Maintenance**: Eliminates the need to keep custom adapters synchronized with `BaseCheckpointSaver` updates.
+3.  **Simplified Configuration**: Relies on standard environment variables for `PostgresSaver`.
+4.  **Robustness**: Falls back gracefully to `MemorySaver` if the database is unavailable.
+5.  **Automatic Schema Management**: Leverages `checkpointer.setup()` for database table creation and migrations.
 
-### Adapter Layer
-
-- **LangGraph-Compatible Adapters**: Convert our storage implementations to LangGraph's `BaseCheckpointSaver` interface:
-  - `MemoryLangGraphCheckpointer`: Adapts InMemoryCheckpointer
-  - `LangGraphCheckpointer`: Adapts SupabaseCheckpointer
-- These adapters implement LangGraph's required methods:
-  - `put`: Store a checkpoint (calls underlying storage.put)
-  - `get`: Retrieve a checkpoint (calls underlying storage.get)
-  - `list`: List checkpoints (calls underlying storage.list)
-
-### Factory Pattern
-
-- **`createCheckpointer()`**: Factory function located in `lib/persistence/checkpointer-factory.ts` that:
-  - **MUST be used** to obtain checkpointer instances for the graph.
-  - Checks environment for valid Supabase credentials.
-  - Creates `SupabaseCheckpointer` + `LangGraphCheckpointer` adapter if credentials exist and are valid.
-  - Falls back to `InMemoryCheckpointer` + `MemoryLangGraphCheckpointer` adapter if credentials missing/invalid.
-  - Logs appropriate warnings when falling back to in-memory storage.
-  - Can be configured with specific user ID (UUID from Supabase Auth) for multi-tenant isolation.
-
-### Checkpointer Implementation Details
-
-- The `SupabaseCheckpointer` interacts directly with the database.
-- It assumes a table named `proposal_checkpoints` (or as configured via `ENV.CHECKPOINTER_TABLE_NAME`).
-- It uses a column named `checkpoint_data` (type `jsonb`) to store the serialized LangGraph state.
-- RLS policies ensure users only access their own data based on the `user_id` column.
-
-### Key Advantages
-
-1. **Decoupling**: Storage implementation is separate from LangGraph interface
-2. **Testability**: In-memory implementation makes testing straightforward
-3. **Future-Proofing**: If LangGraph changes `BaseCheckpointSaver` interface, we only update the adapter layer
-4. **Multi-Tenant Security**: Enforces Row Level Security in Supabase implementation
-5. **Development Flexibility**: Works without database configuration during development
-
-### Usage Example
+### Usage Example:
 
 ```typescript
-// In graph definition/compilation
-import { createGraph } from "./graph";
-import { createCheckpointer } from "../services/checkpointer.service";
+// In OrchestratorService or API handler
+import { createRobustCheckpointer } from "@/lib/persistence/robust-checkpointer.js";
+import { constructProposalThreadId } from "@/lib/utils/threads.js";
 
-// Create a checkpointer with specific user ID
-const checkpointer = createCheckpointer({ userId: "user-123" });
+const checkpointer = await createRobustCheckpointer(); // Get the singleton instance
+const userId = "user-123";
+const rfpId = "rfp-abc";
+const threadId = constructProposalThreadId(userId, rfpId);
 
-// Compile graph with the checkpointer
-const compiledGraph = await createGraph().compile({
-  checkpointer,
-});
+// Use threadId in config for graph operations
+const config = { configurable: { thread_id: threadId } };
 
-// Execute with thread ID
-await compiledGraph.invoke(
-  { messages: [] },
-  { configurable: { thread_id: "thread-456" } }
-);
+// Example: Getting state
+const checkpoint = await checkpointer.get(config);
+
+// Example: Invoking graph (graph instance obtained elsewhere)
+// compiledGraph.invoke(initialState, config);
 ```
 
 ## API Design
@@ -561,188 +532,11 @@ _This document serves as a blueprint for the system, illustrating key architectu
   - Managing state updates outside the graph flow (e.g., applying edits, marking sections `stale`).
   - Tracking dependencies (using `config/dependencies.json`) and guiding regeneration.
 
-## Persistence: Checkpointer Adapter Pattern
+## Server Startup Architecture
 
-- **Pattern:** A layered adapter pattern that separates storage implementation from LangGraph interface requirements.
-- **Storage Layer:**
-  - `InMemoryCheckpointer`: Basic implementation for development and testing.
-  - `SupabaseCheckpointer`: Production implementation using Supabase PostgreSQL.
-  - These implement a consistent interface with basic `put()`, `get()`, `list()`, `delete()` methods.
-- **Adapter Layer:**
-  - `MemoryLangGraphCheckpointer`: Adapts `InMemoryCheckpointer` to implement `BaseCheckpointSaver<number>`.
-  - `LangGraphCheckpointer`: Adapts `SupabaseCheckpointer` to implement `BaseCheckpointSaver<number>`.
-  - These adapters translate between our simple storage API and LangGraph's more specific checkpoint interface.
-- **Factory Pattern:**
-  - `createCheckpointer()`: Factory function that creates the appropriate checkpointer based on environment configuration.
-  - Handles fallback logic: if Supabase credentials are missing/invalid, falls back to in-memory implementation.
-- **Key Advantages:**
-  - **Decoupling:** Storage implementation details are isolated from LangGraph's interface requirements.
-  - **Testability:** Can easily swap implementations for testing purposes.
-  - **Future-Proofing:** If LangGraph's `BaseCheckpointSaver` interface changes, only adapters need to be updated.
-- **Usage:** The compiled graph requires the appropriate adapter:
-  ```typescript
-  const checkpointer = createCheckpointer();
-  const compiledGraph = graph.compile({
-    checkpointer: checkpointer,
-  });
-  ```
-
-## Editing: Editor Agent Service
-
-- **Pattern:** A dedicated `EditorAgentService` handles non-sequential edits.
-- **Responsibilities:** Takes section ID, current content, user feedback, and relevant context (e.g., surrounding sections, research results) to produce revised content.
-- **Invocation:** Called by the `OrchestratorService` upon user edit requests.
-
-## State Reducers
-
-- **Pattern:** Custom reducer functions are used within the state definition (`ProposalStateAnnotation` or explicit channels object) for complex updates.
-- **Examples:** `sectionsReducer` (merges map entries), `errorsReducer` (appends to array), `messagesStateReducer` (LangGraph built-in).
-- **Requirement:** Reducers MUST ensure immutability.
-
-## Validation: Zod Schemas
-
-- **Pattern:** Zod schemas are used for validating:
-  - API request/response bodies.
-  - Structured outputs from LLMs/tools (e.g., evaluation results, research data).
-  - Potentially parts of the `OverallProposalState` (though full state validation might be complex).
-
-## Document Loader Node Pattern
-
-The Document Loader Node is responsible for fetching RFP documents from Supabase storage and preparing them for parsing:
-
-1. **Storage Integration**
-
-   - Uses Supabase client to access the "proposal-documents" bucket
-   - Retrieves documents by ID, matching user permissions
-   - Handles various storage-related errors (not found, unauthorized, etc.)
-
-2. **Format Support**
-
-   - Supports PDF, DOCX, and TXT formats
-   - Determines format based on file extension or content-type metadata
-   - Streams document content for efficient processing
-
-3. **Error Handling**
-
-   - Implements comprehensive error handling for all potential failure points
-   - Updates state with detailed error information for user feedback
-   - Categorizes errors (not found, unauthorized, corrupted, etc.) for appropriate UI messaging
-
-4. **State Updates**
-   - Updates document status in the `OverallProposalState.rfpDocument` field
-   - Sets status to 'loading', 'loaded', or 'error' based on operation result
-   - Maintains content and metadata for successful loads
-   - Records error details for failed operations
-
-## Critical Implementation Paths
-
-The most critical implementation paths in this system are:
-
-1. **HITL Workflow**: The interrupt-feedback-resume cycle for human review
-2. **Document Processing**: Loading, parsing, and analyzing RFP documents
-3. **Section Generation**: Creating and evaluating proposal sections
-4. **State Persistence**: Saving and loading state via the checkpointer
-
-These paths require special attention for error handling, testing, and performance optimization.
-
-## Chat UI Architecture
-
-### Directory Structure
-
-The Chat UI implementation follows a feature-based architecture within the web application:
-
-```
-/apps/web/src/features/chat-ui/
-├── components/       # UI components for the chat interface
-├── hooks/            # Custom React hooks for chat functionality
-├── providers/        # Context providers for state management
-├── types.ts          # Type definitions for the chat feature
-├── utils.ts          # Utility functions for chat operations
-└── index.ts          # Public exports from the feature
-```
-
-### Phase 2 Status
-
-- All core UI components and utilities for Chat UI have been implemented in their correct target locations as per the integration plan.
-- Linter errors are present for missing dependencies (e.g., `@/components/ui/tooltip`, `@/components/ui/button`, `@/lib/utils`), which must be resolved in the next phase.
-
-### Next Phase Focus
-
-- Resolve linter errors and ensure all required dependencies and UI primitives are present
-- Complete backend integration for real-time chat and tool call handling
-- Finalize Agent Inbox and tool call UI
-- Add comprehensive tests for all components
-- Polish UI for consistency, accessibility, and mobile responsiveness
-
-### Core Patterns
-
-#### State Management
-
-The Chat UI uses React Context for state management with a clear separation of concerns:
-
-1. **Chat Context**: Manages thread data and operations
-
-   - Stores threads, active thread ID, and loading state
-   - Provides actions for thread manipulation (create, update, delete)
-   - Implements optimistic updates for better UX
-
-2. **Stream Context**: Handles real-time communication with LangGraph
-   - Manages WebSocket/SSE connections to the LangGraph server
-   - Handles authentication and authorization
-   - Processes incoming messages and updates the UI accordingly
-
-#### Component Hierarchy
-
-```
-└── ChatProvider
-    └── StreamProvider
-        ├── ThreadHistory
-        │   └── ThreadListItem
-        └── Thread
-            ├── MessageList
-            │   └── Message (variants)
-            │       ├── UserMessage
-            │       ├── AssistantMessage
-            │       ├── ToolCallMessage
-            │       └── ToolResultMessage
-            ├── AgentInbox (for interruptions)
-            └── MessageInput
-```
-
-#### Type System
-
-The type system is built around these core interfaces:
-
-- `Message`: Represents a single message in a conversation
-- `Thread`: Represents a conversation thread with multiple messages
-- `ChatState`: Tracks the current state of all threads and UI
-- `ChatActions`: Defines all possible operations on threads
-- `ChatContextValue`: Combines state and actions for the context
-
-#### Data Flow
-
-1. User input is captured in the `MessageInput` component
-2. The input is processed and added to the thread via `ChatContext`
-3. Messages are sent to LangGraph through the `StreamProvider`
-4. Responses from LangGraph are processed by `StreamProvider`
-5. New messages are added to the thread via `ChatContext`
-6. The UI updates to reflect the new state
-
-#### Error Handling
-
-- Network errors are caught and displayed to the user
-- LangGraph server errors are processed and displayed appropriately
-- UI state includes loading and error states to handle asynchronous operations
-
-## Chat UI Integration Progress (2024-06)
-
-Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. The next phase will focus on backend integration, tool call handling, and UI polish. Linter errors for missing dependencies must be resolved as part of this work.
-
-## Recent Updates (2024-06)
-
-- Chat UI integration Phase 2 is complete: all UI components and utilities are implemented in their correct locations. Linter errors remain due to missing dependencies (e.g., @/components/ui/tooltip, @/components/ui/button, @/lib/utils), to be resolved in the next phase.
-- Backend integration, tool call handling, and UI polish are the next focus areas.
-- Orchestrator and graph now support rfpId and userId for multi-tenant, document-specific workflows.
-- Supabase Auth SSR integration is robust and follows best practices (getAll/setAll, getUser()).
-- Adapter pattern for checkpointing ensures future-proofing against LangGraph API changes.
-- Project is on track for backend integration and final polish phases.
+- **Primary Entry Point**: `apps/backend/server.ts` is the main script executed to start the backend.
+- **Asynchronous Initialization**: `server.ts` handles asynchronous setup tasks, notably initializing the LangGraph `graphInstance` and `checkpointerInstance`.
+- **Express App Configuration**: `apps/backend/api/express-server.ts` configures the core Express application instance (`app`). It sets up essential middleware (CORS, helmet, security headers, body-parser, cookie-parser) and mounts the primary, non-LangGraph-specific API routers (e.g., `/api/rfp`). It then exports the configured `app` instance.
+- **Router Mounting**: `server.ts` imports the configured `app` from `express-server.ts`. After the asynchronous initialization completes, it mounts the LangGraph-specific router (`/api/langgraph`) onto the imported `app`. It also sets up final middleware like 404 handlers and global error handlers.
+- **Server Listening**: Finally, `server.ts` creates an HTTP server using the fully configured `app` instance and starts listening on the configured port.
+- **Benefits**: This separation ensures that asynchronous setup (like DB connections or graph compilation) completes before the server starts accepting requests that depend on those components, while keeping core Express configuration distinct.

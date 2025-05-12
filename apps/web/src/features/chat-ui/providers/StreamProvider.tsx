@@ -124,14 +124,25 @@ export function StreamProvider({ children }: StreamProviderProps) {
             body: JSON.stringify({ rfpId }), // Send rfpId to backend
           });
 
+          // Log the raw response text
+          const responseText = await response.text();
+          console.log("[StreamProvider] Raw API response text:", responseText);
+
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(
-              `Failed to initialize workflow: ${response.statusText} - ${errorData?.details || errorData?.error || "Unknown error"}`
-            );
+            // Try to parse error from responseText if possible, otherwise use statusText
+            let errorDetails = response.statusText;
+            try {
+              const errorData = JSON.parse(responseText);
+              errorDetails =
+                errorData?.details || errorData?.error || response.statusText;
+            } catch (e) {
+              // Ignore if parsing error text itself fails, stick with statusText
+            }
+            throw new Error(`Failed to initialize workflow: ${errorDetails}`);
           }
 
-          const { threadId: newThreadId } = await response.json();
+          // Parse the logged text
+          const { threadId: newThreadId } = JSON.parse(responseText);
           if (newThreadId) {
             console.log(
               `[StreamProvider] Received new threadId from API: ${newThreadId}`
@@ -156,8 +167,8 @@ export function StreamProvider({ children }: StreamProviderProps) {
     };
 
     initializeThread();
-    // Dependencies: rfpId changes, threadId becomes null, or we finish initializing
-  }, [rfpId, threadId, setThreadId, isInitializing, baseApiUrl]);
+    // Dependencies: Only run when external inputs change
+  }, [rfpId, threadId, baseApiUrl]);
 
   // Effect to handle missing rfpId - This clears the threadId
   useEffect(() => {

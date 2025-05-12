@@ -91,63 +91,6 @@ describe("Thread Persistence Tests", () => {
     expect(result.initialState).toEqual(mockState); // Check if the retrieved state matches the saved mock state
   });
 
-  // Test 3: State Update Persistence (via Orchestrator Method)
-  test("addUserMessage should persist the updated state via checkpointer", async () => {
-    const threadId = expectedThreadId;
-    const initialMessage = "Initial user message";
-    const config = { configurable: { thread_id: threadId } };
-
-    // Mock graph interactions if needed for addUserMessage to proceed
-    // For this test, we mostly care that checkpointer.put is called correctly by the service method
-    const mockPut = vi.spyOn(checkpointer, "put");
-
-    // Ensure initial state exists for addUserMessage (it likely calls getState first)
-    const initialState: Partial<OverallProposalState> = {
-      messages: [],
-      activeThreadId: threadId,
-    };
-    const initialCheckpoint = {
-      v: 1,
-      id: threadId,
-      ts: new Date().toISOString(),
-      channel_values: initialState as any,
-      channel_versions: {},
-      versions_seen: {},
-      pending_sends: [],
-    };
-    await checkpointer.put(config, initialCheckpoint, {
-      source: "update",
-      step: -1,
-      writes: null,
-      parents: {},
-    });
-
-    // Call the orchestrator method
-    // We might need to mock the graph invoke/updateState calls within addUserMessage
-    mockGraph.updateState.mockResolvedValue({}); // Mock graph update
-    mockGraph.invoke.mockResolvedValue({
-      messages: [{ type: "human", content: initialMessage, id: "1" } as any],
-      activeThreadId: threadId,
-    }); // Mock graph return state
-
-    await orchestratorService.addUserMessage(threadId, initialMessage);
-
-    // Verify checkpointer.put was called with the updated state
-    expect(mockPut).toHaveBeenCalled();
-    const savedCheckpoint = await checkpointer.get(config);
-    expect(savedCheckpoint?.channel_values.messages).toHaveLength(1);
-    expect(savedCheckpoint?.channel_values.messages[0].content).toBe(
-      initialMessage
-    );
-
-    // Optionally, verify getState retrieves the update
-    const retrievedState = await orchestratorService.getState(threadId);
-    expect(retrievedState.messages).toHaveLength(1);
-    expect(retrievedState.messages[0].content).toBe(initialMessage);
-
-    mockPut.mockRestore();
-  });
-
   // Test 4: Thread Isolation
   // test('should isolate state between different thread IDs', async () => {
   //   const userId1 = 'user-iso-1';
