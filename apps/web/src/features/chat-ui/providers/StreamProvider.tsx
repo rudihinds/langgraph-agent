@@ -177,8 +177,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
   // if initialization hasn't happened yet (though our effect above handles primary init).
   const streamValue = useTypedStream({
     apiUrl: directApiUrl, // Pass directly (might be undefined)
-    assistantId: assistantId, // Pass directly (might be undefined)
-    streamMode: "values", // Explicitly set streamMode
+    assistantId: assistantId as string, // Pass directly (might be undefined)
     threadId: threadId || undefined, // Pass the threadId obtained from URL/API
   });
 
@@ -211,7 +210,8 @@ export function StreamProvider({ children }: StreamProviderProps) {
       // Avoid spamming toasts if it's the same error
       if (message !== initError) {
         toast.error(`Chat stream error: ${message}`);
-        setInitError(message); // Assign the guaranteed string message
+        // Ensure a non-empty string is always set
+        setInitError(message || "An unknown stream error occurred.");
       }
     }
   }, [

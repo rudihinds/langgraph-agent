@@ -729,3 +729,42 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 4. **Error Handling**: Improve error handling within `StreamProvider` for connection issues or backend errors.
 5. **Continue Core Agent Implementation**: Resume work on the `ProposalGenerationGraph` nodes (Problem Statement, Methodology, etc.).
 6. **Cleanup Debugging Code**: Remove temporary `console.log` statements and commented-out code added during the chat rendering debug process.
+
+# Active Context
+
+**Last Updated:** <Current Date/Time>
+
+## Current Work Focus
+
+- **Primary:** Resolving the failure in **Test 3 (`addUserMessage`)** within `apps/backend/__tests__/thread-persistence.test.ts`.
+- **Goal:** Ensure reliable testing of state persistence after orchestrator actions that involve graph state updates and invocations.
+- **Challenge:** Difficulty in unit testing the _final persisted state_ due to the nature of LangGraph's `updateState` (persists input for next step) and `invoke` (performs action + final persistence). Mocking `invoke` bypasses the critical persistence step we need to verify.
+
+## Recent Changes & Decisions
+
+- Completed Phase 5.3: System-wide review and cleanup of API handlers for consistent `OrchestratorService` and `thread_id` usage. Removed redundant API files (`thread.ts`, `start.ts`).
+- Completed Phase 5.4 Steps 1-4: Frontend `StreamProvider` updated to use official SDK, old providers removed, thread initialization flow verified.
+- Initiated Phase 5.4 Step 5: Thread persistence testing (`thread-persistence.test.ts`).
+  - Tests 1 (New Thread) and 2 (Existing Thread) are passing.
+  - Test 3 (`addUserMessage`) is currently blocked/failing due to the mocking/persistence verification challenge described above.
+
+## Next Steps (Immediate)
+
+1.  **Re-evaluate Test 3 Strategy:** Decide on the best approach:
+    - Accept unit test limitation (verify `updateState` call only)?
+    - Attempt more complex mocking?
+    - Defer full verification to integration testing?
+2.  **Implement Chosen Strategy:** Modify Test 3 accordingly.
+3.  **Proceed to Test 4:** Implement and run the Thread Isolation test.
+
+## Important Patterns & Preferences
+
+- **Deterministic `thread_id`**: Continue using `user-[userId]::rfp-[rfpId]::proposal`.
+- **`PostgresSaver`**: Sole checkpointer for persistence via Supabase.
+- **`OrchestratorService`**: Central point for all graph workflow management.
+- **`RunnableConfig`**: Always include `{ configurable: { thread_id: threadId } }`.
+- **Testing:** Use Vitest, follow TDD where practical, mock dependencies (`MemorySaver`, `graph` interactions).
+
+## Learnings & Insights
+
+- Unit testing LangGraph persistence side-effects, especially those involving both `updateState` and `invoke`, is non-trivial with simple mocks. The internal persistence mechanism within `invoke` is hard to isolate/verify without running the actual (or a very faithfully mocked) graph logic.
