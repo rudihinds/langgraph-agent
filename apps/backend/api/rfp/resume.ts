@@ -10,7 +10,7 @@ const router = express.Router();
 
 // Input validation schema for POST endpoint
 const resumeSchema = z.object({
-  proposalId: z.string().min(1, "ProposalId is required"),
+  threadId: z.string().min(1, "ThreadId is required"),
 });
 
 /**
@@ -32,17 +32,17 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const { proposalId } = result.data;
-    logger.info("Resuming proposal generation", { proposalId });
+    const { threadId } = result.data;
+    logger.info("Resuming proposal generation", { threadId });
 
     // Get orchestrator and resume execution
-    const orchestrator = getOrchestrator(proposalId);
+    const orchestrator = await getOrchestrator();
 
     // Use the updated resumeAfterFeedback method
-    const resumeResult = await orchestrator.resumeAfterFeedback(proposalId);
+    const resumeResult = await orchestrator.resumeAfterFeedback(threadId);
 
     // Get the current interrupt status after resuming (in case we hit another interrupt)
-    const interruptStatus = await orchestrator.getInterruptStatus(proposalId);
+    const interruptStatus = await orchestrator.getInterruptStatus(threadId);
 
     // Return a detailed response with both resume result and current interrupt state
     return res.status(200).json({

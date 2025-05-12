@@ -407,24 +407,14 @@ const feedbackRoutingMap: Record<string, string> = {
 /**
  * Creates the proposal generation graph with all nodes and edges
  *
- * @param userId The user ID for the proposal
- * @param proposalId The proposal ID
- * @returns The configured StateGraph
+ * @returns The configured StateGraph with checkpointer
  */
-async function createProposalGenerationGraph(
-  userId: string = ENV.TEST_USER_ID,
-  proposalId?: string
-) {
+async function createProposalGenerationGraph() {
   // Create a persistent checkpointer based on environment using the ROBUST factory
   // In development: In-memory checkpointer (unless Supabase is configured)
   // In production: Supabase checkpointer (falls back to in-memory if not configured)
   // Ensure createRobustCheckpointer is awaited as it returns a Promise
-  const checkpointer = await createRobustCheckpointer({
-    // Pass necessary options if robust checkpointer expects them, e.g., threadId
-    // For now, assuming it doesn't require specific options beyond environment checks
-    // userId, // Not directly needed by robust-checkpointer factory itself
-    // proposalId, // Not directly needed by robust-checkpointer factory itself
-  });
+  const checkpointer = await createRobustCheckpointer();
 
   if (ENV.isDevelopment()) {
     console.info(
@@ -433,6 +423,8 @@ async function createProposalGenerationGraph(
   }
 
   // Compile the graph with checkpointer
+  // The thread_id will be provided at invocation time via RunnableConfig
+  // This allows the same compiled graph to be reused across different threads
   const compiledGraph = proposalGenerationGraph.compile({
     checkpointer,
   });

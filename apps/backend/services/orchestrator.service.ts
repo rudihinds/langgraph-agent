@@ -16,6 +16,7 @@ import {
   CompiledStateGraph,
   Checkpoint,
   CheckpointMetadata,
+  CheckpointTuple,
 } from "@langchain/langgraph";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
@@ -490,14 +491,14 @@ export class OrchestratorService {
   /**
    * Resume the graph execution after feedback has been processed
    *
-   * @param proposalId The ID of the proposal to resume
+   * @param threadId The ID of the proposal thread to resume
    * @returns Status object with information about the resume operation
    */
   async resumeAfterFeedback(
-    proposalId: string
+    threadId: string
   ): Promise<{ success: boolean; message: string; status?: string }> {
     // Get the current state
-    const state = await this.getState(proposalId);
+    const state = await this.getState(threadId);
 
     // Validate the state has feedback that needs processing
     if (!state?.userFeedback) {
@@ -515,7 +516,7 @@ export class OrchestratorService {
     }
 
     // Prepare LangGraph config with thread_id for execution
-    const config: RunnableConfig = { configurable: { thread_id: proposalId } };
+    const config: RunnableConfig = { configurable: { thread_id: threadId } };
     if (!config.configurable?.thread_id) {
       throw new Error(
         "Thread ID is missing in config for resumeAfterFeedback."
@@ -531,7 +532,7 @@ export class OrchestratorService {
       >;
 
       this.logger.info(
-        `Resuming graph after feedback (${state.userFeedback.type}) for thread ${proposalId}`
+        `Resuming graph after feedback (${state.userFeedback.type}) for thread ${threadId}`
       );
 
       // First, update the state with user feedback using updateState
@@ -557,7 +558,7 @@ export class OrchestratorService {
         config
       )) as unknown as OverallProposalState;
 
-      this.logger.info(`Graph resumed successfully for thread ${proposalId}`);
+      this.logger.info(`Graph resumed successfully for thread ${threadId}`);
 
       // Check if the resumed execution resulted in another interrupt
       if (result.interruptStatus?.isInterrupted) {
@@ -580,17 +581,17 @@ export class OrchestratorService {
   }
 
   /**
-   * Gets the interrupt status for a specific proposal
+   * Gets the interrupt status for a specific proposal thread
    *
-   * @param proposalId The ID of the proposal to check
+   * @param threadId The ID of the proposal thread to check
    * @returns Status object with interrupt details
    */
   async getInterruptStatus(
-    proposalId: string
+    threadId: string
   ): Promise<{ interrupted: boolean; interruptData?: InterruptDetails }> {
     try {
       // Get current state
-      const state = await this.getState(proposalId);
+      const state = await this.getState(threadId);
 
       // Check for interrupts
       const isInterrupted = state?.interruptStatus?.isInterrupted || false;
@@ -601,7 +602,7 @@ export class OrchestratorService {
       }
 
       // Get detailed interrupt information
-      const interruptData = await this.getInterruptDetails(proposalId);
+      const interruptData = await this.getInterruptDetails(threadId);
 
       return {
         interrupted: true,
@@ -910,171 +911,170 @@ export class OrchestratorService {
     initialState: OverallProposalState | null;
     isNew: boolean;
   }> {
-    if (!userId || !rfpId) {
-      throw new Error(
-        "User ID and RFP ID are required for initOrGetProposalWorkflow."
-      );
-    }
-
     const threadId = constructProposalThreadId(userId, rfpId);
-    const config: RunnableConfig = { configurable: { thread_id: threadId } };
     this.logger.info(
-      `[OrchestratorService] Initializing or getting workflow for threadId: ${threadId}`,
-      { userId, rfpId }
+      `[OrchestratorService] Initializing or getting workflow for threadId: ${threadId}`
     );
 
-    const existingStateTuple = await this.checkpointer.getTuple(config);
+    try {
+      const checkpointTuple = (await this.checkpointer.getTuple({
+        configurable: { thread_id: threadId },
+      })) as CheckpointTuple | null | undefined;
 
-    if (existingStateTuple) {
-      this.logger.info(
-        `[OrchestratorService] Existing workflow found for threadId: ${threadId}`
+      if (!checkpointTuple || !checkpointTuple.checkpoint) {
+        this.logger.info(
+          `[OrchestratorService] No existing checkpoint for threadId: ${threadId}. New workflow.`
+        );
+        return {
+          threadId,
+          initialState: null,
+          isNew: true,
+        };
+      } else {
+        this.logger.info(
+          `[OrchestratorService] Existing checkpoint found for threadId: ${threadId}.`
+        );
+        return {
+          threadId,
+          initialState: checkpointTuple.checkpoint
+            .channel_values as unknown as OverallProposalState,
+          isNew: false,
+        };
+      }
+    } catch (error) {
+      this.logger.error(
+        `[OrchestratorService] Error getting checkpoint for threadId ${threadId}:`,
+        error
       );
-      return {
-        threadId,
-        initialState: existingStateTuple.checkpoint
-          .channel_values as OverallProposalState,
-        isNew: false,
-      };
-    } else {
-      this.logger.info(
-        `[OrchestratorService] New workflow for threadId: ${threadId}`
-      );
-      return { threadId, initialState: null, isNew: true };
+      throw error;
     }
   }
 
   /**
-   * Starts a new proposal generation process
+   * Starts the proposal generation graph for a new workflow.
+   * This method is called after initOrGetProposalWorkflow determines it's a new workflow.
+   * It sets up the initial state to trigger the documentLoaderNode via an intent.
    *
-   * @param rfpId RFP ID
-   * @param rfpData RFP data (text or structured object)
-   * @param userId The ID of the user starting the proposal
-   * @returns Object containing the threadId and initial state, or existing state if already started
-   * @throws Error if userId or rfpId is missing
+   * @param threadId The pre-constructed thread ID for the workflow.
+   * @param userId The ID of the user initiating the workflow.
+   * @param rfpId The ID of the RFP document to be loaded.
+   * @returns The initial state of the graph after the first invocation.
    */
   async startProposalGeneration(
-    rfpId: string,
-    rfpData:
-      | string
-      | { text: string; fileName?: string; metadata?: Record<string, any> },
-    userId: string
+    threadId: string,
+    userId: string,
+    rfpId: string
   ): Promise<{
-    threadId: string;
     state: OverallProposalState;
-    isNew: boolean;
   }> {
-    if (!rfpId || !userId) {
-      throw new Error(
-        "RFP ID and User ID are required to start proposal generation."
-      );
-    }
-
-    const threadId = constructProposalThreadId(userId, rfpId);
-    const config: RunnableConfig = { configurable: { thread_id: threadId } };
-    const logger = this.logger;
-
-    logger.info(
-      `[OrchestratorService] Attempting to start/resume proposal generation for threadId: ${threadId}`,
-      {
-        rfpId,
-        userId,
-        dataType: typeof rfpData === "string" ? "string" : "structured",
-      }
+    this.logger.info(
+      `[OrchestratorService] Starting new proposal generation for threadId: ${threadId}, RFP ID: ${rfpId}, User ID: ${userId}`
     );
 
-    // Check if a checkpoint already exists for this threadId
-    const existingCheckpointTuple = await this.checkpointer.getTuple(config);
+    const initialContent = `System Task: Load RFP document with ID ${rfpId}`;
+    const initialMessages: BaseMessage[] = [
+      new HumanMessage({ content: initialContent }),
+    ];
 
-    if (existingCheckpointTuple) {
-      logger.info(
-        `[OrchestratorService] Proposal already exists. Resuming for threadId: ${threadId}`
-      );
-      const existingState = existingCheckpointTuple.checkpoint
-        .channel_values as OverallProposalState;
-      return { threadId, state: existingState, isNew: false };
-    }
-
-    logger.info(
-      `[OrchestratorService] Starting new proposal for threadId: ${threadId}`
-    );
-
-    // Create initial state with proper enum values
-    // The rfpDocument.id can still be a new uuid for the document entity itself, if needed.
-    const initialRfpDocumentId = uuidv4();
-    const initialStateForGraph: Partial<OverallProposalState> = {
+    const initialState: OverallProposalState = {
+      messages: initialMessages,
       rfpDocument: {
-        id: initialRfpDocumentId, // ID for the document itself
-        sourcePath:
-          typeof rfpData === "object" ? rfpData.fileName : "text_input", // Store original filename or indicator
-        ...(typeof rfpData === "string"
-          ? { text: rfpData, status: LoadingStatus.LOADED } // If string, assume text is loaded
-          : {
-              text: rfpData.text,
-              fileName: rfpData.fileName,
-              metadata: rfpData.metadata,
-              status: LoadingStatus.LOADED,
-            }), // If object, assume text is present
+        id: rfpId,
+        text: undefined,
+        status: LoadingStatus.NOT_STARTED,
+        fileName: undefined,
+        metadata: undefined,
       },
-      researchResults: {},
+      intent: {
+        command: undefined,
+        request_details: undefined,
+      },
+      researchResults: {
+        queries: [],
+        results: [],
+        status: LoadingStatus.NOT_STARTED,
+      },
       researchStatus: ProcessingStatus.NOT_STARTED,
-      solutionResults: {},
+      solutionResults: {
+        solution: null,
+        status: LoadingStatus.NOT_STARTED,
+      },
       solutionStatus: ProcessingStatus.NOT_STARTED,
+      connections: [],
       connectionsStatus: ProcessingStatus.NOT_STARTED,
       sections: new Map(),
-      requiredSections: [], // This should be populated based on RFP analysis or default config later
+      requiredSections: [],
+      status: ProcessingStatus.RUNNING,
+      currentStep: "workflow_initiation",
       interruptStatus: {
         isInterrupted: false,
         interruptionPoint: null,
         feedback: null,
         processingStatus: null,
       },
-      currentStep: "document_loading", // Or an appropriate initial step
-      activeThreadId: threadId, // Store the composite threadId in the state if useful
-      messages: [], // Start with empty messages, or an initial system/human message if needed
+      interruptMetadata: undefined,
+      userFeedback: undefined,
       errors: [],
+      userId: userId,
       createdAt: new Date().toISOString(),
       lastUpdatedAt: new Date().toISOString(),
-      status: ProcessingStatus.NOT_STARTED,
-      userId: userId, // Store userId in state
-      rfpId: rfpId, // Store rfpId in state (NEW)
+      activeThreadId: threadId,
+      projectName: undefined,
+      researchEvaluation: undefined,
+      solutionEvaluation: undefined,
+      connectionsEvaluation: undefined,
+      sectionToolMessages: undefined,
+      funder: undefined,
+      applicant: undefined,
+      wordLength: undefined,
     };
 
-    // The graph is expected to handle the initial loading/processing of rfpData via a starting node.
-    // We pass the prepared initialStateForGraph. The first invoke will create the checkpoint.
-    try {
-      logger.info(
-        `[OrchestratorService] Invoking graph for new proposal: ${threadId}`
-      );
+    const runnableConfig: RunnableConfig = {
+      configurable: {
+        thread_id: threadId,
+      },
+      recursionLimit: 100,
+    };
 
-      // Ensure the graph instance is a compiled graph to use .invoke
-      const compiledGraph = this.graph as CompiledStateGraph<
+    this.logger.info(
+      `[OrchestratorService] Invoking graph for new workflow. Thread ID: ${threadId}`
+    );
+    this.logger.debug(
+      `[OrchestratorService] Initial state for invocation:`,
+      JSON.stringify(initialState, null, 2)
+    );
+
+    await (
+      this.graph as CompiledStateGraph<
         OverallProposalState,
-        Partial<OverallProposalState>,
-        "__start__"
-      >;
+        Partial<OverallProposalState>
+      >
+    ).invoke(initialState, runnableConfig);
 
-      const finalState = await compiledGraph.invoke(
-        initialStateForGraph as OverallProposalState, // Pass the initial state directly
-        config
+    this.logger.info(
+      `[OrchestratorService] Graph invoked. Fetching resulting checkpoint for thread ID: ${threadId}`
+    );
+
+    const checkpoint = await this.checkpointer.get({
+      configurable: { thread_id: threadId },
+    });
+
+    if (!checkpoint || !checkpoint.channel_values) {
+      this.logger.error(
+        `[OrchestratorService] Failed to retrieve checkpoint after initial graph invocation for threadId: ${threadId}`
       );
-      logger.info(
-        `[OrchestratorService] Graph invoked successfully for new proposal: ${threadId}`
+      throw new Error(
+        `Failed to retrieve state after initial graph invocation for threadId: ${threadId}`
       );
-      return {
-        threadId,
-        state: finalState as OverallProposalState,
-        isNew: true,
-      };
-    } catch (error) {
-      logger.error(
-        "[OrchestratorService] Failed to invoke graph for new proposal",
-        {
-          error: (error as Error).message,
-          threadId,
-        }
-      );
-      throw error;
     }
+
+    this.logger.info(
+      `[OrchestratorService] Successfully started and checkpointed new workflow for threadId: ${threadId}`
+    );
+
+    return {
+      state: checkpoint.channel_values as unknown as OverallProposalState,
+    };
   }
 
   /**

@@ -319,22 +319,22 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 4.  **Review and Align Other API Handlers for Consistent OrchestratorService Usage:**
 
-    - **Status:** ◻️ Pending
+    - **Status:** ✅ Done
     - **Goal:** Ensure all API endpoints consistently use the `OrchestratorService` for any graph interaction or state modification and correctly use the `thread_id` obtained via the `/workflow/init` flow (or passed by the client).
-    - **Files to Review & Refactor:**
-      - `apps/backend/api/rfp/feedback.ts`
-      - `apps/backend/api/rfp/resume.ts`
-      - `apps/backend/api/rfp/interrupt-status.ts`
-      - `apps/backend/api/rfp/thread.ts` (for any routes other than a potential `/init` which is now superseded)
-      - `apps/backend/api/rfp/express-handlers/start.ts` (and its usage in `apps/backend/api/rfp/index.ts` - likely to be deprecated/removed in favor of `/workflow/init`).
-    - **Action for each handler:** Verify it:
-      - Obtains the `threadId` (likely from the request body or parameters, originally sourced from `/workflow/init`).
-      - Calls appropriate methods on the `OrchestratorService` (e.g., `processFeedback`, `resumeWorkflow`, `getInterruptStatus`).
-      - Does _not_ interact directly with the checkpointer or generate its own `thread_id`.
+    - **Files Reviewed & Refactored:**
+      - `apps/backend/api/rfp/feedback.ts` (Updated)
+      - `apps/backend/api/rfp/resume.ts` (Updated)
+      - `apps/backend/api/rfp/interrupt-status.ts` (Updated)
+    - **Files Removed/Deprecated:**
+      - `apps/backend/api/rfp/thread.ts` (Deleted - redundant)
+      - `apps/backend/services/thread.service.js` (Implied deletion/deprecation - underlying service for thread.ts)
+      - `apps/backend/api/rfp/express-handlers/start.ts` (Deleted - outdated)
+      - Routes mounting `thread.ts` and `start.ts` in `apps/backend/api/rfp/index.ts` (Removed)
+    - **Action:** Ensured handlers use `threadId`, call `await getOrchestrator()`, and pass `threadId` to service methods. Removed outdated/redundant handlers and routes.
     - **Justification:** Standardizes interaction patterns and ensures the `OrchestratorService` remains the central point of control for graph workflows.
 
 5.  **Confirm `RunnableConfig` Usage in `OrchestratorService`:**
-    - **Status:** ◻️ Pending
+    - **Status:** ✅ Done (Verified during review)
     - **Goal:** Ensure all LangGraph invocations (`invoke`, `stream`, `updateState`, etc.) within the `OrchestratorService` correctly pass the `thread_id` within the `RunnableConfig.configurable` object.
     - **Action:** Review methods in `apps/backend/services/orchestrator.service.ts` that call the compiled graph.
     - **Justification:** Critical for correct, isolated state persistence per workflow.
@@ -342,25 +342,12 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 ### Sub-Phase 5.4: Frontend Integration and Thread Persistence Testing
 
-**Goal:** Integrate the frontend chat UI with our refactored backend to enable thread persistence and comprehensive testing of the end-to-end flow.
-
 1. **Update StreamProvider Configuration for LangGraph SDK Integration:**
 
-   - **Status:** ◻️ Pending
+   - **Status:** 🚧 Blocked (Linter Error)
    - **File(s) to Modify:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-   - **Action:**
-     1. Fix type errors in `useTypedStream` initialization:
-        ```typescript
-        const streamValue = useTypedStream({
-          apiUrl: directApiUrl || "http://localhost:2024", // Default LangGraph server port
-          assistantId: assistantId || "proposal-generation", // Standardize on correct agent ID
-          streamMode: "values",
-          threadId: threadId || undefined, // Pass custom threadId from our API
-        });
-        ```
-     2. Ensure proper error handling for initialization failures
-     3. Add comprehensive logging at key points in the thread initialization flow
-   - **Justification:** Eliminates type errors and aligns with LangGraph SDK expectations. Using the correct `assistantId` ensures proper agent targeting, while the fallback values improve robustness.
+   - **Action:** Attempted to update `useTypedStream` initialization and implement thread initialization via `/api/rfp/workflow/init`. Encountered persistent linter error on line 180 related to `assistantId` type mismatch (`string | undefined` vs `string`).
+   - **Justification:** Necessary to align frontend with SDK and backend changes for persistent chat.
 
 2. **Standardize on the Official SDK Implementation:**
 
@@ -510,8 +497,6 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
    - **Justification:** Provides real-world validation of the complete thread persistence flow, catching any issues that automated tests might miss.
 
 ### Sub-Phase 5.5: Documentation and Production Readiness
-
-**Goal:** Ensure the refactored system is well-documented, maintainable, and ready for production use.
 
 1. **Update API Documentation:**
 
@@ -703,21 +688,10 @@ Our system is transitioning to a standardized thread persistence approach using 
 
 1. **Update StreamProvider Configuration for LangGraph SDK Integration:**
 
-   - **Status:** ◻️ Pending
+   - **Status:** 🚧 Blocked (Linter Error)
    - **File(s) to Modify:** `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-   - **Action:**
-     1. Fix type errors in `useTypedStream` initialization:
-        ```typescript
-        const streamValue = useTypedStream({
-          apiUrl: directApiUrl || "http://localhost:2024", // Default LangGraph server port
-          assistantId: assistantId || "proposal-generation", // Standardize on correct agent ID
-          streamMode: "values",
-          threadId: threadId || undefined, // Pass custom threadId from our API
-        });
-        ```
-     2. Ensure proper error handling for initialization failures
-     3. Add comprehensive logging at key points in the thread initialization flow
-   - **Justification:** Eliminates type errors and aligns with LangGraph SDK expectations. Using the correct `assistantId` ensures proper agent targeting, while the fallback values improve robustness.
+   - **Action:** Attempted to update `useTypedStream` initialization and implement thread initialization via `/api/rfp/workflow/init`. Encountered persistent linter error on line 180 related to `assistantId` type mismatch (`string | undefined` vs `string`).
+   - **Justification:** Necessary to align frontend with SDK and backend changes for persistent chat.
 
 2. **Standardize on the Official SDK Implementation:**
 
