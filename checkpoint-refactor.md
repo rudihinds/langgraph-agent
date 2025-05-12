@@ -477,32 +477,50 @@ Then proceed to implement and run Test 4 (Thread Isolation).
 
 ## Current Context
 
-### Core Architecture & Design Principles
+### Core Architecture & Design Principles (Post-Refactor)
 
-Our system has been refactored to use a standardized thread persistence approach leveraging LangGraph's official `@langchain/langgraph-checkpoint-postgres` (`PostgresSaver`). This replaces previous custom checkpointing code.
+Our system has been refactored (Phase 5.1-5.3 mostly complete) to use a standardized thread persistence approach leveraging LangGraph's official `@langchain/langgraph-checkpoint-postgres` (`PostgresSaver`). This replaces previous custom checkpointing code.
 
-#### Key Design Decisions
+**Key Design Decisions:**
 
-1.  **Deterministic Thread IDs**: We construct thread IDs using the pattern `user-[userId]::rfp-[rfpId]::proposal` via the `constructProposalThreadId` utility (`lib/utils/threads.ts`). This allows predictable thread recovery.
-2.  **Single Checkpointer Instance**: The application uses a single checkpointer instance (typically `PostgresSaver` connected to Supabase, falling back to `MemorySaver`) created via `createRobustCheckpointer()` (`lib/persistence/robust-checkpointer.ts`). Thread isolation is achieved by passing the `thread_id` in `RunnableConfig` at invocation time.
-3.  **Orchestrator-Driven Thread Management**: `OrchestratorService` (`services/orchestrator.service.ts`) manages thread lifecycles:
+1.  **Database Schema & `checkpointer.setup()`:**
+    - We encountered issues ensuring the correct database schema (`langgraph.checkpoints`) was created, initially conflicting with an old `public.checkpoints` table and possibly facing API vs. Dashboard UI discrepancies in Supabase.
+    - Manual SQL (`CREATE TABLE`, `DROP TABLE`) was attempted via migration and execute tools.
+    - **Crucially, the official `PostgresSaver` documentation states its `checkpointer.setup()` method MUST be called once to handle schema creation and migrations.** Our current approach relies on this method, invoked within `createRobustCheckpointer` (`lib/persistence/robust-checkpointer.ts`), to manage the database table structure automatically. We no longer attempt manual SQL DDL for this table. The `langgraph.checkpoints` table should now exist as verified by API checks, despite potential dashboard lag.
+2.  **Deterministic Thread IDs**: We construct thread IDs using the pattern `user-[userId]::rfp-[rfpId]::proposal` via the `constructProposalThreadId` utility (`lib/utils/threads.ts`). This allows predictable thread recovery.
+3.  **Single Checkpointer Instance**: The application uses a single checkpointer instance (typically `PostgresSaver` connected to Supabase, falling back to `MemorySaver`) created via `createRobustCheckpointer()`. Thread isolation is achieved by passing the `thread_id` in `RunnableConfig` at invocation time.
+4.  **Orchestrator-Driven Thread Management**: `OrchestratorService` (`services/orchestrator.service.ts`) manages thread lifecycles:
     - `initOrGetProposalWorkflow(userId, rfpId)`: Checks `checkpointer.getTuple` using the constructed `threadId` to find existing state or confirm a new workflow.
     - `startProposalGeneration(threadId, userId, rfpId)`: Sets initial state (prompting document load via message) and invokes the graph for a new thread.
     - All graph interactions (`invoke`, `updateState`, `getState`) within the orchestrator use `{ configurable: { thread_id: threadId } }`.
-4.  **API-Driven Initiation**: The frontend calls `/api/rfp/workflow/init` (handled by `api/rfp/workflow.ts`) with `rfpId`. The backend retrieves `userId` (auth), calls the orchestrator's `initOrGetProposalWorkflow`, potentially calls `startProposalGeneration`, and returns the `threadId` (and initial state if resuming) to the frontend.
-5.  **Frontend SDK Usage**: The frontend (`StreamProvider.tsx`) uses `@langchain/langgraph-sdk/react`'s `useTypedStream`, passing the `threadId` obtained from the init endpoint. Message sending (`sendInput`) implicitly uses this `threadId` via context.
+5.  **API-Driven Initiation**: The frontend calls `/api/rfp/workflow/init` (handled by `api/rfp/workflow.ts`) with `rfpId`. The backend retrieves `userId` (auth), calls the orchestrator's `initOrGetProposalWorkflow`, potentially calls `startProposalGeneration`, and returns the `threadId` (and initial state if resuming) to the frontend.
+6.  **Frontend SDK Usage**: The frontend (`StreamProvider.tsx`) uses `@langchain/langgraph-sdk/react`'s `useTypedStream`, passing the `threadId` obtained from the init endpoint. Message sending (`sendInput`) implicitly uses this `threadId` via context.
 
-#### Current Testing Challenge (Phase 5.4, Step 5 - Test 3)
+**Relevant Files for Current Stage:**
 
-We are facing difficulties reliably unit-testing the persistence side-effects of orchestrator methods like `addUserMessage` that involve both `graph.updateState` and `graph.invoke`. Specific issues:
+- `checkpoint-refactor.md`: This plan document.
+- `apps/backend/lib/persistence/robust-checkpointer.ts`: Factory for `PostgresSaver`, calls `setup()`.
+- `apps/backend/services/orchestrator.service.ts`: Core logic using checkpointer, graph, and `threadId`.
+- `apps/backend/lib/utils/threads.ts`: Defines `threadId` format.
+- `apps/backend/api/rfp/workflow.ts`: Handles workflow initiation/resumption API.
+- `apps/backend/api/rfp/chat.ts`: Handles chat message API.
+- `apps/backend/agents/proposal-generation/graph.ts`: Compiles graph with checkpointer.
+- `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`: Frontend SDK integration.
+- `apps/backend/__tests__/thread-persistence.test.ts`: Current focus for testing.
+- LangGraph Docs: Particularly `PostgresSaver` and `BaseCheckpointSaver` reference.
+
+**Current Testing Challenge (Phase 5.4, Step 5 - Test 3):**
+
+We are focused on verifying thread persistence in `apps/backend/__tests__/thread-persistence.test.ts`. While basic init/get tests pass using `MemorySaver`, we are facing difficulties reliably unit-testing the persistence side-effects of orchestrator methods like `addUserMessage` that involve both `graph.updateState` and `graph.invoke`.
+
+**Specific Issues:**
 
 - `graph.updateState` prepares the _input_ for the next `invoke` step and triggers a `checkpointer.put`.
 - The actual state modification (e.g., appending messages via a reducer) typically happens _during_ `graph.invoke`.
-- Mocking `graph.invoke` (necessary for unit testing) prevents the real graph execution and associated persistence triggered by `invoke` from occurring.
+- Mocking `graph.invoke` (necessary for unit testing) prevents the real graph execution and associated persistence triggered _by_ `invoke` from occurring.
 - Asserting on the state saved _after_ `updateState` (via `checkpointer.put` args) doesn't reflect the final state _after_ invoke.
-- Asserting on the state retrieved _after_ the mocked `invoke` (via `checkpointer.get`) also fails because the mock bypasses the final persistence step.
+- Asserting on the state retrieved _after_ the mocked `invoke` (via `checkpointer.get`) also fails because the mock bypasses the final persistence step within the actual graph execution cycle.
 
-This suggests that fully verifying the end-to-end persistence within a unit test requires a more sophisticated mock or should be deferred to integration testing.
-The current state of Test 3 in `thread-persistence.test.ts` reflects the attempt to verify the state retrieved via `getState` after a mocked `invoke`, which is currently failing.
+This suggests that fully verifying the end-to-end persistence within a unit test requires a more sophisticated mock or should be deferred to integration testing. The current state of Test 3 in `thread-persistence.test.ts` reflects the attempt to verify the state retrieved via `getState` after a mocked `invoke`, which is currently failing.
 
-# ... existing code ...
+---
