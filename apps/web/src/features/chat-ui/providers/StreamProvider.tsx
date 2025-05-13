@@ -66,7 +66,10 @@ export interface StreamProviderProps {
 export function StreamProvider({ children }: StreamProviderProps) {
   const searchParams = useSearchParams();
   const rfpId = searchParams.get("rfpId");
-  const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || ""; // Get base API URL
+  // URL for general API calls (e.g., workflow init)
+  const generalApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  // Specific URL for the LangGraph SDK
+  const langGraphSdkApiUrl = process.env.NEXT_PUBLIC_LANGGRAPH_API_URL || "";
 
   // Create the Supabase client instance (runs only on the client)
   const supabase = useMemo(() => createClient(), []); // Memoize client creation
@@ -83,28 +86,40 @@ export function StreamProvider({ children }: StreamProviderProps) {
 
   // Log environment variables
   console.log(
-    "[StreamProvider] NEXT_PUBLIC_API_URL:",
+    "[StreamProvider] NEXT_PUBLIC_API_URL (for general calls):",
     process.env.NEXT_PUBLIC_API_URL
+  );
+  console.log(
+    "[StreamProvider] NEXT_PUBLIC_LANGGRAPH_API_URL (for SDK):",
+    process.env.NEXT_PUBLIC_LANGGRAPH_API_URL
   );
   console.log(
     "[StreamProvider] NEXT_PUBLIC_ASSISTANT_ID:",
     process.env.NEXT_PUBLIC_ASSISTANT_ID
   );
 
-  // Use the direct API URL from env
-  const directApiUrl = process.env.NEXT_PUBLIC_API_URL;
   const assistantId = process.env.NEXT_PUBLIC_ASSISTANT_ID;
 
   // Log the URLs being used
-  if (directApiUrl) {
+  if (generalApiUrl) {
     console.log(
-      "[StreamProvider] Using Direct LangGraph API URL:",
-      directApiUrl
+      "[StreamProvider] Using General API URL (e.g., init):",
+      generalApiUrl
     );
   } else {
-    console.warn("[StreamProvider] NEXT_PUBLIC_API_URL is not set!");
-    // Consider throwing an error or showing a persistent warning in the UI
+    console.warn(
+      "[StreamProvider] NEXT_PUBLIC_API_URL is not set for general calls!"
+    );
   }
+  if (langGraphSdkApiUrl) {
+    console.log(
+      "[StreamProvider] Using LangGraph SDK API URL:",
+      langGraphSdkApiUrl
+    );
+  } else {
+    console.warn("[StreamProvider] NEXT_PUBLIC_LANGGRAPH_API_URL is not set!");
+  }
+
   if (assistantId) {
     console.log("[StreamProvider] Using Assistant ID:", assistantId);
   } else {
@@ -137,14 +152,18 @@ export function StreamProvider({ children }: StreamProviderProps) {
           const token = sessionData.session.access_token;
 
           // Make the API call with the Authorization header
-          const response = await fetch(`${baseApiUrl}/api/rfp/workflow/init`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`, // Add the bearer token
-            },
-            body: JSON.stringify({ rfpId }),
-          });
+          // Ensure this uses the generalApiUrl for calls outside the LangGraph SDK prefix
+          const response = await fetch(
+            `${generalApiUrl}/api/rfp/workflow/init`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`, // Add the bearer token
+              },
+              body: JSON.stringify({ rfpId }),
+            }
+          );
 
           const responseText = await response.text();
           console.log("[StreamProvider] Raw API response text:", responseText);
@@ -195,12 +214,12 @@ export function StreamProvider({ children }: StreamProviderProps) {
   }, [
     rfpId,
     threadId,
-    baseApiUrl,
+    generalApiUrl, // Use generalApiUrl here for the init call dependency
     isInitializing,
     setThreadId,
     setInitError,
     supabase,
-  ]); // Add supabase to dependency array
+  ]);
 
   // Effect to handle missing rfpId - This clears the threadId
   useEffect(() => {
@@ -219,7 +238,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
   // The hook will use this threadId if provided, or potentially create one
   // if initialization hasn't happened yet (though our effect above handles primary init).
   const streamValue = useTypedStream({
-    apiUrl: directApiUrl, // Pass directly (might be undefined)
+    apiUrl: langGraphSdkApiUrl, // Pass the specific LangGraph SDK URL
     assistantId: assistantId as string, // Pass directly (might be undefined)
     threadId: threadId || undefined, // Pass the threadId obtained from URL/API
   });
@@ -305,7 +324,8 @@ export function StreamProvider({ children }: StreamProviderProps) {
 
   // Render children only if rfpId is present, otherwise show placeholder
   // Also check if API URL AND assistantId are configured before rendering chat
-  const canRenderChat = rfpId && directApiUrl && assistantId;
+  const canRenderChat =
+    rfpId && generalApiUrl && langGraphSdkApiUrl && assistantId;
 
   return (
     <StreamContext.Provider value={contextValue}>
