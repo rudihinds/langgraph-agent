@@ -43,13 +43,13 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 ### ⚠️ Step 1.4: Verify `PostgresSaver` End-to-End Persistence
 
-- **Status:** Partially Verified (Startup works, unit tests limited)
+- **Status:** Largely Verified (Data is confirmed to be writing to `checkpoints` and `checkpoint_writes` tables)
 - **Pre-requisites:** Phase 2 completion.
 - **Issue:** User reports `checkpoints` table in Supabase remains empty.
 - **Action:**
-  1.  After Phase 2 is complete and build errors are resolved, trigger a flow that modifies state.
-  2.  Verify data is written to the Supabase checkpoint table.
-  3.  Test resuming a conversation.
+  1.  Trigger a flow that modifies state. (Done, data observed)
+  2.  Verify data is written to the Supabase checkpoint table. (Done)
+  3.  Test resuming a conversation. (Next major step after frontend API path fix)
 - **File(s) Potentially Touched:** `apps/backend/agents/proposal-generation/graph.ts`.
 
 ---
@@ -117,13 +117,13 @@ https://langchain-ai.github.io/langgraphjs/reference/classes/checkpoint_postgres
 
 ### ⚠️ Step 4.1: Full Workflow Test with Persistence
 
-- **Status:** Pending full integration/workflow tests
+- **Status:** Partially Verified (Data saving to DB confirmed; full resume and workflow pending frontend API path fix)
 - **Pre-requisites:** Phase 2 & 3 completion.
 - **Issue:** User reports `checkpoints` table in Supabase remains empty.
 - **Action:**
-  1.  After Phase 2 & 3 are complete and build errors are resolved, trigger a flow that modifies state.
-  2.  Verify data is written to the Supabase checkpoint table.
-  3.  Test resuming a conversation.
+  1.  After Phase 2 & 3 are complete and build errors are resolved, trigger a flow that modifies state. (Done)
+  2.  Verify data is written to the Supabase checkpoint table. (Done)
+  3.  Test resuming a conversation. (Next major step after frontend API path fix)
 - **File(s) Potentially Touched:** `apps/backend/agents/proposal-generation/graph.ts`.
 
 ### ◻️ Step 4.2: Review Loop Prevention Logic
@@ -522,5 +522,11 @@ Our system has been refactored (Phase 5.1-5.3 mostly complete) to use a standard
 ⚠️ **Current Testing Challenge (Phase 5.4, Step 5 - Test 3):**
 
 We are focused on verifying thread persistence in `apps/backend/__tests__/thread-persistence.test.ts`. While basic init/get tests pass using `MemorySaver`, we are facing difficulties reliably unit-testing the persistence side-effects of orchestrator methods like `addUserMessage` that involve both `graph.updateState` and `graph.invoke`. Full verification likely requires integration testing or more sophisticated mocking.
+
+**Current Blocker Resolved / Next Blocker:**
+
+- **Database Table Issues:** Resolved. `PostgresSaver.setup()` and manual creation have led to correctly structured `public.checkpoints` and `public.checkpoint_writes` tables, and data is being persisted.
+- **Next Blocker:** Frontend receives HTTP 404 when fetching thread history (`/threads/{threadId}/history`). Diagnosed as the LangGraph SDK `apiUrl` on the frontend (`http://localhost:3001`) not including the backend's API prefix (`/api/langgraph`). The SDK is attempting to call `http://localhost:3001/threads/...` instead of `http://localhost:3001/api/langgraph/threads/...`.
+- **Next Step:** Correct `NEXT_PUBLIC_API_URL` in the frontend environment to `http://localhost:3001/api/langgraph` and restart the frontend dev server.
 
 ---

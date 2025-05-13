@@ -21,6 +21,10 @@ import { toast } from "sonner";
 import { useQueryState } from "nuqs";
 import { Message } from "@langchain/langgraph-sdk";
 
+// Import the Supabase client creation utility
+// Trying path alias based on project structure
+import { createClient } from "@/lib/supabase/client";
+
 // Define the StateType *without* the optional 'ui' channel initially
 export type StateType = { messages: Message[] };
 
@@ -63,6 +67,9 @@ export function StreamProvider({ children }: StreamProviderProps) {
   const searchParams = useSearchParams();
   const rfpId = searchParams.get("rfpId");
   const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || ""; // Get base API URL
+
+  // Create the Supabase client instance (runs only on the client)
+  const supabase = useMemo(() => createClient(), []); // Memoize client creation
 
   // State to track if the thread initialization API call is in progress
   const [isInitializing, setIsInitializing] = useState(false);
@@ -111,43 +118,61 @@ export function StreamProvider({ children }: StreamProviderProps) {
   // Effect to initialize thread via backend API when rfpId is present but threadId is not
   useEffect(() => {
     const initializeThread = async () => {
-      if (rfpId && !threadId && !isInitializing) {
+      if (rfpId && !threadId && !isInitializing && supabase) {
+        // Check if supabase client is available
         console.log(
           `[StreamProvider] Initializing thread via API for rfpId: ${rfpId}`
         );
         setIsInitializing(true);
         setInitError(null);
         try {
+          // Get the current session and access token
+          const { data: sessionData, error: sessionError } =
+            await supabase.auth.getSession();
+
+          if (sessionError || !sessionData?.session) {
+            throw new Error(sessionError?.message || "User session not found.");
+          }
+
+          const token = sessionData.session.access_token;
+
+          // Make the API call with the Authorization header
           const response = await fetch(`${baseApiUrl}/api/rfp/workflow/init`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ rfpId }), // Send rfpId to backend
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // Add the bearer token
+            },
+            body: JSON.stringify({ rfpId }),
           });
 
-          // Log the raw response text
           const responseText = await response.text();
           console.log("[StreamProvider] Raw API response text:", responseText);
 
           if (!response.ok) {
-            // Try to parse error from responseText if possible, otherwise use statusText
             let errorDetails = response.statusText;
             try {
               const errorData = JSON.parse(responseText);
               errorDetails =
                 errorData?.details || errorData?.error || response.statusText;
             } catch (e) {
-              // Ignore if parsing error text itself fails, stick with statusText
+              /* Ignore parsing error */
             }
+
+            // Specific check for 401 Unauthorized
+            if (response.status === 401) {
+              errorDetails = `Authentication failed: ${errorDetails}. Please ensure you are logged in.`;
+            }
+
             throw new Error(`Failed to initialize workflow: ${errorDetails}`);
           }
 
-          // Parse the logged text
           const { threadId: newThreadId } = JSON.parse(responseText);
           if (newThreadId) {
             console.log(
               `[StreamProvider] Received new threadId from API: ${newThreadId}`
             );
-            setThreadId(newThreadId, { shallow: true }); // Update URL without navigation
+            setThreadId(newThreadId, { shallow: true });
           } else {
             throw new Error("Backend did not return a threadId");
           }
@@ -167,8 +192,15 @@ export function StreamProvider({ children }: StreamProviderProps) {
     };
 
     initializeThread();
-    // Dependencies: Only run when external inputs change
-  }, [rfpId, threadId, baseApiUrl]);
+  }, [
+    rfpId,
+    threadId,
+    baseApiUrl,
+    isInitializing,
+    setThreadId,
+    setInitError,
+    supabase,
+  ]); // Add supabase to dependency array
 
   // Effect to handle missing rfpId - This clears the threadId
   useEffect(() => {

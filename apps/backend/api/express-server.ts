@@ -10,6 +10,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { Logger } from "../lib/logger.js";
+import { authMiddleware } from "../lib/middleware/auth.js";
 import rfpRouter from "./rfp/index.js";
 
 // Initialize logger
@@ -36,6 +37,9 @@ app.use((req, res, next) => {
   logger.info(`${req.method} ${req.url}`);
   next();
 });
+
+// Apply authentication middleware specifically to /api/rfp routes
+app.use("/api/rfp", authMiddleware);
 
 // Mount the RFP router
 app.use("/api/rfp", rfpRouter);
