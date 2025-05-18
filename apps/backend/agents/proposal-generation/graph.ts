@@ -32,7 +32,7 @@ import {
 } from "./conditionals.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 import { createSectionEvaluators } from "../../agents/evaluation/sectionEvaluators.js";
-import { createRobustCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
+import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
 import { sectionNodes } from "./nodes/section_nodes.js";
 import { ENV } from "../../lib/config/env.js";
 import { processFeedbackNode } from "./nodes/processFeedback.js";
@@ -404,33 +404,23 @@ const feedbackRoutingMap: Record<string, string> = {
   feedbackRoutingMap
 );
 
-/**
- * Creates the proposal generation graph with all nodes and edges
- *
- * @returns The configured StateGraph with checkpointer
- */
-async function createProposalGenerationGraph() {
-  // Create a persistent checkpointer based on environment using the ROBUST factory
-  // In development: In-memory checkpointer (unless Supabase is configured)
-  // In production: Supabase checkpointer (falls back to in-memory if not configured)
-  // Ensure createRobustCheckpointer is awaited as it returns a Promise
-  const checkpointer = await createRobustCheckpointer();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let compiledGraph: any = null;
 
-  if (ENV.isDevelopment()) {
-    console.info(
-      `Using ${ENV.isSupabaseConfigured() ? "Supabase" : "in-memory"} checkpointer for proposal graph in ${ENV.NODE_ENV} environment.`
-    );
+export async function createProposalGenerationGraph() {
+  if (compiledGraph) {
+    return compiledGraph;
   }
 
-  // Compile the graph with checkpointer
-  // The thread_id will be provided at invocation time via RunnableConfig
-  // This allows the same compiled graph to be reused across different threads
-  const compiledGraph = proposalGenerationGraph.compile({
+  // Initialize the checkpointer
+  const checkpointer = await getInitializedCheckpointer();
+
+  // Compile the graph with the checkpointer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  compiledGraph = (proposalGenerationGraph as any).compile({
     checkpointer,
   });
 
+  console.log("Proposal Generation Graph compiled successfully.");
   return compiledGraph;
 }
-
-// Export the graph creation function
-export { createProposalGenerationGraph };

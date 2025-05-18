@@ -75,13 +75,8 @@ async function initializeLangGraph() {
     app.use("/api/rfp", rfpRouter);
     logger.info("Mounted /api/rfp router.");
 
-    // Create and mount the LangGraph router using the factory
-    const langgraphRouter = createLangGraphRouter({
-      graphInstance,
-      checkpointerInstance,
-    });
-    app.use("/api/langgraph", langgraphRouter);
-    logger.info("Mounted /api/langgraph router.");
+    // LangGraph API is now handled by the LangGraph server
+    logger.info("LangGraph API is handled by the LangGraph server.");
 
     // Health check can be mounted any time
     app.get("/api/health", (req, res) => {
