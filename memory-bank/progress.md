@@ -1,3 +1,52 @@
+# Project Progress - Proposal Agent Development
+
+## What Works / Recently Completed
+
+### Phase 1: Backend - Singleton Checkpointer Factory for LangGraph Server
+
+- **Step 1.1: Implement Singleton Checkpointer Factory:** ✅ Completed.
+  - Refactored `apps/backend/lib/persistence/robust-checkpointer.ts` with `getInitializedCheckpointer`.
+  - Ensures `PostgresSaver.setup()` is called only once.
+  - Corrected TypeScript type error for `pgPoolInstance`.
+- **Step 1.2: Utilize Singleton Checkpointer in Graph Compilation:** ✅ Completed.
+  - Updated `createProposalGenerationGraph` in `apps/backend/agents/proposal-generation/graph.ts` to use `getInitializedCheckpointer`.
+- **Step 1.3: Verify `langgraph.json` and Server Startup:** ✅ Partially Completed.
+  - `langgraph.json` verified to point to `createProposalGenerationGraph`.
+  - **User Task:** Manually test LangGraph server startup and check logs.
+
+### Phase 2: Backend - Application Association Layer (Express Server - Port 3001)
+
+- **Step 2.1: Define `user_rfp_proposal_threads` Table:** ✅ Completed.
+  - SQL DDL defined and applied via Supabase migration. Table `user_rfp_proposal_threads` created.
+- **Step 2.2: Create `ProposalThreadAssociationService`:** ✅ Completed.
+  - `apps/backend/services/proposalThreadAssociation.service.ts` created.
+  - Service methods `recordNewProposalThread` and `listUserProposalThreads` implemented.
+  - Supabase client import updated to use `serverSupabase` (service role client).
+- **Step 2.3: Create API Endpoints for Thread Association:** ✅ Completed.
+  - Implemented `POST /api/rfp/proposal_threads` (records new thread association; validates input, authenticates user, calls service).
+  - Implemented `GET /api/rfp/proposal_threads` (lists user threads; optional rfpId filter; authenticates user, calls service).
+  - Endpoints are protected by auth middleware and use Zod for validation.
+
+## What's Left to Build (Immediate Focus from `final_threads_setup.md`)
+
+1.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`:**
+    - Analyze and refactor these services to align with the new architecture.
+2.  **Phase 3: Frontend - `thread_id` Generation and SDK Interaction:** (All steps)
+3.  **Phase 4: Testing and Refinement:** (All steps)
+
+## Current Status
+
+- Core backend infrastructure for singleton checkpointer management in the LangGraph server is in place.
+- The database table and service layer for managing application-level thread associations (`user_id`, `rfp_id`, `app_generated_thread_id`) are implemented.
+- **API endpoints for thread association are now live and ready for frontend integration.**
+- **Known Issue:** A linter error exists in `ProposalThreadAssociationService` due to the missing Supabase `database.types.ts` file. This is blocked by the user needing to install the Supabase CLI to generate these types.
+
+## Evolution of Project Decisions
+
+- Confirmed the necessity of a singleton `PostgresSaver` and its `setup()` being called only once.
+- Solidified the architecture: frontend generates `app_generated_thread_id`, Express backend records association, LangGraph server uses this ID for its checkpointer.
+- Identified `serverSupabase` (service role) as the appropriate client for backend database services.
+
 # Project Progress
 
 ## Current Status

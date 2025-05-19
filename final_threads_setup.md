@@ -184,21 +184,25 @@ This context should help understand the detailed implementation phases outlined 
 
 ### Step 2.3: Create API Endpoints for Thread Association
 
-- **Status:** ◻️ (Not Started)
+- **Status:** ✅ (Completed)
 - **Depends On:** Step 2.2
 - **Issue:** Frontend needs API endpoints to record and retrieve thread associations.
 - **Action Items:**
-  1.  Create/modify `apps/backend/api/rfp/proposalThreads.ts` (or a similar router file).
-  2.  Implement `POST /api/rfp/proposal_threads`:
-      - Request Body: `{ rfpId: string, appGeneratedThreadId: string, proposalTitle?: string }`
-      - Logic: Authenticate user, validate input, call `proposalThreadAssociationService.recordNewProposalThread`.
-  3.  Implement `GET /api/rfp/proposal_threads`:
-      - Query Parameter: `?rfpId=<string>` (optional).
-      - Logic: Authenticate user, call `proposalThreadAssociationService.listUserProposalThreads`.
+  1.  Created `apps/backend/api/rfp/proposalThreads.ts` as an Express router for thread association endpoints.
+  2.  Implemented `POST /api/rfp/proposal_threads`:
+      - Authenticates user via Supabase auth middleware.
+      - Validates input (`rfpId`, `appGeneratedThreadId`, optional `proposalTitle`) using Zod.
+      - Calls `ProposalThreadAssociationService.recordNewProposalThread` and returns the result or error.
+  3.  Implemented `GET /api/rfp/proposal_threads`:
+      - Authenticates user.
+      - Optionally filters by `rfpId` (query param).
+      - Calls `ProposalThreadAssociationService.listUserProposalThreads` and returns the list or error.
+  4.  The router is mounted at `/api/rfp/proposal_threads` and protected by the existing auth middleware.
 - **File Paths:**
-  - `apps/backend/api/rfp/proposalThreads.ts` (or relevant Express router file)
-  - `apps/backend/server.ts` (to mount the router)
-- **Justification:** Exposes the thread association functionality to the frontend.
+  - `apps/backend/api/rfp/proposalThreads.ts`
+  - `apps/backend/api/rfp/index.ts` (router mount)
+  - `apps/backend/server.ts` (middleware already applied)
+- **Justification:** Exposes the thread association functionality to the frontend. Endpoints are ready for frontend integration.
 
 ### Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`
 

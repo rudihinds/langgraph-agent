@@ -1,3 +1,50 @@
+# Active Context - Proposal Agent Development
+
+## Current Work Focus
+
+The primary focus has been on refactoring the LangGraph thread management and checkpointer initialization to ensure robust and correct behavior, as outlined in `final_threads_setup.md`.
+
+**Key Activities & Decisions:**
+
+1.  **Singleton Checkpointer Implementation (Phase 1):**
+
+    - Refactored `apps/backend/lib/persistence/robust-checkpointer.ts` to implement `getInitializedCheckpointer`.
+    - This function now ensures that `PostgresSaver` and its `pg.Pool` are instantiated only once, and `PostgresSaver.setup()` is called exactly once per server lifecycle.
+    - The `createProposalGenerationGraph` function in `apps/backend/agents/proposal-generation/graph.ts` was updated to use this new singleton checkpointer factory.
+    - `langgraph.json` was verified to point to the correct graph creation function.
+    - **Next Action (User):** Manually test LangGraph server startup (`apps/backend/langgraph-start.mjs`) and check logs for confirmation of singleton checkpointer initialization.
+
+2.  **Application Association Layer - Backend (Phase 2 Started):**
+    - **`user_rfp_proposal_threads` Table (Step 2.1):**
+      - The SQL DDL for creating this table in Supabase PostgreSQL has been defined and applied using the Supabase migration tool.
+      - The table schema includes `id`, `user_id`, `rfp_id`, `app_generated_thread_id` (unique), `proposal_title`, `created_at`, and `updated_at`.
+    - **`ProposalThreadAssociationService` (Step 2.2):**
+      - Created `apps/backend/services/proposalThreadAssociation.service.ts`.
+      - Implemented the service with methods `recordNewProposalThread` and `listUserProposalThreads`.
+      - Updated Supabase client import to use `serverSupabase` (service role client) aliased as `supabase` from `../lib/supabase/client.js`.
+
+## Active Issues & Blockers
+
+1.  **Supabase Database Type Generation:**
+    - The `ProposalThreadAssociationService` currently has a linter error because it cannot find `../lib/supabase/types/database.types.js`.
+    - This file needs to be generated using the Supabase CLI (e.g., `supabase gen types typescript --project-id <your-project-id> > apps/backend/lib/supabase/types/database.types.ts`).
+    - **Blocker:** The user reported that the Supabase CLI is not installed, so this type generation step cannot be completed immediately. The linter error will persist until this is resolved.
+
+## Next Steps (Based on `final_threads_setup.md`)
+
+1.  **Resolve Supabase Type Generation:** (User task) Install Supabase CLI and generate `database.types.ts`.
+2.  **Phase 2, Step 2.3: Create API Endpoints for Thread Association:**
+    - Create or modify `apps/backend/api/rfp/proposalThreads.ts` to include `POST` and `GET` endpoints that utilize `ProposalThreadAssociationService`.
+3.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`**:
+    - Review and refactor these services in the Express backend to align with the new architecture where the LangGraph server manages its own checkpointer.
+
+## Important Patterns & Preferences Reminder
+
+- Adhere to the singleton pattern for `PostgresSaver` initialization in the LangGraph server process.
+- Ensure clear separation of concerns: LangGraph server for graph execution and state, Express backend for application-level data and API orchestration.
+- Frontend drives `thread_id` generation and provides it to the LangGraph server.
+- Backend services (like `ProposalThreadAssociationService`) should use the `serverSupabase` (service role) client for database operations.
+
 # Current Work Focus
 
 ## Implementation of `ProposalGenerationGraph` Core Nodes
@@ -774,3 +821,20 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 ## Learnings & Insights
 
 - Unit testing LangGraph persistence side-effects, especially those involving both `updateState` and `invoke`, is non-trivial with simple mocks. The internal persistence mechanism within `invoke` is hard to isolate/verify without running the actual (or a very faithfully mocked) graph logic.
+
+## Recent Changes (Thread Association API Endpoints)
+
+- **Phase 2, Step 2.3: API Endpoints for Thread Association** is now complete:
+  - Implemented `POST /api/rfp/proposal_threads` for recording new proposal thread associations. This endpoint:
+    - Authenticates the user via Supabase auth middleware.
+    - Validates input (`rfpId`, `appGeneratedThreadId`, optional `proposalTitle`) using Zod.
+    - Calls `ProposalThreadAssociationService.recordNewProposalThread` and returns the result or error.
+  - Implemented `GET /api/rfp/proposal_threads` for listing a user's proposal threads. This endpoint:
+    - Authenticates the user.
+    - Optionally filters by `rfpId` (query param).
+    - Calls `ProposalThreadAssociationService.listUserProposalThreads` and returns the list or error.
+  - The router is mounted at `/api/rfp/proposal_threads` and protected by the existing auth middleware.
+
+## Next Step
+
+- **Phase 2, Step 2.4:** Re-evaluate and refactor `OrchestratorService` and `checkpointer.service.ts` in the Express backend to align with the new architecture (LangGraph server manages its own checkpointer; Express backend focuses on application-level logic).
