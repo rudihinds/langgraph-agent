@@ -14,7 +14,7 @@ const postSchema = z.object({
 });
 
 // POST /api/rfp/proposal_threads
-router.post("/proposal_threads", async (req: AuthenticatedRequest, res) => {
+router.post("/", async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
   if (!userId) {
     return res
@@ -48,7 +48,7 @@ router.post("/proposal_threads", async (req: AuthenticatedRequest, res) => {
 });
 
 // GET /api/rfp/proposal_threads?rfpId=...
-router.get("/proposal_threads", async (req: AuthenticatedRequest, res) => {
+router.get("/", async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
   if (!userId) {
     return res

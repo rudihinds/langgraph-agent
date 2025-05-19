@@ -12,7 +12,6 @@ import type { CompiledStateGraph } from "@langchain/langgraph"; // Needed for ty
 import { createServer } from "http";
 import { Logger } from "@/lib/logger.js";
 import { createProposalGenerationGraph } from "@/agents/proposal-generation/graph.js";
-import { createCheckpointer } from "@/services/[dep]checkpointer.service.js";
 import rfpRouter from "./api/rfp/index.js";
 import { createLangGraphRouter } from "./api/langgraph/index.js"; // Import the factory function
 import cookieParser from "cookie-parser"; // Import cookie-parser
@@ -24,8 +23,6 @@ const logger = Logger.getInstance();
 
 // --- Global instances (will be initialized async) ---
 let graphInstance: CompiledStateGraph<any, any, any> | null = null;
-let checkpointerInstance: BaseCheckpointSaver | null = null;
-// ------------------------------------------
 
 // Middleware
 
@@ -56,16 +53,20 @@ app.use((req, res, next) => {
 // ===== Initialize LangGraph Components =====
 async function initializeLangGraph() {
   try {
-    logger.info("Initializing LangGraph components...");
+    logger.info(
+      "Initializing LangGraph components for Express server (graph only)..."
+    );
     graphInstance = await createProposalGenerationGraph();
-    logger.info("Proposal generation graph initialized.");
-    checkpointerInstance = await createCheckpointer("proposal-agent");
-    logger.info("Checkpointer service initialized.");
-    logger.info("LangGraph components initialized successfully.");
+    logger.info(
+      "Proposal generation graph object created (potentially for schema or direct calls if any remain)."
+    );
+    logger.info(
+      "Express server's LangGraph-related initializations complete (if any are still needed)."
+    );
 
     // Ensure instances are not null before proceeding
-    if (!graphInstance || !checkpointerInstance) {
-      throw new Error("Graph or Checkpointer failed to initialize.");
+    if (!graphInstance) {
+      throw new Error("Graph failed to initialize.");
     }
 
     // --- Mount Routers AFTER initialization ---

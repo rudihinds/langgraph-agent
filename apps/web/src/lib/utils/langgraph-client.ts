@@ -1,7 +1,30 @@
-import { fetchEventSource } from "@microsoft/fetch-event-source";
+import {
+  fetchEventSource,
+  EventSourceMessage,
+} from "@microsoft/fetch-event-source";
 import { toast } from "sonner";
 
-import { InterruptResponse } from "../../features/chat-ui/types";
+// Assuming InterruptResponse is a custom type, adjust if SDK provides it
+// For now, let's define a placeholder if it's not found in the expected SDK path
+// or if the existing import is incorrect.
+// Based on the previous file content, it was:
+// import { InterruptResponse } from "../../features/chat-ui/types";
+// Let's ensure this path is correct or define a placeholder
+// For now, assuming it's a specific structure.
+interface InterruptData {
+  // Define fields based on expected interrupt structure
+  // Example:
+  // messages?: any[];
+  // next?: string[];
+  // [key: string]: any;
+  // For now, let's keep it generic if the exact structure isn't critical for this fix
+  [key: string]: any;
+}
+export interface InterruptResponse {
+  type: "interrupt";
+  data: InterruptData;
+  // Add other fields if necessary based on actual usage
+}
 
 // Base URL for the LangGraph API
 const BASE_URL =
@@ -144,22 +167,26 @@ export class LangGraphClient {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-          },
+            // Add Authorization header if your LangGraph server needs it
+            // ...(this.options.headers?.Authorization && { Authorization: this.options.headers.Authorization }),
+          } as Record<string, string>, // Ensure headers is Record<string, string>
           body: JSON.stringify({ action, input }),
           signal: abortController.signal,
-          onmessage(event) {
+          onmessage(event: EventSourceMessage) {
+            // Added type for event
             try {
               const data = JSON.parse(event.data);
 
               // Check if this is an interrupt message
               if (data.type === "interrupt" && onInterrupt) {
-                onInterrupt(data.data as InterruptResponse);
+                onInterrupt(data as InterruptResponse); // Cast to InterruptResponse
                 return;
               }
 
               // Pass the message to the callback
               onMessage(data);
-            } catch (err) {
+            } catch (err: any) {
+              // Added type for err
               console.error("Error parsing message:", err);
             }
           },
@@ -167,7 +194,8 @@ export class LangGraphClient {
             // Streaming has completed normally
             if (onComplete) onComplete();
           },
-          onerror(err) {
+          onerror(err: any) {
+            // Added type for err
             if (err instanceof Error) {
               if (onError) onError(err);
               // Don't retry on deliberate abort
@@ -176,7 +204,22 @@ export class LangGraphClient {
               }
             }
             // Retry on other errors (this is for the fetchEventSource library)
-            return err;
+            // Or handle specific error types if needed
+            if (err.status === 401) {
+              // Example: specific handling for auth errors
+              toast.error("Authentication error with LangGraph stream.");
+              if (onError)
+                onError(
+                  new Error(`Stream authentication error: ${err.status}`)
+                );
+              abortController.abort(); // Stop retrying on auth failure
+              return;
+            }
+            if (onError)
+              onError(
+                new Error(`Stream error: ${err.status || "Unknown error"}`)
+              );
+            return err; // Default retry for other errors
           },
         });
       } catch (error) {

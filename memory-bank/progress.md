@@ -410,3 +410,50 @@ Express backend API endpoints `/api/rfp/feedback`, `/api/rfp/resume`, and `/api/
 - Phase 3 (Frontend `thread_id` Generation, SDK Interaction, and UI) is ✅ Completed.
 - The system is now ready for comprehensive end-to-end testing (Phase 4).
 - Identified backend API endpoints (`feedback`, `resume`, `interrupt-status`) that are temporarily disabled and require future refactoring.
+
+## API Routing and Persistence Stability:
+
+- Resolved a series of 404 errors related to API routing and LangGraph checkpointer initialization.
+- Frontend requests to the Express backend (e.g., `POST /api/rfp/proposal_threads`) are now correctly routed and handled.
+- Frontend requests to the LangGraph server (e.g., `POST /threads/.../history`) are reaching the server.
+- The LangGraph `PostgresSaver` checkpointer is now correctly initializing and creating its database tables via the `pgSaver.setup()` call within the `getInitializedCheckpointer` factory. This resolved the "Thread not found" errors from the LangGraph server.
+- Clear distinction and correct usage of `NEXT_PUBLIC_API_URL` (for Express backend) and `NEXT_PUBLIC_LANGGRAPH_API_URL` (for LangGraph server) is established.
+
+## Previous Completions (Phases 1 & 2 of `final_threads_setup.md` up to API endpoints):
+
+- Singleton checkpointer factory (`getInitializedCheckpointer`) for LangGraph server is robust.
+- `user_rfp_proposal_threads` table in Supabase for application-level thread association is created.
+- `ProposalThreadAssociationService` for managing these associations is implemented.
+- API endpoints (`POST` and `GET /api/rfp/proposal_threads`) for thread association are implemented and functional.
+
+## What's Left to Build (Immediate Focus from `final_threads_setup.md` and beyond)
+
+1.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts` (Express Backend):**
+    - Analyze and refactor these services to align with the current architecture where the LangGraph server manages its own checkpointer and the Express backend handles application-level thread association and orchestration tasks that don't directly involve running graph steps (e.g., initiating a new graph run, interpreting HITL feedback for state updates outside the graph flow).
+2.  **Phase 3: Frontend - `thread_id` Generation and SDK Interaction:**
+    - Implement frontend logic for generating `app_generated_thread_id`.
+    - Ensure frontend calls the new `/api/rfp/proposal_threads` endpoint to record association before interacting with LangGraph.
+    - Ensure frontend uses the `app_generated_thread_id` when interacting with the LangGraph server SDK.
+3.  **Phase 4: Testing and Refinement:**
+    - Conduct thorough end-to-end testing of the entire proposal creation, interaction, and persistence flow.
+    - Test HITL scenarios with the new setup.
+    - Verify multi-tenancy and user-specific data isolation.
+4.  **Continue `ProposalGenerationGraph` Node Implementations:** Resume work on core graph nodes once the foundational persistence and API layers are fully stable and tested.
+
+## Current Status
+
+- The core API routing and LangGraph persistence mechanisms are now believed to be stable and correctly configured.
+- The system can successfully record application-level thread associations.
+- The LangGraph server can successfully persist and retrieve thread states using its `PostgresSaver` checkpointer.
+- **Next major steps involve:**
+
+  - Refactoring the Express backend's `OrchestratorService` to work with the now independent LangGraph server's state.
+  - Integrating the frontend to correctly generate and use the `app_generated_thread_id` for both Express backend association and LangGraph server interaction.
+
+- **Known Issue (User Task):** Linter error in `ProposalThreadAssociationService` due to missing Supabase `database.types.ts` file. User needs to install Supabase CLI to generate these types.
+
+## Evolution of Project Decisions
+
+- **API Routing:** Refined understanding of how Express sub-routers and base paths interact. Ensured internal API prefixes are not duplicated if already handled by environment variables or primary router configurations.
+- **LangGraph Persistence:** Confirmed the critical role of `PostgresSaver.setup()` and ensured it's reliably called via our `getInitializedCheckpointer` factory. Shifted to relying on the library for its table creation rather than manual DDL for checkpointer tables.
+- **Environment Variables:** Clarified the specific roles of `NEXT_PUBLIC_API_URL` vs. `NEXT_PUBLIC_LANGGRAPH_API_URL` for frontend configuration.

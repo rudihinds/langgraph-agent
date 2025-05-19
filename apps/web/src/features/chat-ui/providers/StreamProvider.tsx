@@ -20,6 +20,9 @@ import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
 import { toast } from "sonner";
 import { useQueryState } from "nuqs";
 import { Message } from "@langchain/langgraph-sdk";
+import { v4 as uuidv4 } from "uuid";
+import { recordNewProposalThread } from "@/lib/api";
+import { User } from "@supabase/supabase-js";
 
 // Import the Supabase client creation utility
 // Trying path alias based on project structure
@@ -81,7 +84,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
 
   // Use query state for threadId, only if rfpId is present
   const [threadId, setThreadId] = useQueryState("threadId", {
-    // history: "push", // Consider adding history management if needed
+    history: "replace",
   });
 
   // Log environment variables
@@ -130,76 +133,60 @@ export function StreamProvider({ children }: StreamProviderProps) {
     `[StreamProvider] Initial state - rfpId: ${rfpId}, threadId: ${threadId}`
   );
 
-  // Effect to initialize thread via backend API when rfpId is present but threadId is not
+  // Effect to initialize thread: if rfpId is present but threadId is not,
+  // generate a new threadId, record association, and set it.
   useEffect(() => {
-    const initializeThread = async () => {
+    const initializeNewThreadForRfp = async () => {
       if (rfpId && !threadId && !isInitializing && supabase) {
-        // Check if supabase client is available
         console.log(
-          `[StreamProvider] Initializing thread via API for rfpId: ${rfpId}`
+          `[StreamProvider] rfpId ${rfpId} present, but no threadId. Initializing new thread.`
         );
         setIsInitializing(true);
         setInitError(null);
         try {
-          // Get the current session and access token
           const { data: sessionData, error: sessionError } =
             await supabase.auth.getSession();
 
-          if (sessionError || !sessionData?.session) {
-            throw new Error(sessionError?.message || "User session not found.");
+          if (sessionError || !sessionData?.session?.access_token) {
+            throw new Error(
+              sessionError?.message ||
+                "User session not found or token missing."
+            );
           }
-
           const token = sessionData.session.access_token;
 
-          // Make the API call with the Authorization header
-          // Ensure this uses the generalApiUrl for calls outside the LangGraph SDK prefix
-          const response = await fetch(
-            `${generalApiUrl}/api/rfp/workflow/init`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`, // Add the bearer token
-              },
-              body: JSON.stringify({ rfpId }),
-            }
+          const newAppGeneratedThreadId = uuidv4();
+          console.log(
+            `[StreamProvider] Generated new appGeneratedThreadId: ${newAppGeneratedThreadId} for rfpId: ${rfpId}`
           );
 
-          const responseText = await response.text();
-          console.log("[StreamProvider] Raw API response text:", responseText);
+          // Persist this new threadId association via our Express backend
+          await recordNewProposalThread(
+            {
+              rfpId,
+              appGeneratedThreadId: newAppGeneratedThreadId,
+              // proposalTitle can be added here if a default is desired or comes from rfpId context
+            },
+            token
+          );
+          toast.success(
+            `New proposal chat initialized and associated with RFP.`
+          );
 
-          if (!response.ok) {
-            let errorDetails = response.statusText;
-            try {
-              const errorData = JSON.parse(responseText);
-              errorDetails =
-                errorData?.details || errorData?.error || response.statusText;
-            } catch (e) {
-              /* Ignore parsing error */
-            }
-
-            // Specific check for 401 Unauthorized
-            if (response.status === 401) {
-              errorDetails = `Authentication failed: ${errorDetails}. Please ensure you are logged in.`;
-            }
-
-            throw new Error(`Failed to initialize workflow: ${errorDetails}`);
-          }
-
-          const { threadId: newThreadId } = JSON.parse(responseText);
-          if (newThreadId) {
-            console.log(
-              `[StreamProvider] Received new threadId from API: ${newThreadId}`
-            );
-            setThreadId(newThreadId, { shallow: true });
-          } else {
-            throw new Error("Backend did not return a threadId");
-          }
+          // Set this new threadId in the URL query state
+          // This will trigger the useStream hook to use this new threadId
+          setThreadId(newAppGeneratedThreadId, {
+            shallow: true,
+            history: "replace",
+          });
+          console.log(
+            `[StreamProvider] Set new threadId in query state: ${newAppGeneratedThreadId}`
+          );
         } catch (error) {
           const message =
             error instanceof Error ? error.message : String(error);
           console.error(
-            "[StreamProvider] Thread initialization error:",
+            "[StreamProvider] Error during new thread initialization and association:",
             message
           );
           setInitError(message);
@@ -210,16 +197,8 @@ export function StreamProvider({ children }: StreamProviderProps) {
       }
     };
 
-    initializeThread();
-  }, [
-    rfpId,
-    threadId,
-    generalApiUrl, // Use generalApiUrl here for the init call dependency
-    isInitializing,
-    setThreadId,
-    setInitError,
-    supabase,
-  ]);
+    initializeNewThreadForRfp();
+  }, [rfpId, threadId, isInitializing, setThreadId, supabase]);
 
   // Effect to handle missing rfpId - This clears the threadId
   useEffect(() => {

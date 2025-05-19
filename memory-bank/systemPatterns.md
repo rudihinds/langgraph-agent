@@ -45,13 +45,13 @@ We now utilize the official `@langchain/langgraph-checkpoint-postgres` package's
 
 ### Key Implementation Details:
 
-- **Factory Function (`createRobustCheckpointer`)**: Located in `apps/backend/lib/persistence/robust-checkpointer.ts`, this function:
+- **Factory Function (`getInitializedCheckpointer`)**: Located in `apps/backend/lib/persistence/robust-checkpointer.ts`, this function:
   - Attempts to create and configure a `PostgresSaver` instance using environment variables (`DATABASE_URL`, etc.).
-  - **Critically, it calls `await checkpointer.setup()` to ensure the necessary `langgraph.checkpoints` table and schema exist in the database.** This method handles DB migrations automatically.
+  - **Critically, it calls `await pgSaver.setup()` (after `const pgSaver = new PostgresSaver(pgPoolInstance);`) to ensure the necessary `langgraph.checkpoints` table (or similarly named by the library) and schema exist in the database.** This method handles DB migrations automatically.
   - If `PostgresSaver` setup fails (e.g., missing env vars, connection error), it falls back to using LangGraph's `MemorySaver` for resilience during development or in environments without a DB connection.
   - Returns a `BaseCheckpointSaver` compatible instance (either `PostgresSaver` or `MemorySaver`).
 - **Thread ID Management**: Thread isolation is achieved by passing a uniquely constructed `thread_id` (typically `user-[userId]::rfp-[rfpId]::proposal`) within the `RunnableConfig` during graph invocations (`invoke`, `updateState`, `getState`). The checkpointer instance itself is thread-agnostic.
-- **`OrchestratorService`**: This service is responsible for constructing the `thread_id` and managing all interactions with the checkpointer instance obtained from `createRobustCheckpointer`.
+- **`OrchestratorService`**: This service is responsible for constructing the `thread_id` and managing all interactions with the checkpointer instance obtained from `getInitializedCheckpointer`.
 - **Removed Components**: Custom `SupabaseCheckpointer`, `LangGraphCheckpointer`, `MemoryLangGraphCheckpointer`, and `checkpointer-factory.ts` have been removed.
 
 ### Key Advantages:
@@ -66,10 +66,10 @@ We now utilize the official `@langchain/langgraph-checkpoint-postgres` package's
 
 ```typescript
 // In OrchestratorService or API handler
-import { createRobustCheckpointer } from "@/lib/persistence/robust-checkpointer.js";
+import { getInitializedCheckpointer } from "@/lib/persistence/robust-checkpointer.js";
 import { constructProposalThreadId } from "@/lib/utils/threads.js";
 
-const checkpointer = await createRobustCheckpointer(); // Get the singleton instance
+const checkpointer = await getInitializedCheckpointer(); // Get the singleton instance
 const userId = "user-123";
 const rfpId = "rfp-abc";
 const threadId = constructProposalThreadId(userId, rfpId);
@@ -202,11 +202,11 @@ graph TD
 ### Key Components
 
 1.  **User Interface (UI)**: Frontend Next.js application.
-2.  **StreamProvider/InterruptProvider**: Frontend components managing the direct connection to the LangGraph stream.
-3.  **API Layer**: Express.js REST API handling HTTP requests, authentication, and calls to backend services _other than_ the chat stream.
-4.  **Orchestrator Service**: Core control unit managing workflow state (via Checkpointer), invoking agent runs, and coordinating non-stream actions.
-5.  **Persistent Checkpointer**: State persistence layer using PostgreSQL/Supabase.
-6.  **LangGraph API Endpoint**: The actual LangGraph server endpoint (`http://localhost:2024` currently) that handles stream requests.
+2.  **StreamProvider/InterruptProvider**: Frontend components managing the direct connection to the LangGraph stream endpoints (e.g., `http://localhost:2024/threads/...`).
+3.  **API Layer**: Express.js REST API (`http://localhost:3001`) handling HTTP requests for application-specific logic (RFP management, user proposal associations), authentication, and calls to backend services _other than_ the direct LangGraph chat stream.
+4.  **Orchestrator Service**: Core control unit managing workflow state (via Checkpointer), invoking agent runs on the LangGraph server, and coordinating non-stream actions.
+5.  **Persistent Checkpointer**: State persistence layer using PostgreSQL/Supabase, initialized via `getInitializedCheckpointer` which calls `PostgresSaver.setup()`.
+6.  **LangGraph API Endpoint**: The actual LangGraph server endpoint (e.g., `http://localhost:2024` currently) that handles stream requests, graph execution, and checkpointer interactions.
 7.  **ProposalGenerationGraph**: LangGraph StateGraph defining the workflow, running within the LangGraph server process.
 8.  **EditorAgent**: Specialized service for handling revisions and edits, called via the Express API.
 

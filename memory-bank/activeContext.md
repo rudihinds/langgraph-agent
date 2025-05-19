@@ -2,50 +2,60 @@
 
 ## Current Work Focus
 
-The primary focus has been on refactoring the LangGraph thread management and checkpointer initialization to ensure robust and correct behavior, as outlined in `final_threads_setup.md`.
+**Primary Focus: Stabilizing LangGraph Thread Persistence and API Routing**
 
-**Key Activities & Decisions:**
+The most recent efforts have revolved around debugging and resolving a series of cascading errors related to API routing and LangGraph checkpointer initialization. The core issue stemmed from how the LangGraph server interacts with its PostgreSQL database for persisting thread states, and how the frontend and backend Express server route requests to the correct services.
 
-1.  **Singleton Checkpointer Implementation (Phase 1):**
+**Debugging Journey & Resolutions:**
 
-    - Refactored `apps/backend/lib/persistence/robust-checkpointer.ts` to implement `getInitializedCheckpointer`.
-    - This function now ensures that `PostgresSaver` and its `pg.Pool` are instantiated only once, and `PostgresSaver.setup()` is called exactly once per server lifecycle.
-    - The `createProposalGenerationGraph` function in `apps/backend/agents/proposal-generation/graph.ts` was updated to use this new singleton checkpointer factory.
-    - `langgraph.json` was verified to point to the correct graph creation function.
-    - **Next Action (User):** Manually test LangGraph server startup (`apps/backend/langgraph-start.mjs`) and check logs for confirmation of singleton checkpointer initialization.
+1.  **Initial Error: Recursion in Frontend (`useToast`)**
 
-2.  **Application Association Layer - Backend (Phase 2 Started):**
-    - **`user_rfp_proposal_threads` Table (Step 2.1):**
-      - The SQL DDL for creating this table in Supabase PostgreSQL has been defined and applied using the Supabase migration tool.
-      - The table schema includes `id`, `user_id`, `rfp_id`, `app_generated_thread_id` (unique), `proposal_title`, `created_at`, and `updated_at`.
-    - **`ProposalThreadAssociationService` (Step 2.2):**
-      - Created `apps/backend/services/proposalThreadAssociation.service.ts`.
-      - Implemented the service with methods `recordNewProposalThread` and `listUserProposalThreads`.
-      - Updated Supabase client import to use `serverSupabase` (service role client) aliased as `supabase` from `../lib/supabase/client.js`.
+    - Identified a `useEffect` in `apps/web/src/features/ui/components/toast.tsx` with a missing dependency array, causing excessive re-renders.
+    - **Resolution:** Added an empty dependency array `[]` to the `useEffect` in `useToast`.
+
+2.  **Next Error: 404 on Express Backend (`POST /api/rfp/proposal_threads`)**
+
+    - The frontend was correctly trying to hit this endpoint (on port 3001) to record a new proposal thread association.
+    - The issue was traced to how routes were defined and mounted in the Express backend.
+      - `apps/backend/api/rfp/proposalThreads.ts` had routes like `router.post("/proposal_threads", ...)` which, when mounted under `/api/rfp` in `express-server.ts`, resulted in an expected path of `/api/rfp/proposal_threads`.
+      - However, an initial misconfiguration in `express-server.ts` (mounting `/api/rfp` at `/api/api/rfp`) compounded the issue.
+    - **Resolution Path:**
+      - Corrected `apps/backend/api/rfp/proposalThreads.ts` to use `/` for its local routes (e.g., `router.post("/", ...)`), as the `/proposal_threads` path segment was handled by the file/router name itself when mounted by `apps/backend/api/rfp/index.ts` (`router.use("/proposal_threads", proposalThreadsRouter);`).
+      - Corrected `apps/backend/api/express-server.ts` to mount `rfpRouter` directly at `/rfp` (and `authMiddleware` also at `/rfp`), removing the `/api` prefix internally as the frontend was already including it based on `NEXT_PUBLIC_API_URL`.
+
+3.  **Next Error: 404 on LangGraph Server (`POST http://localhost:2024/threads/.../history`)**
+    - After fixing the Express backend routing, requests for thread history started hitting the LangGraph server (on port 2024) as intended by `NEXT_PUBLIC_LANGGRAPH_API_URL`.
+    - The LangGraph server was returning 404s with the message "Thread with ID ... not found".
+    - This indicated that while the LangGraph server was reachable, it couldn't find or create the state for the given thread ID in its persistent storage (Supabase/PostgreSQL).
+    - **Root Cause:** The checkpointer (specifically `PostgresSaver`) was likely not creating the necessary database tables (`langgraph.checkpoints` or similar) because its `setup()` method was not being called, or not being called correctly/reliably.
+    - **Verification:** Confirmed through LangGraph.js documentation that `await checkpointer.setup()` is essential and must be called once to initialize the database schema for `PostgresSaver`.
+    - **Confirmation:** Our `apps/backend/lib/persistence/robust-checkpointer.ts` (specifically the `getInitializedCheckpointer` factory) _correctly_ calls `await pgSaver.setup()` after instantiating `PostgresSaver`.
+    - **Resolution:** The user deleted any manually created checkpoint-related tables from the Supabase database. Upon restarting the LangGraph server, the `pgSaver.setup()` call within `getInitializedCheckpointer` successfully created the required tables, and the 404 errors for thread history resolved.
+
+**Current State & Learnings:**
+
+- The distinct roles of `NEXT_PUBLIC_API_URL` (for the Express backend on port 3001) and `NEXT_PUBLIC_LANGGRAPH_API_URL` (for the LangGraph server on port 2024) are critical and now correctly configured and understood.
+- The Express backend (`express-server.ts`) correctly mounts routers without an additional `/api` prefix if the full path is already provided by the primary router index (e.g., `apps/backend/api/rfp/index.ts` mounting `proposalThreadsRouter` at `/proposal_threads`).
+- The `PostgresSaver.setup()` method is crucial for LangGraph.js when using PostgreSQL persistence and must be called (e.g., during server initialization) to ensure tables are created. Our `getInitializedCheckpointer` handles this.
+- Relying on the library's `setup()` for table creation is preferable to manual DDL for the library's own tables.
+
+## Next Steps
+
+1.  **Commit & Push Current Changes**: Secure the fixes made.
+2.  **Full End-to-End Testing**: Verify the complete proposal generation and interaction flow now that the core persistence and routing issues are resolved.
+3.  **Continue with `final_threads_setup.md`**: Address any remaining steps, particularly Phase 2, Step 2.4 (Re-evaluate `OrchestratorService` and `checkpointer.service.ts`) and subsequent Frontend phases.
 
 ## Active Issues & Blockers
 
-1.  **Supabase Database Type Generation:**
-    - The `ProposalThreadAssociationService` currently has a linter error because it cannot find `../lib/supabase/types/database.types.js`.
-    - This file needs to be generated using the Supabase CLI (e.g., `supabase gen types typescript --project-id <your-project-id> > apps/backend/lib/supabase/types/database.types.ts`).
-    - **Blocker:** The user reported that the Supabase CLI is not installed, so this type generation step cannot be completed immediately. The linter error will persist until this is resolved.
-
-## Next Steps (Based on `final_threads_setup.md`)
-
-1.  **Resolve Supabase Type Generation:** (User task) Install Supabase CLI and generate `database.types.ts`.
-2.  **Phase 2, Step 2.3: Create API Endpoints for Thread Association:**
-    - Create or modify `apps/backend/api/rfp/proposalThreads.ts` to include `POST` and `GET` endpoints that utilize `ProposalThreadAssociationService`.
-3.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`**:
-    - Review and refactor these services in the Express backend to align with the new architecture where the LangGraph server manages its own checkpointer.
+- None directly related to the resolved 404 errors. Previous issue regarding Supabase type generation (`database.types.ts`) remains a user task (install Supabase CLI).
 
 ## Important Patterns & Preferences Reminder
 
-- Adhere to the singleton pattern for `PostgresSaver` initialization in the LangGraph server process.
-- Ensure clear separation of concerns: LangGraph server for graph execution and state, Express backend for application-level data and API orchestration.
-- Frontend drives `thread_id` generation and provides it to the LangGraph server.
-- Backend services (like `ProposalThreadAssociationService`) should use the `serverSupabase` (service role) client for database operations.
+- Adhere to the singleton pattern for `PostgresSaver` initialization in the LangGraph server process, handled by `getInitializedCheckpointer`.
+- Ensure clear separation of concerns: LangGraph server for graph execution and state, Express backend for application-level data and API orchestration (non-streaming parts).
+- Frontend drives `thread_id` generation and provides it to both the Express backend (for association) and the LangGraph server (for checkpointer keying).
 
-# Current Work Focus
+## Current Work Focus
 
 ## Implementation of `ProposalGenerationGraph` Core Nodes
 
