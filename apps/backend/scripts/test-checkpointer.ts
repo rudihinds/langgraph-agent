@@ -10,7 +10,7 @@ import { fileURLToPath } from "url";
 import {
   createCheckpointer,
   generateThreadId,
-} from "../services/checkpointer.service.js";
+} from "../services/[dep]checkpointer.service.js";
 
 // Get the current directory
 const __filename = fileURLToPath(import.meta.url);

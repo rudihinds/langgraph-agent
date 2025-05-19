@@ -6,7 +6,7 @@
  */
 import express, { Request, Response } from "express";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js";
 import { AuthenticatedRequest, AUTH_CONSTANTS } from "../../lib/types/auth.js";
 
 // Initialize logger

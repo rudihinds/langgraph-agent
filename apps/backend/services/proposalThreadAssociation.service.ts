@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { serverSupabase as supabase } from "../lib/supabase/client.js";
-import { Database } from "../lib/supabase/types/database.types.js"; // Assuming generated DB types path
+import { Database } from "../lib/supabase/types/database.types.js";
 
 export interface UserProposalThreadType {
   rfpId: string;

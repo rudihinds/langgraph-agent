@@ -8,7 +8,7 @@ import {
 import type { CompiledStateGraph } from "@langchain/langgraph";
 import { v4 as uuidv4 } from "uuid";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { createCheckpointer } from "@/services/checkpointer.service.js";
+import { createCheckpointer } from "@/services/[dep]checkpointer.service.js";
 import { createServerClient } from "@supabase/ssr";
 import { Request, Response } from "express";
 import { ENV } from "@/lib/config/env.js";

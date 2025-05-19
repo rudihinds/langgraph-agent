@@ -4,7 +4,7 @@
  * This handler provides detailed information about the current interrupt
  * status including the reason for interruption, content being evaluated,
  * and any evaluation results.
- * 
+ *
  * Note: This function should eventually work with an existing graph instance
  * instead of creating a new one for each request.
  */
@@ -12,7 +12,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { Logger } from "../../../lib/logger.js";
-import { OrchestratorService } from "../../../services/orchestrator.service.js";
+import { OrchestratorService } from "../../../services/[dep]orchestrator.service.js";
 import { createProposalAgentWithCheckpointer } from "../../../agents/proposal-agent/graph.js";
 
 // Initialize logger

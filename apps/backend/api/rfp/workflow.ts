@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js";
 import { AuthenticatedRequest } from "../../lib/types/auth.js"; // Assuming auth middleware populates req.user
 
 const router = express.Router();

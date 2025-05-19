@@ -1,4 +1,14 @@
 /**
+ * DEPRECATED: This service is no longer responsible for managing the main proposal graph or checkpointer.
+ * The LangGraph server now handles all stateful graph operations.
+ * Methods related to direct LangGraph flow control (interrupts, resume, explicit state save/load for graph operations)
+ * are deprecated by commenting them out.
+ * Methods containing useful business logic are preserved with comments indicating their value and need for refactoring
+ * to align with the new LangGraph server architecture (e.g., for state access).
+ * Refactor or remove methods as needed.
+ */
+
+/**
  * OrchestratorService
  *
  * Manages interactions between the ProposalGenerationGraph, EditorAgent, and Persistent Checkpointer
@@ -22,16 +32,16 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import {
   OverallProposalState,
-  InterruptStatus,
-  InterruptMetadata,
+  // InterruptStatus, // Related to deprecated interrupt handling
+  // InterruptMetadata, // Related to deprecated interrupt handling
   UserFeedback,
   SectionType,
-  SectionProcessingStatus,
+  // SectionProcessingStatus, // Potentially used by business logic if it manipulates section status directly
 } from "../state/modules/types.js";
 import { FeedbackType } from "../lib/types/feedback.js";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger, LogLevel } from "../lib/logger.js";
-import { v4 as uuidv4 } from "uuid";
+// import { v4 as uuidv4 } from "uuid"; // Potentially unused if no new UUIDs generated here
 import {
   ProcessingStatus,
   InterruptProcessingStatus,
@@ -43,6 +53,7 @@ import { constructProposalThreadId } from "../lib/utils/threads.js"; // Import t
 /**
  * Details about an interrupt that can be provided to the UI
  */
+/* DEPRECATED: Interrupt handling is now managed by the LangGraph server.
 export interface InterruptDetails {
   nodeId: string;
   reason: string;
@@ -50,21 +61,24 @@ export interface InterruptDetails {
   timestamp: string;
   evaluationResult?: any;
 }
+*/
 
 /**
  * Type definition for any form of LangGraph state graph, compiled or not
  */
+/* DEPRECATED: Graph management is now handled by the LangGraph server.
 export type AnyStateGraph<T = OverallProposalState> =
   | StateGraph<T, T, Partial<T>, "__start__">
   | CompiledStateGraph<T, Partial<T>, "__start__">;
+*/
 
 /**
  * OrchestratorService class
  * Implements the Orchestrator pattern described in AGENT_BASESPEC.md
  */
 export class OrchestratorService {
-  private graph: AnyStateGraph;
-  private checkpointer: BaseCheckpointSaver;
+  private graph: AnyStateGraph; // DEPRECATED: Graph instance managed by LangGraph server
+  private checkpointer: BaseCheckpointSaver; // DEPRECATED: Checkpointer interactions managed by LangGraph server
   private logger: Logger;
   private dependencyService: DependencyService; // Add DependencyService
 
@@ -75,14 +89,14 @@ export class OrchestratorService {
    * @param checkpointer The checkpointer for state persistence
    */
   constructor(
-    graph: AnyStateGraph,
-    checkpointer: BaseCheckpointSaver,
+    graph: AnyStateGraph, // DEPRECATED
+    checkpointer: BaseCheckpointSaver, // DEPRECATED
     dependencyMapPath?: string // Optional path to dependency map
   ) {
-    this.graph = graph;
-    this.checkpointer = checkpointer;
+    this.graph = graph; // DEPRECATED
+    this.checkpointer = checkpointer; // DEPRECATED
     this.logger = Logger.getInstance();
-    this.dependencyService = new DependencyService(dependencyMapPath); // Initialize DependencyService
+    this.dependencyService = new DependencyService(dependencyMapPath); // Initialize DependencyService, used by business logic
 
     // Check if setLogLevel exists before calling (for tests where Logger might be mocked)
     if (typeof this.logger.setLogLevel === "function") {
@@ -96,6 +110,7 @@ export class OrchestratorService {
    * @param threadId The thread ID to check
    * @returns True if the graph is interrupted
    */
+  /* DEPRECATED: Interrupt detection is now managed by the LangGraph server.
   async detectInterrupt(threadId: string): Promise<boolean> {
     // Get the latest state from the checkpointer
     const checkpoint = await this.checkpointer.get({
@@ -108,6 +123,7 @@ export class OrchestratorService {
     // Check if state is interrupted
     return state?.interruptStatus?.isInterrupted === true;
   }
+  */
 
   /**
    * Handles an interrupt from the proposal generation graph
@@ -115,6 +131,7 @@ export class OrchestratorService {
    * @param threadId The thread ID of the interrupted graph
    * @returns The current state with interrupt details
    */
+  /* DEPRECATED: Interrupt handling is now managed by the LangGraph server.
   async handleInterrupt(threadId: string): Promise<OverallProposalState> {
     // Get the latest state via checkpointer
     const checkpoint = await this.checkpointer.get({
@@ -148,6 +165,7 @@ export class OrchestratorService {
 
     return state;
   }
+  */
 
   /**
    * Extracts detailed information about the current interrupt
@@ -155,6 +173,7 @@ export class OrchestratorService {
    * @param threadId The thread ID to check
    * @returns Interrupt details or null if no interrupt
    */
+  /* DEPRECATED: Interrupt detail extraction is now managed by the LangGraph server.
   async getInterruptDetails(
     threadId: string
   ): Promise<InterruptDetails | null> {
@@ -177,6 +196,7 @@ export class OrchestratorService {
       evaluationResult: state.interruptMetadata.evaluationResult,
     };
   }
+  */
 
   /**
    * Gets the content being evaluated in the current interrupt
@@ -184,6 +204,7 @@ export class OrchestratorService {
    * @param threadId The thread ID to check
    * @returns The content reference and actual content
    */
+  /* DEPRECATED: Interrupt content retrieval is now managed by the LangGraph server.
   async getInterruptContent(
     threadId: string
   ): Promise<{ reference: string; content: any } | null> {
@@ -194,7 +215,7 @@ export class OrchestratorService {
       | OverallProposalState
       | undefined;
 
-    const details = await this.getInterruptDetails(threadId);
+    const details = await this.getInterruptDetails(threadId); // Relies on deprecated method
 
     if (!state || !details || !details.contentReference) return null;
 
@@ -234,6 +255,7 @@ export class OrchestratorService {
         return null;
     }
   }
+  */
 
   /**
    * Gets the current state of a proposal
@@ -241,6 +263,7 @@ export class OrchestratorService {
    * @param threadId The thread ID to retrieve state for
    * @returns The current proposal state
    */
+  /* DEPRECATED: Direct state retrieval via checkpointer is replaced by LangGraph server APIs.
   async getState(threadId: string): Promise<OverallProposalState> {
     const checkpoint = await this.checkpointer.get({
       configurable: { thread_id: threadId },
@@ -253,6 +276,7 @@ export class OrchestratorService {
     }
     return state;
   }
+  */
 
   /**
    * Submits user feedback during an interrupt for review of content
@@ -261,6 +285,7 @@ export class OrchestratorService {
    * @param feedback Feedback submission object
    * @returns Status of the feedback submission
    */
+  /* DEPRECATED: Feedback submission and graph resumption are managed by the LangGraph server.
   async submitFeedback(
     threadId: string,
     feedback: {
@@ -279,7 +304,7 @@ export class OrchestratorService {
     } = feedback;
 
     // Get the current state
-    const state = await this.getState(threadId);
+    const state = await this.getState(threadId); // Relies on deprecated method
 
     // Verify there is an active interrupt
     if (!state?.interruptStatus?.isInterrupted) {
@@ -340,7 +365,7 @@ export class OrchestratorService {
     );
 
     // Prepare state based on feedback type
-    const preparedState = await this.prepareFeedbackForProcessing(
+    const preparedState = await this.prepareFeedbackForProcessing( // Relies on deprecated method
       threadId,
       feedbackType
     );
@@ -351,6 +376,7 @@ export class OrchestratorService {
       status: preparedState.interruptStatus.processingStatus || undefined,
     };
   }
+  */
 
   /**
    * Prepares state for processing based on feedback type
@@ -359,12 +385,13 @@ export class OrchestratorService {
    * @param feedbackType Type of feedback provided
    * @returns State prepared for resumption
    */
+  /* DEPRECATED: State preparation for feedback processing is managed by the LangGraph server.
   private async prepareFeedbackForProcessing(
     threadId: string,
     feedbackType: FeedbackType
   ): Promise<OverallProposalState> {
     // Get latest state with feedback incorporated
-    const state = await this.getState(threadId);
+    const state = await this.getState(threadId); // Relies on deprecated method
     let updatedState: OverallProposalState = { ...state };
 
     // Get the content reference from interrupt metadata
@@ -373,7 +400,7 @@ export class OrchestratorService {
     switch (feedbackType) {
       case FeedbackType.APPROVE:
         // Mark the relevant content as approved
-        updatedState = this.updateContentStatus(
+        updatedState = this.updateContentStatus( // Calls a potentially useful business logic method
           updatedState,
           contentRef,
           ProcessingStatus.APPROVED
@@ -382,7 +409,7 @@ export class OrchestratorService {
 
       case FeedbackType.REVISE:
         // Mark the content for revision
-        updatedState = this.updateContentStatus(
+        updatedState = this.updateContentStatus( // Calls a potentially useful business logic method
           updatedState,
           contentRef,
           ProcessingStatus.EDITED
@@ -391,7 +418,7 @@ export class OrchestratorService {
 
       case FeedbackType.REGENERATE:
         // Mark the content as stale to trigger regeneration
-        updatedState = this.updateContentStatus(
+        updatedState = this.updateContentStatus( // Calls a potentially useful business logic method
           updatedState,
           contentRef,
           ProcessingStatus.STALE
@@ -428,15 +455,13 @@ export class OrchestratorService {
     await this.checkpointer.put(config, checkpointToSave, metadata, {}); // Pass defined metadata
     return updatedState;
   }
+  */
 
-  /**
-   * Updates the status of a specific content reference based on feedback
-   *
-   * @param state The current state
-   * @param contentRef The content reference (research, solution, section, etc.)
-   * @param status The new status to apply
-   * @returns Updated state with the content status changed
-   */
+  // BUSINESS LOGIC: This method encapsulates the logic for updating the processing status
+  // of specific content types within the proposal state (e.g., research, solution, sections).
+  // This logic might be reusable if direct state manipulation for these fields is needed
+  // outside the main graph flow, or for adapting to new state structures.
+  // It's designed to be immutable.
   private updateContentStatus(
     state: OverallProposalState,
     contentRef?: string,
@@ -494,11 +519,12 @@ export class OrchestratorService {
    * @param threadId The ID of the proposal thread to resume
    * @returns Status object with information about the resume operation
    */
+  /* DEPRECATED: Graph resumption is managed by the LangGraph server.
   async resumeAfterFeedback(
     threadId: string
   ): Promise<{ success: boolean; message: string; status?: string }> {
     // Get the current state
-    const state = await this.getState(threadId);
+    const state = await this.getState(threadId); // Relies on deprecated method
 
     // Validate the state has feedback that needs processing
     if (!state?.userFeedback) {
@@ -525,7 +551,7 @@ export class OrchestratorService {
 
     try {
       // Cast to CompiledStateGraph to access proper methods
-      const compiledGraph = this.graph as CompiledStateGraph<
+      const compiledGraph = this.graph as CompiledStateGraph< // Relies on deprecated graph property
         OverallProposalState,
         Partial<OverallProposalState>,
         "__start__"
@@ -579,6 +605,7 @@ export class OrchestratorService {
       throw new Error(`Failed to resume graph execution: ${error}`);
     }
   }
+  */
 
   /**
    * Gets the interrupt status for a specific proposal thread
@@ -586,12 +613,13 @@ export class OrchestratorService {
    * @param threadId The ID of the proposal thread to check
    * @returns Status object with interrupt details
    */
+  /* DEPRECATED: Interrupt status checking is managed by the LangGraph server.
   async getInterruptStatus(
     threadId: string
-  ): Promise<{ interrupted: boolean; interruptData?: InterruptDetails }> {
+  ): Promise<{ interrupted: boolean; interruptData?: InterruptDetails }> { // InterruptDetails is deprecated
     try {
       // Get current state
-      const state = await this.getState(threadId);
+      const state = await this.getState(threadId); // Relies on deprecated method
 
       // Check for interrupts
       const isInterrupted = state?.interruptStatus?.isInterrupted || false;
@@ -602,7 +630,7 @@ export class OrchestratorService {
       }
 
       // Get detailed interrupt information
-      const interruptData = await this.getInterruptDetails(threadId);
+      const interruptData = await this.getInterruptDetails(threadId); // Relies on deprecated method
 
       return {
         interrupted: true,
@@ -613,15 +641,14 @@ export class OrchestratorService {
       throw new Error(`Failed to check interrupt status: ${error}`);
     }
   }
+  */
 
-  /**
-   * Mark dependent sections as stale after a section has been edited
-   * This implements the dependency chain management from AGENT_ARCHITECTURE.md
-   *
-   * @param state The current proposal state
-   * @param editedSectionId The section that was edited
-   * @returns Updated state with stale sections
-   */
+  // BUSINESS LOGIC: This method implements the core logic for identifying and marking
+  // dependent sections as stale using the DependencyService. This is crucial for
+  // maintaining data integrity when sections are edited.
+  // NOTE: This method currently relies on `this.saveState()`, which is deprecated.
+  // It will require refactoring to use the new LangGraph server's state management APIs for persistence.
+  // The `state` parameter is already passed in, which is good.
   async markDependentSectionsAsStale(
     state: OverallProposalState,
     editedSectionId: SectionType
@@ -678,7 +705,10 @@ export class OrchestratorService {
       };
 
       // Save the updated state
-      await this.saveState(updatedState);
+      // await this.saveState(updatedState); // DEPRECATED: Persistence handled by LangGraph server or new mechanism
+      this.logger.info(
+        "State updated with stale sections, persistence layer needs refactoring."
+      );
 
       return updatedState;
     } catch (error) {
@@ -689,15 +719,12 @@ export class OrchestratorService {
     }
   }
 
-  /**
-   * Handle stale section decision (keep or regenerate)
-   *
-   * @param threadId The thread ID
-   * @param sectionId The section ID to handle
-   * @param decision Keep or regenerate the stale section
-   * @param guidance Optional guidance for regeneration
-   * @returns Updated state
-   */
+  // BUSINESS LOGIC: Handles user decisions on stale sections (keep or regenerate),
+  // updating section status and potentially adding regeneration guidance to messages.
+  // This is UI-driven state modification logic.
+  // NOTE: This method currently relies on `this.getState()` and `this.saveState()`,
+  // which are deprecated. It will require refactoring to fetch state from and persist
+  // state to the new LangGraph server's APIs.
   async handleStaleDecision(
     threadId: string,
     sectionId: SectionType,
@@ -705,8 +732,12 @@ export class OrchestratorService {
     guidance?: string
   ): Promise<OverallProposalState> {
     // Get current state
-    const state = await this.getState(threadId);
-
+    // const state = await this.getState(threadId); // DEPRECATED
+    // TODO: Refactor to get state from LangGraph server
+    throw new Error(
+      "handleStaleDecision needs refactoring for state access (getState is deprecated)."
+    );
+    /*
     // Get the section from the state
     const section = state.sections.get(sectionId);
 
@@ -722,6 +753,7 @@ export class OrchestratorService {
 
     // Create a copy of the sections Map
     const sectionsCopy = new Map(state.sections);
+    let updatedMessages = [...state.messages]; // Initialize here for both paths
 
     if (decision === "keep") {
       // Restore previous status (approved or edited)
@@ -734,18 +766,7 @@ export class OrchestratorService {
       this.logger.info(
         `Keeping section ${sectionId} with status ${section.previousStatus || ProcessingStatus.APPROVED}`
       );
-
-      // Update state
-      const updatedState = {
-        ...state,
-        sections: sectionsCopy,
-      };
-
-      // Save the updated state
-      await this.saveState(updatedState);
-
-      return updatedState;
-    } else {
+    } else { // decision === "regenerate"
       // Set to queued for regeneration
       sectionsCopy.set(sectionId, {
         ...section,
@@ -755,52 +776,61 @@ export class OrchestratorService {
 
       this.logger.info(`Regenerating section ${sectionId}`);
 
-      // Update messages with guidance if provided
-      let updatedMessages = [...state.messages];
-
       if (guidance) {
-        // Create a properly formatted message that matches BaseMessage structure
-        const guidanceMessage = {
-          content: guidance,
-          additional_kwargs: {
+        const guidanceMessage: BaseMessage = new HumanMessage({
+           content: guidance,
+           // Langchain HumanMessage doesn't directly support additional_kwargs in constructor in all versions.
+           // If needed, this might require a custom message type or different handling.
+           // For simplicity, we'll assume content is the primary carrier.
+           // additional_kwargs: {
+           //   type: "regeneration_guidance",
+           //   sectionId: sectionId,
+           // },
+        });
+        // Add custom attributes if necessary after creation, or use a more flexible message structure
+        (guidanceMessage as any).additional_kwargs = {
             type: "regeneration_guidance",
             sectionId: sectionId,
-          },
-          name: undefined,
-          id: [],
-          type: "human",
-          example: false,
         };
 
-        updatedMessages.push(guidanceMessage as unknown as BaseMessage);
+
+        updatedMessages.push(guidanceMessage);
 
         this.logger.info(
           `Added regeneration guidance for section ${sectionId}`
         );
       }
-
-      // Update state
-      const updatedState = {
-        ...state,
-        sections: sectionsCopy,
-        messages: updatedMessages,
-      };
-
-      // Save the updated state
-      await this.saveState(updatedState);
-
-      return updatedState;
     }
+
+    // Update state
+    const updatedState: OverallProposalState = {
+      ...state,
+      sections: sectionsCopy,
+      messages: updatedMessages,
+    };
+
+    // Save the updated state
+    // await this.saveState(updatedState); // DEPRECATED
+    this.logger.info(
+        "State updated for stale decision, persistence layer needs refactoring."
+      );
+
+
+    return updatedState;
+    */
   }
 
-  /**
-   * Get all stale sections in the proposal
-   *
-   * @param threadId The thread ID
-   * @returns Array of stale section IDs
-   */
+  // BUSINESS LOGIC: Queries the state to find all sections currently marked as STALE.
+  // This is a direct query on the state's `sections` map.
+  // NOTE: This method currently relies on `this.getState()`, which is deprecated.
+  // It will require refactoring to fetch state from the new LangGraph server's APIs.
   async getStaleSections(threadId: string): Promise<SectionType[]> {
-    const state = await this.getState(threadId);
+    // const state = await this.getState(threadId); // DEPRECATED
+    // TODO: Refactor to get state from LangGraph server
+    throw new Error(
+      "getStaleSections needs refactoring for state access (getState is deprecated)."
+    );
+    /*
     const staleSections: SectionType[] = [];
 
     state.sections.forEach((section, sectionId) => {
@@ -810,6 +840,7 @@ export class OrchestratorService {
     });
 
     return staleSections;
+    */
   }
 
   /**
@@ -817,6 +848,7 @@ export class OrchestratorService {
    *
    * @param state The state to save
    */
+  /* DEPRECATED: Direct state persistence via checkpointer is replaced by LangGraph server APIs.
   private async saveState(state: OverallProposalState): Promise<void> {
     try {
       // Create config with thread ID
@@ -850,22 +882,27 @@ export class OrchestratorService {
       throw error;
     }
   }
+  */
 
-  /**
-   * After editing a section, mark dependent sections as stale
-   *
-   * @param threadId The thread ID
-   * @param editedSectionId The section that was edited
-   * @returns Updated state with stale sections
-   */
+  // BUSINESS LOGIC: Handles the event of a section being edited. It updates the
+  // section's content and status, and then triggers the process to mark dependent
+  // sections as stale.
+  // NOTE: This method currently relies on `this.getState()` and `this.saveState()`,
+  // which are deprecated. It will require refactoring for state access and persistence
+  // using the new LangGraph server's APIs. The call to `markDependentSectionsAsStale`
+  // also needs consideration for how state is passed and persisted.
   async handleSectionEdit(
     threadId: string,
     editedSectionId: SectionType,
     newContent: string
   ): Promise<OverallProposalState> {
     // Get current state
-    const state = await this.getState(threadId);
-
+    // const state = await this.getState(threadId); // DEPRECATED
+    // TODO: Refactor to get state from LangGraph server
+    throw new Error(
+      "handleSectionEdit needs refactoring for state access (getState is deprecated)."
+    );
+    /*
     // Update the edited section
     const sectionsCopy = new Map(state.sections);
     const section = sectionsCopy.get(editedSectionId);
@@ -882,27 +919,32 @@ export class OrchestratorService {
     });
 
     // Create updated state
-    const updatedState = {
+    let updatedState = { // Make it 'let' if markDependentSectionsAsStale modifies it and returns a new one
       ...state,
       sections: sectionsCopy,
     };
 
-    // Save the state
-    await this.saveState(updatedState);
+    // Save the state (intermediate save before marking dependents)
+    // await this.saveState(updatedState); // DEPRECATED
+    this.logger.info(
+        "State updated after section edit, persistence layer needs refactoring."
+      );
+
 
     // Mark dependent sections as stale
-    return this.markDependentSectionsAsStale(updatedState, editedSectionId);
+    // This will internally try to save state again if not refactored.
+    updatedState = await this.markDependentSectionsAsStale(updatedState, editedSectionId);
+    return updatedState;
+    */
   }
 
-  /**
-   * Initializes a new proposal workflow or retrieves context for an existing one.
-   * This method constructs the composite thread_id and checks for existing state.
-   *
-   * @param userId The ID of the user.
-   * @param rfpId The ID of the RFP.
-   * @returns An object containing the threadId, initial state (if any), and a flag indicating if the workflow is new.
-   * @throws Error if userId or rfpId is missing.
-   */
+  // BUSINESS LOGIC: Initializes a new proposal workflow or retrieves context for an existing one.
+  // Key logic includes constructing a composite thread_id using `constructProposalThreadId`
+  // and checking for an existing workflow by attempting to retrieve a checkpoint.
+  // This is essential for workflow lifecycle management.
+  // NOTE: This method uses `this.checkpointer.getTuple()`, a direct checkpointer interaction,
+  // which is conceptually deprecated. It needs refactoring to use the LangGraph server's
+  // API for checking workflow existence and retrieving initial state.
   async initOrGetProposalWorkflow(
     userId: string,
     rfpId: string
@@ -917,13 +959,19 @@ export class OrchestratorService {
     );
 
     try {
-      const checkpointTuple = (await this.checkpointer.getTuple({
-        configurable: { thread_id: threadId },
-      })) as CheckpointTuple | null | undefined;
-
-      if (!checkpointTuple || !checkpointTuple.checkpoint) {
+      // const checkpointTuple = (await this.checkpointer.getTuple({ // DEPRECATED checkpointer interaction
+      //   configurable: { thread_id: threadId },
+      // })) as CheckpointTuple | null | undefined;
+      // TODO: Refactor to use LangGraph server API to check for existing workflow/state.
+      // For now, assume it's always new or throw error, as checkpointer is deprecated.
+      this.logger.warn(
+        `[OrchestratorService] Checkpointer interaction in initOrGetProposalWorkflow is deprecated. Assuming new workflow for ${threadId} or needs refactoring.`
+      );
+      // Placeholder logic:
+      const isNewWorkflow = true; // Simulate or throw
+      if (isNewWorkflow) {
         this.logger.info(
-          `[OrchestratorService] No existing checkpoint for threadId: ${threadId}. New workflow.`
+          `[OrchestratorService] (Refactor Pending) No existing checkpoint for threadId: ${threadId}. New workflow.`
         );
         return {
           threadId,
@@ -931,35 +979,37 @@ export class OrchestratorService {
           isNew: true,
         };
       } else {
-        this.logger.info(
-          `[OrchestratorService] Existing checkpoint found for threadId: ${threadId}.`
+        // This path would require fetching state via new API
+        throw new Error(
+          "Existing workflow retrieval in initOrGetProposalWorkflow needs refactoring."
         );
-        return {
-          threadId,
-          initialState: checkpointTuple.checkpoint
-            .channel_values as unknown as OverallProposalState,
-          isNew: false,
-        };
+        // this.logger.info(
+        //   `[OrchestratorService] (Refactor Pending) Existing checkpoint found for threadId: ${threadId}.`
+        // );
+        // return {
+        //   threadId,
+        //   initialState: checkpointTuple.checkpoint
+        //     .channel_values as unknown as OverallProposalState,
+        //   isNew: false,
+        // };
       }
     } catch (error) {
       this.logger.error(
-        `[OrchestratorService] Error getting checkpoint for threadId ${threadId}:`,
+        `[OrchestratorService] Error in initOrGetProposalWorkflow for threadId ${threadId}:`,
         error
       );
       throw error;
     }
   }
 
-  /**
-   * Starts the proposal generation graph for a new workflow.
-   * This method is called after initOrGetProposalWorkflow determines it's a new workflow.
-   * It sets up the initial state to trigger the documentLoaderNode via an intent.
-   *
-   * @param threadId The pre-constructed thread ID for the workflow.
-   * @param userId The ID of the user initiating the workflow.
-   * @param rfpId The ID of the RFP document to be loaded.
-   * @returns The initial state of the graph after the first invocation.
-   */
+  // BUSINESS LOGIC: Defines the initial state structure for a new proposal workflow.
+  // This includes setting up initial messages, RFP document placeholders, default statuses,
+  // and other essential fields. This initial state definition is critical.
+  // NOTE: The graph invocation and subsequent checkpoint retrieval parts of this method
+  // are deprecated as the LangGraph server will handle graph execution.
+  // The `initialState` object itself remains valuable. This method will need to be
+  // refactored to potentially just return this initial state, or to integrate with
+  // the new LangGraph server's workflow initiation process.
   async startProposalGeneration(
     threadId: string,
     userId: string,
@@ -968,7 +1018,7 @@ export class OrchestratorService {
     state: OverallProposalState;
   }> {
     this.logger.info(
-      `[OrchestratorService] Starting new proposal generation for threadId: ${threadId}, RFP ID: ${rfpId}, User ID: ${userId}`
+      `[OrchestratorService] Defining initial state for new proposal generation for threadId: ${threadId}, RFP ID: ${rfpId}, User ID: ${userId}`
     );
 
     const initialContent = `System Task: Load RFP document with ID ${rfpId}`;
@@ -976,6 +1026,7 @@ export class OrchestratorService {
       new HumanMessage({ content: initialContent }),
     ];
 
+    // THIS IS THE KEY BUSINESS LOGIC TO PRESERVE: The definition of initialState
     const initialState: OverallProposalState = {
       messages: initialMessages,
       rfpDocument: {
@@ -1004,7 +1055,7 @@ export class OrchestratorService {
       connectionsStatus: ProcessingStatus.NOT_STARTED,
       sections: new Map(),
       requiredSections: [],
-      status: ProcessingStatus.RUNNING,
+      status: ProcessingStatus.RUNNING, // Initial status might be PENDING_START or similar
       currentStep: "workflow_initiation",
       interruptStatus: {
         isInterrupted: false,
@@ -1029,6 +1080,12 @@ export class OrchestratorService {
       wordLength: undefined,
     };
 
+    this.logger.debug(
+      `[OrchestratorService] Defined initial state:`,
+      JSON.stringify(initialState, null, 2)
+    );
+
+    /* DEPRECATED: Graph invocation and state retrieval now handled by LangGraph server
     const runnableConfig: RunnableConfig = {
       configurable: {
         thread_id: threadId,
@@ -1039,13 +1096,9 @@ export class OrchestratorService {
     this.logger.info(
       `[OrchestratorService] Invoking graph for new workflow. Thread ID: ${threadId}`
     );
-    this.logger.debug(
-      `[OrchestratorService] Initial state for invocation:`,
-      JSON.stringify(initialState, null, 2)
-    );
 
     await (
-      this.graph as CompiledStateGraph<
+      this.graph as CompiledStateGraph< // Relies on deprecated graph property
         OverallProposalState,
         Partial<OverallProposalState>
       >
@@ -1055,7 +1108,7 @@ export class OrchestratorService {
       `[OrchestratorService] Graph invoked. Fetching resulting checkpoint for thread ID: ${threadId}`
     );
 
-    const checkpoint = await this.checkpointer.get({
+    const checkpoint = await this.checkpointer.get({ // Relies on deprecated checkpointer property
       configurable: { thread_id: threadId },
     });
 
@@ -1075,6 +1128,15 @@ export class OrchestratorService {
     return {
       state: checkpoint.channel_values as unknown as OverallProposalState,
     };
+    */
+
+    // TODO: This method should likely now return the `initialState` to be passed to the
+    // LangGraph server's API for starting a new workflow, or be removed if the
+    // LangGraph client handles initial state construction.
+    this.logger.info(
+      `[OrchestratorService] Initial state constructed for threadId: ${threadId}. Graph invocation and persistence are now external.`
+    );
+    return { state: initialState };
   }
 
   /**
@@ -1084,12 +1146,13 @@ export class OrchestratorService {
    * @param message The user message
    * @returns Updated state with added message
    */
+  /* DEPRECATED: Adding messages and invoking graph is managed by the LangGraph server.
   async addUserMessage(
     threadId: string,
     message: string
   ): Promise<OverallProposalState> {
     // Get current state
-    const state = await this.getState(threadId);
+    const state = await this.getState(threadId); // Relies on deprecated method
 
     // Create the human message
     const humanMessage = new HumanMessage(message);
@@ -1098,7 +1161,7 @@ export class OrchestratorService {
     const config: RunnableConfig = { configurable: { thread_id: threadId } };
 
     // Cast to CompiledStateGraph to access proper methods
-    const compiledGraph = this.graph as CompiledStateGraph<
+    const compiledGraph = this.graph as CompiledStateGraph< // Relies on deprecated graph property
       OverallProposalState,
       Partial<OverallProposalState>,
       "__start__"
@@ -1106,17 +1169,18 @@ export class OrchestratorService {
 
     // Update state with the new message
     await compiledGraph.updateState(config, {
-      messages: [humanMessage],
+      messages: [humanMessage], // This appends if messages is an accumulator, replaces if not. Check graph logic.
     });
 
     // Now invoke the graph to process the message
     const result = (await compiledGraph.invoke(
-      {},
+      {}, // Assumes graph picks up state from checkpointer or updated state
       config
     )) as unknown as OverallProposalState;
 
     return result;
   }
+  */
 
   /**
    * Processes a chat message and returns the response
@@ -1125,13 +1189,19 @@ export class OrchestratorService {
    * @param message The user message
    * @returns The AI response
    */
+  // DEPRECATED: Chat processing, including message handling and graph invocation,
+  // is now managed by the LangGraph server.
+  // BUSINESS LOGIC NOTE: The concept of `passiveIntents` (e.g., ["ask_question", "help", "other"])
+  // for determining if a command was truly "executed" vs. just a query might be useful
+  // in interpreting responses or UI behavior elsewhere.
+  /*
   async processChatMessage(
     threadId: string,
     message: string
   ): Promise<{ response: string; commandExecuted: boolean }> {
     try {
       // Add the message and process through the graph
-      const updatedState = await this.addUserMessage(threadId, message);
+      const updatedState = await this.addUserMessage(threadId, message); // Relies on deprecated method
 
       // Check if a command was executed (intent present and not a passive query)
       const passiveIntents = ["ask_question", "help", "other"] as string[];
@@ -1153,11 +1223,12 @@ export class OrchestratorService {
 
       return {
         response: "I'm not sure how to respond to that.",
-        commandExecuted: false,
+        commandExecuted: false, // Or based on intent if no AIMessage
       };
     } catch (error) {
       this.logger.error(`Error processing chat message: ${error}`);
       throw error;
     }
   }
+  */
 }

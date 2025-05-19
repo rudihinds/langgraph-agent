@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { OrchestratorService, AnyStateGraph } from "../orchestrator.service.js";
+import {
+  OrchestratorService,
+  AnyStateGraph,
+} from "../[dep]orchestrator.service.js";
 import { DependencyService } from "../DependencyService.js";
 import {
   SectionType,

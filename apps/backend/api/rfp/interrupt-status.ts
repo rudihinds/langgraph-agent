@@ -1,7 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js";
 
 // Initialize logger
 const logger = Logger.getInstance();

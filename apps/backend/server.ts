@@ -12,7 +12,7 @@ import type { CompiledStateGraph } from "@langchain/langgraph"; // Needed for ty
 import { createServer } from "http";
 import { Logger } from "@/lib/logger.js";
 import { createProposalGenerationGraph } from "@/agents/proposal-generation/graph.js";
-import { createCheckpointer } from "@/services/checkpointer.service.js";
+import { createCheckpointer } from "@/services/[dep]checkpointer.service.js";
 import rfpRouter from "./api/rfp/index.js";
 import { createLangGraphRouter } from "./api/langgraph/index.js"; // Import the factory function
 import cookieParser from "cookie-parser"; // Import cookie-parser

@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemorySaver } from "@langchain/langgraph";
-import { OrchestratorService } from "../services/orchestrator.service.js";
+import { OrchestratorService } from "../services/[dep]orchestrator.service.js";
 import { constructProposalThreadId } from "../lib/utils/threads.js";
 import { OverallProposalState } from "../state/modules/types.js"; // Assuming state type import
 import { Checkpoint } from "@langchain/langgraph";

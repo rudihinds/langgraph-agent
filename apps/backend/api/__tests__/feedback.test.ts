@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import express from "express";
-import { OrchestratorService } from "../../services/orchestrator.service.js";
+import { OrchestratorService } from "../../services/[dep]orchestrator.service.js";
 import rfpRouter from "../rfp/index.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js";
 import { FeedbackType } from "../../lib/types/feedback.js";
 
 // Mock the getOrchestrator factory function
