@@ -365,3 +365,52 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 - **Shifted from custom `SupabaseCheckpointer` to official `PostgresSaver`:** Reduces maintenance and aligns with LangGraph standards.
 - **Adopted deterministic `thread_id` pattern:** Simplifies thread lookup and management compared to previous UUID mapping (`ThreadService` is now deprecated).
 - **Centralized workflow logic in `OrchestratorService`:** Provides a clear control point for graph interactions.
+
+## Phase 3: Frontend - `thread_id` Generation and SDK Interaction
+
+**Goal:** Implement frontend logic to generate `thread_id`s, record associations via the Express backend, and correctly use these `thread_id`s when interacting with the LangGraph server.
+
+- **Step 3.1: Frontend Environment Configuration:** ✅ (Verified)
+  - `NEXT_PUBLIC_LANGGRAPH_API_URL="http://localhost:2024"`
+  - `NEXT_PUBLIC_API_URL="http://localhost:3001"`
+- **Step 3.2: UUID Generation Utility:** ✅ (Completed)
+  - `uuid` package installed. Utility assumed covered by direct usage of `uuidv4()`.
+- **Step 3.3: Implement "Start New Proposal" Flow:** 🟡 (Provider Logic Implemented, UI Pending)
+  - **API Client (`apps/web/src/lib/api.ts`):**
+    - `recordNewProposalThread` function: ✅ Completed.
+  - **Frontend Provider Logic (`StreamProvider.tsx`, `ThreadProvider.tsx`):**
+    - `StreamProvider.tsx` now handles new thread creation if `rfpId` is present and `threadId` is not, including UUID generation and calling `recordNewProposalThread`. ✅ Completed.
+    - `ThreadProvider.tsx` updates related to `createThread` (accepting `proposalTitle`, refreshing list): ✅ Completed.
+- **Step 3.4: Implement "Continue/Select Existing Proposal" Flow:** 🟡 (Provider Logic Implemented, UI Pending)
+  - **API Client (`apps/web/src/lib/api.ts`):**
+    - `listUserProposalThreads` function: ✅ Completed.
+  - **Frontend Provider Logic (`ThreadProvider.tsx`, `StreamProvider.tsx`):**
+    - `ThreadProvider.tsx` fetches and manages `applicationThreads`. ✅ Completed.
+    - `StreamProvider.tsx` consumes `rfpId` and `threadId` from URL to load existing threads. ✅ Completed.
+- **Step 3.5: LangGraph SDK Integration Review:** 🟡 (In Progress/Ongoing)
+  - Core pattern of passing `configurable: { thread_id: activeThreadId }` is being implemented. Continuous review as UI is built.
+- **Step 3.6: Implement Frontend UI for Thread Management and Selection:** ◻️ (Not Started)
+  - Design and implement UI (sidebar/panel) for listing threads and starting new ones.
+  - Integrate with `ThreadProvider` and URL parameter updates for `StreamProvider`.
+
+**What Works:**
+
+- Singleton checkpointer factory for the LangGraph server (Phase 1).
+- Express backend APIs for associating `app_generated_thread_id` with `rfpId` and `userId` (Phase 2).
+- Frontend API client functions in `apps/web/src/lib/api.ts` for `recordNewProposalThread` and `listUserProposalThreads`.
+- Core logic in `StreamProvider.tsx` to handle new thread creation when `rfpId` is present in the URL and `threadId` is not. This includes generating a UUID, calling the backend to record the association, and updating URL params.
+- Core logic in `ThreadProvider.tsx` to fetch and manage the list of `applicationThreads` (user's proposal thread associations).
+
+**What's Left to Build (Current Focus):**
+
+- **Frontend UI for Thread Management (Phase 3, Step 3.6):**
+  - A visual component (e.g., sidebar) to display `applicationThreads` from `ThreadProvider`.
+  - Functionality for the user to select an existing thread from this list (which will navigate by updating URL params for `StreamProvider` to consume).
+  - A "Start New Proposal" button/action that, for a given `rfpId`, navigates to a URL that `StreamProvider` will use to initiate the new thread flow (i.e., URL with `rfpId` but no `threadId`).
+- Thorough end-to-end testing of all flows (Phase 4).
+- Refinements based on testing.
+
+**Current Status:**
+
+- The foundational pieces for frontend-driven thread ID management and association with the backend are largely in place within the providers (`StreamProvider`, `ThreadProvider`) and API client (`api.ts`).
+- The immediate next step is to build the user interface (Phase 3, Step 3.6) that allows users to interact with this system: view their proposal threads, select existing ones, and initiate new ones. This UI will primarily leverage the data and functions now available in `ThreadProvider` and will drive `StreamProvider` behavior through URL changes.
