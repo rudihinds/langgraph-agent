@@ -206,24 +206,19 @@ This context should help understand the detailed implementation phases outlined 
 
 ### Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`
 
-- **Status:** ◻️ (Not Started)
+- **Status:** ✅ (Completed)
 - **Depends On:** Step 1.2, Step 2.3
 - **Issue:** With the LangGraph server managing its own checkpointer and the frontend driving interactions, the role of the existing `OrchestratorService` (and its factory) and `checkpointer.service.ts` within the Express backend (port 3001) for the main proposal flow needs reassessment.
 - **Action Items:**
-  1.  Review `apps/backend/services/orchestrator.service.ts` and `apps/backend/services/orchestrator-factory.ts`.
-  2.  Identify methods that attempt to directly invoke the main graph or manipulate its checkpoints (e.g., `graph.invoke()`, `checkpointer.put()`). These are likely redundant for the primary flow.
-  3.  Refactor `OrchestratorService`:
-      - Remove direct graph/checkpointer instantiation for the main proposal flow.
-      - Its methods should now either:
-        - Focus on application-level logic (e.g., using `ProposalThreadAssociationService`).
-        - If they need to trigger graph actions, they should instruct the frontend to make the appropriate LangGraph SDK call to port 2024, or act as a client to the LangGraph server themselves if absolutely necessary (less preferred for simplicity).
-        - Methods like `initOrGetProposalWorkflow` are good candidates to remain but should primarily interact with the `ProposalThreadAssociationService` to check for existing _application-level_ thread records, not directly with the LangGraph server's checkpointer for this initial check.
-  4.  Review `apps/backend/services/checkpointer.service.ts`. If its sole purpose was to provide a checkpointer for the Express backend's local graph instance (which is being re-evaluated), and there's no other consumer, it might be deprecated or removed. If this is the case either delete if completely safe, or if you don't have a 95%+ confidence score it is safe to delete but are fairly sure it is irrelevant then comment out the code and mark the top of the file 'due to be deleted/deprecated'. If it serves other distinct purposes, ensure it uses `getInitializedCheckpointer()` if it runs in the same process as the LangGraph server (unlikely) or understands it will get its own singleton if in a separate process. Once you've implemented your decision, write an explanation as to what and why you have done it.
+  1.  Reviewed `apps/backend/services/orchestrator.service.ts` and `apps/backend/services/orchestrator-factory.ts`. ✅
+  2.  Identified redundant methods for main graph/checkpointer manipulation. ✅
+  3.  Refactored `OrchestratorService`: Marked as deprecated for main proposal flow. ✅
+  4.  Reviewed `apps/backend/services/checkpointer.service.ts`: Marked as deprecated and commented out as its primary role was for the now-re-evaluated Express backend graph instance. ✅
 - **File Paths:**
-  - `apps/backend/services/orchestrator.service.ts`
-  - `apps/backend/services/orchestrator-factory.ts`
-  - `apps/backend/services/checkpointer.service.ts`
-- **Justification:** Simplifies the Express backend's role, avoids redundant graph/checkpointer instances, and aligns with the architecture where the LangGraph server is the primary engine for graph execution and state persistence.
+  - `apps/backend/services/orchestrator.service.ts` (Marked DEPRECATED)
+  - `apps/backend/services/orchestrator-factory.ts` (Marked DEPRECATED)
+  - `apps/backend/services/checkpointer.service.ts` (Marked DEPRECATED)
+- **Justification:** Simplifies the Express backend's role, avoids redundant graph/checkpointer instances, and aligns with the architecture where the LangGraph server is the primary engine for graph execution and state persistence. These services were primarily for a direct Express-managed LangGraph instance, which is not the current pattern for the main proposal flow.
 
 ---
 
