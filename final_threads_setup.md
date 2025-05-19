@@ -280,90 +280,41 @@ This context should help understand the detailed implementation phases outlined 
 
 ### Step 3.5: LangGraph SDK Integration Review
 
-- **Status:** ◻️ (Not Started)
+- **Status:** ✅ (Completed)
 - **Depends On:** Step 3.3, Step 3.4
 - **Issue:** All LangGraph SDK calls needing persistence must correctly use the `activeThreadId`.
 - **Action Items:**
-  1.  Review all LangGraph SDK integration points in the frontend (e.g., `StreamProvider.tsx`, hooks interacting with the SDK).
-  2.  Ensure methods like `client.streamEvents()`, `client.invoke()`, `client.getState()`, `client.updateState()` pass the `activeThreadId` from the frontend's state within the `configurable` object: `{ configurable: { thread_id: activeThreadId } }`.
-  3.  Confirm these calls target `NEXT_PUBLIC_LANGGRAPH_API_URL` (port 2024).
-- **File Paths:**
-  - `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
-  - Any hooks or components directly using the LangGraph SDK client.
-- **Justification:** Ensures all stateful LangGraph operations are correctly associated with the intended application-level thread.
+  1.  Reviewed all LangGraph SDK integration points in the frontend (e.g., `StreamProvider.tsx`, hooks interacting with the SDK). ✅
+  2.  Ensured methods like `client.streamEvents()`, `client.invoke()`, `client.getState()`, `client.updateState()` pass the `activeThreadId` from the frontend's state within the `configurable` object: `{ configurable: { thread_id: activeThreadId } }`. (Verified in `StreamProvider.tsx` which is the primary SDK interaction point for streaming). ✅
+  3.  Confirmed these calls target `NEXT_PUBLIC_LANGGRAPH_API_URL` (port 2024). ✅
+- **Outcome:** `StreamProvider.tsx` correctly handles passing the application-managed `threadId` to the LangGraph SDK for persistent operations.
 
 ### Step 3.6: Implement Frontend UI for Thread Management and Selection
 
-- **Status:** ◻️ (Not Started)
+- **Status:** ✅ (Completed)
 - **Depends On:** Step 3.4 (for `applicationThreads` in `ThreadProvider`), Step 3.3 (for understanding new thread creation flow)
 - **Issue:** The user needs a way to see their existing proposal threads for an RFP (or all their threads) and to start new proposal threads.
 - **Goal:** Create a UI element (e.g., a sidebar) that lists proposal threads and allows users to select an existing one or initiate a new one.
-
-- **Action Items:**
-
-  1.  **Design UI for Thread Listing and Creation:**
-
-      - **Location:** Sidebar or a dedicated section on the chat page. `apps/web/src/features/layout/components/` and `apps/web/src/features/ui/components/sheet.tsx` are potential places to look for existing sidebar/panel components.
-        - If a global sidebar exists in `apps/web/src/features/layout/components/`, explore adapting it.
-        - Alternatively, `apps/web/src/features/ui/components/sheet.tsx` could be used for a slide-out panel.
-      - **Content:**
-        - A "Start New Proposal" button/action.
-        - A list of existing proposal threads. This list should be filterable by the current `rfpId` if present in the URL `searchParams`.
-        - Each item in the list should display relevant information like `proposalTitle` (if available), `appGeneratedThreadId` (perhaps partially or as a fallback), and creation/update date.
-
-  2.  **Implement `ProposalThreadsList` Component (e.g., `apps/web/src/features/thread/components/ProposalThreadsList.tsx`):**
-
-      - **Data Source:**
-        - Consume `applicationThreads`, `appThreadsLoading`, and `getApplicationThreads` from `useThreadContext()` (from `ThreadProvider.tsx`).
-        - Call `getApplicationThreads(rfpIdFromParams)` in a `useEffect` hook, triggered by changes in `rfpIdFromParams` or `session`.
-      - **Rendering:**
-        - Display a loading state based on `appThreadsLoading`.
-        - If `applicationThreads` is empty (and not loading), show an appropriate message (e.g., "No proposals started for this RFP yet." or "Start your first proposal!").
-        - Render list items, potentially reusing or adapting `apps/web/src/features/dashboard/components/ProposalList.tsx` or its item components. Each item should be clickable.
-      - **Interaction (Selecting an Existing Thread):**
-        - When a user clicks on a thread in the list:
-          - Construct the new URL: `/chat?rfpId=[rfp_id_of_selected_thread]&threadId=[app_generated_thread_id_of_selected_thread]`.
-          - Use Next.js `router.push()` to navigate to this URL.
-          - `StreamProvider` will automatically pick up the `threadId` and `rfpId` from the `searchParams` and load the corresponding LangGraph thread and application context.
-
-  3.  **Implement "Start New Proposal" UI Functionality:**
-
-      - **Trigger:** A clearly visible button or link (e.g., "Start New Proposal" or "+ New Proposal").
-        - Could adapt `apps/web/src/features/dashboard/components/NewProposalCard.tsx` or `NewProposalModal.tsx` if a modal flow for naming the proposal is desired before creation.
-      - **Action (if `rfpId` is present in URL `searchParams`):**
-        - Construct the new URL: `/chat?rfpId=[current_rfpId_from_params]` (i.e., ensure `threadId` is _not_ in the params).
-        - Use Next.js `router.push()` to navigate.
-        - `StreamProvider`'s `useEffect` hook will detect the presence of `rfpId` and absence of `threadId`. It will then:
-          - Generate a new `appGeneratedThreadId` (UUID).
-          - Call `recordNewProposalThread` (from `lib/api.ts`) to associate it with the `rfpId`.
-          - Update the URL `searchParams` by calling `setThreadIdQueryParam(newAppGeneratedThreadId)`, which triggers `StreamProvider` to initialize with the LangGraph backend.
-      - **Action (if no `rfpId` is present):**
-        - The behavior is less defined here. Options:
-          - Prompt user to select an RFP first.
-          - Navigate to an RFP selection/creation page.
-          - (For now, focus on the flow where `rfpId` is already contextually available).
-
-  4.  **Integrate `ProposalThreadsList` into the Main Chat Layout:**
-
-      - Identify the main layout component for the chat interface (e.g., in `apps/web/src/app/chat/page.tsx` or a layout component it uses).
-      - Add the `ProposalThreadsList` component to this layout (e.g., as a sidebar).
-      - Ensure it has access to `ThreadProvider`'s context.
-
-  5.  **Refine `ThreadProvider.createThread` (if still used directly):**
-      - Given that `StreamProvider` now handles the initial creation of a new thread when `rfpId` is present and `threadId` is not, the direct usage of `ThreadProvider.createThread` for _initiating_ a new proposal thread might become redundant or its role might shift.
-      - Review if `ThreadProvider.createThread` is still needed. It was originally designed to interact with LangGraph's `/create_run` endpoint. If `StreamProvider` now fully handles new thread instantiation (including backend association and then passing the `threadId` to LangGraph via `configurable`), `createThread` might only be relevant for cases where a LangGraph thread needs to be created _without_ an initial `rfpId` association, or it might be deprecated.
-      - For now, the "Start New Proposal" UI should trigger the `StreamProvider` flow by manipulating URL params.
-
-- **File Paths (Potential New/Modified):**
-
+- **Action Items & Outcomes:**
+  1.  **UI Design for Thread Listing and Creation:** Conceptualized as a sidebar integrated into chat-relevant pages.
+  2.  **Implemented `ProposalThreadsList` Component (`apps/web/src/features/thread/components/ProposalThreadsList.tsx`):** ✅
+      - Consumes context from `ThreadProvider`.
+      - Fetches and displays threads, filterable by `rfpId` from URL.
+      - Handles selection of existing threads (navigates by updating URL params `rfpId` & `threadId`).
+  3.  **Implemented "Start New Proposal" UI Functionality (within `ProposalThreadsList.tsx`):** ✅
+      - Button navigates to `/chat?rfpId=[current_rfpId]` (no `threadId`), triggering `StreamProvider`'s new thread creation and association flow.
+  4.  **Integrated `ProposalThreadsList` into the Main Chat Layout (via `apps/web/src/features/chat-ui/providers/AgentProvidersWrapper.tsx`):** ✅
+      - `AgentProvidersWrapper` now includes `ProposalThreadsList` in a sidebar for chat-related paths.
+  5.  **Reviewed `ThreadProvider.createThread` Role:** ✅
+      - Its direct role for initiating RFP-associated proposals is superseded by `StreamProvider`'s URL-driven flow.
+      - Kept for now, as it might serve other purposes or future use cases for non-RFP-bound thread creation directly via SDK.
+- **Files Created/Modified:**
   - `apps/web/src/features/thread/components/ProposalThreadsList.tsx` (New)
-  - `apps/web/src/features/thread/components/ProposalListItem.tsx` (New, or adapted)
-  - `apps/web/src/app/chat/page.tsx` (or main layout component for chat - Modified)
-  - `apps/web/src/features/layout/components/` (Potentially modified for sidebar structure)
-  - `apps/web/src/features/chat-ui/providers/ThreadProvider.tsx` (Review `createThread` role)
-  - `apps/web/src/features/chat-ui/providers/StreamProvider.tsx` (Relied upon for new thread flow)
+  - `apps/web/src/features/thread/components/ProposalListItem.tsx` (New)
+  - `apps/web/src/features/chat-ui/providers/AgentProvidersWrapper.tsx` (Modified for layout)
 
-- **Justification:** Provides a user-friendly way to manage multiple proposal chat sessions, leveraging the backend association and LangGraph persistence. This makes the application more robust and allows users to work on multiple proposals or versions concurrently.
+**Note on Deprecated Express Endpoints (Feedback/Resume/Interrupt):**
+During Phase 3, it was identified that several Express backend API endpoints (`/api/rfp/feedback`, `/api/rfp/resume`, `/api/rfp/interrupt-status`) were tied to a deprecated orchestrator model. These have been temporarily disabled (return 503) to allow the backend server to start. They require a future refactor to align with the LangGraph server's direct handling of Human-in-the-Loop (HITL) processes.
 
 ---
 

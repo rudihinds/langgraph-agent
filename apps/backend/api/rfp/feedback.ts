@@ -1,7 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js";
+// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
 import { FeedbackType } from "../../lib/types/feedback.js";
 
 // Initialize logger
@@ -56,6 +56,21 @@ const feedbackSchema = z
  * @returns {Object} - Object indicating the success status
  */
 router.post("/", async (req, res) => {
+  // TODO: Refactor this entire endpoint to integrate with the LangGraph server's
+  // Human-in-the-Loop (HITL) mechanisms. The previous orchestrator-based feedback
+  // system is deprecated for the main proposal flow.
+  // For now, this endpoint will return a 503 Service Unavailable.
+
+  logger.warn("Attempt to use deprecated feedback endpoint", {
+    body: req.body,
+  });
+  return res.status(503).json({
+    error: "Service Temporarily Unavailable",
+    message:
+      "The feedback submission system is currently under reconstruction to integrate with the new LangGraph server architecture. Please try again later.",
+  });
+
+  /*
   try {
     // Validate request body
     const result = feedbackSchema.safeParse(req.body);
@@ -81,35 +96,28 @@ router.post("/", async (req, res) => {
       feedbackType,
     });
 
-    // Get orchestrator
-    const orchestrator = await getOrchestrator();
+    // DEPRECATED CODE:
+    // const orchestrator = await getOrchestrator();
+    // const interruptStatus = await orchestrator.getInterruptStatus(threadId);
+    // const contentReference =
+    //   interruptStatus.interruptData?.contentReference || "";
+    // const feedbackPayload = {
+    //   type: feedbackType,
+    //   comments: comments,
+    //   timestamp: new Date().toISOString(),
+    //   contentReference: contentReference,
+    //   customInstructions: customInstructions,
+    // };
+    // const feedbackResult = await orchestrator.submitFeedback(
+    //   threadId,
+    //   feedbackPayload
+    // );
+    // return res.status(200).json({
+    //   success: true,
+    //   message: feedbackResult.message,
+    //   status: feedbackResult.status,
+    // });
 
-    // Get interrupt details to retrieve the correct contentReference
-    const interruptStatus = await orchestrator.getInterruptStatus(threadId);
-    const contentReference =
-      interruptStatus.interruptData?.contentReference || "";
-
-    // Prepare feedback object
-    const feedbackPayload = {
-      type: feedbackType,
-      comments: comments,
-      timestamp: new Date().toISOString(),
-      contentReference: contentReference,
-      customInstructions: customInstructions,
-    };
-
-    // Submit feedback using the updated orchestrator method
-    const feedbackResult = await orchestrator.submitFeedback(
-      threadId,
-      feedbackPayload
-    );
-
-    // Return success response with details from the operation
-    return res.status(200).json({
-      success: true,
-      message: feedbackResult.message,
-      status: feedbackResult.status,
-    });
   } catch (error) {
     logger.error("Failed to submit feedback", {
       error: error instanceof Error ? error.message : String(error),
@@ -121,6 +129,7 @@ router.post("/", async (req, res) => {
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
+  */
 });
 
 export default router;

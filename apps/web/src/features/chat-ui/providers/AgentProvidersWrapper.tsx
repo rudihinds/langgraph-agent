@@ -2,8 +2,9 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { StreamProvider } from "./StreamProvider";
-import { InterruptProvider } from "./InterruptProvider";
+import { StreamProvider } from "./StreamProvider.js";
+import { InterruptProvider } from "./InterruptProvider.js";
+import ProposalThreadsList from "../../thread/components/ProposalThreadsList.js";
 
 export default function AgentProvidersWrapper({
   children,
@@ -37,10 +38,24 @@ export default function AgentProvidersWrapper({
     return <>{children}</>;
   }
 
-  // For chat-related pages, wrap with the providers
+  // Layout for chat-related pages with sidebar
   return (
-    <StreamProvider>
-      <InterruptProvider>{children}</InterruptProvider>
-    </StreamProvider>
+    <div style={{ display: "flex", height: "100vh" }}>
+      <div
+        style={{
+          width: "300px",
+          borderRight: "1px solid #ccc",
+          padding: "10px",
+          overflowY: "auto",
+        }}
+      >
+        <ProposalThreadsList />
+      </div>
+      <div style={{ flexGrow: 1, padding: "10px", overflowY: "auto" }}>
+        <StreamProvider>
+          <InterruptProvider>{children}</InterruptProvider>
+        </StreamProvider>
+      </div>
+    </div>
   );
 }

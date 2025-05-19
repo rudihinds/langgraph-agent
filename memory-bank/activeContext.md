@@ -839,39 +839,35 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 
 - **Phase 2, Step 2.4:** Re-evaluate and refactor `OrchestratorService` and `checkpointer.service.ts` in the Express backend to align with the new architecture (LangGraph server manages its own checkpointer; Express backend focuses on application-level logic).
 
-## Recent Changes & Current Focus (LangGraph Thread Management - Phase 3)
+## Recent Changes & Current Focus (LangGraph Thread Management - Phase 3 Complete)
 
-**Phase 3: Frontend - `thread_id` Generation and SDK Interaction** is actively in progress. The goal is to enable robust management of user-specific proposal conversation threads, associated with RFPs, and persisted by the LangGraph server.
+**Phase 3: Frontend - `thread_id` Generation and SDK Interaction** is now considered functionally complete for its core goals. The system now supports:
 
-**Recently Completed (Frontend Provider Logic & API Clients):**
+- Frontend generation of `app_generated_thread_id`.
+- Association of this ID with `rfpId` and `userId` via Express backend APIs (`POST & GET /api/rfp/proposal_threads`).
+- Correct usage of this `app_generated_thread_id` in LangGraph SDK calls to the LangGraph server (`:2024`) for persistent, isolated chat states.
+- A UI sidebar (`ProposalThreadsList` integrated via `AgentProvidersWrapper`) for listing threads associated with an RFP and starting new proposal threads for an RFP.
 
-- **API Client Functions (`apps/web/src/lib/api.ts`):**
-  - `recordNewProposalThread`: Implemented to call the backend `POST /api/rfp/proposal_threads` endpoint, associating a frontend-generated `appGeneratedThreadId` with an `rfpId` and `userId`.
-  - `listUserProposalThreads`: Implemented to call `GET /api/rfp/proposal_threads` to fetch a user's existing thread associations, filterable by `rfpId`.
-- \*\*Core Provider Logic (`apps/web/src/features/chat-ui/providers/`):
-  - **`StreamProvider.tsx` Updates:**
-    - Crucially, if an `rfpId` is present in the URL and `threadId` is _not_, `StreamProvider` now takes charge of initiating a new proposal thread. It generates a new UUID (`appGeneratedThreadId`), calls `recordNewProposalThread` to persist this association with the backend, and then updates the URL with this new `threadId`. This `threadId` is then used for all subsequent LangGraph interactions for that session, ensuring persistence.
-  - **`ThreadProvider.tsx` Updates:**
-    - Now manages an `applicationThreads` state, populated by calling `listUserProposalThreads` from `lib/api.ts`. This list will be used by the upcoming UI to display existing threads.
-    - The `getApplicationThreads` function was added to fetch these threads.
-    - The `createThread` method was updated to accept an optional `proposalTitle` (passed to `recordNewProposalThread`) and to refresh the `applicationThreads` list after a new association is recorded. Its role in _initiating_ new RFP-linked threads is now primarily handled by `StreamProvider`'s URL-driven logic.
-- **Dependency:** The `uuid` package was installed for frontend `thread_id` generation.
+**Key Completed Items in Phase 3:**
 
-**Current Task & Next Steps (Handover Point):**
+- **API Client Functions (`apps/web/src/lib/api.ts`):** `recordNewProposalThread` and `listUserProposalThreads` implemented.
+- **Provider Logic (`StreamProvider.tsx`, `ThreadProvider.tsx`):**
+  - `StreamProvider` handles new thread initiation if `rfpId` is present and `threadId` is not (generates UUID, records association, updates URL).
+  - `ThreadProvider` manages `applicationThreads` state (list of associated threads from backend) and related loading states.
+- **UI Components (`apps/web/src/features/thread/components/`):**
+  - `ProposalThreadsList.tsx`: Displays threads, handles selection (URL update), and initiates new proposals (URL update).
+  - `ProposalListItem.tsx`: Renders individual thread items.
+- **Layout Integration (`apps/web/src/features/chat-ui/providers/AgentProvidersWrapper.tsx`):** Integrates `ProposalThreadsList` into a sidebar for chat-relevant pages.
+- **LangGraph SDK Integration Review (`StreamProvider.tsx`):** Confirmed `thread_id` is correctly passed to the SDK.
 
-- **We are now moving to: Phase 3, Step 3.6: Implement Frontend UI for Thread Management and Selection** (as detailed in `final_threads_setup.md`).
-- **Goal:** To build the UI components (likely a sidebar) that will allow users to:
-  1.  View a list of their existing proposal threads (associated with the current RFP or all their threads).
-  2.  Select an existing thread to load it into the chat interface.
-  3.  Initiate a new proposal thread for the currently viewed RFP.
-- **Key Files for Next Step (UI Implementation):**
-  - `apps/web/src/features/thread/components/ProposalThreadsList.tsx` (New file to create)
-  - `apps/web/src/features/thread/components/ProposalListItem.tsx` (New file, or adapt existing list item components)
-  - `apps/web/src/app/chat/page.tsx` (or the main layout component for the chat page, to integrate the new UI).
-  - Relevant components from `apps/web/src/features/dashboard/components/` (e.g., `ProposalList.tsx`) and `apps/web/src/features/ui/components/` might be adapted or reused.
-- **Interaction Flow:** The new UI will leverage `applicationThreads` from `ThreadProvider`. Selecting/starting threads will primarily involve updating URL query parameters (`rfpId`, `threadId`), which `StreamProvider` will then use to interact with the LangGraph backend and our application backend.
+**Important Note on Backend API Endpoints:**
 
-**Context & Why:**
-This work ensures that each user chat session is uniquely identified and persisted. The frontend generates a unique ID (`appGeneratedThreadId`), the Express backend (`:3001`) links this ID to users and RFPs, and the LangGraph server (`:2024`) uses this ID (passed as `configurable: { thread_id: ... }`) with its singleton `PostgresSaver` for state persistence.
+- The Express backend API endpoints related to the old orchestrator model (`/api/rfp/feedback`, `/api/rfp/resume`, `/api/rfp/interrupt-status`) have been temporarily disabled (return 503) to resolve startup issues. These endpoints (`apps/backend/api/rfp/feedback.ts`, `resume.ts`, `interrupt-status.ts`) require a significant refactor in the future to align with how the LangGraph server directly manages Human-in-the-Loop (HITL) processes and state. This refactor is outside the scope of the current `final_threads_setup.md` plan for thread management.
 
-This setup allows users to have multiple, independent proposal generation attempts for the same RFP, or across different RFPs, with each chat history saved and resumable.
+**Current Focus & Next Steps:**
+
+- **Current Task:** **Phase 4: Testing and Refinement** (from `final_threads_setup.md`).
+- **Reasoning:** With the core frontend and backend logic for thread management and persistence in place, the next step is to thoroughly test the entire system end-to-end. This includes verifying the singleton checkpointer, the frontend/backend API flows, LangGraph persistence using the application-provided `thread_id`, and overall error handling.
+- **Objective:** Ensure the system is robust, functions as designed, and correctly manages user-specific proposal conversation threads.
+
+This context should allow a developer to understand the current state and begin comprehensive testing as outlined in Phase 4 of `final_threads_setup.md`.
