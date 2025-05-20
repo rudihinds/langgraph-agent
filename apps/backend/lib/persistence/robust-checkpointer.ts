@@ -28,25 +28,68 @@ const DEFAULT_FALLBACK_LOG_LEVEL: "error" | "warn" | "info" | "silent" = "warn";
 export async function getInitializedCheckpointer(): Promise<BaseCheckpointSaver> {
   // If an instance already exists, return it immediately
   if (checkpointerInstance) {
+    console.log(
+      "[SingletonCheckpointer]: Returning existing checkpointer instance."
+    );
     return checkpointerInstance;
   }
 
   // If setup is already in progress, return the existing promise
   if (setupInProgressPromise) {
+    console.log(
+      "[SingletonCheckpointer]: Setup already in progress, returning existing promise."
+    );
     return setupInProgressPromise;
   }
 
-  // Start the setup process
+  console.log(
+    "[SingletonCheckpointer]: Starting checkpointer setup process..."
+  );
   setupInProgressPromise = (async (): Promise<BaseCheckpointSaver> => {
     try {
       const useFallback = DEFAULT_USE_FALLBACK;
       const fallbackLogLevel = DEFAULT_FALLBACK_LOG_LEVEL;
 
+      console.log(
+        "[SingletonCheckpointer]: --- Environment Variable Check ---"
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.DATABASE_URL: ${ENV.DATABASE_URL}`
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.SUPABASE_DB_HOST: ${ENV.SUPABASE_DB_HOST}`
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.SUPABASE_DB_PORT: ${ENV.SUPABASE_DB_PORT}`
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.SUPABASE_DB_USER: ${ENV.SUPABASE_DB_USER}`
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.SUPABASE_DB_PASSWORD: ${ENV.SUPABASE_DB_PASSWORD ? "********" : undefined}`
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.SUPABASE_DB_NAME: ${ENV.SUPABASE_DB_NAME}`
+      );
+      console.log(
+        `[SingletonCheckpointer]: ENV.isSupabaseConfigured(): ${ENV.isSupabaseConfigured()}`
+      );
+      console.log(
+        "[SingletonCheckpointer]: --- End Environment Variable Check ---"
+      );
+
       if (ENV.isSupabaseConfigured()) {
+        console.log(
+          "[SingletonCheckpointer]: Supabase is configured, attempting PostgresSaver initialization."
+        );
         try {
           const connectionString =
             ENV.DATABASE_URL ||
             `postgresql://${ENV.SUPABASE_DB_USER}:${ENV.SUPABASE_DB_PASSWORD}@${ENV.SUPABASE_DB_HOST}:${ENV.SUPABASE_DB_PORT}/${ENV.SUPABASE_DB_NAME}`;
+
+          console.log(
+            `[SingletonCheckpointer]: Using connection string: ${connectionString.replace(ENV.SUPABASE_DB_PASSWORD || "DUMMY_PASSWORD_FOR_LOG", "********")}`
+          );
 
           pgPoolInstance = new PgPoolClass({
             connectionString: connectionString,
@@ -64,8 +107,14 @@ export async function getInitializedCheckpointer(): Promise<BaseCheckpointSaver>
 
           const pgSaver = new PostgresSaver(pgPoolInstance);
           await pgSaver.setup();
+          console.log(
+            "[SingletonCheckpointer]: PostgresSaver.setup() completed successfully."
+          );
 
           checkpointerInstance = pgSaver;
+          console.log(
+            "[SingletonCheckpointer]: PostgresSaver initialized and set as checkpointerInstance."
+          );
           return checkpointerInstance;
         } catch (pgError) {
           console.error(
@@ -113,9 +162,18 @@ export async function getInitializedCheckpointer(): Promise<BaseCheckpointSaver>
             break;
         }
       }
+      console.log(
+        "[SingletonCheckpointer]: Initializing MemorySaver as fallback."
+      );
       checkpointerInstance = new MemorySaver();
+      console.log(
+        "[SingletonCheckpointer]: MemorySaver initialized and set as checkpointerInstance."
+      );
       return checkpointerInstance;
     } finally {
+      console.log(
+        "[SingletonCheckpointer]: Checkpointer setup process finished."
+      );
       setupInProgressPromise = null;
     }
   })();

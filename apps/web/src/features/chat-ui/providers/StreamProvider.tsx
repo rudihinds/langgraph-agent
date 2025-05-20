@@ -14,6 +14,7 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  useRef,
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
@@ -70,28 +71,32 @@ export function StreamProvider({ children }: StreamProviderProps) {
   const searchParams = useSearchParams();
   const rfpId = searchParams.get("rfpId");
   // URL for general API calls (e.g., workflow init)
-  const generalApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  // const generalApiUrl = process.env.NEXT_PUBLIC_API_URL || ""; // Keep if used elsewhere, otherwise remove
   // Specific URL for the LangGraph SDK
   const langGraphSdkApiUrl = process.env.NEXT_PUBLIC_LANGGRAPH_API_URL || "";
 
   // Create the Supabase client instance (runs only on the client)
   const supabase = useMemo(() => createClient(), []); // Memoize client creation
 
-  // State to track if the thread initialization API call is in progress
-  const [isInitializing, setIsInitializing] = useState(false);
-  // State to track initialization errors
-  const [initError, setInitError] = useState<string | null>(null);
+  // Ref to track if we've already processed the SDK-generated threadId for the current rfpId session
+  const sdkThreadIdProcessedRef = useRef(false);
+  // Ref to store the rfpId for which we are awaiting an SDK threadId
+  const expectingSdkThreadIdForRfpRef = useRef<string | null>(null);
 
-  // Use query state for threadId, only if rfpId is present
-  const [threadId, setThreadId] = useQueryState("threadId", {
+  // Use query state for threadId
+  const [urlThreadId, setUrlThreadId] = useQueryState("threadId", {
     history: "replace",
   });
 
+  // Local state to hold the SDK-generated threadId before it's set in the URL
+  // This helps bridge the gap if onThreadId is slightly delayed or if we need to react to it.
+  const [localSdkThreadId, setLocalSdkThreadId] = useState<string | null>(null);
+
   // Log environment variables
-  console.log(
-    "[StreamProvider] NEXT_PUBLIC_API_URL (for general calls):",
-    process.env.NEXT_PUBLIC_API_URL
-  );
+  // console.log(
+  //   "[StreamProvider] NEXT_PUBLIC_API_URL (for general calls):",
+  //   process.env.NEXT_PUBLIC_API_URL
+  // ); // Keep if used
   console.log(
     "[StreamProvider] NEXT_PUBLIC_LANGGRAPH_API_URL (for SDK):",
     process.env.NEXT_PUBLIC_LANGGRAPH_API_URL
@@ -104,16 +109,16 @@ export function StreamProvider({ children }: StreamProviderProps) {
   const assistantId = process.env.NEXT_PUBLIC_ASSISTANT_ID;
 
   // Log the URLs being used
-  if (generalApiUrl) {
-    console.log(
-      "[StreamProvider] Using General API URL (e.g., init):",
-      generalApiUrl
-    );
-  } else {
-    console.warn(
-      "[StreamProvider] NEXT_PUBLIC_API_URL is not set for general calls!"
-    );
-  }
+  // if (generalApiUrl) {
+  //   console.log(
+  //     "[StreamProvider] Using General API URL (e.g., init):",
+  //     generalApiUrl
+  //   );
+  // } else {
+  //   console.warn(
+  //     "[StreamProvider] NEXT_PUBLIC_API_URL is not set for general calls!"
+  //   );
+  // } // Keep if used
   if (langGraphSdkApiUrl) {
     console.log(
       "[StreamProvider] Using LangGraph SDK API URL:",
@@ -130,199 +135,169 @@ export function StreamProvider({ children }: StreamProviderProps) {
   }
 
   console.log(
-    `[StreamProvider] Initial state - rfpId: ${rfpId}, threadId: ${threadId}`
+    `[StreamProvider] Initial state - rfpId: ${rfpId}, urlThreadId: ${urlThreadId}`
   );
 
-  // Effect to initialize thread: if rfpId is present but threadId is not,
-  // generate a new threadId, record association, and set it.
+  // Effect to manage the expectingSdkThreadIdForRfpRef and reset processor flag
   useEffect(() => {
-    const initializeNewThreadForRfp = async () => {
-      if (rfpId && !threadId && !isInitializing && supabase) {
+    if (rfpId && !urlThreadId) {
+      // Scenario: New proposal attempt for an rfpId, no threadId in URL yet.
+      // We expect the SDK to generate a threadId after the first message.
+      if (expectingSdkThreadIdForRfpRef.current !== rfpId) {
+        // If the rfpId changed or was previously null, reset processing state.
+        expectingSdkThreadIdForRfpRef.current = rfpId;
+        sdkThreadIdProcessedRef.current = false;
         console.log(
-          `[StreamProvider] rfpId ${rfpId} present, but no threadId. Initializing new thread.`
+          `[StreamProvider] Expecting SDK-generated threadId for new session with rfpId: ${rfpId}`
         );
-        setIsInitializing(true);
-        setInitError(null);
-        try {
-          const { data: sessionData, error: sessionError } =
-            await supabase.auth.getSession();
-
-          if (sessionError || !sessionData?.session?.access_token) {
-            throw new Error(
-              sessionError?.message ||
-                "User session not found or token missing."
-            );
-          }
-          const token = sessionData.session.access_token;
-
-          const newAppGeneratedThreadId = uuidv4();
-          console.log(
-            `[StreamProvider] Generated new appGeneratedThreadId: ${newAppGeneratedThreadId} for rfpId: ${rfpId}`
-          );
-
-          // Persist this new threadId association via our Express backend
-          await recordNewProposalThread(
-            {
-              rfpId,
-              appGeneratedThreadId: newAppGeneratedThreadId,
-              // proposalTitle can be added here if a default is desired or comes from rfpId context
-            },
-            token
-          );
-          toast.success(
-            `New proposal chat initialized and associated with RFP.`
-          );
-
-          // Set this new threadId in the URL query state
-          // This will trigger the useStream hook to use this new threadId
-          setThreadId(newAppGeneratedThreadId, {
-            shallow: true,
-            history: "replace",
-          });
-          console.log(
-            `[StreamProvider] Set new threadId in query state: ${newAppGeneratedThreadId}`
-          );
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            "[StreamProvider] Error during new thread initialization and association:",
-            message
-          );
-          setInitError(message);
-          toast.error(`Error initializing chat: ${message}`);
-        } finally {
-          setIsInitializing(false);
-        }
       }
-    };
-
-    initializeNewThreadForRfp();
-  }, [rfpId, threadId, isInitializing, setThreadId, supabase]);
-
-  // Effect to handle missing rfpId - This clears the threadId
-  useEffect(() => {
-    if (!rfpId) {
-      console.log("[StreamProvider] No rfpId provided. Resetting thread.");
-      if (threadId) setThreadId(null); // Clear threadId if rfpId is removed
-      setInitError(null); // Clear errors if rfpId is removed
+    } else if (!rfpId) {
+      // Scenario: No rfpId, clear expectation.
+      expectingSdkThreadIdForRfpRef.current = null;
+      sdkThreadIdProcessedRef.current = false;
     }
-  }, [rfpId, threadId, setThreadId]);
+    // If rfpId AND urlThreadId are present, it's an existing thread, no special expectation needed here.
+  }, [rfpId, urlThreadId]);
 
-  console.log(
-    `[StreamProvider] Before useStream - rfpId: ${rfpId}, threadId: ${threadId}`
-  );
+  // Ensure assistantId is a string, as the hook seems to require it.
+  // If NEXT_PUBLIC_ASSISTANT_ID is not set, this will cause a runtime error,
+  // which is appropriate if it's a required configuration.
+  if (!assistantId) {
+    console.error(
+      "[StreamProvider] CRITICAL: NEXT_PUBLIC_ASSISTANT_ID is not set!"
+    );
+    // Optionally, you could throw an error here or set a default, but an error is safer for required envs.
+  }
 
-  // Always call useStream, passing the current threadId from state/URL
-  // The hook will use this threadId if provided, or potentially create one
-  // if initialization hasn't happened yet (though our effect above handles primary init).
-  const streamValue = useTypedStream({
-    apiUrl: langGraphSdkApiUrl, // Pass the specific LangGraph SDK URL
-    assistantId: assistantId as string, // Pass directly (might be undefined)
-    threadId: threadId || undefined, // Pass the threadId obtained from URL/API
+  // Effect to capture SDK-generated threadId via onThreadId and persist association
+  // This logic was previously in a useEffect dependent on a wrongly destructured threadId
+  const handleSdkThreadIdGeneration = async (sdkGeneratedThreadId: string) => {
+    setLocalSdkThreadId(sdkGeneratedThreadId); // Store it locally first
+
+    if (
+      rfpId && // Must have an rfpId
+      expectingSdkThreadIdForRfpRef.current === rfpId && // We were expecting an SDK ID for *this* rfpId
+      !sdkThreadIdProcessedRef.current && // We haven't processed it yet for this rfpId session
+      supabase // Supabase client is available
+    ) {
+      sdkThreadIdProcessedRef.current = true; // Mark as processed *before* async operations
+
+      console.log(
+        `[StreamProvider onThreadId] Detected SDK-generated threadId: ${sdkGeneratedThreadId} for rfpId: ${rfpId}. Attempting to associate.`
+      );
+
+      try {
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
+        if (sessionError || !sessionData?.session?.access_token) {
+          throw new Error(
+            sessionError?.message ||
+              "User session not found for SDK thread association."
+          );
+        }
+        const token = sessionData.session.access_token;
+
+        // Persist association to Express backend
+        await recordNewProposalThread(
+          {
+            rfpId,
+            appGeneratedThreadId: sdkGeneratedThreadId, // Use SDK-generated ID
+            // proposalTitle: "New Proposal" // Optional: Derive from first message or use a default
+          },
+          token
+        );
+        toast.success("New chat session established and saved.");
+
+        // Update URL with the new SDK-generated threadId
+        // This should ideally be the primary way urlThreadId gets updated for new threads
+        setUrlThreadId(sdkGeneratedThreadId, {
+          shallow: true,
+          history: "replace",
+        });
+        console.log(
+          `[StreamProvider onThreadId] Set SDK-generated threadId in query state: ${sdkGeneratedThreadId}`
+        );
+        expectingSdkThreadIdForRfpRef.current = null; // Successfully processed, clear expectation.
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(
+          "[StreamProvider onThreadId] Error associating SDK-generated threadId:",
+          message
+        );
+        toast.error(`Error saving chat session: ${message}`);
+        sdkThreadIdProcessedRef.current = false; // Allow reprocessing
+      }
+    } else if (sdkGeneratedThreadId && !urlThreadId) {
+      // If rfpId conditions weren't met for association (e.g., not expecting for *this* rfpId)
+      // but we got an SDK threadId and there's no URL threadId, still update the URL.
+      // This handles cases where a thread might be generated without an RFP context initially.
+      console.log(
+        `[StreamProvider onThreadId] SDK-generated threadId ${sdkGeneratedThreadId} received, updating URL.`
+      );
+      setUrlThreadId(sdkGeneratedThreadId, {
+        shallow: true,
+        history: "replace",
+      });
+    }
+  };
+
+  const streamData = useTypedStream({
+    threadId: urlThreadId, // Pass the threadId from URL (can be null for new threads)
+    apiUrl: langGraphSdkApiUrl,
+    assistantId: assistantId as string,
+    onThreadId: handleSdkThreadIdGeneration, // Callback for when SDK sets/generates threadId
+    // streamConfig: { ... }
+    // initialMessages: [],
   });
 
-  // Log updates from useStream - simplified, removed internal threadId logic
-  useEffect(() => {
-    console.log(
-      "[StreamProvider] useStream update:",
-      `isLoading: ${streamValue.isLoading},`,
-      `error: ${streamValue.error},`,
-      `messages count: ${streamValue.messages?.length ?? 0}`
-    );
+  // Destructure other properties from streamData, threadId is now handled by onThreadId callback
+  const {
+    submit,
+    messages,
+    isLoading,
+    error,
+    stop,
+    // DO NOT destructure threadId here: sdkGeneratedThreadIdFromStream
+  } = streamData;
 
-    // Handle errors from useStream
-    if (streamValue.error) {
-      let message = "Unknown stream error"; // Default error message
-      if (streamValue.error instanceof Error) {
-        message = streamValue.error.message;
-      } else if (typeof streamValue.error === "string") {
-        message = streamValue.error;
-      } else {
-        try {
-          message = JSON.stringify(streamValue.error);
-        } catch (e) {
-          // Fallback if stringify fails
-          message = "An unknown stream error occurred.";
-        }
-      }
+  // Remove the old useEffect that depended on sdkGeneratedThreadIdFromStream
+  // The logic is now in handleSdkThreadIdGeneration, triggered by the onThreadId callback.
 
-      console.error("[StreamProvider] useStream error:", message);
-      // Avoid spamming toasts if it's the same error
-      if (message !== initError) {
-        toast.error(`Chat stream error: ${message}`);
-        // Ensure a non-empty string is always set
-        setInitError(message || "An unknown stream error occurred.");
-      }
-    }
-  }, [
-    streamValue.isLoading,
-    streamValue.error,
-    streamValue.messages,
-    initError,
-  ]);
-
-  // Create the context value
-  const contextValue: StreamContextType = useMemo(
+  // Context value provided to children
+  const contextValue = useMemo<StreamContextType>(
     () => ({
-      messages: rfpId ? streamValue.messages : [],
-      // Combine initialization loading state with stream loading state
-      isLoading: isInitializing || streamValue.isLoading,
-      error: initError // Prioritize init error, then stream error
-        ? new Error(initError)
-        : streamValue.error instanceof Error
-          ? streamValue.error
-          : undefined,
-      submit: streamValue.submit,
-      stop: streamValue.stop,
-      threadId: rfpId ? threadId : null, // Use threadId directly from useQueryState
+      messages,
+      isLoading: !!(
+        (
+          isLoading || // Standard loading from useStream
+          (rfpId &&
+            !urlThreadId && // No threadId in URL yet
+            expectingSdkThreadIdForRfpRef.current === rfpId && // And we are expecting one for this rfp
+            !localSdkThreadId)
+        ) // And we haven't received it locally yet
+      ),
+      error: error instanceof Error ? error : null,
+      submit,
+      stop,
+      // Use urlThreadId as the source of truth, updated by onThreadId via setUrlThreadId
+      // Fallback to localSdkThreadId if urlThreadId hasn't caught up yet (e.g. during the re-render cycle)
+      threadId: urlThreadId || localSdkThreadId || null,
     }),
     [
+      messages,
+      isLoading,
+      error,
+      submit,
+      stop,
+      urlThreadId,
       rfpId,
-      threadId, // Use threadId from useQueryState
-      isInitializing, // Add dependency
-      initError, // Add dependency
-      streamValue.messages,
-      streamValue.isLoading,
-      streamValue.error,
-      streamValue.submit,
-      streamValue.stop,
+      localSdkThreadId, // Add localSdkThreadId to dependencies
     ]
   );
 
-  // Log the final context value being provided
-  useEffect(() => {
-    console.log(
-      "[StreamProvider] Context Value updated -",
-      `isLoading: ${contextValue.isLoading},`,
-      `messages count: ${contextValue.messages?.length ?? 0},`,
-      `threadId: ${contextValue.threadId ?? "(Not set)"},`,
-      `rfpId: ${rfpId ?? "(Not set)"}`
-    );
-  }, [contextValue, rfpId]);
-
-  // Render children only if rfpId is present, otherwise show placeholder
-  // Also check if API URL AND assistantId are configured before rendering chat
-  const canRenderChat =
-    rfpId && generalApiUrl && langGraphSdkApiUrl && assistantId;
-
   return (
     <StreamContext.Provider value={contextValue}>
-      {canRenderChat ? (
-        children
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-lg text-gray-500">
-            {isInitializing
-              ? "Initializing chat..."
-              : initError
-                ? `Initialization failed: ${initError}`
-                : !rfpId
-                  ? "Please select an RFP to start chatting."
-                  : "Chat service is not configured. Please check environment variables."}
-          </p>
-        </div>
-      )}
+      {children}
     </StreamContext.Provider>
   );
 }

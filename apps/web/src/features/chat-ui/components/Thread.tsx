@@ -187,9 +187,11 @@ export function Thread() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isLoading}
+              disabled={isLoading && (messages.length > 0 || !!threadId)}
               placeholder={
-                isLoading ? "Waiting for response..." : "Type a message..."
+                isLoading && (messages.length > 0 || !!threadId)
+                  ? "Waiting for response..."
+                  : "Type a message..."
               }
               className={cn(
                 "min-h-10 max-h-24 resize-none bg-background",
@@ -200,7 +202,11 @@ export function Thread() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={!inputValue.trim() || isLoading || !submit}
+                disabled={
+                  (isLoading && (messages.length > 0 || !!threadId)) ||
+                  !inputValue.trim() ||
+                  !submit
+                }
               >
                 Send
               </Button>

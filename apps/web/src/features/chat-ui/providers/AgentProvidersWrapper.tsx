@@ -12,26 +12,18 @@ export default function AgentProvidersWrapper({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const [needsChatProviders, setNeedsChatProviders] = useState(false);
 
-  useEffect(() => {
-    // Only include chat providers on specific routes that need chat functionality
-    // For example: /chat, /proposal, /rfp, etc.
-    const chatPaths = [
-      "/chat",
-      "/proposal",
-      "/rfp",
-      "/generate",
-      "/dashboard/chat",
-    ];
-
-    // Check if current path matches or starts with any of the chat paths
-    const needsChat = chatPaths.some(
-      (path) => pathname === path || pathname?.startsWith(`${path}/`)
-    );
-
-    setNeedsChatProviders(needsChat);
-  }, [pathname]);
+  // Determine needsChatProviders synchronously
+  const chatPaths = [
+    "/chat",
+    "/proposal",
+    "/rfp",
+    "/generate",
+    "/dashboard/chat",
+  ];
+  const needsChatProviders = chatPaths.some(
+    (path) => pathname === path || pathname?.startsWith(`${path}/`)
+  );
 
   // Only wrap with StreamProvider/InterruptProvider if on a chat-related page
   if (!needsChatProviders) {

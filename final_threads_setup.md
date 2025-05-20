@@ -318,6 +318,160 @@ During Phase 3, it was identified that several Express backend API endpoints (`/
 
 ---
 
+## Phase 5: Frontend Refactor - SDK-Driven `thread_id` Generation for New Threads
+
+**Core Principle (from LangGraph Docs/Quickstart):**
+For a new, checkpointed conversation, the LangGraph SDK (when `checkpointSaver` is configured) can generate the `thread_id` upon the first actual graph invocation (e.g., `client.invoke`, `client.streamEvents`, or the `submit` function from `useStream`) if a `thread_id` is NOT provided in the `configurable` options for that _initial write operation_. This SDK-generated `thread_id` is then used for persistence.
+
+### Sub-Phase 5.1: Modify `StreamProvider.tsx` for New Thread Handling
+
+- **Goal:**
+  - When `rfpId` is present but no `threadId` is in the URL (indicating a new proposal attempt):
+    - Initialize `useStream` without a `threadId`.
+    - After the _first successful `submit` call_ (triggered by the user's first message):
+      - Capture the `threadId` now available from `useStream`'s `onThreadId` callback (this is the SDK-generated ID).
+      - Persist this association (`rfpId`, SDK-generated `threadId`, `userId`, optional `proposalTitle`) to your Express backend (`/api/rfp/proposal_threads`).
+      - Update the URL with this SDK-generated `threadId`.
+- **Files to Modify:**
+  - `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
+
+#### Step 5.1.1: Adjust `useStream` Initialization and State for New Threads
+
+- **Status:** ✅ (Completed)
+- **Issue:** The `StreamProvider` needs to handle the scenario where a `threadId` is not initially present for a new proposal, wait for the SDK to generate it after the first user message (via the `onThreadId` callback from `useStream`), and then persist this association.
+- **Action Items & Outcome:**
+  1.  In `StreamProvider.tsx`, when `rfpId` is present and `urlThreadId` (from `useQueryState`) is initially `null` or `undefined`:
+      - The `threadId` option passed to `useTypedStream` is `urlThreadId` (which will be `null`/`undefined`). This is correct for the SDK to generate an ID.
+  2.  Implemented the `onThreadId` callback (`handleSdkThreadIdGeneration`) in `useTypedStream` options. This callback receives the SDK-generated `threadId`.
+  3.  Inside `handleSdkThreadIdGeneration`:
+      - It sets a local state `localSdkThreadId` and then updates the URL via `setUrlThreadId`.
+      - If `rfpId` is present, we are expecting an SDK ID for this `rfpId`, and it hasn't been processed:
+        - It obtains the Supabase auth token.
+        - Calls `recordNewProposalThread` API function to associate `{ rfpId, appGeneratedThreadId: sdkGeneratedThreadId, ... }` with the backend.
+        - Handles success and error cases for this association.
+  4.  Removed the incorrect direct destructuring of `threadId` from the `useTypedStream` hook's return.
+  5.  Updated context value to use `urlThreadId` or `localSdkThreadId`.
+  6.  Refs `sdkThreadIdProcessedRef` and `expectingSdkThreadIdForRfpRef` are used to manage the processing state.
+- **Code Sketch (Conceptual - for `StreamProvider.tsx`):**
+
+  ```typescript
+  // Inside StreamProvider
+  const [urlThreadId, setUrlThreadId] = useQueryState("threadId", ...);
+  const [localSdkThreadId, setLocalSdkThreadId] = useState<string | null>(null);
+  // ... refs for processing state ...
+
+  const handleSdkThreadIdGeneration = async (sdkGeneratedThreadId: string) => {
+    setLocalSdkThreadId(sdkGeneratedThreadId);
+    // ... logic to associate with backend if rfpId and other conditions are met ...
+    // ... call recordNewProposalThread(...) ...
+    // ... setUrlThreadId(sdkGeneratedThreadId, ...) ...
+  };
+
+  const streamData = useTypedStream({
+    threadId: urlThreadId, // Pass current URL threadId
+    apiUrl: langGraphSdkApiUrl,
+    assistantId: assistantId,
+    onThreadId: handleSdkThreadIdGeneration, // SDK provides threadId here
+  });
+
+  // const { submit, messages, isLoading, error, stop } = streamData; // No threadId here
+
+  const contextValue = useMemo(() => ({
+    // ...
+    threadId: urlThreadId || localSdkThreadId || null,
+    // ...
+  }), [/* ...dependencies including urlThreadId, localSdkThreadId */]);
+  ```
+
+- **Justification:** Aligns `StreamProvider` with the documented SDK pattern for generating `thread_id`s using the `onThreadId` callback, ensuring correct persistence flow.
+
+#### Step 5.1.2: Remove Old Client-Side `threadId` Generation Logic
+
+- **Status:** ✅ (Completed - Handled as part of Step 5.1.1 refactor)
+- **Depends On:** Step 5.1.1
+- **Issue:** The previous logic for client-side UUID generation before any SDK interaction is now obsolete and needs to be removed.
+- **Action Items & Outcome:**
+  1.  The `useEffect` hook in `StreamProvider.tsx` that was previously responsible for client-side UUID generation and immediate backend association (before the first user message and SDK interaction) has been replaced by the `handleSdkThreadIdGeneration` callback triggered by `onThreadId`. The old logic for generating `uuidv4()` directly in the provider for new threads and calling `recordNewProposalThread` prematurely has been removed.
+  2.  Related state variables or refs solely for the old client-side generation flow are no longer present or have been repurposed for the new flow (e.g., `expectingSdkThreadIdForRfpRef`, `sdkThreadIdProcessedRef`).
+- **File Paths:**
+  - `apps/web/src/features/chat-ui/providers/StreamProvider.tsx`
+- **Justification:** Removes outdated logic, simplifying the provider and preventing conflicts with the new SDK-driven approach.
+
+### Sub-Phase 5.2: Ensure `Thread` Component (and Message Submission) Calls `submit` Correctly
+
+- **Status:** ✅ (Completed)
+- **Depends On:** Step 5.1.1
+- **Goal:** Verify that the UI component responsible for sending messages (e.g., `Thread.tsx` or a message input component) uses the `submit` function from `StreamContext` correctly, allowing the SDK to manage `thread_id` generation for new threads.
+- **Issue:** The message submission logic must not interfere with the SDK's `thread_id` generation by, for instance, attempting to inject its own `thread_id` into the `configurable` options for the very first message of a new session.
+- **Action Items & Outcome:**
+  1.  Reviewed `apps/web/src/features/chat-ui/components/Thread.tsx`, specifically the `handleSubmit` function.
+  2.  Confirmed that when `submit(values, options)` (from `useStreamContext`) is called, it is invoked as `await submit({ messages: [...] })` without a second `options` argument.
+  3.  This means no `options.configurable.thread_id` is explicitly passed from the `Thread.tsx` component during message submission.
+  4.  **Conclusion:** This is the correct behavior. The `Thread.tsx` component defers `thread_id` management to the `useStream` hook (via `StreamProvider`). If `StreamProvider` initializes `useStream` with a `null` `threadId` (for new sessions), the SDK will generate the `thread_id` upon this first `submit` call. The `onThreadId` callback in `StreamProvider` then handles the SDK-generated ID.
+- **File Paths:**
+  - `apps/web/src/features/chat-ui/components/Thread.tsx`
+- **Justification:** Confirms that the UI layer correctly defers `thread_id` management to the SDK for new threads, allowing the new `onThreadId` flow in `StreamProvider` to function as intended.
+
+### Sub-Phase 5.3: Testing and Verification
+
+- **Status:** 🟡 (In Progress)
+- **Depends On:** Step 5.1, Step 5.2
+- **Goal:** Thoroughly test the new thread creation and persistence flow.
+
+#### Step 5.3.1: Test Case 1 - New Proposal (First Message Flow)
+
+- **Status:** 🟡 (Under Investigation)
+- **Action Items:**
+
+  1.  **Preparation:**
+      - Ensure the LangGraph server (port 2024) is running.
+      - Have access to the LangGraph server's console logs.
+      - Have access to the PostgreSQL database used by the LangGraph server's `PostgresSaver` checkpointer, specifically the `checkpoints` table (or its equivalent, often named `langgraph_checkpoints`).
+  2.  **Execution:**
+      - Navigate to a URL initiating a new proposal for a specific RFP (e.g., `/dashboard/chat?rfpId=some-rfp-id`, ensuring no `threadId` is in the URL).
+  3.  **Initial Frontend Verification (Console Logs):**
+      - Verify `StreamProvider` initializes.
+      - Confirm `urlThreadId` (from `useQueryState`) is `null` or `undefined`.
+      - Confirm `expectingSdkThreadIdForRfpRef.current` is set to the `rfpId`.
+      - Confirm `sdkThreadIdProcessedRef.current` is `false`.
+  4.  **Send the First Message:**
+      - Type and send the first message from the UI.
+  5.  **Observe Frontend Behavior (Console Logs & UI):**
+      - Note the `submit()` call being made by `streamData`.
+      - Observe the `onThreadId` callback (`handleSdkThreadIdGeneration`) in `StreamProvider` being triggered. Note the `sdkGeneratedThreadId` it receives.
+      - Verify the call to the Express backend (`POST /api/rfp/proposal_threads`) to associate `rfpId` with the `sdkGeneratedThreadId` and `userId`.
+      - Confirm the frontend URL is updated by `setUrlThreadId(sdkGeneratedThreadId)` to include the new `threadId`.
+  6.  **Critical Backend Verification (LangGraph Server & Database - _Immediately after step 5 completes_):**
+      - **LangGraph Server Logs (Port 2024):**
+        - Check for any errors logged during the processing of the first message and the graph invocation.
+        - Look for logs related to the `PostgresSaver` checkpointer attempting to save a checkpoint for the `sdkGeneratedThreadId`. Are there any success or failure messages from the checkpointer?
+      - **PostgreSQL Database (`checkpoints` table):**
+        - Query the `checkpoints` table (e.g., `SELECT * FROM langgraph_checkpoints WHERE thread_id = 'THE_SDK_GENERATED_THREAD_ID';`).
+        - **Expected:** A new record (or records) should exist for this `sdkGeneratedThreadId`. This confirms the LangGraph server successfully created the initial checkpoint.
+        - **If No Record Exists:** This is the primary point of failure for the 404 error. It means the LangGraph server, despite the SDK generating an ID, did not persist the checkpoint. Investigate LangGraph server logs and checkpointer configuration (`robust-checkpointer.ts`, DB connection, permissions).
+  7.  **Express Backend Database Verification (`user_rfp_proposal_threads` table):**
+      - Check the `user_rfp_proposal_threads` table: A new record should exist linking the `rfpId`, `userId`, and the `sdkGeneratedThreadId`. (This part seems to be working based on your current issue, but good to double-check).
+  8.  **User Experience Verification (After successful checkpointing):**
+      - Subsequent interactions (sending more messages in the same session) should continue on the same thread without errors.
+      - Reloading the page (with the `sdkGeneratedThreadId` now in the URL) should load the existing chat history correctly from the LangGraph server.
+      - There should be no 404 errors from `POST /threads/.../history` when fetching history for this newly established and checkpointed thread.
+
+- **Purpose:** This detailed test aims to pinpoint whether the initial checkpoint for a new thread is being successfully created by the LangGraph server. A failure here is the most likely cause of the 404 errors on subsequent history loads.
+
+#### Step 5.3.2: Test Case 2 - Existing Proposal (Loading Flow)
+
+- **Action Items:**
+  1.  Navigate directly to a URL that includes an `rfpId` and a previously SDK-generated `threadId` (e.g., `/dashboard/chat?rfpId=some-rfp-id&threadId=existing-sdk-generated-id`).
+  2.  Verify `StreamProvider` initializes, and `urlThreadId` is correctly set to `existing-sdk-generated-id`.
+  3.  Verify `useStream` is initialized with this `threadId`.
+  4.  **Expected Frontend Behavior:**
+      - Chat history for the `existing-sdk-generated-id` should be fetched and displayed correctly.
+      - The `useEffect` hook for processing new SDK-generated IDs (Step 5.1.1) should NOT attempt to re-associate or re-process this thread if `sdkThreadIdProcessedRef` was correctly managed or if `urlThreadId` was present from the start.
+      - The chat should function normally, continuing the existing conversation.
+- **Justification:** Ensures that both new thread creation and loading of existing threads work correctly under the new SDK-driven `thread_id` generation model.
+
+---
+
 ## Phase 4: Testing and Refinement
 
 **Goal:** Thoroughly validate the entire integrated system.
