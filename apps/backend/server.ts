@@ -21,9 +21,6 @@ import { app } from "./api/express-server.js"; // Import the configured app
 // Initialize logger
 const logger = Logger.getInstance();
 
-// --- Global instances (will be initialized async) ---
-let graphInstance: CompiledStateGraph<any, any, any> | null = null;
-
 // Middleware
 
 // Enable CORS
@@ -50,26 +47,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// ===== Initialize LangGraph Components =====
-async function initializeLangGraph() {
+// ===== Configure Express App Routes and Middleware =====
+function configureAppRoutesAndMiddleware() {
   try {
+    logger.info("Configuring Express app routes and middleware...");
     logger.info(
-      "Initializing LangGraph components for Express server (graph only)..."
-    );
-    graphInstance = await createProposalGenerationGraph();
-    logger.info(
-      "Proposal generation graph object created (potentially for schema or direct calls if any remain)."
-    );
-    logger.info(
-      "Express server's LangGraph-related initializations complete (if any are still needed)."
+      "Proposal generation graph object is NOT created by this Express server. This is handled by the separate LangGraph server."
     );
 
-    // Ensure instances are not null before proceeding
-    if (!graphInstance) {
-      throw new Error("Graph failed to initialize.");
-    }
-
-    // --- Mount Routers AFTER initialization ---
+    // --- Mount Routers ---
     logger.info("Mounting API routers...");
 
     // Mount other specific routers first
@@ -77,7 +63,9 @@ async function initializeLangGraph() {
     logger.info("Mounted /api/rfp router.");
 
     // LangGraph API is now handled by the LangGraph server
-    logger.info("LangGraph API is handled by the LangGraph server.");
+    logger.info(
+      "LangGraph-specific API endpoints are handled by the LangGraph server, not this Express server."
+    );
 
     // Health check can be mounted any time
     app.get("/api/health", (req, res) => {
@@ -112,14 +100,17 @@ async function initializeLangGraph() {
     );
     logger.info("Final 404 and error handling middleware configured.");
   } catch (error) {
-    logger.error("FATAL: Failed during initialization or router setup:", error);
-    process.exit(1); // Exit if critical initialization fails
+    logger.error(
+      "FATAL: Failed during Express app routes and middleware configuration:",
+      error
+    );
+    process.exit(1); // Exit if critical configuration fails
   }
 }
 
 // --- Start Server AFTER Initialization ---
 async function startServer() {
-  await initializeLangGraph(); // Wait for initialization and router mounting
+  await configureAppRoutesAndMiddleware(); // Wait for initialization and router mounting
 
   const PORT = process.env.PORT || 3001; // Use a single consistent port
   const server = createServer(app); // Use the imported and augmented Express app
