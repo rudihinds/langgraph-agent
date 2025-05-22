@@ -7,6 +7,7 @@ import chatRouter from "./chat.js";
 // import threadRouter from "./thread.js"; // Removed
 import workflowRouter from "./workflow.js";
 // import { startProposalGeneration } from "./express-handlers/start.js"; // Removed
+import proposalThreadsRouter from "./proposalThreads.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -27,5 +28,6 @@ router.use("/resume", resumeRouter);
 router.use("/interrupt-status", interruptStatusRouter);
 router.use("/chat", chatRouter);
 // router.use("/thread", threadRouter); // This is now obsolete and removed
+router.use("/proposal_threads", proposalThreadsRouter);
 
 export default router;

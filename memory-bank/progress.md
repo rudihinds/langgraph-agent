@@ -1,3 +1,99 @@
+# Project Progress - Proposal Agent Development
+
+## What Works / Recently Completed
+
+### Phase 1: Backend - Singleton Checkpointer Factory for LangGraph Server
+
+- **Step 1.1: Implement Singleton Checkpointer Factory:** ✅ Completed.
+  - Refactored `apps/backend/lib/persistence/robust-checkpointer.ts` with `getInitializedCheckpointer`.
+  - Ensures `PostgresSaver.setup()` is called only once.
+  - Corrected TypeScript type error for `pgPoolInstance`.
+- **Step 1.2: Utilize Singleton Checkpointer in Graph Compilation:** ✅ Completed.
+  - Updated `createProposalGenerationGraph` in `apps/backend/agents/proposal-generation/graph.ts` to use `getInitializedCheckpointer`.
+- **Step 1.3: Verify `langgraph.json` and Server Startup:** ✅ Partially Completed.
+  - `langgraph.json` verified to point to `createProposalGenerationGraph`.
+  - **User Task:** Manually test LangGraph server startup and check logs.
+
+### Phase 2: Backend - Application Association Layer (Express Server - Port 3001)
+
+- **Step 2.1: Define `user_rfp_proposal_threads` Table:** ✅ Completed.
+  - SQL DDL defined and applied via Supabase migration. Table `user_rfp_proposal_threads` created.
+- **Step 2.2: Create `ProposalThreadAssociationService`:** ✅ Completed.
+  - `apps/backend/services/proposalThreadAssociation.service.ts` created.
+  - Service methods `recordNewProposalThread` and `listUserProposalThreads` implemented.
+  - Supabase client import updated to use `serverSupabase` (service role client).
+- **Step 2.3: Create API Endpoints for Thread Association:** ✅ Completed.
+  - Implemented `POST /api/rfp/proposal_threads` (records new thread association; validates input, authenticates user, calls service).
+  - Implemented `GET /api/rfp/proposal_threads` (lists user threads; optional rfpId filter; authenticates user, calls service).
+  - Endpoints are protected by auth middleware and use Zod for validation.
+
+## What's Left to Build (Immediate Focus from `final_threads_setup.md`)
+
+1.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`:**
+    - Analyze and refactor these services to align with the new architecture.
+2.  **Phase 3: Frontend - `thread_id` Generation and SDK Interaction:** (All steps)
+3.  **Phase 4: Testing and Refinement:** (All steps)
+
+## Current Status
+
+- Core backend infrastructure for singleton checkpointer management in the LangGraph server is in place.
+- The database table and service layer for managing application-level thread associations (`user_id`, `rfp_id`, `app_generated_thread_id`) are implemented.
+- **API endpoints for thread association are now live and ready for frontend integration.**
+- **Known Issue:** A linter error exists in `ProposalThreadAssociationService` due to the missing Supabase `database.types.ts` file. This is blocked by the user needing to install the Supabase CLI to generate these types.
+
+## Evolution of Project Decisions
+
+- Confirmed the necessity of a singleton `PostgresSaver` and its `setup()` being called only once.
+- Solidified the architecture: frontend generates `app_generated_thread_id`, Express backend records association, LangGraph server uses this ID for its checkpointer.
+- Identified `serverSupabase` (service role) as the appropriate client for backend database services.
+
+# Project Progress
+
+## Current Status
+
+**Overall:** Development is focused on implementing robust thread management for LangGraph, ensuring user conversations are correctly associated and can be resumed. The UI for managing these threads is the current primary task.
+
+**Key Milestones Achieved:**
+
+- Clarified LangGraph SDK's `thread_id` generation for new threads.
+- Successfully implemented backend API endpoints in the Express server (`:3001`) to associate SDK-generated `thread_id`s with `rfpId` and `userId` in the `user_rfp_proposal_threads` Supabase table.
+- Confirmed that `StreamProvider.tsx` correctly captures SDK-generated `thread_id`s and uses URL-provided `thread_id`s for existing sessions.
+- Understood that `langgraph-cli dev` utilizes `InMemorySaver` by default, and `PostgresSaver` (via `robust-checkpointer.ts`) would be active in a custom server deployment.
+- Updated planning documents (`final_threads_setup.md`) to reflect the `InMemorySaver` behavior in `dev` and the SDK-driven `thread_id` flow.
+
+**Work in Progress:**
+
+- **Phase 3, Step 3.6: Implement Frontend UI for Thread Management and Selection**
+  - Developing UI components (`ProposalThreadsList.tsx`) to list associated threads.
+  - Integrating this list into a chat-specific sidebar.
+  - Implementing UI logic for selecting existing threads and starting new ones.
+
+## What Works
+
+- **Backend Thread Association:** The Express server can reliably create and list associations between users, RFPs, and SDK-generated `thread_id`s.
+- **SDK `thread_id` Capture:** `StreamProvider.tsx` effectively captures `thread_id`s provided by the LangGraph SDK for new sessions.
+- **LangGraph `InMemorySaver` (`dev` mode):** The LangGraph server (via `langgraph-cli dev`) correctly uses its `InMemorySaver` to manage thread state for the duration of the server session, keyed by the `thread_id` passed from the frontend.
+- **URL-based Thread Loading:** The frontend can load existing threads by passing the `thread_id` in the URL, which `StreamProvider` uses to initialize SDK interactions.
+
+## What's Left to Build (Immediate Focus)
+
+- **Frontend UI for Thread Management (Step 3.6 of `final_threads_setup.md`):**
+  - Component to list threads from the backend (`ProposalThreadsList.tsx`).
+  - Integration of this component into a chat-specific sidebar.
+  - UI interactions for selecting existing threads (updating URL `threadId`).
+  - UI interactions for starting new proposal threads (clearing URL `threadId`, relying on SDK generation).
+  - Styling and conditional rendering of the thread management UI.
+
+## Known Issues
+
+- No major blocking issues related to the current UI implementation task. The primary "issue" is the known behavior of `langgraph-cli dev` using `InMemorySaver`, which is accepted for the current development phase.
+
+## Evolution of Project Decisions
+
+- **`thread_id` Generation:** Shifted from frontend UUID generation for LangGraph `thread_id`s to relying on the LangGraph SDK to generate the `thread_id` for new threads. The frontend then captures this ID and associates it in the application backend.
+- **Checkpointer Understanding (`dev` vs. Production):** Clarified that while `robust-checkpointer.ts` correctly sets up `PostgresSaver`, the `langgraph-cli dev` environment defaults to `InMemorySaver`. True PostgreSQL persistence for a self-hosted setup will require a custom server invoking the graph compiled with `PostgresSaver`.
+- **Planning Doc Consolidation:** `final_threads_setup.md` was updated to merge frontend implementation phases (old 3 and 5) into a coherent new Phase 3, reflecting the current SDK-driven `thread_id` flow and UI focus.
+
 # Project Progress
 
 ## Current Status
@@ -316,3 +412,95 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
 - **Shifted from custom `SupabaseCheckpointer` to official `PostgresSaver`:** Reduces maintenance and aligns with LangGraph standards.
 - **Adopted deterministic `thread_id` pattern:** Simplifies thread lookup and management compared to previous UUID mapping (`ThreadService` is now deprecated).
 - **Centralized workflow logic in `OrchestratorService`:** Provides a clear control point for graph interactions.
+
+## Phase 3: Frontend - `thread_id` Generation and SDK Interaction
+
+**Goal:** Implement frontend logic to generate `thread_id`s, record associations via the Express backend, and correctly use these `thread_id`s when interacting with the LangGraph server.
+
+- **Step 3.1: Frontend Environment Configuration:** ✅ (Verified)
+- **Step 3.2: UUID Generation Utility:** ✅ (Completed - `uuid` package installed and used directly)
+- **Step 3.3: Implement "Start New Proposal" Flow:** ✅ (Completed)
+  - **API Client (`apps/web/src/lib/api.ts`):** `recordNewProposalThread` function: ✅
+  - **Frontend Provider Logic (`StreamProvider.tsx`, `ThreadProvider.tsx`):** Core logic for new thread initiation and association: ✅
+- **Step 3.4: Implement "Continue/Select Existing Proposal" Flow:** ✅ (Completed)
+  - **API Client (`apps/web/src/lib/api.ts`):** `listUserProposalThreads` function: ✅
+  - **Frontend Provider Logic (`ThreadProvider.tsx`):** Fetching and managing `applicationThreads`: ✅
+  - **URL-driven loading via `StreamProvider.tsx`**: ✅
+- **Step 3.5: LangGraph SDK Integration Review:** ✅ (Completed)
+  - Verified `StreamProvider.tsx` correctly passes `thread_id` to SDK calls.
+- **Step 3.6: Implement Frontend UI for Thread Management and Selection:** ✅ (Completed)
+  - New UI components (`ProposalThreadsList.tsx`, `ProposalListItem.tsx`) created in `apps/web/src/features/thread/components/`.
+  - UI integrated into `AgentProvidersWrapper.tsx` as a sidebar for chat pages.
+  - UI allows listing threads, selecting existing threads (updates URL), and starting new proposals for an RFP (updates URL to trigger `StreamProvider`).
+
+**Note on Deprecated Express Endpoints (Feedback/Resume/Interrupt):**
+Express backend API endpoints `/api/rfp/feedback`, `/api/rfp/resume`, and `/api/rfp/interrupt-status` have been temporarily disabled (return 503) due to reliance on a deprecated orchestrator model. These require future refactoring to work with the LangGraph server's HITL capabilities. Files affected: `apps/backend/api/rfp/feedback.ts`, `resume.ts`, `interrupt-status.ts`.
+
+## Phase 4: Testing and Refinement
+
+**Goal:** Thoroughly validate the entire integrated system.
+
+- **Step 4.1: Test Singleton Checkpointer Initialization:** ◻️ (Not Started)
+- **Step 4.2: Test Frontend and Backend API Flows:** ◻️ (Not Started)
+- **Step 4.3: Test LangGraph Persistence with Application `thread_id`:** ◻️ (Not Started)
+- **Step 4.4: Comprehensive Error Handling:** ◻️ (Not Started)
+
+## What's Left to Build
+
+- **Phase 4: Testing and Refinement** (All steps).
+- Future refactor of deprecated Express backend HITL-related API endpoints (`feedback`, `resume`, `interrupt-status`).
+
+## Current Status
+
+- Phase 1 (Backend Singleton Checkpointer) is ✅ Completed.
+- Phase 2 (Backend Application Association Layer) is ✅ Completed.
+- Phase 3 (Frontend `thread_id` Generation, SDK Interaction, and UI) is ✅ Completed.
+- The system is now ready for comprehensive end-to-end testing (Phase 4).
+- Identified backend API endpoints (`feedback`, `resume`, `interrupt-status`) that are temporarily disabled and require future refactoring.
+
+## API Routing and Persistence Stability:
+
+- Resolved a series of 404 errors related to API routing and LangGraph checkpointer initialization.
+- Frontend requests to the Express backend (e.g., `POST /api/rfp/proposal_threads`) are now correctly routed and handled.
+- Frontend requests to the LangGraph server (e.g., `POST /threads/.../history`) are reaching the server.
+- The LangGraph `PostgresSaver` checkpointer is now correctly initializing and creating its database tables via the `pgSaver.setup()` call within the `getInitializedCheckpointer` factory. This resolved the "Thread not found" errors from the LangGraph server.
+- Clear distinction and correct usage of `NEXT_PUBLIC_API_URL` (for Express backend) and `NEXT_PUBLIC_LANGGRAPH_API_URL` (for LangGraph server) is established.
+
+## Previous Completions (Phases 1 & 2 of `final_threads_setup.md` up to API endpoints):
+
+- Singleton checkpointer factory (`getInitializedCheckpointer`) for LangGraph server is robust.
+- `user_rfp_proposal_threads` table in Supabase for application-level thread association is created.
+- `ProposalThreadAssociationService` for managing these associations is implemented.
+- API endpoints (`POST` and `GET /api/rfp/proposal_threads`) for thread association are implemented and functional.
+
+## What's Left to Build (Immediate Focus from `final_threads_setup.md` and beyond)
+
+1.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts` (Express Backend):**
+    - Analyze and refactor these services to align with the current architecture where the LangGraph server manages its own checkpointer and the Express backend handles application-level thread association and orchestration tasks that don't directly involve running graph steps (e.g., initiating a new graph run, interpreting HITL feedback for state updates outside the graph flow).
+2.  **Phase 3: Frontend - `thread_id` Generation and SDK Interaction:**
+    - Implement frontend logic for generating `app_generated_thread_id`.
+    - Ensure frontend calls the new `/api/rfp/proposal_threads` endpoint to record association before interacting with LangGraph.
+    - Ensure frontend uses the `app_generated_thread_id` when interacting with the LangGraph server SDK.
+3.  **Phase 4: Testing and Refinement:**
+    - Conduct thorough end-to-end testing of the entire proposal creation, interaction, and persistence flow.
+    - Test HITL scenarios with the new setup.
+    - Verify multi-tenancy and user-specific data isolation.
+4.  **Continue `ProposalGenerationGraph` Node Implementations:** Resume work on core graph nodes once the foundational persistence and API layers are fully stable and tested.
+
+## Current Status
+
+- The core API routing and LangGraph persistence mechanisms are now believed to be stable and correctly configured.
+- The system can successfully record application-level thread associations.
+- The LangGraph server can successfully persist and retrieve thread states using its `PostgresSaver` checkpointer.
+- **Next major steps involve:**
+
+  - Refactoring the Express backend's `OrchestratorService` to work with the now independent LangGraph server's state.
+  - Integrating the frontend to correctly generate and use the `app_generated_thread_id` for both Express backend association and LangGraph server interaction.
+
+- **Known Issue (User Task):** Linter error in `ProposalThreadAssociationService` due to missing Supabase `database.types.ts` file. User needs to install Supabase CLI to generate these types.
+
+## Evolution of Project Decisions
+
+- **API Routing:** Refined understanding of how Express sub-routers and base paths interact. Ensured internal API prefixes are not duplicated if already handled by environment variables or primary router configurations.
+- **LangGraph Persistence:** Confirmed the critical role of `PostgresSaver.setup()` and ensured it's reliably called via our `getInitializedCheckpointer` factory. Shifted to relying on the library for its table creation rather than manual DDL for checkpointer tables.
+- **Environment Variables:** Clarified the specific roles of `NEXT_PUBLIC_API_URL` vs. `NEXT_PUBLIC_LANGGRAPH_API_URL` for frontend configuration.

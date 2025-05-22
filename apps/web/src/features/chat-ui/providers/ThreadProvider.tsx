@@ -12,6 +12,11 @@ import { Thread, ThreadStatus } from "@langchain/langgraph-sdk";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import {
+  recordNewProposalThread,
+  listUserProposalThreads,
+  UserProposalThreadType,
+} from "@/lib/api";
 
 import { createClient } from "../lib/client";
 
@@ -19,12 +24,18 @@ interface ThreadContextType {
   threads: Thread[];
   setThreads: React.Dispatch<React.SetStateAction<Thread[]>>;
   getThreads: (agentId?: string) => Promise<Thread[]>;
-  createThread: (input?: Record<string, any>) => Promise<string | null>;
+  applicationThreads: UserProposalThreadType[];
+  getApplicationThreads: (rfpId?: string) => Promise<UserProposalThreadType[]>;
+  createThread: (
+    input?: Record<string, any>,
+    proposalTitle?: string
+  ) => Promise<string | null>;
   deleteThread: (threadId: string) => Promise<boolean>;
   loading: boolean;
   error: Error | null;
   threadsLoading: boolean;
   setThreadsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  appThreadsLoading: boolean;
 }
 
 const ThreadContext = createContext<ThreadContextType | undefined>(undefined);
@@ -47,8 +58,12 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
   const [loading, setLoading] = useState(false);
   const [threadsLoading, setThreadsLoading] = useState(false);
+  const [appThreadsLoading, setAppThreadsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [applicationThreads, setApplicationThreads] = useState<
+    UserProposalThreadType[]
+  >([]);
 
   // Update URL params helper function
   const updateUrlParams = useCallback(
@@ -83,7 +98,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
       const client = createClient(apiUrl, session?.access_token);
 
-      setLoading(true);
+      setThreadsLoading(true);
       setError(null);
 
       try {
@@ -117,40 +132,109 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
         });
         return [];
       } finally {
-        setLoading(false);
+        setThreadsLoading(false);
       }
     },
     [apiUrl, assistantId, session?.access_token]
+  );
+
+  const getApplicationThreads = useCallback(
+    async (rfpIdFilter?: string): Promise<UserProposalThreadType[]> => {
+      if (!session?.access_token) {
+        // toast.error("User not authenticated to fetch application threads.");
+        // Don't toast here, as it might be called on initial load before session is ready
+        return [];
+      }
+      setAppThreadsLoading(true);
+      setError(null);
+      try {
+        const fetchedAppThreads = await listUserProposalThreads(
+          session.access_token,
+          rfpIdFilter
+        );
+        setApplicationThreads(fetchedAppThreads);
+        return fetchedAppThreads;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err : new Error(String(err));
+        console.error("Error fetching application threads:", errorMsg);
+        setError(errorMsg);
+        toast.error("Failed to fetch your proposal threads.", {
+          description: errorMsg.message,
+        });
+        return [];
+      } finally {
+        setAppThreadsLoading(false);
+      }
+    },
+    [session?.access_token]
   );
 
   /**
    * Create a new thread
    */
   const createThread = useCallback(
-    async (input?: Record<string, any>): Promise<string | null> => {
+    async (
+      input?: Record<string, any>,
+      proposalTitle?: string
+    ): Promise<string | null> => {
       if (!apiUrl || !assistantId) {
         toast.error("API URL or Assistant ID not set");
         return null;
       }
 
+      const rfpId = searchParams.get("rfpId");
+
       setLoading(true);
       setError(null);
+
+      let langGraphThreadId: string | null = null;
 
       try {
         const client = createClient(apiUrl, session?.access_token);
 
-        const threadId = await client.threads.create({
+        const threadIdResponse = await client.threads.create({
           metadata: {
             graph_id: assistantId,
             ...(input && { initial_input: JSON.stringify(input) }),
           },
         });
 
+        langGraphThreadId =
+          typeof threadIdResponse === "string"
+            ? threadIdResponse
+            : threadIdResponse.thread_id;
+
+        if (langGraphThreadId && rfpId && session?.access_token) {
+          try {
+            await recordNewProposalThread(
+              {
+                rfpId,
+                appGeneratedThreadId: langGraphThreadId,
+                ...(proposalTitle && { proposalTitle }),
+              },
+              session.access_token
+            );
+            toast.success("Proposal thread association recorded.");
+            await getApplicationThreads(rfpId);
+          } catch (assocError: any) {
+            console.error(
+              "Error recording proposal thread association:",
+              assocError
+            );
+            toast.error("Failed to record proposal thread association.", {
+              description: assocError.message,
+            });
+          }
+        } else if (rfpId && !session?.access_token) {
+          toast.info(
+            "LangGraph thread created, but user not authenticated to record association."
+          );
+        }
+
         // Refresh the threads list
         await getThreads();
 
-        // Convert to string if needed
-        return typeof threadId === "string" ? threadId : threadId.thread_id;
+        return langGraphThreadId;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         console.error("Error creating thread:", error);
@@ -163,7 +247,14 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [apiUrl, assistantId, getThreads, session?.access_token]
+    [
+      apiUrl,
+      assistantId,
+      getThreads,
+      session?.access_token,
+      searchParams,
+      getApplicationThreads,
+    ]
   );
 
   /**
@@ -189,7 +280,11 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
           prevThreads.filter((t) => t.thread_id !== threadId)
         );
 
-        toast.success("Thread deleted");
+        setApplicationThreads((prevAppThreads) =>
+          prevAppThreads.filter((t) => t.appGeneratedThreadId !== threadId)
+        );
+
+        toast.success("Thread deleted from LangGraph and local list.");
         return true;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -213,16 +308,27 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     }
   }, [apiUrl, assistantId, getThreads]);
 
+  // Initial loading of application threads
+  useEffect(() => {
+    const currentRfpId = searchParams.get("rfpId");
+    if (session?.access_token) {
+      getApplicationThreads(currentRfpId || undefined);
+    }
+  }, [session?.access_token, searchParams, getApplicationThreads]);
+
   const value = {
     threads,
     setThreads,
     getThreads,
+    applicationThreads,
+    getApplicationThreads,
     createThread,
     deleteThread,
     loading,
     error,
     threadsLoading,
     setThreadsLoading,
+    appThreadsLoading,
   };
 
   return (

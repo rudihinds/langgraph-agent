@@ -11,7 +11,7 @@
 - **Key Libraries:**
   - `@langchain/core` - Core LangChain components
   - `@langchain/langgraph` - Main agent graph framework
-  - `@langchain/langgraph-checkpoint-postgres` - Checkpoint persistence with PostgreSQL
+  - `@langchain/langgraph-checkpoint-postgres` - Checkpoint persistence with PostgreSQL. Requires `await checkpointer.setup()` to be called once during application initialization to ensure database tables are created.
   - `@supabase/supabase-js` - Supabase client for database, auth, and storage
   - `zod` - Schema validation for state and API inputs/outputs
   - Various LLM provider clients (Anthropic, OpenAI, Mistral, Gemini)
@@ -30,6 +30,8 @@
   - `PORT` - Port for the backend server (default: 3001)
   - `NEXT_PUBLIC_BACKEND_URL` - URL for backend API (default: "http://localhost:3001")
   - `NEXT_PUBLIC_APP_URL` - URL for frontend app (default: "http://localhost:3000")
+  - `NEXT_PUBLIC_API_URL` - Base URL for the primary backend Express.js API server (e.g., "http://localhost:3001"). Used for application-specific endpoints like RFP management, user proposals, etc.
+  - `NEXT_PUBLIC_LANGGRAPH_API_URL` - Base URL for the dedicated LangGraph.js server (e.g., "http://localhost:2024"). Used for direct interaction with LangGraph threads, streaming, and state.
   - `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY` - Optional: LangSmith observability (monitoring and debugging)
 
 - **Local Development:**

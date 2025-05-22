@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
-import { AuthenticatedRequest } from "../../lib/types/auth.js"; // Assuming auth middleware populates req.user
+// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
+import { AuthenticatedRequest } from "../../lib/types/auth.js";
 
 const router = express.Router();
 const logger = Logger.getInstance();
@@ -16,10 +16,32 @@ const logger = Logger.getInstance();
 router.post(
   "/init",
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    // TODO: Refactor or remove this endpoint. The primary flow for initializing a new proposal thread
+    // when rfpId is known is now handled by the frontend (StreamProvider) generating a UUID,
+    // calling POST /api/rfp/proposal_threads to record the association, and then using that UUID
+    // as the thread_id for the LangGraph server. This endpoint's original responsibilities
+    // (deterministic thread_id creation, graph invocation via orchestrator) are either handled
+    // differently or are no longer the Express backend's role for this specific flow.
+    // For now, this endpoint will return a 503 Service Unavailable.
+
+    const { rfpId } = req.body;
+    const userId = req.user?.id;
+    logger.warn("Attempt to use deprecated workflow/init endpoint", {
+      userId,
+      rfpId,
+    });
+
+    return res.status(503).json({
+      error: "Service Temporarily Unavailable",
+      message:
+        "The workflow initialization system is currently under reconstruction. Please ensure your client is using the latest flow involving POST /api/rfp/proposal_threads for new thread associations.",
+    });
+
+    /*
     logger.info("[API /rfp/workflow/init] Received request");
     try {
-      const userId = req.user?.id; // Assuming userId is available from auth middleware
-      const { rfpId } = req.body; // Removed initialRfpData
+      const userId = req.user?.id; 
+      const { rfpId } = req.body; 
 
       if (!userId) {
         logger.warn("[API /rfp/workflow/init] Unauthorized: User ID missing");
@@ -35,51 +57,44 @@ router.post(
         `[API /rfp/workflow/init] UserID: ${userId}, RFPID: ${rfpId}`
       );
 
-      const orchestratorService = await getOrchestrator();
-      const workflowContext =
-        await orchestratorService.initOrGetProposalWorkflow(userId, rfpId);
+      // DEPRECATED CODE:
+      // const orchestratorService = await getOrchestrator();
+      // const workflowContext =
+      //   await orchestratorService.initOrGetProposalWorkflow(userId, rfpId);
+      // if (workflowContext.isNew) {
+      //   logger.info(
+      //     `[API /rfp/workflow/init] New workflow for threadId: ${workflowContext.threadId}. Starting graph invocation.`
+      //   );
+      //   const { state: newWorkflowState } =
+      //     await orchestratorService.startProposalGeneration(
+      //       workflowContext.threadId, 
+      //       userId,
+      //       rfpId
+      //     );
+      //   return res.status(201).json({
+      //     threadId: workflowContext.threadId,
+      //     state: newWorkflowState,
+      //     isNew: true,
+      //   });
+      // } else {
+      //   logger.info(
+      //     `[API /rfp/workflow/init] Existing workflow found for threadId: ${workflowContext.threadId}`
+      //   );
+      //   return res.status(200).json({
+      //     threadId: workflowContext.threadId,
+      //     state: workflowContext.initialState, 
+      //     isNew: false,
+      //   });
+      // }
 
-      if (workflowContext.isNew) {
-        logger.info(
-          `[API /rfp/workflow/init] New workflow for threadId: ${workflowContext.threadId}. Starting graph invocation.`
-        );
-        // initialRfpData is no longer needed or checked here.
-        // The orchestrator's startProposalGeneration (or equivalent) will handle
-        // initiating the graph in a way that documentLoaderNode picks up the rfpId.
-
-        // The call to startProposalGeneration will be adjusted.
-        // It now needs the threadId determined by initOrGetProposalWorkflow.
-        // Assuming startProposalGeneration is refactored to accept threadId, userId, rfpId
-        // and to set up the initial graph state/message to trigger document loading.
-        const { state: newWorkflowState } =
-          await orchestratorService.startProposalGeneration(
-            workflowContext.threadId, // Pass the determined threadId
-            userId,
-            rfpId
-            // initialRfpData is removed
-          );
-        return res.status(201).json({
-          threadId: workflowContext.threadId,
-          state: newWorkflowState,
-          isNew: true,
-        });
-      } else {
-        logger.info(
-          `[API /rfp/workflow/init] Existing workflow found for threadId: ${workflowContext.threadId}`
-        );
-        return res.status(200).json({
-          threadId: workflowContext.threadId,
-          state: workflowContext.initialState, // This is the checkpoint state
-          isNew: false,
-        });
-      }
     } catch (error) {
       logger.error(
         "[API /rfp/workflow/init] Error initializing/getting workflow:",
         error
       );
-      next(error); // Pass to global error handler
+      next(error); 
     }
+    */
   }
 );
 

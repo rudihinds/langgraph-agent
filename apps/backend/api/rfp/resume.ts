@@ -1,7 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -19,6 +19,19 @@ const resumeSchema = z.object({
  * @returns {Object} - Object indicating resume status and detailed state information
  */
 router.post("/", async (req, res) => {
+  // TODO: Refactor this entire endpoint. Resuming a graph is now handled by the
+  // LangGraph server when the client sends new input/events to a thread after an interrupt.
+  // This Express endpoint might become obsolete or serve a different purpose related to application state.
+  // For now, this endpoint will return a 503 Service Unavailable.
+
+  logger.warn("Attempt to use deprecated resume endpoint", { body: req.body });
+  return res.status(503).json({
+    error: "Service Temporarily Unavailable",
+    message:
+      "The resume functionality is currently under reconstruction to integrate with the new LangGraph server architecture. Client applications should interact directly with the LangGraph server to resume threads.",
+  });
+
+  /*
   try {
     // Validate request body
     const result = resumeSchema.safeParse(req.body);
@@ -35,23 +48,18 @@ router.post("/", async (req, res) => {
     const { threadId } = result.data;
     logger.info("Resuming proposal generation", { threadId });
 
-    // Get orchestrator and resume execution
-    const orchestrator = await getOrchestrator();
+    // DEPRECATED CODE:
+    // const orchestrator = await getOrchestrator();
+    // const resumeResult = await orchestrator.resumeAfterFeedback(threadId);
+    // const interruptStatus = await orchestrator.getInterruptStatus(threadId);
+    // return res.status(200).json({
+    //   success: true,
+    //   message: resumeResult.message,
+    //   status: resumeResult.status,
+    //   interrupted: interruptStatus.interrupted,
+    //   interruptData: interruptStatus.interruptData,
+    // });
 
-    // Use the updated resumeAfterFeedback method
-    const resumeResult = await orchestrator.resumeAfterFeedback(threadId);
-
-    // Get the current interrupt status after resuming (in case we hit another interrupt)
-    const interruptStatus = await orchestrator.getInterruptStatus(threadId);
-
-    // Return a detailed response with both resume result and current interrupt state
-    return res.status(200).json({
-      success: true,
-      message: resumeResult.message,
-      status: resumeResult.status,
-      interrupted: interruptStatus.interrupted,
-      interruptData: interruptStatus.interruptData,
-    });
   } catch (error) {
     logger.error("Failed to resume proposal generation", {
       error: error instanceof Error ? error.message : String(error),
@@ -63,6 +71,7 @@ router.post("/", async (req, res) => {
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
+  */
 });
 
 export default router;

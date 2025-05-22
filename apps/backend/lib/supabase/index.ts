@@ -31,6 +31,3 @@ export {
   downloadFileWithRetry,
   uploadFileWithRetry,
 } from "./storage.js";
-
-// Export default instance for convenience
-export { default } from "./client.js";

@@ -1,8 +1,6 @@
 {
   "graphs": {
-    "proposal-generation": "apps/backend/agents/proposal-generation/graph.ts:createProposalGenerationGraph",
-    "proposal-agent": "apps/backend/agents/proposal-generation/graph.ts:createProposalGenerationGraph",
-    "agent": "apps/backend/agents/proposal-generation/graph.ts:createProposalGenerationGraph"
+    "proposal-agent": "apps/backend/agents/proposal-generation/graph.ts:createProposalGenerationGraph"
   },
   "env": ".env",
   "static_dir": "apps/backend/public",

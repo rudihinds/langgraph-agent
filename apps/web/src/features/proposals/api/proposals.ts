@@ -21,6 +21,7 @@ export type Proposal = {
   updatedAt: string;
   phase?: string;
   dueDate?: string;
+  associatedThreadId?: string | null;
 };
 
 /**
@@ -64,7 +65,38 @@ export async function getUserProposals(
       throw error;
     }
 
-    return data || [];
+    // For each proposal, fetch the latest associated thread_id
+    const proposalsWithThreads = await Promise.all(
+      (data || []).map(async (proposal) => {
+        const { data: threadData, error: threadError } = await supabase
+          .from("user_rfp_proposal_threads")
+          .select("app_generated_thread_id")
+          .eq("rfp_id", proposal.id)
+          .eq("user_id", sessionData.session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single(); // Expecting one or null
+
+        if (threadError && threadError.code !== "PGRST116") {
+          // PGRST116: 'single' row not found, which is fine
+          console.error(
+            `Error fetching thread for proposal ${proposal.id}:`,
+            threadError
+          );
+          // Decide if you want to throw, or just return proposal without threadId
+        }
+        return {
+          ...proposal,
+          associatedThreadId: threadData?.app_generated_thread_id || null,
+        };
+      })
+    );
+
+    console.log(
+      "[getUserProposals] Proposals with threads:",
+      JSON.stringify(proposalsWithThreads, null, 2)
+    );
+    return proposalsWithThreads;
   } catch (error) {
     console.error("Error fetching user proposals:", error);
     throw error;

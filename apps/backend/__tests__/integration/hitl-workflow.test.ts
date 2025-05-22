@@ -53,7 +53,7 @@ vi.mock("@langgraph/checkpoint-postgres", () => {
 
 // Now import everything else
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { OrchestratorService } from "../../services/orchestrator.service.js";
+import { OrchestratorService } from "../../services/[dep]orchestrator.service.js";
 import { FeedbackType } from "../../lib/types/feedback.js";
 import { OverallProposalState } from "../../state/modules/types.js";
 

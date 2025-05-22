@@ -6,7 +6,7 @@
  */
 import express, { Request, Response } from "express";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
 import { AuthenticatedRequest, AUTH_CONSTANTS } from "../../lib/types/auth.js";
 
 // Initialize logger
@@ -36,22 +36,45 @@ const router = express.Router();
  * @throws {500} - If an error occurs during processing
  */
 router.post("/", async (req: AuthenticatedRequest, res: Response) => {
+  // TODO: Refactor this entire endpoint. Chat interactions are now primarily handled
+  // by the client directly interacting with the LangGraph server.
+  // This Express endpoint might become obsolete or serve a different purpose (e.g., proxying with enhanced logic).
+  // For now, this endpoint will return a 503 Service Unavailable.
+
+  const { threadId, message } = req.body;
+  logger.warn("Attempt to use deprecated chat endpoint", { threadId, message });
+
+  // Preserve token refresh header logic if it's still relevant for other potential uses of this path
+  if (req.tokenRefreshRecommended === true) {
+    res.setHeader(AUTH_CONSTANTS.REFRESH_HEADER, "true");
+    logger.info(
+      `Token refresh recommended for user ${req.user?.id} (accessed deprecated chat endpoint)`,
+      {
+        tokenExpiresIn: req.tokenExpiresIn,
+        threadId,
+      }
+    );
+  }
+
+  return res.status(503).json({
+    error: "Service Temporarily Unavailable",
+    message:
+      "The chat message processing system is currently under reconstruction to integrate with the new LangGraph server architecture. Client applications should interact directly with the LangGraph server for chat.",
+  });
+
+  /*
   try {
     const { threadId, message } = req.body;
 
-    // Validate required fields
     if (!threadId) {
       return res.status(400).json({ error: "Missing threadId" });
     }
-
     if (!message) {
       return res.status(400).json({ error: "Missing message" });
     }
 
     logger.info(`Processing chat message for thread ${threadId}`);
 
-    // Add token refresh header if recommended
-    // This informs the client that their token will expire soon and should be refreshed
     if (req.tokenRefreshRecommended === true) {
       res.setHeader(AUTH_CONSTANTS.REFRESH_HEADER, "true");
       logger.info(`Token refresh recommended for user ${req.user?.id}`, {
@@ -60,18 +83,15 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    // Get orchestrator service
-    const orchestratorService = await getOrchestrator();
+    // DEPRECATED CODE:
+    // const orchestratorService = await getOrchestrator();
+    // const { response, commandExecuted } =
+    //   await orchestratorService.processChatMessage(threadId, message);
+    // return res.json({
+    //   response,
+    //   commandExecuted,
+    // });
 
-    // Process the chat message using the orchestrator
-    const { response, commandExecuted } =
-      await orchestratorService.processChatMessage(threadId, message);
-
-    // Return response to client
-    return res.json({
-      response,
-      commandExecuted,
-    });
   } catch (error) {
     logger.error(`Error processing chat message: ${error.message}`);
     return res.status(500).json({
@@ -79,6 +99,7 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
       message: error.message,
     });
   }
+  */
 });
 
 export default router;

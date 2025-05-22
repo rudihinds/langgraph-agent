@@ -10,6 +10,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { Logger } from "../lib/logger.js";
+import { authMiddleware } from "../lib/middleware/auth.js";
 import rfpRouter from "./rfp/index.js";
 
 // Initialize logger
@@ -37,11 +38,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Apply authentication middleware specifically to /rfp routes
+app.use("/rfp", authMiddleware);
+
 // Mount the RFP router
-app.use("/api/rfp", rfpRouter);
+app.use("/rfp", rfpRouter);
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
+app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 

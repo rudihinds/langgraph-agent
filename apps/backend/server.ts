@@ -12,7 +12,6 @@ import type { CompiledStateGraph } from "@langchain/langgraph"; // Needed for ty
 import { createServer } from "http";
 import { Logger } from "@/lib/logger.js";
 import { createProposalGenerationGraph } from "@/agents/proposal-generation/graph.js";
-import { createCheckpointer } from "@/services/checkpointer.service.js";
 import rfpRouter from "./api/rfp/index.js";
 import { createLangGraphRouter } from "./api/langgraph/index.js"; // Import the factory function
 import cookieParser from "cookie-parser"; // Import cookie-parser
@@ -21,11 +20,6 @@ import { app } from "./api/express-server.js"; // Import the configured app
 
 // Initialize logger
 const logger = Logger.getInstance();
-
-// --- Global instances (will be initialized async) ---
-let graphInstance: CompiledStateGraph<any, any, any> | null = null;
-let checkpointerInstance: BaseCheckpointSaver | null = null;
-// ------------------------------------------
 
 // Middleware
 
@@ -53,35 +47,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// ===== Initialize LangGraph Components =====
-async function initializeLangGraph() {
+// ===== Configure Express App Routes and Middleware =====
+function configureAppRoutesAndMiddleware() {
   try {
-    logger.info("Initializing LangGraph components...");
-    graphInstance = await createProposalGenerationGraph();
-    logger.info("Proposal generation graph initialized.");
-    checkpointerInstance = await createCheckpointer("proposal-agent");
-    logger.info("Checkpointer service initialized.");
-    logger.info("LangGraph components initialized successfully.");
+    logger.info("Configuring Express app routes and middleware...");
+    logger.info(
+      "Proposal generation graph object is NOT created by this Express server. This is handled by the separate LangGraph server."
+    );
 
-    // Ensure instances are not null before proceeding
-    if (!graphInstance || !checkpointerInstance) {
-      throw new Error("Graph or Checkpointer failed to initialize.");
-    }
-
-    // --- Mount Routers AFTER initialization ---
+    // --- Mount Routers ---
     logger.info("Mounting API routers...");
 
     // Mount other specific routers first
     app.use("/api/rfp", rfpRouter);
     logger.info("Mounted /api/rfp router.");
 
-    // Create and mount the LangGraph router using the factory
-    const langgraphRouter = createLangGraphRouter({
-      graphInstance,
-      checkpointerInstance,
-    });
-    app.use("/api/langgraph", langgraphRouter);
-    logger.info("Mounted /api/langgraph router.");
+    // LangGraph API is now handled by the LangGraph server
+    logger.info(
+      "LangGraph-specific API endpoints are handled by the LangGraph server, not this Express server."
+    );
 
     // Health check can be mounted any time
     app.get("/api/health", (req, res) => {
@@ -116,14 +100,17 @@ async function initializeLangGraph() {
     );
     logger.info("Final 404 and error handling middleware configured.");
   } catch (error) {
-    logger.error("FATAL: Failed during initialization or router setup:", error);
-    process.exit(1); // Exit if critical initialization fails
+    logger.error(
+      "FATAL: Failed during Express app routes and middleware configuration:",
+      error
+    );
+    process.exit(1); // Exit if critical configuration fails
   }
 }
 
 // --- Start Server AFTER Initialization ---
 async function startServer() {
-  await initializeLangGraph(); // Wait for initialization and router mounting
+  await configureAppRoutesAndMiddleware(); // Wait for initialization and router mounting
 
   const PORT = process.env.PORT || 3001; // Use a single consistent port
   const server = createServer(app); // Use the imported and augmented Express app

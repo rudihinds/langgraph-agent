@@ -1,7 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { Logger } from "../../lib/logger.js";
-import { getOrchestrator } from "../../services/orchestrator-factory.js";
+// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -14,6 +14,23 @@ const router = express.Router();
  * @returns {Object} - Object indicating if the proposal generation is interrupted and the state if interrupted
  */
 router.get("/:threadId", async (req, res) => {
+  // TODO: Refactor this entire endpoint. Interrupt status is now managed by the
+  // LangGraph server. The client should get this information directly from the
+  // LangGraph server's state or events.
+  // This Express endpoint is likely obsolete for the main proposal flow.
+  // For now, this endpoint will return a 503 Service Unavailable.
+
+  const { threadId } = req.params;
+  logger.warn("Attempt to use deprecated interrupt-status endpoint", {
+    threadId,
+  });
+  return res.status(503).json({
+    error: "Service Temporarily Unavailable",
+    message:
+      "The interrupt status check is currently under reconstruction to integrate with the new LangGraph server architecture. Client applications should obtain interrupt status directly from the LangGraph server.",
+  });
+
+  /*
   try {
     // Validate threadId from path parameters
     const paramSchema = z.object({
@@ -34,12 +51,11 @@ router.get("/:threadId", async (req, res) => {
     const { threadId } = result.data;
     logger.info("Checking interrupt status for thread", { threadId });
 
-    // Get the orchestrator
-    const orchestrator = await getOrchestrator();
+    // DEPRECATED CODE:
+    // const orchestrator = await getOrchestrator();
+    // const status = await orchestrator.getInterruptStatus(threadId);
+    // return res.status(200).json(status);
 
-    // Get the interrupt status and return it directly - use threadId
-    const status = await orchestrator.getInterruptStatus(threadId);
-    return res.status(200).json(status);
   } catch (error) {
     logger.error("Failed to check interrupt status", { error });
     return res.status(500).json({
@@ -47,6 +63,7 @@ router.get("/:threadId", async (req, res) => {
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
+  */
 });
 
 export default router;

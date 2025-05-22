@@ -45,6 +45,7 @@ interface ProposalCardProps {
     updatedAt: string;
     dueDate?: string;
     phase?: string;
+    associatedThreadId?: string | null;
   };
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
@@ -92,6 +93,19 @@ function ProposalCardView({
         year: "numeric",
       })
     : null;
+
+  const chatLinkParams = new URLSearchParams();
+  chatLinkParams.set("rfpId", proposal.id);
+  if (proposal.associatedThreadId) {
+    chatLinkParams.set("threadId", proposal.associatedThreadId);
+  }
+  const chatHref = `/dashboard/chat?${chatLinkParams.toString()}`;
+
+  if (proposal.id === "f3001786-9f37-437e-814e-170c77b9b748") {
+    console.log(
+      `[ProposalCardView] For proposal ${proposal.title} (ID: ${proposal.id}), associatedThreadId: ${proposal.associatedThreadId}, generated chatHref: ${chatHref}`
+    );
+  }
 
   return (
     <Card
@@ -191,10 +205,7 @@ function ProposalCardView({
               Continue
             </Button>
           </Link>
-          <Link
-            href={`/dashboard/chat?rfpId=${proposal.id}`}
-            className="w-full"
-          >
+          <Link href={chatHref} className="w-full">
             <Button variant="outline" className="w-full" size="sm">
               Continue in Chat
             </Button>

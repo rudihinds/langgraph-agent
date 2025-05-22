@@ -2,9 +2,13 @@
 
 ## Overview
 
-This directory contains the API endpoints for the Request for Proposal (RFP) processing system. It provides routes for starting proposal generation, checking interrupt status, submitting user feedback, and resuming generation after feedback.
+This directory contains the API endpoints for the Request for Proposal (RFP) processing system.
+
+**[IMPORTANT NOTE]**: Several endpoints in this API module (`/interrupt-status`, `/chat`, `/feedback`, `/resume`, and `/workflow/init`) are currently returning `503 Service Unavailable`. This is due to an ongoing system refactor where the core proposal generation logic, state management, and Human-in-the-Loop (HITL) interactions are being migrated to a dedicated LangGraph server. Client applications should now primarily interact directly with the LangGraph server for these functionalities. The descriptions below may reflect the original design and are pending updates to align with the new architecture.
 
 ## Services Architecture
+
+**[DEPRECATED ARCHITECTURE INFO]**: The API previously followed a factory pattern with an Express-based Orchestrator Service. This is being phased out. The new architecture centers around a LangGraph server.
 
 The API follows a factory pattern with three main components:
 
@@ -16,7 +20,7 @@ The API follows a factory pattern with three main components:
 
 ### GET /rfp/interrupt-status
 
-Checks if a proposal generation process has been interrupted and needs user feedback.
+**[DEPRECATED ENDPOINT]** Checks if a proposal generation process has been interrupted and needs user feedback. (Currently returns 503)
 
 **Query Parameters:**
 
@@ -42,7 +46,7 @@ Checks if a proposal generation process has been interrupted and needs user feed
 
 ### POST /rfp/chat
 
-Handles chat messages for a proposal, processes them through the orchestrator, and returns AI responses.
+**[DEPRECATED ENDPOINT]** Handles chat messages for a proposal, processes them through the orchestrator, and returns AI responses. (Currently returns 503)
 
 **Request Body:**
 
@@ -72,7 +76,7 @@ This header allows clients to proactively refresh tokens before they expire, pre
 
 ### POST /rfp/feedback
 
-Submits user feedback during an interrupt for content review.
+**[DEPRECATED ENDPOINT]** Submits user feedback during an interrupt for content review. (Currently returns 503)
 
 **Request Body:**
 
@@ -95,7 +99,7 @@ Submits user feedback during an interrupt for content review.
 
 ### POST /rfp/resume
 
-Resumes proposal generation after feedback has been processed.
+**[DEPRECATED ENDPOINT]** Resumes proposal generation after feedback has been processed. (Currently returns 503)
 
 **Request Body:**
 
@@ -121,28 +125,32 @@ Resumes proposal generation after feedback has been processed.
 
 ## Developer Guide
 
+**[OUTDATED GUIDE]**: Much of the information below, particularly regarding the OrchestratorService and direct HITL management via these Express endpoints, is outdated due to the migration to a LangGraph server-centric architecture.
+
 ### Instantiating the Orchestrator
 
-Always use the `getOrchestrator` factory function to obtain an instance of the Orchestrator service:
-
-```typescript
-import { getOrchestrator } from "../../../services/orchestrator-factory.js";
-
-// Later in your code:
-const orchestrator = getOrchestrator(proposalId);
-```
+**[REMOVED - DEPRECATED PATTERN]**
+// Always use the `getOrchestrator` factory function to obtain an instance of the Orchestrator service:
+//
+// `typescript
+// import { getOrchestrator } from "../../../services/orchestrator-factory.js";
+//
+// // Later in your code:
+// const orchestrator = getOrchestrator(proposalId);
+// `
 
 ### HITL Workflow
 
-Human-in-the-Loop workflow follows this sequence:
-
-1. **Interrupt Detection**:
-   - Call `orchestrator.getInterruptStatus(proposalId)` to check if user input is needed
-2. **Feedback Submission**:
-   - Call `orchestrator.submitFeedback({ proposalId, feedbackType, contentRef, comment })`
-   - `feedbackType` can be "approve", "revise", or "regenerate"
-3. **Resume Generation**:
-   - Call `orchestrator.resumeAfterFeedback(proposalId)` to continue processing
+**[REMOVED - DEPRECATED PATTERN]** This workflow is now managed by the LangGraph server.
+// Human-in-the-Loop workflow follows this sequence:
+//
+// 1. **Interrupt Detection**:
+// - Call `orchestrator.getInterruptStatus(proposalId)` to check if user input is needed
+// 2. **Feedback Submission**:
+// - Call `orchestrator.submitFeedback({ proposalId, feedbackType, contentRef, comment })`
+// - `feedbackType` can be "approve", "revise", or "regenerate"
+// 3. **Resume Generation**:
+// - Call `orchestrator.resumeAfterFeedback(proposalId)` to continue processing
 
 ### Token Refresh Handling
 

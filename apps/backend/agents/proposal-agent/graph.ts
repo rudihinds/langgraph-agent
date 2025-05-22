@@ -65,7 +65,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import {
   createCheckpointer,
   generateThreadId,
-} from "../../services/checkpointer.service.js";
+} from "../../services/[dep]checkpointer.service.js";
 
 // Restore FULL explicit channels definition
 const proposalGraphStateChannels: StateGraphArgs<ProposalState>["channels"] = {

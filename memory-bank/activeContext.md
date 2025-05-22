@@ -1,4 +1,61 @@
-# Current Work Focus
+# Active Context - Proposal Agent Development
+
+## Current Work Focus
+
+**Primary Focus: Stabilizing LangGraph Thread Persistence and API Routing**
+
+The most recent efforts have revolved around debugging and resolving a series of cascading errors related to API routing and LangGraph checkpointer initialization. The core issue stemmed from how the LangGraph server interacts with its PostgreSQL database for persisting thread states, and how the frontend and backend Express server route requests to the correct services.
+
+**Debugging Journey & Resolutions:**
+
+1.  **Initial Error: Recursion in Frontend (`useToast`)**
+
+    - Identified a `useEffect` in `apps/web/src/features/ui/components/toast.tsx` with a missing dependency array, causing excessive re-renders.
+    - **Resolution:** Added an empty dependency array `[]` to the `useEffect` in `useToast`.
+
+2.  **Next Error: 404 on Express Backend (`POST /api/rfp/proposal_threads`)**
+
+    - The frontend was correctly trying to hit this endpoint (on port 3001) to record a new proposal thread association.
+    - The issue was traced to how routes were defined and mounted in the Express backend.
+      - `apps/backend/api/rfp/proposalThreads.ts` had routes like `router.post("/proposal_threads", ...)` which, when mounted under `/api/rfp` in `express-server.ts`, resulted in an expected path of `/api/rfp/proposal_threads`.
+      - However, an initial misconfiguration in `express-server.ts` (mounting `/api/rfp` at `/api/api/rfp`) compounded the issue.
+    - **Resolution Path:**
+      - Corrected `apps/backend/api/rfp/proposalThreads.ts` to use `/` for its local routes (e.g., `router.post("/", ...)`), as the `/proposal_threads` path segment was handled by the file/router name itself when mounted by `apps/backend/api/rfp/index.ts` (`router.use("/proposal_threads", proposalThreadsRouter);`).
+      - Corrected `apps/backend/api/express-server.ts` to mount `rfpRouter` directly at `/rfp` (and `authMiddleware` also at `/rfp`), removing the `/api` prefix internally as the frontend was already including it based on `NEXT_PUBLIC_API_URL`.
+
+3.  **Next Error: 404 on LangGraph Server (`POST http://localhost:2024/threads/.../history`)**
+    - After fixing the Express backend routing, requests for thread history started hitting the LangGraph server (on port 2024) as intended by `NEXT_PUBLIC_LANGGRAPH_API_URL`.
+    - The LangGraph server was returning 404s with the message "Thread with ID ... not found".
+    - This indicated that while the LangGraph server was reachable, it couldn't find or create the state for the given thread ID in its persistent storage (Supabase/PostgreSQL).
+    - **Root Cause:** The checkpointer (specifically `PostgresSaver`) was likely not creating the necessary database tables (`langgraph.checkpoints` or similar) because its `setup()` method was not being called, or not being called correctly/reliably.
+    - **Verification:** Confirmed through LangGraph.js documentation that `await checkpointer.setup()` is essential and must be called once to initialize the database schema for `PostgresSaver`.
+    - **Confirmation:** Our `apps/backend/lib/persistence/robust-checkpointer.ts` (specifically the `getInitializedCheckpointer` factory) _correctly_ calls `await pgSaver.setup()` after instantiating `PostgresSaver`.
+    - **Resolution:** The user deleted any manually created checkpoint-related tables from the Supabase database. Upon restarting the LangGraph server, the `pgSaver.setup()` call within `getInitializedCheckpointer` successfully created the required tables, and the 404 errors for thread history resolved.
+
+**Current State & Learnings:**
+
+- The distinct roles of `NEXT_PUBLIC_API_URL` (for the Express backend on port 3001) and `NEXT_PUBLIC_LANGGRAPH_API_URL` (for the LangGraph server on port 2024) are critical and now correctly configured and understood.
+- The Express backend (`express-server.ts`) correctly mounts routers without an additional `/api` prefix if the full path is already provided by the primary router index (e.g., `apps/backend/api/rfp/index.ts` mounting `proposalThreadsRouter` at `/proposal_threads`).
+- The `PostgresSaver.setup()` method is crucial for LangGraph.js when using PostgreSQL persistence and must be called (e.g., during server initialization) to ensure tables are created. Our `getInitializedCheckpointer` handles this.
+- Relying on the library's `setup()` for table creation is preferable to manual DDL for the library's own tables.
+
+## Next Steps
+
+1.  **Commit & Push Current Changes**: Secure the fixes made.
+2.  **Full End-to-End Testing**: Verify the complete proposal generation and interaction flow now that the core persistence and routing issues are resolved.
+3.  **Continue with `final_threads_setup.md`**: Address any remaining steps, particularly Phase 2, Step 2.4 (Re-evaluate `OrchestratorService` and `checkpointer.service.ts`) and subsequent Frontend phases.
+
+## Active Issues & Blockers
+
+- None directly related to the resolved 404 errors. Previous issue regarding Supabase type generation (`database.types.ts`) remains a user task (install Supabase CLI).
+
+## Important Patterns & Preferences Reminder
+
+- Adhere to the singleton pattern for `PostgresSaver` initialization in the LangGraph server process, handled by `getInitializedCheckpointer`.
+- Ensure clear separation of concerns: LangGraph server for graph execution and state, Express backend for application-level data and API orchestration (non-streaming parts).
+- Frontend drives `thread_id` generation and provides it to both the Express backend (for association) and the LangGraph server (for checkpointer keying).
+
+## Current Work Focus
 
 ## Implementation of `ProposalGenerationGraph` Core Nodes
 
@@ -740,37 +797,34 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 
 **Last Updated:** <Current Date/Time>
 
-## Current Work Focus
+## Current State & Focus (as of [Current Date/Time])
 
-- **Primary:** Resolving the failure in **Test 3 (`addUserMessage`)** within `apps/backend/__tests__/thread-persistence.test.ts`.
-- **Goal:** Ensure reliable testing of state persistence after orchestrator actions that involve graph state updates and invocations.
-- **Challenge:** Difficulty in unit testing the _final persisted state_ due to the nature of LangGraph's `updateState` (persists input for next step) and `invoke` (performs action + final persistence). Mocking `invoke` bypasses the critical persistence step we need to verify.
+**Primary Goal:** Implement Frontend UI for Thread Management and Selection (Phase 3, Step 3.6 of `final_threads_setup.md`).
 
-## Recent Changes & Decisions
+**Key Understanding:**
 
-- Completed Phase 5.3: System-wide review and cleanup of API handlers for consistent `OrchestratorService` and `thread_id` usage. Removed redundant API files (`thread.ts`, `start.ts`).
-- Completed Phase 5.4 Steps 1-4: Frontend `StreamProvider` updated to use official SDK, old providers removed, thread initialization flow verified.
-- Initiated Phase 5.4 Step 5: Thread persistence testing (`thread-persistence.test.ts`).
-  - Tests 1 (New Thread) and 2 (Existing Thread) are passing.
-  - Test 3 (`addUserMessage`) is currently blocked/failing due to the mocking/persistence verification challenge described above.
+- The LangGraph server (`langgraph-cli dev`) uses `InMemorySaver` by default for checkpointing in the development environment. This means thread states persist for the server session but are not written to PostgreSQL by the CLI's default runtime.
+- The application's Express backend (`:3001`) is correctly associating SDK-generated `thread_id`s with `rfpId` and `userId` in the `user_rfp_proposal_threads` Supabase table. This association mechanism is functional.
+- `StreamProvider.tsx` correctly captures SDK-generated `thread_id`s (via `onThreadId` from `useStream`) for new threads and uses URL-provided `thread_id`s for existing ones.
 
-## Next Steps (Immediate)
+## Recent Changes & Learnings
 
-1.  **Re-evaluate Test 3 Strategy:** Decide on the best approach:
-    - Accept unit test limitation (verify `updateState` call only)?
-    - Attempt more complex mocking?
-    - Defer full verification to integration testing?
-2.  **Implement Chosen Strategy:** Modify Test 3 accordingly.
-3.  **Proceed to Test 4:** Implement and run the Thread Isolation test.
+- **`InMemorySaver` Confirmed for `dev` CLI:** Clarified that `langgraph-cli dev` uses `InMemorySaver` for its runtime, even if the graph is programmatically compiled with `PostgresSaver`. True PostgreSQL persistence for a self-hosted solution would likely require a custom Node.js server.
+- **SDK-Driven `thread_id` Generation:** The flow for new threads now relies on the LangGraph SDK (via `useStream` and `onThreadId` in `StreamProvider.tsx`) to provide the `thread_id`, which is then associated with the RFP in our backend.
+- **Backend Association Works:** The Express server endpoints and services for managing `user_rfp_proposal_threads` are functioning as expected.
+- **`final_threads_setup.md` Updated:** The main planning document has been significantly revised to reflect the `InMemorySaver` behavior in `dev` mode and to consolidate frontend thread management logic (merging previous Phases 3 and 5 into a new Phase 3).
+- **Core Memory Bank Updated:** This document and `progress.md` are being updated to reflect these clarifications.
 
-## Important Patterns & Preferences
+## Next Steps (High-Level for UI Implementation - Phase 3.6)
 
-- **Deterministic `thread_id`**: Continue using `user-[userId]::rfp-[rfpId]::proposal`.
-- **`PostgresSaver`**: Sole checkpointer for persistence via Supabase.
-- **`OrchestratorService`**: Central point for all graph workflow management.
-- **`RunnableConfig`**: Always include `{ configurable: { thread_id: threadId } }`.
-- **Testing:** Use Vitest, follow TDD where practical, mock dependencies (`MemorySaver`, `graph` interactions).
+1.  **Develop UI Component (`ProposalThreadsList.tsx`):** Create a component to fetch (via `ThreadProvider` / Express API) and display proposal threads associated with the current `rfpId`.
+2.  **Integrate into Chat-Specific Sidebar:** Incorporate `ProposalThreadsList.tsx` into a sidebar or panel specifically for chat-related pages.
+3.  **Implement "Select Existing Thread" UI:** Allow users to click a thread in the list to load it (by updating URL `threadId`, which `StreamProvider` consumes).
+4.  **Implement "Start New Proposal" UI:** Provide a button/action that navigates to the chat view with only `rfpId` (no `threadId`), letting `StreamProvider` handle new thread initialization.
+5.  **Ensure Styling and Conditional Rendering:** Style the new UI elements consistently and manage their visibility appropriately (e.g., chat sidebar vs. main dashboard sidebar).
 
-## Learnings & Insights
+## Active Decisions & Considerations
 
-- Unit testing LangGraph persistence side-effects, especially those involving both `updateState` and `invoke`, is non-trivial with simple mocks. The internal persistence mechanism within `invoke` is hard to isolate/verify without running the actual (or a very faithfully mocked) graph logic.
+- Proceed with UI development for thread management, understanding that the `dev` environment uses `InMemorySaver` for LangGraph state.
+- PostgreSQL persistence for a self-hosted LangGraph server remains a future consideration, likely requiring a custom Node.js server implementation.
+- Focus on robustly handling the `thread_id` lifecycle: SDK generation -> backend association -> frontend UI for selection/initiation.
