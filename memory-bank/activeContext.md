@@ -797,87 +797,34 @@ We have successfully refactored the Chat UI connection mechanism to align with t
 
 **Last Updated:** <Current Date/Time>
 
-## Current Work Focus
+## Current State & Focus (as of [Current Date/Time])
 
-- **Primary:** Resolving the failure in **Test 3 (`addUserMessage`)** within `apps/backend/__tests__/thread-persistence.test.ts`.
-- **Goal:** Ensure reliable testing of state persistence after orchestrator actions that involve graph state updates and invocations.
-- **Challenge:** Difficulty in unit testing the _final persisted state_ due to the nature of LangGraph's `updateState` (persists input for next step) and `invoke` (performs action + final persistence). Mocking `invoke` bypasses the critical persistence step we need to verify.
+**Primary Goal:** Implement Frontend UI for Thread Management and Selection (Phase 3, Step 3.6 of `final_threads_setup.md`).
 
-## Recent Changes & Decisions
+**Key Understanding:**
 
-- Completed Phase 5.3: System-wide review and cleanup of API handlers for consistent `OrchestratorService` and `thread_id` usage. Removed redundant API files (`thread.ts`, `start.ts`).
-- Completed Phase 5.4 Steps 1-4: Frontend `StreamProvider` updated to use official SDK, old providers removed, thread initialization flow verified.
-- Initiated Phase 5.4 Step 5: Thread persistence testing (`thread-persistence.test.ts`).
-  - Tests 1 (New Thread) and 2 (Existing Thread) are passing.
-  - Test 3 (`addUserMessage`) is currently blocked/failing due to the mocking/persistence verification challenge described above.
+- The LangGraph server (`langgraph-cli dev`) uses `InMemorySaver` by default for checkpointing in the development environment. This means thread states persist for the server session but are not written to PostgreSQL by the CLI's default runtime.
+- The application's Express backend (`:3001`) is correctly associating SDK-generated `thread_id`s with `rfpId` and `userId` in the `user_rfp_proposal_threads` Supabase table. This association mechanism is functional.
+- `StreamProvider.tsx` correctly captures SDK-generated `thread_id`s (via `onThreadId` from `useStream`) for new threads and uses URL-provided `thread_id`s for existing ones.
 
-## Next Steps (Immediate)
+## Recent Changes & Learnings
 
-1.  **Re-evaluate Test 3 Strategy:** Decide on the best approach:
-    - Accept unit test limitation (verify `updateState` call only)?
-    - Attempt more complex mocking?
-    - Defer full verification to integration testing?
-2.  **Implement Chosen Strategy:** Modify Test 3 accordingly.
-3.  **Proceed to Test 4:** Implement and run the Thread Isolation test.
+- **`InMemorySaver` Confirmed for `dev` CLI:** Clarified that `langgraph-cli dev` uses `InMemorySaver` for its runtime, even if the graph is programmatically compiled with `PostgresSaver`. True PostgreSQL persistence for a self-hosted solution would likely require a custom Node.js server.
+- **SDK-Driven `thread_id` Generation:** The flow for new threads now relies on the LangGraph SDK (via `useStream` and `onThreadId` in `StreamProvider.tsx`) to provide the `thread_id`, which is then associated with the RFP in our backend.
+- **Backend Association Works:** The Express server endpoints and services for managing `user_rfp_proposal_threads` are functioning as expected.
+- **`final_threads_setup.md` Updated:** The main planning document has been significantly revised to reflect the `InMemorySaver` behavior in `dev` mode and to consolidate frontend thread management logic (merging previous Phases 3 and 5 into a new Phase 3).
+- **Core Memory Bank Updated:** This document and `progress.md` are being updated to reflect these clarifications.
 
-## Important Patterns & Preferences
+## Next Steps (High-Level for UI Implementation - Phase 3.6)
 
-- **Deterministic `thread_id`**: Continue using `user-[userId]::rfp-[rfpId]::proposal`.
-- **`PostgresSaver`**: Sole checkpointer for persistence via Supabase.
-- **`OrchestratorService`**: Central point for all graph workflow management.
-- **`RunnableConfig`**: Always include `{ configurable: { thread_id: threadId } }`.
-- **Testing:** Use Vitest, follow TDD where practical, mock dependencies (`MemorySaver`, `graph` interactions).
+1.  **Develop UI Component (`ProposalThreadsList.tsx`):** Create a component to fetch (via `ThreadProvider` / Express API) and display proposal threads associated with the current `rfpId`.
+2.  **Integrate into Chat-Specific Sidebar:** Incorporate `ProposalThreadsList.tsx` into a sidebar or panel specifically for chat-related pages.
+3.  **Implement "Select Existing Thread" UI:** Allow users to click a thread in the list to load it (by updating URL `threadId`, which `StreamProvider` consumes).
+4.  **Implement "Start New Proposal" UI:** Provide a button/action that navigates to the chat view with only `rfpId` (no `threadId`), letting `StreamProvider` handle new thread initialization.
+5.  **Ensure Styling and Conditional Rendering:** Style the new UI elements consistently and manage their visibility appropriately (e.g., chat sidebar vs. main dashboard sidebar).
 
-## Learnings & Insights
+## Active Decisions & Considerations
 
-- Unit testing LangGraph persistence side-effects, especially those involving both `updateState` and `invoke`, is non-trivial with simple mocks. The internal persistence mechanism within `invoke` is hard to isolate/verify without running the actual (or a very faithfully mocked) graph logic.
-
-## Recent Changes (Thread Association API Endpoints)
-
-- **Phase 2, Step 2.3: API Endpoints for Thread Association** is now complete:
-  - Implemented `POST /api/rfp/proposal_threads` for recording new proposal thread associations. This endpoint:
-    - Authenticates the user via Supabase auth middleware.
-    - Validates input (`rfpId`, `appGeneratedThreadId`, optional `proposalTitle`) using Zod.
-    - Calls `ProposalThreadAssociationService.recordNewProposalThread` and returns the result or error.
-  - Implemented `GET /api/rfp/proposal_threads` for listing a user's proposal threads. This endpoint:
-    - Authenticates the user.
-    - Optionally filters by `rfpId` (query param).
-    - Calls `ProposalThreadAssociationService.listUserProposalThreads` and returns the list or error.
-  - The router is mounted at `/api/rfp/proposal_threads` and protected by the existing auth middleware.
-
-## Next Step
-
-- **Phase 2, Step 2.4:** Re-evaluate and refactor `OrchestratorService` and `checkpointer.service.ts` in the Express backend to align with the new architecture (LangGraph server manages its own checkpointer; Express backend focuses on application-level logic).
-
-## Recent Changes & Current Focus (LangGraph Thread Management - Phase 3 Complete)
-
-**Phase 3: Frontend - `thread_id` Generation and SDK Interaction** is now considered functionally complete for its core goals. The system now supports:
-
-- Frontend generation of `app_generated_thread_id`.
-- Association of this ID with `rfpId` and `userId` via Express backend APIs (`POST & GET /api/rfp/proposal_threads`).
-- Correct usage of this `app_generated_thread_id` in LangGraph SDK calls to the LangGraph server (`:2024`) for persistent, isolated chat states.
-- A UI sidebar (`ProposalThreadsList` integrated via `AgentProvidersWrapper`) for listing threads associated with an RFP and starting new proposal threads for an RFP.
-
-**Key Completed Items in Phase 3:**
-
-- **API Client Functions (`apps/web/src/lib/api.ts`):** `recordNewProposalThread` and `listUserProposalThreads` implemented.
-- **Provider Logic (`StreamProvider.tsx`, `ThreadProvider.tsx`):**
-  - `StreamProvider` handles new thread initiation if `rfpId` is present and `threadId` is not (generates UUID, records association, updates URL).
-  - `ThreadProvider` manages `applicationThreads` state (list of associated threads from backend) and related loading states.
-- **UI Components (`apps/web/src/features/thread/components/`):**
-  - `ProposalThreadsList.tsx`: Displays threads, handles selection (URL update), and initiates new proposals (URL update).
-  - `ProposalListItem.tsx`: Renders individual thread items.
-- **Layout Integration (`apps/web/src/features/chat-ui/providers/AgentProvidersWrapper.tsx`):** Integrates `ProposalThreadsList` into a sidebar for chat-relevant pages.
-- **LangGraph SDK Integration Review (`StreamProvider.tsx`):** Confirmed `thread_id` is correctly passed to the SDK.
-
-**Important Note on Backend API Endpoints:**
-
-- The Express backend API endpoints related to the old orchestrator model (`/api/rfp/feedback`, `/api/rfp/resume`, `/api/rfp/interrupt-status`) have been temporarily disabled (return 503) to resolve startup issues. These endpoints (`apps/backend/api/rfp/feedback.ts`, `resume.ts`, `interrupt-status.ts`) require a significant refactor in the future to align with how the LangGraph server directly manages Human-in-the-Loop (HITL) processes and state. This refactor is outside the scope of the current `final_threads_setup.md` plan for thread management.
-
-**Current Focus & Next Steps:**
-
-- **Current Task:** **Phase 4: Testing and Refinement** (from `final_threads_setup.md`).
-- **Reasoning:** With the core frontend and backend logic for thread management and persistence in place, the next step is to thoroughly test the entire system end-to-end. This includes verifying the singleton checkpointer, the frontend/backend API flows, LangGraph persistence using the application-provided `thread_id`, and overall error handling.
-- **Objective:** Ensure the system is robust, functions as designed, and correctly manages user-specific proposal conversation threads.
-
-This context should allow a developer to understand the current state and begin comprehensive testing as outlined in Phase 4 of `final_threads_setup.md`.
+- Proceed with UI development for thread management, understanding that the `dev` environment uses `InMemorySaver` for LangGraph state.
+- PostgreSQL persistence for a self-hosted LangGraph server remains a future consideration, likely requiring a custom Node.js server implementation.
+- Focus on robustly handling the `thread_id` lifecycle: SDK generation -> backend association -> frontend UI for selection/initiation.

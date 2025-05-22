@@ -51,6 +51,53 @@
 
 ## Current Status
 
+**Overall:** Development is focused on implementing robust thread management for LangGraph, ensuring user conversations are correctly associated and can be resumed. The UI for managing these threads is the current primary task.
+
+**Key Milestones Achieved:**
+
+- Clarified LangGraph SDK's `thread_id` generation for new threads.
+- Successfully implemented backend API endpoints in the Express server (`:3001`) to associate SDK-generated `thread_id`s with `rfpId` and `userId` in the `user_rfp_proposal_threads` Supabase table.
+- Confirmed that `StreamProvider.tsx` correctly captures SDK-generated `thread_id`s and uses URL-provided `thread_id`s for existing sessions.
+- Understood that `langgraph-cli dev` utilizes `InMemorySaver` by default, and `PostgresSaver` (via `robust-checkpointer.ts`) would be active in a custom server deployment.
+- Updated planning documents (`final_threads_setup.md`) to reflect the `InMemorySaver` behavior in `dev` and the SDK-driven `thread_id` flow.
+
+**Work in Progress:**
+
+- **Phase 3, Step 3.6: Implement Frontend UI for Thread Management and Selection**
+  - Developing UI components (`ProposalThreadsList.tsx`) to list associated threads.
+  - Integrating this list into a chat-specific sidebar.
+  - Implementing UI logic for selecting existing threads and starting new ones.
+
+## What Works
+
+- **Backend Thread Association:** The Express server can reliably create and list associations between users, RFPs, and SDK-generated `thread_id`s.
+- **SDK `thread_id` Capture:** `StreamProvider.tsx` effectively captures `thread_id`s provided by the LangGraph SDK for new sessions.
+- **LangGraph `InMemorySaver` (`dev` mode):** The LangGraph server (via `langgraph-cli dev`) correctly uses its `InMemorySaver` to manage thread state for the duration of the server session, keyed by the `thread_id` passed from the frontend.
+- **URL-based Thread Loading:** The frontend can load existing threads by passing the `thread_id` in the URL, which `StreamProvider` uses to initialize SDK interactions.
+
+## What's Left to Build (Immediate Focus)
+
+- **Frontend UI for Thread Management (Step 3.6 of `final_threads_setup.md`):**
+  - Component to list threads from the backend (`ProposalThreadsList.tsx`).
+  - Integration of this component into a chat-specific sidebar.
+  - UI interactions for selecting existing threads (updating URL `threadId`).
+  - UI interactions for starting new proposal threads (clearing URL `threadId`, relying on SDK generation).
+  - Styling and conditional rendering of the thread management UI.
+
+## Known Issues
+
+- No major blocking issues related to the current UI implementation task. The primary "issue" is the known behavior of `langgraph-cli dev` using `InMemorySaver`, which is accepted for the current development phase.
+
+## Evolution of Project Decisions
+
+- **`thread_id` Generation:** Shifted from frontend UUID generation for LangGraph `thread_id`s to relying on the LangGraph SDK to generate the `thread_id` for new threads. The frontend then captures this ID and associates it in the application backend.
+- **Checkpointer Understanding (`dev` vs. Production):** Clarified that while `robust-checkpointer.ts` correctly sets up `PostgresSaver`, the `langgraph-cli dev` environment defaults to `InMemorySaver`. True PostgreSQL persistence for a self-hosted setup will require a custom server invoking the graph compiled with `PostgresSaver`.
+- **Planning Doc Consolidation:** `final_threads_setup.md` was updated to merge frontend implementation phases (old 3 and 5) into a coherent new Phase 3, reflecting the current SDK-driven `thread_id` flow and UI focus.
+
+# Project Progress
+
+## Current Status
+
 The project is focused on implementing the core nodes of the `ProposalGenerationGraph` for the Proposal Generator Agent.
 
 ### Completed
