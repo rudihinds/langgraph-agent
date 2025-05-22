@@ -32,26 +32,19 @@ function ProposalGridView({
   onEdit,
   onDelete,
   onExport,
-  className,
 }: ProposalGridProps) {
   // If loading, show skeleton
   if (isLoading) {
-    return <DashboardSkeleton />;
+    return null;
   }
 
   // If no proposals, show empty state
   if (!proposals?.length) {
-    return <EmptyProposalState />;
+    return null;
   }
 
   return (
-    <div
-      className={cn(
-        "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4",
-        className
-      )}
-      data-testid="proposal-grid"
-    >
+    <>
       {proposals.map((proposal) => (
         <ProposalCard
           key={proposal.id}
@@ -61,7 +54,7 @@ function ProposalGridView({
           onExport={onExport}
         />
       ))}
-    </div>
+    </>
   );
 }
 
@@ -89,7 +82,6 @@ export function ProposalGrid(props: ProposalGridProps) {
       onEdit={handleEdit}
       onDelete={handleDelete}
       onExport={handleExport}
-      className={props.className}
     />
   );
 }

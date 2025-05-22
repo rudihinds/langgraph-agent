@@ -3,9 +3,8 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { Thread } from "@/features/chat-ui/components/Thread";
-// StreamProvider and InterruptProvider are no longer needed here
-// import { StreamProvider } from "@/features/chat-ui/providers/StreamProvider";
-// import { InterruptProvider } from "@/features/chat-ui/providers/InterruptProvider";
+import AgentProvidersWrapper from "@/features/chat-ui/providers/AgentProvidersWrapper.js";
+import DashboardLayout from "@/features/layout/components/DashboardLayout.js";
 import { Toaster } from "sonner";
 
 export default function ChatPage(): React.ReactNode {
@@ -15,10 +14,13 @@ export default function ChatPage(): React.ReactNode {
   console.log("[ChatPage] Rendering with rfpId:", rfpId);
 
   return (
-    // Remove StreamProvider and InterruptProvider wrapping here
-    <main className="flex flex-col h-[calc(100vh-4rem)] p-4">
-      <Toaster />
-      <Thread />
-    </main>
+    <DashboardLayout>
+      <AgentProvidersWrapper>
+        <div className="flex flex-col h-full p-4">
+          <Toaster />
+          <Thread />
+        </div>
+      </AgentProvidersWrapper>
+    </DashboardLayout>
   );
 }

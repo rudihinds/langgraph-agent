@@ -23,16 +23,14 @@ const ProposalListItem: React.FC<ProposalListItemProps> = ({
   return (
     <div
       onClick={handleSelect}
-      style={{
-        cursor: "pointer",
-        border: "1px solid #ccc",
-        margin: "5px",
-        padding: "10px",
-      }}
+      className="cursor-pointer border border-border rounded-md p-3 hover:bg-muted transition-colors"
     >
-      <h4>{title || `Proposal Thread: ${threadId.substring(0, 8)}...`}</h4>
-      <p>ID: {threadId}</p>
-      <p>Created: {new Date(createdAt).toLocaleDateString()}</p>
+      <h4 className="font-semibold text-sm mb-1 truncate">
+        {title || `Proposal Thread: ${threadId.substring(0, 8)}...`}
+      </h4>
+      <p className="text-xs text-muted-foreground">
+        Created: {new Date(createdAt).toLocaleDateString()}
+      </p>
     </div>
   );
 };

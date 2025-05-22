@@ -34,6 +34,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Separator } from "@/features/ui/components/separator";
+import ProposalThreadsList from "@/features/thread/components/ProposalThreadsList";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -53,6 +54,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [authChecked, setAuthChecked] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Determine if it's a chat page
+  const chatPaths = ["/dashboard/chat"]; // Define chat paths
+  const isChatPage = chatPaths.some(
+    (path) => pathname === path || pathname?.startsWith(`${path}/`)
+  );
 
   // Check if on mobile screen
   useEffect(() => {
@@ -160,43 +167,40 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          <ul className="px-2 space-y-1">
-            <NavItem
-              href="/dashboard"
-              icon={<HomeIcon size={20} />}
-              label="Dashboard"
-              isActive={pathname === "/dashboard"}
-              isCollapsed={isSidebarCollapsed}
-            />
-            <NavItem
-              href="/proposals"
-              icon={<FileTextIcon size={20} />}
-              label="My Proposals"
-              isActive={pathname.startsWith("/proposals")}
-              isCollapsed={isSidebarCollapsed}
-            />
-            <NavItem
-              href="/dashboard/chat"
-              icon={<MessageSquare size={20} />}
-              label="Chat"
-              isActive={pathname.startsWith("/dashboard/chat")}
-              isCollapsed={isSidebarCollapsed}
-            />
-            <NavItem
-              href="/proposals/new"
-              icon={<PlusIcon size={20} />}
-              label="New Proposal"
-              isActive={pathname === "/proposals/new"}
-              isCollapsed={isSidebarCollapsed}
-            />
-            <NavItem
-              href="/settings"
-              icon={<SettingsIcon size={20} />}
-              label="Settings"
-              isActive={pathname === "/settings"}
-              isCollapsed={isSidebarCollapsed}
-            />
-          </ul>
+          {isChatPage ? (
+            <ProposalThreadsList />
+          ) : (
+            <ul className="px-2 space-y-1">
+              <NavItem
+                href="/dashboard"
+                icon={<HomeIcon size={20} />}
+                label="Dashboard"
+                isActive={pathname === "/dashboard"}
+                isCollapsed={isSidebarCollapsed}
+              />
+              <NavItem
+                href="/proposals"
+                icon={<FileTextIcon size={20} />}
+                label="My Proposals"
+                isActive={pathname.startsWith("/proposals")}
+                isCollapsed={isSidebarCollapsed}
+              />
+              <NavItem
+                href="/proposals/new"
+                icon={<PlusIcon size={20} />}
+                label="New Proposal"
+                isActive={pathname === "/proposals/new"}
+                isCollapsed={isSidebarCollapsed}
+              />
+              <NavItem
+                href="/settings"
+                icon={<SettingsIcon size={20} />}
+                label="Settings"
+                isActive={pathname === "/settings"}
+                isCollapsed={isSidebarCollapsed}
+              />
+            </ul>
+          )}
         </nav>
 
         {/* Sidebar Footer */}
