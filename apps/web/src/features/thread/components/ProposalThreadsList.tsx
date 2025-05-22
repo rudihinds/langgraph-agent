@@ -12,8 +12,12 @@ const LoadingSpinner = () => (
 );
 
 const ProposalThreadsList: React.FC = () => {
-  const { applicationThreads, getApplicationThreads, appThreadsLoading } =
-    useThreads();
+  const {
+    applicationThreads,
+    getApplicationThreads,
+    appThreadsLoading,
+    error, // Destructure error state
+  } = useThreads();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = "/chat"; // Assuming chat page is at /chat
@@ -55,6 +59,22 @@ const ProposalThreadsList: React.FC = () => {
 
   if (appThreadsLoading) {
     return <LoadingSpinner />;
+  }
+
+  // Handle error state
+  if (error && !appThreadsLoading) {
+    return (
+      <div className="p-4 text-center text-destructive-foreground bg-destructive/10 border border-destructive/30 rounded-md">
+        <p className="mb-2">Could not load your proposal sessions.</p>
+        <p className="mb-4 text-sm">Error: {error.message}</p>
+        <Button
+          variant="outline"
+          onClick={() => getApplicationThreads(rfpIdFromParams || undefined)}
+        >
+          Try Again
+        </Button>
+      </div>
+    );
   }
 
   const threadsToDisplay = rfpIdFromParams

@@ -92,9 +92,20 @@ function configureAppRoutesAndMiddleware() {
         res: Response,
         next: NextFunction // Although unused, it's required for Express error middleware signature
       ) => {
-        logger.error("Unhandled Express error:", err);
+        logger.error("Unhandled Express error:", {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+          url: req.originalUrl,
+          method: req.method,
+        });
         if (!res.headersSent) {
-          res.status(500).json({ error: "Internal Server Error" });
+          res.status(500).json({
+            error: {
+              message: "Internal Server Error",
+              code: "INTERNAL_ERROR",
+            },
+          });
         }
       }
     );

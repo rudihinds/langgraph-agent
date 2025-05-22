@@ -14,7 +14,7 @@ const postSchema = z.object({
 });
 
 // POST /api/rfp/proposal_threads
-router.post("/", async (req: AuthenticatedRequest, res) => {
+router.post("/", async (req: AuthenticatedRequest, res, next) => {
   const userId = req.user?.id;
   if (!userId) {
     return res
@@ -35,20 +35,22 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
       appGeneratedThreadId,
       proposalTitle,
     });
-    if (result.error) {
-      return res.status(500).json({ error: result.error });
+    if (
+      result &&
+      typeof result === "object" &&
+      "error" in result &&
+      result.error
+    ) {
+      return next(new Error(String(result.error)));
     }
     return res.status(200).json(result);
   } catch (err) {
-    return res.status(500).json({
-      error: "Internal server error",
-      message: (err as Error).message,
-    });
+    return next(err);
   }
 });
 
 // GET /api/rfp/proposal_threads?rfpId=...
-router.get("/", async (req: AuthenticatedRequest, res) => {
+router.get("/", async (req: AuthenticatedRequest, res, next) => {
   const userId = req.user?.id;
   if (!userId) {
     return res
@@ -63,16 +65,15 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
       rfpId
     );
     if (threads === null) {
-      return res
-        .status(500)
-        .json({ error: "Failed to fetch proposal threads" });
+      return next(
+        new Error(
+          "Failed to fetch proposal threads due to an unexpected issue in the service."
+        )
+      );
     }
     return res.status(200).json({ threads });
   } catch (err) {
-    return res.status(500).json({
-      error: "Internal server error",
-      message: (err as Error).message,
-    });
+    return next(err);
   }
 });
 

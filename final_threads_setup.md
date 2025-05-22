@@ -316,16 +316,70 @@ This context should help understand the detailed implementation phases outlined 
   3.  Test isolation: Ensure different `thread_id`s lead to distinct, isolated `InMemorySaver` checkpoints.
 - **Justification:** Confirms the end-to-end persistence mechanism with the LangGraph server's active `InMemorySaver` works as expected for the session.
 
-### Step 4.4: Comprehensive Error Handling
+### Step 4.4: Comprehensive Error Handling Plan
 
-- **Status:** ◻️ (Not Started)
+- **Status:** 🟡 (Partially Implemented - Frontend and Express Backend covered, LangGraph server and Checkpointer init next)
 - **Depends On:** All previous phases
-- **Action Items:**
-  1.  Implement and test error handling for:
-      - Express backend API calls (e.g., failures in recording associations).
-      - Frontend SDK interactions with the LangGraph server (e.g., network errors, server errors from port 2024).
-      - Failures in the singleton checkpointer initialization (ensure fallback or clear error reporting).
-- **Justification:** Ensures a resilient user experience.
+- **Goal:** Ensure the system gracefully handles potential failures across frontend, backend API, and LangGraph server interactions, providing clear feedback to the user and robust logging for developers.
+- **Action Items (High-Level Plan):**
+
+  1.  **Frontend Application (Next.js - Port 3000):**
+
+      - **Environment Variable Checks:** (Status: ✅ Completed)
+        - On application startup (e.g., in `StreamProvider` or a global setup), verify the presence of critical environment variables (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_LANGGRAPH_API_URL`, `NEXT_PUBLIC_ASSISTANT_ID`).
+        - Log warnings or errors if missing, and potentially display a maintenance/error message to the user if essential services cannot be configured.
+      - **`StreamProvider` and LangGraph SDK Interactions:**
+        - **Thread Initialization & Association:** (Status: ✅ Completed)
+          - _SDK `thread_id` Generation Failure:_ If `onThreadId` callback in `useStream` is not triggered or returns an invalid `thread_id` after the first message in a new session: Log the issue. Inform the user via a toast notification that the chat session could not be initialized correctly and suggest retrying.
+          - _User Authentication for Association:_ If Supabase session/token cannot be retrieved before calling the Express backend to associate the thread: Log the error. Display a toast to the user indicating an authentication problem and advise them to re-login or refresh.
+          - _Thread Association API Call Failure (`POST /api/rfp/proposal_threads`):_ Handle network errors or non-2xx responses from the Express backend. Log detailed error information. Notify the user via toast that "Failed to save new chat session metadata" and that while the chat might work for the current session (due to `InMemorySaver`), it won't be listed or resumable later.
+          - _URL Update Failure:_ If setting the `threadId` in the URL via `useQueryState` fails: Log the error. This is a less critical UI issue but should be noted.
+        - **Loading Existing Threads (via URL `threadId`):** (Status: ✅ Completed)
+          - _Invalid `threadId` in URL:_ If the `threadId` from the URL doesn't correspond to a valid session on the LangGraph server (e.g., `InMemorySaver` was cleared or `threadId` is corrupt): `useStream` should ideally handle this by starting a new session or erroring. If it errors, catch and display a user-friendly message (e.g., "Could not load existing chat session. Starting a new one.").
+        - **General `useStream` Errors:** (Status: ✅ Completed)
+          - Utilize the `error` property returned by `useStream`. If an error occurs during streaming or other SDK operations: Log the error. Display a clear, non-technical toast notification to the user (e.g., "A connection error occurred with the chat service. Please try again.").
+          - Implement a "Reconnect" or "Retry" button if feasible for certain types of recoverable errors.
+      - **Thread Listing and Selection UI (e.g., Chat Sidebar):** (Status: ✅ Completed)
+        - _API Call Failure (`GET /api/rfp/proposal_threads`):_ When fetching the list of associated threads from the Express backend: Handle network errors or non-2xx responses. Log the error. Display an inline message in the sidebar (e.g., "Could not load your proposal sessions. Please try again later.") with a retry mechanism if appropriate.
+        - _Empty State vs. Error State:_ Clearly differentiate between a user having no proposal sessions and an error occurring while trying to fetch them.
+      - **User Notifications:** (Status: 🟡 In Progress/Ongoing Review)
+        - Standardize the use of toast notifications for transient errors or informational messages.
+        - For critical, unrecoverable errors, consider a more prominent UI display (e.g., a modal or a full-page error message if the application cannot function).
+
+  2.  **Express Backend (API Server - Port 3001):** (Status: ✅ Completed)
+
+      - **Global Error Handling Middleware:**
+        - Implement a global error handling middleware in Express to catch unhandled exceptions from route handlers and services.
+        - This middleware should log the full error stack and return a standardized JSON error response to the client (e.g., `{ "error": { "message": "Internal Server Error", "code": "INTERNAL_ERROR" } }`) with an appropriate HTTP status code (e.g., 500).
+      - **API Endpoint Specific Error Handling (`/api/rfp/proposal_threads`):**
+        - _Authentication/Authorization:_ Supabase auth middleware should correctly return 401/403 errors if authentication fails or user is not authorized. Ensure these are handled by the frontend.
+        - _Input Validation (Zod):_ Return 400 Bad Request errors with clear messages if input validation fails, detailing which fields are problematic.
+        - _`ProposalThreadAssociationService` Errors:_
+          - _Database Interaction Failures:_ Catch errors from Supabase client (e.g., connection errors, query execution errors, unique constraint violations if not handled gracefully). Log these server-side. Return a generic 500 error to the client for database issues, or a more specific 409 Conflict if appropriate (e.g., trying to re-record an identical unique `app_generated_thread_id` if the service logic doesn't handle it as an update/noop).
+          - _Service Logic Errors:_ Any other unexpected errors within the service layer should be caught, logged, and result in a 500 error.
+      - **Logging:**
+        - Implement structured logging (e.g., using Winston or Pino) for all API requests, responses, and errors, including correlation IDs if possible to trace requests across services.
+
+  3.  **LangGraph Server (via `langgraph-cli dev` - Port 2024):** (Status: ◻️ Not Started)
+
+      - **`InMemorySaver` Limitations (Dev Mode):**
+        - Primary "error" here is data loss on server restart. This is an accepted behavior for `dev` mode with `InMemorySaver`. No specific runtime error handling is needed for this aspect, but documentation/developer awareness is key.
+      - **Invalid `thread_id`:**
+        - If the LangGraph server receives an SDK call with a malformed or unknown `thread_id` (that `InMemorySaver` cannot resolve), LangGraph's default behavior is typically to treat it as a new thread or error. Ensure the frontend handles any errors propagated back from the SDK gracefully (as covered in Frontend section).
+      - **Graph Execution Errors:**
+        - Errors originating from within the LangGraph graph execution (e.g., issues in specific nodes, tool calls) should be caught by the graph's error handling mechanisms (if defined within the graph) or propagated to the SDK. The frontend is responsible for displaying these to the user.
+      - **Server Availability:**
+        - If the LangGraph server (port 2024) is down or unreachable, the frontend SDK calls will fail. This should be handled by the frontend with appropriate "service unavailable" messages and retry logic.
+
+  4.  **Checkpointer Initialization Logic (Conceptual for `robust-checkpointer.ts`):**
+      - **Logging Checkpointer Type:**
+        - Ensure `robust-checkpointer.ts` and `graph.ts` (during compilation) log the type of checkpointer they _attempt_ to initialize and the type they _actually_ receive/use. This aids in debugging discrepancies between intended configuration (e.g., `PostgresSaver`) and runtime behavior (e.g., `InMemorySaver` due to `langgraph-cli dev` defaults).
+      - **Failure to Initialize Intended Checkpointer (Future `PostgresSaver` Context):**
+        - If `PostgresSaver` (or any persistent checkpointer) fails to initialize (e.g., database connection refused):
+          - The `getInitializedCheckpointer` function should throw a clear error.
+          - The LangGraph server startup process (if custom) should catch this error, log it extensively, and fail to start, or fall back to `InMemorySaver` _with explicit and prominent logging/warnings_ about the fallback. This prevents silent failures where persistence is expected but not active.
+
+- **Justification:** A comprehensive error handling strategy is crucial for system stability, developer diagnosability, and a good user experience. This plan addresses potential failure points across the distributed architecture of the application.
 
 ---
 
