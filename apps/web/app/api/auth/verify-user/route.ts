@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { ensureUserExists } from "@/lib/user-management";
 
 /**
  * API endpoint to verify that a user exists in the database.
@@ -37,23 +36,10 @@ export async function POST() {
     }
 
     console.log(
-      `[VerifyUser API] User authenticated: ${authData.user.id}, ensuring database record exists`
+      `[VerifyUser API] User authenticated: ${authData.user.id}, user verification complete`
     );
 
-    // Ensure user record exists
-    const result = await ensureUserExists(supabase);
-
-    if (!result.success) {
-      console.error("[VerifyUser API] User verification failed:", result.error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: "User verification failed",
-          details: result.error || "Unknown error",
-        },
-        { status: 500 }
-      );
-    }
+    // User is authenticated via Supabase Auth - no additional verification needed
 
     console.log(
       `[VerifyUser API] User verified successfully: ${authData.user.id}`

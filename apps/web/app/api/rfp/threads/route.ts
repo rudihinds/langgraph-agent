@@ -1,6 +1,6 @@
 // Import required dependencies
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/src/lib/auth-client";
+import { getSession } from "@/lib/supabase/auth";
 
 // Base URL for the backend API
 const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:3001";
@@ -30,10 +30,11 @@ const MOCK_THREADS = [
 export async function GET(request: NextRequest) {
   try {
     // Get the session
-    const session = await getSession();
-    if (!session?.access_token) {
+    const sessionResult = await getSession();
+    if (!sessionResult.success || !sessionResult.data?.session?.access_token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    const accessToken = sessionResult.data.session.access_token;
 
     // Try to forward to backend API
     try {
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         // Set a short timeout to fail fast if backend is not available
         signal: AbortSignal.timeout(3000),

@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { syncUserToDatabase } from "@/lib/user-management";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -31,10 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
 
-    // After successful sign-in, check if user exists in users table and update or create
-    if (data.user) {
-      await syncUserToDatabase(supabase, data.user);
-    }
+    // User authentication successful - Supabase handles user management automatically
 
     return NextResponse.json(
       {

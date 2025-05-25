@@ -3,7 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useThreads } from "@/features/chat-ui/providers/ThreadProvider"; // Adjusted import path
 import ProposalListItem from "@/features/thread/components/ProposalListItem";
 import { Button } from "@/features/ui/components/button"; // Assuming Button component exists
-import { UserProposalThreadType } from "@/lib/api.js"; // Import the type
+import { UserProposalThreadType } from "@/lib/api/client.js"; // Import the type
 
 // Placeholder for a UI component that might show loading state
 // Styled with Tailwind for now

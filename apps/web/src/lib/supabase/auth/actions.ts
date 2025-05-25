@@ -3,7 +3,7 @@
  */
 import { createClient } from "../client";
 import { getRedirectURL } from "./utils";
-import { SignInResult, SignOutResult } from "../types";
+
 import { createAuthErrorResponse } from "./auth-errors";
 import { ApiResponse, ErrorCodes } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
  *
  * @returns {Promise<SignInResult>} The result of the sign-in attempt
  */
-export async function signIn(): Promise<ApiResponse<SignInResult["data"]>> {
+export async function signIn(): Promise<ApiResponse<{ url?: string }>> {
   try {
     const supabase = createClient();
     const redirectURL = getRedirectURL() + "/auth/callback";

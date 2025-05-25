@@ -1,4 +1,4 @@
-import { checkSupabaseStorage, testUpload } from "@/lib/diagnostic-tools";
+import { checkSupabaseStorage, testUpload } from "@/lib/utils/diagnostic-tools";
 import { NextResponse } from "next/server";
 
 export async function GET() {

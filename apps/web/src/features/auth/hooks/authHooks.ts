@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { AppUser, CurrentUserState } from "@/features/auth/types";
+import { AppUser, CurrentUserState } from "@/lib/supabase/types";
 
 /**
  * Hook to get the current authenticated user

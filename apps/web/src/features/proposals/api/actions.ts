@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { ProposalSchema } from "@/lib/schema/proposal-schema";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { ensureUserExists } from "@/lib/user-management";
+// User management is handled by Supabase Auth automatically
 import { Database } from "@/lib/schema/database";
 import { revalidatePath } from "next/cache";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -40,19 +40,19 @@ export async function createProposal(
       };
     }
 
-    // 1. Ensure user is authenticated and exists in DB
-    const userResult = await ensureUserExists(supabase);
-    if (!userResult.success || !userResult.user) {
-      console.error(
-        "[Action][Auth] User not authenticated or failed verification:",
-        userResult.error
-      );
+    // 1. Ensure user is authenticated
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error("[Action][Auth] User not authenticated:", authError);
       return {
         success: false,
-        error: userResult.error || "User authentication failed",
+        error: "User authentication failed",
       };
     }
-    const userId = userResult.user.id;
+    const userId = user.id;
     console.log(`[Action][Auth] User ${userId} authenticated and verified`);
 
     // 2. Validate form data
@@ -232,10 +232,12 @@ export async function uploadProposalFile(
     }
 
     // 3. Ensure user is authenticated
-    const userResult = await ensureUserExists(supabase);
-
-    if (!userResult.success || !userResult.user) {
-      console.error("[UploadAction] Authentication failed");
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error("[UploadAction] Authentication failed:", authError);
       return {
         success: false,
         message: "Authentication failed. Please sign in again.",
@@ -247,7 +249,7 @@ export async function uploadProposalFile(
       .from("proposals")
       .select("id")
       .eq("id", proposalId)
-      .eq("user_id", userResult.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (verifyError) {
@@ -267,12 +269,7 @@ export async function uploadProposalFile(
     }
 
     // 5. Perform the actual upload using the helper
-    const result = await handleRfpUpload(
-      supabase,
-      userResult.user.id,
-      proposalId,
-      file
-    );
+    const result = await handleRfpUpload(supabase, user.id, proposalId, file);
 
     // 6. Return the result
     if (result.success) {
@@ -357,9 +354,12 @@ export async function uploadProposalFileEnhanced(input: {
     }
 
     // Verify user exists
-    const userResult = await ensureUserExists(supabase);
-    if (!userResult.success || !userResult.user) {
-      console.error("User verification failed:", userResult.error);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error("User verification failed:", authError);
       return {
         success: false,
         error: "Authentication failed. Please sign in again.",
@@ -367,7 +367,7 @@ export async function uploadProposalFileEnhanced(input: {
     }
 
     // Verify the user ID matches the authenticated user
-    if (userResult.user.id !== userId) {
+    if (user.id !== userId) {
       console.error("User ID mismatch - potential security issue");
       return {
         success: false,
@@ -476,9 +476,12 @@ export async function createProposalWithQuestions(input: {
     }
 
     // Verify user exists
-    const userResult = await ensureUserExists(supabase);
-    if (!userResult.success || !userResult.user) {
-      console.error("User verification failed:", userResult.error);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error("User verification failed:", authError);
       return {
         success: false,
         error: "Authentication failed. Please sign in again.",
@@ -486,7 +489,7 @@ export async function createProposalWithQuestions(input: {
     }
 
     // Verify the user ID matches the authenticated user
-    if (userResult.user.id !== input.userId) {
+    if (user.id !== input.userId) {
       console.error("User ID mismatch - potential security issue");
       return {
         success: false,

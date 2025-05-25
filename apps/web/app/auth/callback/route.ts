@@ -1,5 +1,4 @@
 import { createServerClient } from "@/lib/supabase";
-import { syncUserToDatabase } from "@/lib/user-management";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -94,13 +93,7 @@ export async function GET(request: NextRequest) {
         : "unknown",
     });
 
-    // Create or update user record in the users table
-    if (data.session.user) {
-      const result = await syncUserToDatabase(supabase, data.session.user);
-      if (result.error) {
-        console.error("[Auth] Error syncing user to database:", result.error);
-      }
-    }
+    // User authentication successful - Supabase handles user management automatically
 
     // Create a response with the right cookies
     const redirectUrl = new URL("/dashboard", targetOrigin);

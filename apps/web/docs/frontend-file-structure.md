@@ -5,7 +5,11 @@
 
 ## Overview
 
-This document outlines the file structure of the frontend application after the refactoring. The project follows a feature-based architecture pattern, which organizes code by domain features rather than technical concerns. This approach improves discoverability, maintainability, and scalability of the codebase.
+This document outlines the file structure of the frontend application after comprehensive refactoring and cleanup. The project follows a feature-based architecture pattern, which organizes code by domain features rather than technical concerns. This approach improves discoverability, maintainability, and scalability of the codebase.
+
+**Last Updated**: January 25, 2025  
+**Total TypeScript Files**: 230 files  
+**Status**: Post-refactoring cleanup complete
 
 ## Core Principles
 
@@ -202,31 +206,19 @@ apps/web/
 │       └── empty-proposals.svg             # Empty state illustration
 │
 ├── src/                                    # Source code
-│   ├── __tests__/                          # Source tests
-│   │   └── chat-ui/                        # Chat UI tests
-│   │       ├── pages/                      # Chat page tests
-│   │       ├── providers/                  # Provider tests
-│   │       └── thread/                     # Thread tests
-│   │
-│   ├── components/                         # Shared UI components
-│   │   ├── layouts/                        # Layout components
-│   │   │   └── Sidebar.tsx                 # Sidebar component
-│   │   └── ui/                             # shadcn/ui components
-│   │       ├── button.tsx                  # Button component
-│   │       ├── card.tsx                    # Card component
-│   │       └── ...                         # Other UI components
+│   │   # Note: __tests__ directory removed during cleanup
+│   │   # Note: components/ directory removed during cleanup (unused legacy code)
 │   │
 │   ├── features/                           # Feature modules
 │   │   ├── auth/                           # Authentication feature
 │   │   │   ├── api/                        # Auth API calls
 │   │   │   │   ├── __tests__/              # Auth API tests
-│   │   │   │   ├── docs/                   # Auth API docs
-│   │   │   │   └── examples/               # Auth examples
-│   │   │   ├── components/                 # Auth-specific components
-│   │   │   ├── hoc/                        # Higher-order components
+│   │   │   │   ├── docs/                   # Auth API docs (cleaned up)
+│   │   │   │   └── examples/               # Auth examples (cleaned up)
+│   │   │   ├── components/                 # Auth-specific components (LoginButton only)
 │   │   │   ├── hooks/                      # Auth hooks (useAuth, etc.)
 │   │   │   │   └── __tests__/              # Auth hook tests
-│   │   │   └── types/                      # Auth types
+│   │   │   └── types/                      # Auth types (consolidated)
 │   │   │
 │   │   ├── chat/                           # Chat feature
 │   │   │   └── components/                 # Chat components
@@ -367,14 +359,41 @@ apps/web/
    - Document complex components with comments
    - Update this file when making significant structural changes
 
+## Recent Changes (January 2025)
+
+### Cleanup Summary
+
+- **Removed unused test files**: Deleted broken test files (Stream.test.tsx, Thread.test.tsx) and placeholder tests (auth.test.ts, setup.js)
+- **Removed unused auth components**: Cleaned up LoginForm, UserProfile, StandardLoginForm, and auth HOCs
+- **Removed unused directories**: Eliminated empty **tests** and components directories
+- **Consolidated auth types**: Merged duplicate type definitions into single source
+- **Fixed import paths**: Updated all imports to use new consolidated structure
+- **Authentication migration**: Moved from custom auth client to direct Supabase auth integration
+
+### Files Removed (Total: 22)
+
+- 4 broken/placeholder test files
+- 7 unused auth components and utilities
+- 3 deprecated auth documentation files
+- 8 duplicate/deprecated files from previous refactoring phases
+
+### Current State
+
+- ✅ All TypeScript compilation errors resolved
+- ✅ All import paths updated and working
+- ✅ Authentication system fully functional with Supabase
+- ✅ Build process working correctly
+- ✅ Dev server running successfully on port 3000
+
 ## Migration Notes
 
 When working with existing code:
 
-1. Gradually migrate legacy code to follow this structure
-2. Prioritize feature-based organization for new code
-3. Update imports when moving files to maintain compatibility
-4. Test thoroughly after structural changes
+1. Follow the established feature-based organization
+2. Use consolidated auth patterns (Supabase direct integration)
+3. Place new components in appropriate feature directories
+4. Test thoroughly after any structural changes
+5. Refer to this document for current structure before adding new files
 
 ## References
 

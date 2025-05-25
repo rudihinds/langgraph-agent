@@ -11,7 +11,7 @@ import { HumanMessage } from "./messages/human";
 import {
   DO_NOT_RENDER_ID_PREFIX,
   ensureToolCallsHaveResponses,
-} from "@/lib/ensure-tool-responses";
+} from "@/lib/utils/ensure-tool-responses";
 import { LangGraphLogoSVG } from "@/features/shared/components/icons/langgraph";
 import { TooltipIconButton } from "@/features/chat-ui/components/tooltip-icon-button";
 import {

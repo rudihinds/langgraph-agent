@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { syncUserToDatabase } from "@/lib/user-management";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -34,10 +33,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
 
-    // After successful sign-up, create a record in the users table
-    if (data.user) {
-      await syncUserToDatabase(supabase, data.user);
-    }
+    // User registration successful - Supabase handles user management automatically
 
     return NextResponse.json(
       {

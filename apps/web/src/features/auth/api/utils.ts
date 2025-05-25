@@ -1,8 +1,8 @@
 /**
  * Utility functions for Supabase authentication - API related
  */
-import { createClient } from "@/features/auth/api/client";
-import { AppUser } from "@/features/auth/types";
+import { createClient } from "@/lib/supabase/client";
+import { AppUser } from "@/lib/supabase/types";
 import { createAuthErrorResponse } from "@/features/auth/api/auth-errors";
 import { ApiResponse } from "@/lib/errors/types";
 import { logger } from "@/lib/logger";
