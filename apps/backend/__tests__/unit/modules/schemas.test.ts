@@ -7,8 +7,8 @@ import {
   OverallProposalStateSchema,
   rfpDocumentSchema,
   sectionDataSchema,
-} from "../../modules/schemas.js";
-import { SectionType } from "../../modules/types.js";
+  } from "../../../state/modules/schemas.js";
+import { SectionType } from "../../../state/modules/types.js";
 
 describe("State Schemas Module", () => {
   describe("interruptStatusSchema", () => {

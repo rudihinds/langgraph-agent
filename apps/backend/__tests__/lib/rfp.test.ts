@@ -1,15 +1,15 @@
 import { parseRfpDocument, parseRfpFromBuffer } from "../rfp";
-import { jest, describe, expect, test, beforeEach } from "@jest/globals";
+import { vi, describe, expect, test, beforeEach } from "vitest";
 
 // Mock the PDF.js module
-jest.mock("pdfjs-dist/legacy/build/pdf.js", () => {
+vi.mock("pdfjs-dist/legacy/build/pdf.js", () => {
   return {
-    getDocument: jest.fn().mockImplementation(() => {
+    getDocument: vi.fn().mockImplementation(() => {
       const mockPdfDocument = {
         numPages: 2,
-        getPage: jest.fn().mockImplementation(() => {
+        getPage: vi.fn().mockImplementation(() => {
           return Promise.resolve({
-            getTextContent: jest.fn().mockImplementation(() => {
+            getTextContent: vi.fn().mockImplementation(() => {
               return Promise.resolve({
                 items: [
                   { str: "Page 1 content" },
@@ -30,26 +30,26 @@ jest.mock("pdfjs-dist/legacy/build/pdf.js", () => {
 });
 
 // Mock the logger
-jest.mock("../../../logger.js", () => {
+vi.mock("../../../logger.js", () => {
   return {
     Logger: {
-      getInstance: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
+      getInstance: vi.fn().mockReturnValue({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
       }),
     },
   };
 });
 
 // Get the mocked modules for type-safe mocking
-const pdfjsLib = jest.requireMock("pdfjs-dist/legacy/build/pdf.js");
-const loggerModule = jest.requireMock("../../../logger.js");
+const pdfjsLib = await vi.importMock("pdfjs-dist/legacy/build/pdf.js");
+const loggerModule = await vi.importMock("../../../logger.js");
 const mockLogger = loggerModule.Logger.getInstance();
 
 describe("RFP Document Parser", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test("should parse text documents correctly", async () => {
@@ -96,7 +96,7 @@ describe("RFP Document Parser", () => {
   test("should handle PDF parsing errors gracefully", async () => {
     // Setup
     const pdfBuffer = Buffer.from("Mock PDF content");
-    jest.spyOn(pdfjsLib, "getDocument").mockImplementationOnce(() => {
+    vi.spyOn(pdfjsLib, "getDocument").mockImplementationOnce(() => {
       return {
         promise: Promise.reject(new Error("PDF parsing error")),
       };
@@ -138,7 +138,7 @@ describe("RFP Document Parser", () => {
 
 describe("parseRfpFromBuffer Function", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test("should parse a PDF document correctly", async () => {
@@ -203,7 +203,7 @@ describe("parseRfpFromBuffer Function", () => {
     const mimeType = "application/pdf";
 
     // Mock PDF.js to throw an error
-    jest.spyOn(pdfjsLib, "getDocument").mockImplementationOnce(() => ({
+    vi.spyOn(pdfjsLib, "getDocument").mockImplementationOnce(() => ({
       promise: Promise.reject(new Error("PDF parsing failed")),
     }));
 

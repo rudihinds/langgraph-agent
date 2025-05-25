@@ -72,12 +72,12 @@ const mocks = vi.hoisted(() => {
 });
 
 // Mock modules AFTER defining the hoisted mocks
-vi.mock("../index.js", () => ({
+vi.mock("../../evaluation/index.js", () => ({
   createEvaluationNode: mocks.createEvaluationNode,
   loadCriteriaConfiguration: mocks.loadCriteriaConfiguration,
 }));
 
-vi.mock("../extractors.js", () => ({
+vi.mock("../../evaluation/extractors.js", () => ({
   extractResearchContent: mocks.extractResearchContent,
   extractSolutionContent: vi.fn(),
   extractConnectionPairsContent: vi.fn(),
@@ -106,8 +106,8 @@ import {
   ProcessingStatus,
   EvaluationResult,
 } from "../../state/proposal.state.js";
-import { EvaluationNodeFactory } from "../factory.js";
-import { EvaluationNodeOptions, EvaluationNodeFunction } from "../index.js";
+import { EvaluationNodeFactory } from "../../evaluation/factory.js";
+import { EvaluationNodeOptions, EvaluationNodeFunction } from "../../evaluation/index.js";
 
 // Define a proper TestState interface for our testing needs
 interface TestState {
