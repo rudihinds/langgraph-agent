@@ -65,3 +65,14 @@ tasks/
 # LangGraph API
 .langgraph_api
 apps/web/.next/
+
+# Test outputs and artifacts
+test-results.json
+test-thread.json
+
+# Package manager locks (keep only npm)
+pnpm-lock.yaml
+**/pnpm-lock.yaml
+
+# Additional system files
+**/.DS_Store
