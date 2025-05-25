@@ -2,7 +2,7 @@
  * Type definitions for Supabase-related functionality
  */
 import { User, Session } from "@supabase/supabase-js";
-import { ApiResponse, BaseError } from "@/features/shared/errors/types";
+import { ApiResponse, BaseError } from "@/lib/errors/types";
 
 /**
  * Supabase user extended with application-specific properties
@@ -19,40 +19,18 @@ interface AppSession extends Session {
 }
 
 /**
- * Deprecated: Result of sign-in operation
- * @deprecated Use ApiResponse<SignInData> instead
- */
-export interface SignInResult {
-  data: {
-    url?: string;
-    session?: AppSession;
-    user?: AppUser;
-  } | null;
-  error: Error | null;
-}
-
-/**
  * Type for successful sign-in data
  */
-interface SignInData {
+export interface SignInData {
   url?: string;
   session?: AppSession;
   user?: AppUser;
 }
 
 /**
- * Deprecated: Result of sign-out operation
- * @deprecated Use ApiResponse<SignOutData> instead
- */
-export interface SignOutResult {
-  success: boolean;
-  error?: string;
-}
-
-/**
  * Type for successful sign-out data
  */
-interface SignOutData {
+export interface SignOutData {
   success: boolean;
 }
 

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { getSession } from "@/lib/supabase";
-import Header from "@/features/layout/components/Header";
 import LoginButton from "@/features/auth/components/LoginButton";
 
 export default function Home() {
@@ -45,8 +44,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} />
-
       <main className="flex flex-col flex-1">
         <div className="flex flex-col items-center justify-center flex-1 py-16 md:py-24">
           <div className="w-full max-w-5xl px-4 mx-auto">

@@ -2,7 +2,7 @@ import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { Message, Metadata } from "@langchain/langgraph-sdk";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { cn } from "@/lib/utils/utils";
-import { MarkdownText } from "../markdown-text";
+import { MarkdownText } from "@/features/thread/components/markdown-text";
 import { BranchSwitcher, CommandBar } from "./shared";
 import { getContentString } from "../../utils/message-utils";
 import { ToolCalls } from "./tool-calls";

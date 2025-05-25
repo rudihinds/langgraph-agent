@@ -12,7 +12,7 @@ import { BaseMessage } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { ToolCallTable } from "./tool-call-table";
 import { Button } from "@/features/ui/components/button";
-import { MarkdownText } from "../markdown-text";
+import { MarkdownText } from "@/features/thread/components/markdown-text";
 
 interface StateViewRecursiveProps {
   value: unknown;

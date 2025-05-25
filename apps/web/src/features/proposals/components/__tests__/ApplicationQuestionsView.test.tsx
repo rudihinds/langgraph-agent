@@ -1,21 +1,7 @@
-import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
-import ApplicationQuestionsView from "../ApplicationQuestionsView";
-
-// Mock framer-motion to avoid animation issues
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}));
-
-// Mock the ProgressStepper component since we're testing ApplicationQuestionsView in isolation
-vi.mock("../ProgressStepper", () => ({
-  ProgressStepper: () => <div data-testid="progress-stepper-mock" />,
-}));
+import ApplicationQuestionsView from "./ApplicationQuestionsView";
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -36,445 +22,338 @@ Object.defineProperty(window, "localStorage", {
 });
 
 describe("ApplicationQuestionsView", () => {
+  const mockOnSubmit = vi.fn();
+  const mockOnBack = vi.fn();
+
   beforeEach(() => {
-    localStorage.clear();
     vi.clearAllMocks();
-    // Mock scrollIntoView since it's not implemented in JSDOM
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    localStorageMock.clear();
   });
 
-  it("renders correctly with initial empty question", () => {
+  it("renders the component with initial empty question", () => {
     render(
-      <ApplicationQuestionsView
-        initialQuestions={[{ id: "q1", text: "", required: true }]}
-        onSubmit={() => {}}
-        onBack={() => {}}
-      />
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
     );
 
-    // Check that the component renders
+    // Check for main elements
     expect(screen.getByText("Application Questions")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Enter the questions from your application/i)
+    ).toBeInTheDocument();
 
-    // Check for the question input
-    expect(screen.getByTestId("question-1")).toBeInTheDocument();
+    // Should have one question field initially
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
 
-    // Check for Next and Back buttons
-    expect(screen.getByText("Next")).toBeInTheDocument();
+    // Should have Add Question button
+    expect(screen.getByText("Add Question")).toBeInTheDocument();
+
+    // Should have navigation buttons
+    expect(screen.getByText("Continue")).toBeInTheDocument();
     expect(screen.getByText("Back")).toBeInTheDocument();
   });
 
-  it("allows adding multiple questions", async () => {
-    const onSubmit = vi.fn();
-    const onBack = vi.fn();
+  it("allows adding new questions", async () => {
     const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
 
-    render(<ApplicationQuestionsView onSubmit={onSubmit} onBack={onBack} />);
+    // Initially has one question
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
 
-    // Initial question should exist
-    const initialTextareas = screen.getAllByRole("textbox");
-    expect(initialTextareas.length).toBe(1);
+    // Add a new question
+    await user.click(screen.getByText("Add Question"));
+
+    // Should now have two questions
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Question 2/i)).toBeInTheDocument();
 
     // Add another question
-    await user.click(screen.getByText(/Add Another Question/i));
+    await user.click(screen.getByText("Add Question"));
 
-    // Now there should be 2 questions
-    const updatedTextareas = screen.getAllByRole("textbox");
-    expect(updatedTextareas.length).toBe(2);
+    // Should now have three questions
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Question 2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Question 3/i)).toBeInTheDocument();
   });
 
-  it.skip("allows removing questions", async () => {
-    // Skipping this test due to issues with finding remove buttons
-    const onSubmit = vi.fn();
-    const onBack = vi.fn();
+  it("allows removing questions", async () => {
     const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
 
-    render(<ApplicationQuestionsView onSubmit={onSubmit} onBack={onBack} />);
+    // Add a second question
+    await user.click(screen.getByText("Add Question"));
 
-    // Add another question
-    await user.click(screen.getByText(/Add Another Question/i));
+    // Should have two questions
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Question 2/i)).toBeInTheDocument();
 
-    // Enter text in both questions
-    const questions = screen.getAllByRole("textbox");
-    await user.type(questions[0], "First question");
-    await user.type(questions[1], "Second question");
+    // Remove the second question
+    const removeButtons = screen.getAllByLabelText(/Remove question/i);
+    await user.click(removeButtons[1]); // Second remove button
 
-    // The actual implementation of question removal needs to be investigated
-    // to find the correct way to target the remove buttons
+    // Should now have only one question
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Question 2/i)).not.toBeInTheDocument();
   });
 
-  it("renders the component with empty questions", () => {
-    render(<ApplicationQuestionsView onSubmit={() => {}} onBack={() => {}} />);
-
-    // Check that the page title is present
-    expect(screen.getByText("Application Questions")).toBeInTheDocument();
-
-    // Check that there's at least one question by default
-    expect(screen.getByTestId(/question-/)).toBeInTheDocument();
-
-    // Check for the buttons
-    expect(screen.getByText("Next")).toBeInTheDocument();
-    expect(screen.getByText("Back")).toBeInTheDocument();
-  });
-
-  it("displays validation error when submitting an empty question", async () => {
-    const onSubmit = vi.fn();
+  it("prevents removing the last question", async () => {
     const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
 
-    render(<ApplicationQuestionsView onSubmit={onSubmit} onBack={() => {}} />);
+    // Try to remove the only question
+    const removeButton = screen.getByLabelText(/Remove question/i);
+    await user.click(removeButton);
 
-    // Try to submit without entering any question text
-    await user.click(screen.getByText("Next"));
+    // The question should still be there
+    expect(screen.getByLabelText(/Question 1/i)).toBeInTheDocument();
+  });
 
-    // Validation error should appear
-    expect(screen.getByText("Question text is required")).toBeInTheDocument();
+  it("allows editing question text", async () => {
+    const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
+
+    // Get the first question input
+    const questionInput = screen.getByLabelText(/Question 1/i);
+
+    // Type in the question
+    await user.clear(questionInput);
+    await user.type(questionInput, "What is your organization's mission?");
+
+    // Check that the value was updated
+    expect(questionInput).toHaveValue("What is your organization's mission?");
+  });
+
+  it("allows setting word/character limits", async () => {
+    const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
+
+    // Open the first question's options
+    const expandButton = screen.getByLabelText(/Options for question 1/i);
+    await user.click(expandButton);
+
+    // Set word limit
+    const wordLimitInput = screen.getByLabelText(/Word limit/i);
+    await user.clear(wordLimitInput);
+    await user.type(wordLimitInput, "500");
+
+    // Check that the value was updated
+    expect(wordLimitInput).toHaveValue(500);
+  });
+
+  it("allows setting a category for questions", async () => {
+    const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
+
+    // Open the first question's options
+    const expandButton = screen.getByLabelText(/Options for question 1/i);
+    await user.click(expandButton);
+
+    // Open category dropdown
+    const categorySelect = screen.getByLabelText(/Category/i);
+    await user.click(categorySelect);
+
+    // Select Organizational Background
+    const option = screen.getByText("Organizational Background");
+    await user.click(option);
+
+    // Check that the selection was made
+    expect(categorySelect).toHaveTextContent("Organizational Background");
+  });
+
+  it("validates empty questions on submit", async () => {
+    const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
+
+    // Click submit without entering question text
+    await user.click(screen.getByText("Continue"));
+
+    // Should show validation error
+    expect(screen.getByText(/Question text is required/i)).toBeInTheDocument();
 
     // onSubmit should not be called
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  it("validates questions on submit", async () => {
-    const onSubmit = vi.fn();
+  it("submits the form when valid", async () => {
     const user = userEvent.setup();
-
     render(
-      <ApplicationQuestionsView
-        initialQuestions={[{ id: "q1", text: "", required: true }]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
     );
 
-    // Try to submit without entering any question text
-    await user.click(screen.getByText("Next"));
+    // Enter question text
+    const questionInput = screen.getByLabelText(/Question 1/i);
+    await user.clear(questionInput);
+    await user.type(questionInput, "What is your organization's mission?");
 
-    // Validation error should appear
-    expect(screen.getByText("Question text is required")).toBeInTheDocument();
-
-    // onSubmit should not be called
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("submits questions when form is valid", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-
-    render(
-      <ApplicationQuestionsView
-        initialQuestions={[]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
-    );
-
-    // Enter text in the question field
-    await user.type(
-      screen.getByRole("textbox"),
-      "What is your organization's mission?"
-    );
-
-    // Add another question and fill it
-    await user.click(screen.getByText(/Add Another Question/i));
-    const questions = screen.getAllByRole("textbox");
-    await user.type(questions[1], "Describe your project objectives.");
+    // Add and fill second question
+    await user.click(screen.getByText("Add Question"));
+    const questionInput2 = screen.getByLabelText(/Question 2/i);
+    await user.clear(questionInput2);
+    await user.type(questionInput2, "Describe your project goals.");
 
     // Submit the form
-    await user.click(screen.getByText("Next"));
+    await user.click(screen.getByText("Continue"));
 
-    // Wait for onSubmit to be called
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalled();
+    // onSubmit should be called with the questions
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      questions: [
+        {
+          text: "What is your organization's mission?",
+          wordLimit: null,
+          charLimit: null,
+          category: null,
+        },
+        {
+          text: "Describe your project goals.",
+          wordLimit: null,
+          charLimit: null,
+          category: null,
+        },
+      ],
     });
-
-    // Get the submitted data and verify it's an object with a questions array
-    const submittedData = onSubmit.mock.calls[0][0];
-    expect(submittedData).toHaveProperty("questions");
-    expect(submittedData.questions).toHaveLength(2);
-    expect(submittedData.questions[0].text).toBe(
-      "What is your organization's mission?"
-    );
-    expect(submittedData.questions[1].text).toBe(
-      "Describe your project objectives."
-    );
   });
 
-  it("calls onBack when Back button is clicked", async () => {
-    const onSubmit = vi.fn();
-    const onBack = vi.fn();
+  it("calls onBack when back button is clicked", async () => {
     const user = userEvent.setup();
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
 
-    render(<ApplicationQuestionsView onSubmit={onSubmit} onBack={onBack} />);
-
-    // Click the back button
+    // Click back button
     await user.click(screen.getByText("Back"));
 
-    expect(onBack).toHaveBeenCalled();
+    // onBack should be called
+    expect(mockOnBack).toHaveBeenCalled();
   });
 
-  it("scrolls to first validation error on submit", async () => {
-    // Mock scrollIntoView on both HTMLElement and Element prototypes to be safe
-    const scrollIntoViewMock = vi.fn();
-    window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
-    Element.prototype.scrollIntoView = scrollIntoViewMock;
-    
-    const onSubmit = vi.fn();
+  it("allows bulk importing questions", async () => {
     const user = userEvent.setup();
     render(
-      <ApplicationQuestionsView
-        initialQuestions={[]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
-    );
-    
-    // Add a question but leave it empty
-    await user.click(screen.getByText(/Add Another Question/i));
-
-    // Submit without filling in any questions
-    await user.click(screen.getByText("Next"));
-    
-    // Check that validation errors appear
-    await waitFor(() => {
-      expect(screen.getAllByText(/Question text is required/i).length).toBeGreaterThan(0);
-    });
-
-    // Give time for the scrollIntoView to be called (may be in an async function)
-    await waitFor(() => {
-      expect(scrollIntoViewMock).toHaveBeenCalled();
-    }, { timeout: 1000 });
-
-    // Verify onSubmit was not called
-    expect(onSubmit).not.toHaveBeenCalled();
-
-    // Clean up mock
-    vi.restoreAllMocks();
-  });
-
-  it("shows validation error for multiple questions", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-
-    render(
-      <ApplicationQuestionsView
-        initialQuestions={[
-          { id: "q1", text: "", required: true },
-          { id: "q2", text: "", required: true },
-        ]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
     );
 
-    // Submit form with empty questions
-    await user.click(screen.getByText("Next"));
+    // Click bulk import button
+    await user.click(screen.getByText(/Bulk Import/i));
 
-    // Should show validation errors
-    const errorMessages = screen.getAllByText("Question text is required");
-    expect(errorMessages.length).toBeGreaterThan(0);
+    // Should open a modal
+    expect(screen.getByText(/Paste your questions/i)).toBeInTheDocument();
 
-    // onSubmit should not be called
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("clears validation errors when a question is filled in", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-
-    // Start with a mock ID that we know will be used
-    render(
-      <ApplicationQuestionsView
-        initialQuestions={[{ id: "fixed-id", text: "", required: true }]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
-    );
-
-    // Submit form to trigger validation
-    await user.click(screen.getByText("Next"));
-
-    // Verify error is shown
-    expect(screen.getByText("Question text is required")).toBeInTheDocument();
-
-    // Get the textarea for the question
-    const questionTextarea = screen.getByRole("textbox");
-
-    // Fill in the question
-    await user.type(questionTextarea, "This is a valid question?");
-
-    // Submit again - the error should be gone
-    await user.click(screen.getByText("Next"));
-
-    // onSubmit should now be called with the valid data
-    expect(onSubmit).toHaveBeenCalled();
-  });
-
-  it("preserves valid questions when some questions have errors", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-
-    render(
-      <ApplicationQuestionsView
-        initialQuestions={[
-          { id: "q1", text: "", required: true },
-          { id: "q2", text: "This is a valid question?", required: true },
-        ]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
-    );
-
-    // Submit form (first question is empty, second is valid)
-    await user.click(screen.getByText("Next"));
-
-    // Should show error for the first question
-    expect(screen.getByText("Question text is required")).toBeInTheDocument();
-
-    // onSubmit should not be called because of the validation error
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("handles cross-field validation for dependent questions", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-
-    render(
-      <ApplicationQuestionsView
-        initialQuestions={[]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
-    );
-
-    // Add a question and select that it requires file upload
-    const questionTextarea = screen.getByRole("textbox");
-    await user.type(questionTextarea, "Please upload your portfolio");
-
-    // Find and check the "Requires File Upload" checkbox if it exists
-    // If your component has such functionality, uncomment and adjust this section
-    /*
-    const fileUploadCheckbox = screen.getByLabelText(/Requires File Upload/i);
-    await user.click(fileUploadCheckbox);
-    
-    // Submit form
-    await user.click(screen.getByText("Continue"));
-    
-    // Check if appropriate validation for file requirements is in place
-    await waitFor(() => {
-      expect(screen.getByText(/File type must be specified/i)).toBeInTheDocument();
-    });
-    */
-  });
-
-  it.skip("supports bulk import of questions", async () => {
-    // Skipping this test due to issues with dialog implementation
-    const onSubmit = vi.fn();
-    const onBack = vi.fn();
-    const user = userEvent.setup();
-
-    render(<ApplicationQuestionsView onSubmit={onSubmit} onBack={onBack} />);
-
-    // The actual implementation of bulk import needs to be investigated
-    // to find the correct way to interact with the dialog
-  });
-
-  // Already skipped
-  it.skip("allows toggling question options panel", async () => {
-    const onSubmit = vi.fn();
-    const onBack = vi.fn();
-    const user = userEvent.setup();
-
-    render(<ApplicationQuestionsView onSubmit={onSubmit} onBack={onBack} />);
-
-    // Enter text in the question field
+    // Type multiple questions
+    const textArea = screen.getByLabelText(/Questions/i);
+    await user.clear(textArea);
     await user.type(
-      screen.getByRole("textbox"),
-      "What is your project budget?"
+      textArea,
+      "What is your mission?\nDescribe your project.\nWhat is your budget?"
     );
 
-    // Find and click the settings button to open question options
-    // Look for Settings icon instead of data-testid
-    const settingsButton = screen.getAllByRole("button")[0]; // This is a simplification
-    await user.click(settingsButton);
+    // Submit the bulk import
+    await user.click(screen.getByText(/Import/i));
 
-    // Options panel should be visible
-    expect(screen.getByText(/Word limit/i)).toBeInTheDocument();
-    expect(screen.getByText(/Character limit/i)).toBeInTheDocument();
-
-    // Close the panel by clicking the button again
-    await user.click(settingsButton);
-
-    // Options panel should be closed
-    await waitFor(() => {
-      expect(screen.queryByText(/Word limit/i)).not.toBeInTheDocument();
-    });
+    // Should have three questions now
+    expect(screen.getByText("What is your mission?")).toBeInTheDocument();
+    expect(screen.getByText("Describe your project.")).toBeInTheDocument();
+    expect(screen.getByText("What is your budget?")).toBeInTheDocument();
   });
 
-  it("allows adding and submitting multiple questions", async () => {
-    const onSubmit = vi.fn();
+  it("allows reordering questions", async () => {
     const user = userEvent.setup();
-
     render(
-      <ApplicationQuestionsView
-        initialQuestions={[{ id: "q1", text: "", required: true }]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
     );
 
-    // Fill out the first question - get input by role rather than testId for reliability
-    const firstQuestionInput = screen.getByRole("textbox");
-    await user.clear(firstQuestionInput);
-    await user.type(firstQuestionInput, "First question?");
+    // Add a few questions
+    await user.clear(screen.getByLabelText(/Question 1/i));
+    await user.type(screen.getByLabelText(/Question 1/i), "Question One");
 
-    // Add another question
-    await user.click(screen.getByText("Add Another Question"));
+    await user.click(screen.getByText("Add Question"));
+    await user.clear(screen.getByLabelText(/Question 2/i));
+    await user.type(screen.getByLabelText(/Question 2/i), "Question Two");
 
-    // Get all textboxes after adding new question
-    const textboxes = screen.getAllByRole("textbox");
-    expect(textboxes.length).toBe(2);
+    await user.click(screen.getByText("Add Question"));
+    await user.clear(screen.getByLabelText(/Question 3/i));
+    await user.type(screen.getByLabelText(/Question 3/i), "Question Three");
 
-    // Fill out the second question - use the second textbox
-    await user.type(textboxes[1], "Second question?");
+    // Move question 3 up
+    const moveUpButtons = screen.getAllByLabelText(/Move question up/i);
+    await user.click(moveUpButtons[2]); // Third question's up button
 
-    // Submit the form
-    await user.click(screen.getByText("Next"));
-
-    // Wait for and verify onSubmit call
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledTimes(1);
-    });
-
-    // Verify the submitted data contains both questions
-    const submittedData = onSubmit.mock.calls[0][0];
-    expect(submittedData).toHaveProperty("questions");
-    expect(submittedData.questions).toHaveLength(2);
-    expect(submittedData.questions[0].text).toBe("First question?");
-    expect(submittedData.questions[1].text).toBe("Second question?");
+    // Check order by getting all inputs and checking their values
+    const questionInputs = screen.getAllByLabelText(/Question \d/i);
+    expect(questionInputs[0]).toHaveValue("Question One");
+    expect(questionInputs[1]).toHaveValue("Question Three"); // This should now be question 2
+    expect(questionInputs[2]).toHaveValue("Question Two"); // This should now be question 3
   });
 
-  it("validates empty questions", async () => {
-    const onSubmit = vi.fn();
+  it("auto-saves questions to localStorage", async () => {
     const user = userEvent.setup();
     render(
-      <ApplicationQuestionsView
-        initialQuestions={[]}
-        onSubmit={onSubmit}
-        onBack={() => {}}
-      />
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
     );
 
-    // Add two empty questions - the default already has one
-    await user.click(screen.getByText(/Add Another Question/i));
+    // Enter a question
+    const questionInput = screen.getByLabelText(/Question 1/i);
+    await user.clear(questionInput);
+    await user.type(questionInput, "Auto-saved question");
 
-    // Try to submit
-    await user.click(screen.getByText("Next"));
-
-    // Check validation errors are shown - should have 2 errors since there are 2 empty questions
+    // Wait for auto-save
     await waitFor(() => {
-      const errorMessages = screen.getAllByText(/Question text is required/i);
-      expect(errorMessages.length).toBe(2);
+      expect(localStorageMock.getItem("applicationQuestions")).toBeTruthy();
     });
 
-    // Verify onSubmit was not called
-    expect(onSubmit).not.toHaveBeenCalled();
+    // Parse the saved data
+    const savedData = JSON.parse(
+      localStorageMock.getItem("applicationQuestions") || ""
+    );
+    expect(savedData.questions[0].text).toBe("Auto-saved question");
+  });
+
+  it("restores questions from localStorage on mount", async () => {
+    // Set up localStorage with saved questions
+    const savedQuestions = {
+      questions: [
+        {
+          text: "Saved question 1",
+          wordLimit: 100,
+          charLimit: null,
+          category: "Organizational Background",
+        },
+        {
+          text: "Saved question 2",
+          wordLimit: null,
+          charLimit: 500,
+          category: "Project Goals",
+        },
+      ],
+    };
+    localStorageMock.setItem(
+      "applicationQuestions",
+      JSON.stringify(savedQuestions)
+    );
+
+    // Render component
+    render(
+      <ApplicationQuestionsView onSubmit={mockOnSubmit} onBack={mockOnBack} />
+    );
+
+    // Should restore two questions with their values
+    expect(screen.getByLabelText(/Question 1/i)).toHaveValue(
+      "Saved question 1"
+    );
+    expect(screen.getByLabelText(/Question 2/i)).toHaveValue(
+      "Saved question 2"
+    );
   });
 });

@@ -1,7 +1,7 @@
 "use server";
 
 import { SupabaseClient, User } from "@supabase/supabase-js";
-import { Database } from "@/lib/supabase/db/schema/database";
+import { Database } from "@/lib/schema/database";
 
 export type SyncUserResult = {
   success: boolean;

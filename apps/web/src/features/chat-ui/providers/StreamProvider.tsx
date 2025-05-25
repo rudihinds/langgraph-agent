@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { useQueryState } from "nuqs";
 import { Message } from "@langchain/langgraph-sdk";
 import { v4 as uuidv4 } from "uuid";
-import { recordNewProposalThread } from "@/lib/api";
+import { recordNewProposalThread } from "@/lib/api/client";
 import { User } from "@supabase/supabase-js";
 
 // Import the Supabase client creation utility

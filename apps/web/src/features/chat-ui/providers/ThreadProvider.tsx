@@ -16,7 +16,7 @@ import {
   recordNewProposalThread,
   listUserProposalThreads,
   UserProposalThreadType,
-} from "@/lib/api";
+} from "@/lib/api/client";
 
 import { createClient } from "../lib/client";
 

@@ -4,7 +4,10 @@ import { useState } from "react";
 import { getContentString } from "../utils";
 import { cn } from "@/lib/utils/utils";
 import { Textarea } from "@/features/ui/components/textarea";
-import { BranchSwitcher, CommandBar } from "./shared";
+import {
+  BranchSwitcher,
+  CommandBar,
+} from "@/features/chat-ui/components/messages/shared";
 
 function EditableContent({
   value,
