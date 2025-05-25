@@ -146,11 +146,13 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - Centralized `thread_id` management within the `OrchestratorService` and API layer for all graph operations.
    - Removed redundant server startup files (`apps/backend/index.ts`, `apps/backend/server.js`) and custom persistence components.
 
-9. **Backend Refactoring - Phase 1 Complete ✅**:
-   - **Removed Deprecated Services**: Deleted `[dep]orchestrator.service.ts` (1235 lines), `[dep]orchestrator-factory.ts`, `[dep]checkpointer.service.ts`, and all broken test files importing these services.
-   - **Cleaned Up Agent Files**: Removed deprecated `agents/[dep]README.md` and `agents/[dep]index.ts` files containing obsolete documentation and commented-out code.
-   - **Eliminated Obsolete LangGraph Server Code**: Deleted `api/langgraph/index.ts` (249 lines) and the entire `api/langgraph/` directory containing deprecated server management code that conflicted with LangGraph SDK.
-   - **Impact**: Removed ~1,700+ lines of deprecated code, eliminated 8 broken test files, and simplified backend architecture to focus purely on Express.js business logic while LangGraph SDK handles agent execution.
+9. **Backend Refactoring - Phase 2 Complete ✅**:
+   - **Phase 1 - Removed Deprecated Services**: Deleted `[dep]orchestrator.service.ts` (1235 lines), `[dep]orchestrator-factory.ts`, `[dep]checkpointer.service.ts`, and all broken test files importing these services. Removed deprecated `agents/[dep]README.md` and `agents/[dep]index.ts` files. Eliminated obsolete LangGraph server code in `api/langgraph/index.ts` (249 lines).
+   - **Phase 2 - Agent Structure Standardization**:
+     - **Consolidated Agent Implementations**: Removed duplicate `proposal-agent/` directory, consolidated all functionality into `proposal-generation/`
+     - **Standardized Agent Structure**: Created individual node files for stub implementations (`deepResearch.ts`, `solutionSought.ts`, `connectionPairs.ts`, `evaluateResearch.ts`, `evaluateSolution.ts`, `evaluateConnections.ts`). Refactored `nodes.ts` to be a proper barrel export file with clean separation between implementations and exports.
+     - **Consolidated Agent Utilities**: Audited utility distribution, confirmed no duplicates between agents and `lib/utils/`, maintained proper separation between agent-specific and shared utilities.
+   - **Impact**: Removed ~1,700+ lines of deprecated code, established clean agent directory structure with individual node files for better maintainability, proper separation of concerns, and no duplicate utility functions. All tests continue passing.
 
 ### Next
 
