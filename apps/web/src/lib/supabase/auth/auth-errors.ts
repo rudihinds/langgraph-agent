@@ -3,7 +3,11 @@
  */
 import { AuthError as SupabaseAuthError } from "@supabase/supabase-js";
 import { ErrorCodes } from "@/lib/errors";
-import { AuthenticationError, ValidationError, ServerError } from "@/lib/errors/custom-errors";
+import {
+  AuthenticationError,
+  ValidationError,
+  ServerError,
+} from "@/lib/errors/custom-errors";
 import { logger } from "@/lib/logger";
 import { ApiErrorResponse, ApiResponse } from "@/lib/errors";
 
@@ -11,18 +15,18 @@ import { ApiErrorResponse, ApiResponse } from "@/lib/errors";
  * Mapping of Supabase auth error codes to standardized error codes
  */
 const AUTH_ERROR_CODE_MAP: Record<string, string> = {
-  'invalid_grant': ErrorCodes.AUTHENTICATION,
-  'invalid_credentials': ErrorCodes.AUTHENTICATION,
-  'user_not_found': ErrorCodes.AUTHENTICATION,
-  'expired_token': ErrorCodes.AUTHENTICATION,
-  'invalid_token': ErrorCodes.AUTHENTICATION,
-  'email_taken': ErrorCodes.VALIDATION,
-  'phone_taken': ErrorCodes.VALIDATION,
-  'invalid_email': ErrorCodes.VALIDATION,
-  'invalid_phone': ErrorCodes.VALIDATION,
-  'oauth_error': ErrorCodes.AUTHENTICATION,
-  'server_error': ErrorCodes.SERVER_ERROR,
-  'rate_limit_error': ErrorCodes.SERVER_ERROR,
+  invalid_grant: ErrorCodes.AUTHENTICATION,
+  invalid_credentials: ErrorCodes.AUTHENTICATION,
+  user_not_found: ErrorCodes.AUTHENTICATION,
+  expired_token: ErrorCodes.AUTHENTICATION,
+  invalid_token: ErrorCodes.AUTHENTICATION,
+  email_taken: ErrorCodes.VALIDATION,
+  phone_taken: ErrorCodes.VALIDATION,
+  invalid_email: ErrorCodes.VALIDATION,
+  invalid_phone: ErrorCodes.VALIDATION,
+  oauth_error: ErrorCodes.AUTHENTICATION,
+  server_error: ErrorCodes.SERVER_ERROR,
+  rate_limit_error: ErrorCodes.SERVER_ERROR,
   // Add more error codes as they are encountered
 };
 
@@ -42,101 +46,111 @@ const AUTH_STATUS_CODE_MAP: Record<number, number> = {
 
 /**
  * Standardized handling of Supabase auth errors
- * 
+ *
  * @param error The auth error from Supabase
  * @param operation Description of the operation that failed
  * @returns Never returns, always throws an appropriate error
  */
-export function handleAuthError(error: SupabaseAuthError, operation: string): never {
+export function handleAuthError(
+  error: SupabaseAuthError,
+  operation: string
+): never {
   // Extract useful information for logging
   const context = {
     operation,
     status: error.status,
     name: error.name,
     supabaseErrorCode: error?.message?.match(/error_code=([^&\\s]+)/)?.[1],
-    message: error.message
+    message: error.message,
   };
-  
+
   logger.error(`Auth error: ${operation}`, context, error);
-  
+
   // Determine error code from message or status
   const errorCodeMatch = error.message?.match(/error_code=([^&\\s]+)/)?.[1];
-  const errorCode = errorCodeMatch ? AUTH_ERROR_CODE_MAP[errorCodeMatch] : undefined;
-  const statusCode = error.status ? AUTH_STATUS_CODE_MAP[error.status] || 500 : 500;
-  
+  const errorCode = errorCodeMatch
+    ? AUTH_ERROR_CODE_MAP[errorCodeMatch]
+    : undefined;
+  const statusCode = error.status
+    ? AUTH_STATUS_CODE_MAP[error.status] || 500
+    : 500;
+
   // Map to appropriate error type
   if (errorCode === ErrorCodes.VALIDATION) {
-    throw new ValidationError(error.message, { 
+    throw new ValidationError(error.message, {
       originalError: error.message,
-      supabaseErrorCode: errorCodeMatch
+      supabaseErrorCode: errorCodeMatch || "unknown",
     });
   } else if (errorCode === ErrorCodes.SERVER_ERROR) {
     throw new ServerError(error.message, {
       originalError: error.message,
-      supabaseErrorCode: errorCodeMatch
+      supabaseErrorCode: errorCodeMatch || "unknown",
     });
   } else {
     // Default to authentication error
     throw new AuthenticationError(error.message, {
       originalError: error.message,
-      supabaseErrorCode: errorCodeMatch
+      supabaseErrorCode: errorCodeMatch || "unknown",
     });
   }
 }
 
 /**
  * Creates a standardized error response for auth operations
- * 
+ *
  * @param error The error that occurred
  * @param operation Description of the operation
  * @returns A standardized error response object
  */
-export function createAuthErrorResponse(error: unknown, operation: string): ApiErrorResponse {
+export function createAuthErrorResponse(
+  error: unknown,
+  operation: string
+): ApiErrorResponse {
   logger.error(`Auth operation failed: ${operation}`, {}, error);
-  
+
   if (error instanceof SupabaseAuthError) {
     const errorCodeMatch = error.message?.match(/error_code=([^&\\s]+)/)?.[1];
-    const errorCode = errorCodeMatch 
-      ? AUTH_ERROR_CODE_MAP[errorCodeMatch] || ErrorCodes.AUTHENTICATION 
+    const errorCode = errorCodeMatch
+      ? AUTH_ERROR_CODE_MAP[errorCodeMatch] || ErrorCodes.AUTHENTICATION
       : ErrorCodes.AUTHENTICATION;
-    
+
     return {
       success: false,
       error: {
-        message: error.message || 'Authentication failed',
+        message: error.message || "Authentication failed",
         code: errorCode,
         details: {
           status: error.status,
-          supabaseErrorCode: errorCodeMatch
-        }
-      }
+          supabaseErrorCode: errorCodeMatch || "unknown",
+        },
+      },
     };
   }
-  
+
   if (error instanceof Error) {
     return {
       success: false,
       error: {
-        message: error.message || 'Authentication failed',
+        message: error.message || "Authentication failed",
         code: ErrorCodes.AUTHENTICATION,
-        details: { originalError: error.toString() }
-      }
+        details: { originalError: error.toString() },
+      },
     };
   }
-  
+
   return {
     success: false,
     error: {
-      message: 'Authentication failed',
+      message: "Authentication failed",
       code: ErrorCodes.AUTHENTICATION,
-      details: error
-    }
+      details: error,
+    },
   };
 }
 
 /**
  * Wraps an auth operation with standardized error handling
- * 
+ *
  * @param operation Function that performs the auth operation
  * @param operationName Name of the operation for logging
  * @returns A function with standardized error handling

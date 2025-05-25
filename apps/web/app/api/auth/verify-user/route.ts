@@ -13,9 +13,8 @@ export async function POST() {
 
   try {
     // Create a supabase client that handles cookies
-    // Make sure to await cookies() before passing it
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    // Pass cookies() directly to createClient
+    const supabase = await createClient(cookies());
 
     // Get authenticated user
     console.log("[VerifyUser API] Checking for authenticated user");
@@ -50,7 +49,7 @@ export async function POST() {
         {
           success: false,
           error: "User verification failed",
-          details: result.error.message || result.error,
+          details: result.error || "Unknown error",
         },
         { status: 500 }
       );

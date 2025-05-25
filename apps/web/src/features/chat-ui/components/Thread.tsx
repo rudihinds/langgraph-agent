@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useRef, useEffect } from "react";
 import { useStreamContext } from "../providers/StreamProvider";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { useState, FormEvent } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/features/ui/components/textarea";
 import { LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 

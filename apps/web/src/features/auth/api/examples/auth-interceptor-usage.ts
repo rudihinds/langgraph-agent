@@ -115,7 +115,12 @@ export function setupGlobalApi() {
   const originalFetch = window.fetch;
   window.fetch = async (input, init) => {
     // Only intercept calls to your API, not all fetch requests
-    const url = typeof input === "string" ? input : input.url;
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
     if (
       url.startsWith("/api/") ||
       url.startsWith("https://api.yourdomain.com")

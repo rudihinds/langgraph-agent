@@ -1,8 +1,8 @@
-import { useStreamContext } from "@/features/providers/Stream";
+import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { Message } from "@langchain/langgraph-sdk";
 import { useState } from "react";
 import { getContentString } from "../utils";
-import { cn } from "@/features/shared/utils/utils";
+import { cn } from "@/lib/utils/utils";
 import { Textarea } from "@/features/ui/components/textarea";
 import { BranchSwitcher, CommandBar } from "./shared";
 
@@ -56,7 +56,7 @@ export function HumanMessage({
       {
         checkpoint: parentCheckpoint,
         streamMode: ["values"],
-        optimisticValues: (prev) => {
+        optimisticValues: (prev: any) => {
           const values = meta?.firstSeenState?.values;
           if (!values) return prev;
 

@@ -4,8 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   StreamProvider,
   useStream,
-} from "../../../components/chat-ui/providers/Stream";
-import * as authInterceptorModule from "../../../lib/api/auth-interceptor";
+} from "@/features/chat-ui/providers/StreamProvider";
+import * as authInterceptorModule from "@/features/auth/api/auth-interceptor";
 
 // Mock the auth interceptor module
 const mockAuthFetch = vi.fn();
@@ -15,7 +15,7 @@ const mockCreateAuthInterceptor = vi.hoisted(() => {
   }));
 });
 
-vi.mock("../../../lib/api/auth-interceptor", () => ({
+vi.mock("@/features/auth/api/auth-interceptor", () => ({
   createAuthInterceptor: mockCreateAuthInterceptor,
 }));
 

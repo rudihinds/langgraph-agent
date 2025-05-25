@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import ProposalList from "../ProposalList";
-import { getProposals } from "@/features/api/utils/proposals";
+import { getUserProposals } from "@/features/proposals/api/proposals";
 import EmptyDashboard from "../EmptyDashboard";
 
 // Mock dependencies
-jest.mock("@/lib/api/proposals", () => ({
-  getProposals: jest.fn(),
+jest.mock("@/features/proposals/api/proposals", () => ({
+  getUserProposals: jest.fn(),
 }));
 
 jest.mock("../EmptyDashboard", () => ({
@@ -29,14 +29,14 @@ describe("ProposalList", () => {
   });
 
   it("renders EmptyDashboard when no proposals are found", async () => {
-    (getProposals as jest.Mock).mockResolvedValue([]);
+    (getUserProposals as jest.Mock).mockResolvedValue([]);
 
     render(await ProposalList());
 
     expect(screen.getByTestId("empty-dashboard")).toBeInTheDocument();
   });
 
-  it("renders all proposals in the "all" tab', async () => {
+  it("renders all proposals in the all tab", async () => {
     const mockProposals = [
       {
         id: "1",
@@ -64,7 +64,7 @@ describe("ProposalList", () => {
       },
     ];
 
-    (getProposals as jest.Mock).mockResolvedValue(mockProposals);
+    (getUserProposals as jest.Mock).mockResolvedValue(mockProposals);
 
     render(await ProposalList());
 
@@ -124,7 +124,7 @@ describe("ProposalList", () => {
       },
     ];
 
-    (getProposals as jest.Mock).mockResolvedValue(mockProposals);
+    (getUserProposals as jest.Mock).mockResolvedValue(mockProposals);
 
     render(await ProposalList());
 

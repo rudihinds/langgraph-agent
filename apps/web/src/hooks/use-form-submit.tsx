@@ -4,8 +4,8 @@
  * Hook for form submission with standardized error handling
  */
 import { useState, useTransition } from "react";
-import { ApiResponse } from "@/features/shared/errors/types";
-import { extractFieldErrors } from "@/features/shared/errors/form-errors";
+import { ApiResponse } from "@/lib/errors/types";
+import { extractFieldErrors } from "@/lib/errors/form-errors";
 
 interface UseFormSubmitOptions<TData> {
   /**
@@ -26,7 +26,7 @@ interface UseFormSubmitOptions<TData> {
 
 /**
  * Hook for form submission with standardized error handling
- * 
+ *
  * @param action The server action to call for form submission
  * @param options Configuration options
  * @returns Form submission utilities with error handling
@@ -49,7 +49,10 @@ export function useFormSubmit<TData>(
   /**
    * Submit handler for the form
    */
-  const handleSubmit = async (formData: FormData | Record<string, any>, ...args: any[]) => {
+  const handleSubmit = async (
+    formData: FormData | Record<string, any>,
+    ...args: any[]
+  ) => {
     startTransition(async () => {
       try {
         // Clear previous errors
@@ -72,7 +75,7 @@ export function useFormSubmit<TData>(
           // Reset the form if configured to do so
           if (options.resetOnSuccess) {
             if (formData instanceof FormData) {
-              const form = formData.get("form") as HTMLFormElement;
+              const form = formData.get("form") as unknown as HTMLFormElement;
               if (form) form.reset();
             }
           }
@@ -84,7 +87,10 @@ export function useFormSubmit<TData>(
         } else {
           // Handle error
           const fieldErrors = extractFieldErrors(result as any);
-          const formError = fieldErrors._form || result.error?.message || "Form submission failed";
+          const formError =
+            fieldErrors._form ||
+            result.error?.message ||
+            "Form submission failed";
 
           setFormState((prev) => ({
             ...prev,
@@ -96,7 +102,10 @@ export function useFormSubmit<TData>(
         // Handle unexpected errors
         setFormState((prev) => ({
           ...prev,
-          formError: error instanceof Error ? error.message : "An unexpected error occurred",
+          formError:
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred",
         }));
       }
     });

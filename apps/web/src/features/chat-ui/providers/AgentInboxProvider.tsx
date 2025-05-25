@@ -10,7 +10,7 @@ import { Thread, ThreadStatus } from "@langchain/langgraph-sdk";
 import { toast } from "sonner";
 
 import { useStreamContext } from "./StreamProvider";
-import { Agent, AgentInbox } from "../types";
+import { AgentInbox } from "../types";
 import { createClient } from "../lib/client";
 
 interface AgentInboxContextType {
@@ -77,21 +77,23 @@ export function AgentInboxProvider({ children }: { children: ReactNode }) {
       );
 
       // Fetch threads using the client
-      const fetchedThreads = await client.threads.list();
+      const fetchedThreads = await client.threads.search();
       setThreads(fetchedThreads);
 
       // Update thread statuses
       const newThreadStatus: Record<string, ThreadStatus> = {};
       for (const thread of fetchedThreads) {
         try {
-          const status = await client.threads.getStatus(thread.id);
-          newThreadStatus[thread.id] = status;
+          // Get thread state to determine status
+          const state = await client.threads.getState(thread.thread_id);
+          // Infer status from state - use valid ThreadStatus values
+          newThreadStatus[thread.thread_id] = thread.status || "idle";
         } catch (error) {
           console.error(
-            `Error fetching status for thread ${thread.id}:`,
+            `Error fetching status for thread ${thread.thread_id}:`,
             error
           );
-          newThreadStatus[thread.id] = "ready";
+          newThreadStatus[thread.thread_id] = "idle";
         }
       }
       setThreadStatus(newThreadStatus);

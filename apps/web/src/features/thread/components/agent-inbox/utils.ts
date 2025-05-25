@@ -1,7 +1,7 @@
 import { BaseMessage, isBaseMessage } from "@langchain/core/messages";
 import { format } from "date-fns";
 import { startCase } from "lodash";
-import { HumanResponseWithEdits, SubmitType } from "./types";
+import { HumanResponseWithEdits, SubmitType } from "@/features/chat-ui/types/index";
 import { HumanInterrupt } from "@langchain/langgraph/prebuilt";
 
 export function prettifyText(action: string) {
@@ -9,7 +9,7 @@ export function prettifyText(action: string) {
 }
 
 export function isArrayOfMessages(
-  value: Record<string, any>[],
+  value: Record<string, any>[]
 ): value is BaseMessage[] {
   if (
     value.every(isBaseMessage) ||
@@ -20,7 +20,7 @@ export function isArrayOfMessages(
           "id" in v &&
           "type" in v &&
           "content" in v &&
-          "additional_kwargs" in v,
+          "additional_kwargs" in v
       ))
   ) {
     return true;
@@ -83,9 +83,7 @@ export function unknownToPrettyDate(input: unknown): string | undefined {
 
 export function createDefaultHumanResponse(
   interrupt: HumanInterrupt,
-  initialHumanInterruptEditValue: React.MutableRefObject<
-    Record<string, string>
-  >,
+  initialHumanInterruptEditValue: React.MutableRefObject<Record<string, string>>
 ): {
   responses: HumanResponseWithEdits[];
   defaultSubmitType: SubmitType | undefined;
@@ -120,7 +118,7 @@ export function createDefaultHumanResponse(
               key: k,
               value: stringValue,
               expectedValue: initialHumanInterruptEditValue.current[k],
-            },
+            }
           );
         }
       });
@@ -189,7 +187,7 @@ export function createDefaultHumanResponse(
 
 export function constructOpenInStudioURL(
   deploymentUrl: string,
-  threadId?: string,
+  threadId?: string
 ) {
   const smithStudioURL = new URL("https://smith.langchain.com/studio/thread");
   // trim the trailing slash from deploymentUrl
@@ -206,7 +204,7 @@ export function constructOpenInStudioURL(
 
 export function haveArgsChanged(
   args: unknown,
-  initialValues: Record<string, string>,
+  initialValues: Record<string, string>
 ): boolean {
   if (typeof args !== "object" || !args) {
     return false;

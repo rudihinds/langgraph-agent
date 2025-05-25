@@ -1,12 +1,17 @@
 import { Suspense } from "react";
 import { ProposalCard } from "@/features/dashboard/components/ProposalCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/components/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/features/ui/components/tabs";
 import EmptyDashboard from "@/features/dashboard/components/EmptyDashboard";
 import DashboardSkeleton from "@/features/dashboard/components/DashboardSkeleton";
-import { getProposals } from "@/features/api/utils/proposals";
+import { getUserProposals } from "@/features/proposals/api/proposals";
 
 export default async function ProposalList() {
-  const proposals = await getProposals();
+  const proposals = await getUserProposals();
 
   if (!proposals || proposals.length === 0) {
     return <EmptyDashboard />;

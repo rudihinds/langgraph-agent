@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import {
-  useCurrentUser,
-  useRequireAuth,
-  signOut,
-} from "../../../../lib/client-auth";
+import { useCurrentUser, useRequireAuth, signOut } from "@/lib/client-auth";
 
 // Set up mock router before importing modules
 const mockRouter = { push: vi.fn(), refresh: vi.fn() };
@@ -18,7 +14,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => mockRouter,
 }));
 
-vi.mock("../supabase/client", () => ({
+vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn().mockImplementation(() => ({
     auth: {
       getUser: vi.fn(),
@@ -32,7 +28,7 @@ vi.mock("../supabase/client", () => ({
 import { createBrowserClient } from "@supabase/ssr";
 
 // Mock supabase/auth module
-vi.mock("../supabase/auth", () => ({
+vi.mock("@/lib/supabase/auth", () => ({
   signOut: vi.fn().mockImplementation(async (redirectTo = "/login") => {
     try {
       // Mock successful API call

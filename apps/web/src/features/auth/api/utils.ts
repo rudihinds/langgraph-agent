@@ -4,7 +4,7 @@
 import { createClient } from "@/features/auth/api/client";
 import { AppUser } from "@/features/auth/types";
 import { createAuthErrorResponse } from "@/features/auth/api/auth-errors";
-import { ApiResponse } from "@/features/shared/errors/types";
+import { ApiResponse } from "@/lib/errors/types";
 import { logger } from "@/lib/logger";
 
 /**

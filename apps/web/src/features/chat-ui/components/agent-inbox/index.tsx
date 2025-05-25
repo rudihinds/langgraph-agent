@@ -5,9 +5,14 @@ import {
   createDefaultHumanResponse,
   prettifyText,
 } from "../../utils/agent-inbox-utils";
-import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/features/ui/components/card";
+import { Button } from "@/features/ui/components/button";
 import { StateView } from "./state-view";
 import { ThreadActionsView } from "./thread-actions-view";
 import { ThreadId } from "./thread-id";
@@ -31,7 +36,7 @@ interface AgentInboxViewProps {
 
 function InterruptIconComponent({ interrupt }: { interrupt: HumanInterrupt }) {
   const actionName = interrupt.action_request
-    ? interrupt.action_request.type
+    ? (interrupt.action_request as any).type || "Unknown"
     : "Unknown";
 
   return (
@@ -96,7 +101,9 @@ function AgentInboxItemView({
           <InterruptIconComponent interrupt={interrupt} />
           <div className="flex flex-col">
             <CardTitle className="text-sm">
-              {prettifyText(interrupt.action_request?.type || "Action")}
+              {prettifyText(
+                (interrupt.action_request as any)?.type || "Action"
+              )}
             </CardTitle>
           </div>
         </div>
@@ -162,7 +169,14 @@ function AgentInboxItemView({
                 {activeResponse && (
                   <div className="rounded-md border border-gray-200 p-2">
                     <InboxItemInput
-                      initialValue={activeResponse.args ?? ""}
+                      initialValue={
+                        typeof activeResponse.args === "string"
+                          ? activeResponse.args
+                          : ((activeResponse.args as unknown as Record<
+                              string,
+                              unknown
+                            >) ?? "")
+                      }
                       inputType={activeResponse.type as SubmitType}
                       hasAccept={hasAccept}
                       editsMade={
@@ -226,7 +240,7 @@ export function AgentInbox({
         <div className="flex w-full flex-col gap-4">
           {interrupts.map((interrupt, idx) => (
             <AgentInboxItemView
-              key={`interrupt-${idx}-${interrupt.action_request.type}`}
+              key={`interrupt-${idx}-${(interrupt.action_request as any)?.type || "unknown"}`}
               interrupt={interrupt}
               onSubmit={onSubmit}
               onDiscard={onDiscard}

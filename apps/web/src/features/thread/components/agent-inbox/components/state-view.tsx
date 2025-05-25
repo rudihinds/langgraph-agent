@@ -7,7 +7,7 @@ import {
   unknownToPrettyDate,
 } from "../utils";
 import { motion } from "framer-motion";
-import { cn } from "@/features/shared/utils/utils";
+import { cn } from "@/lib/utils/utils";
 import { BaseMessage } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { ToolCallTable } from "./tool-call-table";

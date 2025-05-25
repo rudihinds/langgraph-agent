@@ -38,6 +38,8 @@ export class AppError extends Error {
  * Error thrown when authentication fails
  */
 export class AuthenticationError extends AppError implements IAuthError {
+  declare code: "AUTH_ERROR";
+
   constructor(message: string = "Authentication failed", details?: unknown) {
     super(message, ErrorCodes.AUTHENTICATION, 401, details);
   }
@@ -47,6 +49,9 @@ export class AuthenticationError extends AppError implements IAuthError {
  * Error thrown when validation fails
  */
 export class ValidationError extends AppError implements IValidationError {
+  declare code: "VALIDATION_ERROR";
+  declare details?: Record<string, string>;
+
   constructor(
     message: string = "Validation failed",
     details?: Record<string, string>
@@ -59,6 +64,8 @@ export class ValidationError extends AppError implements IValidationError {
  * Error thrown when a database operation fails
  */
 export class DatabaseError extends AppError implements IDatabaseError {
+  declare code: "DATABASE_ERROR";
+
   constructor(
     message: string = "Database operation failed",
     details?: unknown
@@ -71,6 +78,9 @@ export class DatabaseError extends AppError implements IDatabaseError {
  * Error thrown when a resource is not found
  */
 export class NotFoundError extends AppError implements INotFoundError {
+  declare code: "NOT_FOUND";
+  declare details?: { resourceType?: string; resourceId?: string | number };
+
   constructor(
     message: string = "Resource not found",
     resourceType?: string,
@@ -85,6 +95,8 @@ export class NotFoundError extends AppError implements INotFoundError {
  * Error thrown when a user doesn't have permission to access a resource
  */
 export class ForbiddenError extends AppError implements IForbiddenError {
+  declare code: "FORBIDDEN";
+
   constructor(message: string = "Access forbidden", details?: unknown) {
     super(message, ErrorCodes.FORBIDDEN, 403, details);
   }
@@ -94,6 +106,8 @@ export class ForbiddenError extends AppError implements IForbiddenError {
  * Error thrown when a server error occurs
  */
 export class ServerError extends AppError implements IServerError {
+  declare code: "SERVER_ERROR";
+
   constructor(message: string = "Server error occurred", details?: unknown) {
     super(message, ErrorCodes.SERVER_ERROR, 500, details);
   }

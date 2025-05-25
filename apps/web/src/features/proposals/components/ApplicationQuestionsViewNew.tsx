@@ -17,13 +17,16 @@ import { formatDateForAPI } from "@/lib/utils/date-utils";
 import { FormErrorBoundary } from "@/features/ui/components/form-error";
 import { FormField } from "@/features/ui/components/form-field";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { QuestionField, Question } from "@/features/ui/components/question-field";
+import {
+  QuestionField,
+  Question,
+} from "@/features/ui/components/question-field";
 import {
   questionsFormSchema,
   QuestionsFormValues,
 } from "@/lib/forms/schemas/questions-form-schema";
 import { logger } from "@/lib/logger";
-import { createProposalWithQuestions } from "@/features/proposals/utils/actions[dep]";
+import { createProposalWithQuestions } from "@/features/proposals/api/actions";
 
 type ApplicationQuestionsViewProps = {
   userId: string;
@@ -41,7 +44,7 @@ export function ApplicationQuestionsView({
 
   // Track questions state
   const [questions, setQuestions] = useState<Question[]>([
-    { id: uuidv4(), text: "", type: "text", required: false },
+    { id: uuidv4(), text: "", type: "text" as const, required: false },
   ]);
 
   // Use the form validation hook
@@ -55,10 +58,10 @@ export function ApplicationQuestionsView({
 
   // Question management functions
   const addQuestion = () => {
-    const newQuestion = {
+    const newQuestion: Question = {
       id: uuidv4(),
       text: "",
-      type: "text",
+      type: "text" as const,
       required: false,
     };
     const updatedQuestions = [...questions, newQuestion];

@@ -29,8 +29,15 @@ import { User } from "@supabase/supabase-js";
 // Trying path alias based on project structure
 import { createClient } from "@/lib/supabase/client";
 
-// Define the StateType *without* the optional 'ui' channel initially
-export type StateType = { messages: Message[] };
+// Define the StateType with ui channel for custom components
+export type StateType = {
+  messages: Message[];
+  ui?: Array<{
+    id: string;
+    metadata?: { message_id?: string };
+    [key: string]: any;
+  }>;
+};
 
 // Use the standard useStream hook, typed only for messages
 // Explicitly provide BagTemplate to avoid potential generic issues
@@ -45,17 +52,23 @@ export interface StreamContextType {
   isLoading: boolean;
   error: Error | null | undefined;
   submit: (
-    values: Partial<StateType>,
-    options?:
-      | {
-          config?: Record<string, unknown>;
-          toolChoice?: string | undefined;
-        }
-      | undefined
+    values: Partial<StateType> | null | undefined,
+    options?: any
   ) => void;
   stop: () => void;
   // We will manage threadId separately via useQueryState for now
   threadId: string | null; // Keep this for context consumers, but populate from useQueryState
+  // Additional properties from useStream hook
+  values: StateType;
+  getMessagesMetadata: (message: Message) => any;
+  interrupt: any;
+  setBranch: (branch: string) => void;
+  // Properties needed for LoadExternalComponent
+  branch: string;
+  history: any;
+  experimental_branchTree: any;
+  client: any;
+  assistantId: string;
   // isStreaming might be implicitly handled by isLoading or not directly exposed
 }
 
@@ -336,7 +349,21 @@ export function StreamProvider({ children }: StreamProviderProps) {
   });
 
   // Destructure other properties from streamData, threadId is now handled by onThreadId callback
-  const { submit, messages, isLoading, error: streamError, stop } = streamData;
+  const {
+    submit,
+    messages,
+    isLoading,
+    error: streamError,
+    stop,
+    values,
+    getMessagesMetadata,
+    interrupt,
+    setBranch,
+    branch,
+    history,
+    experimental_branchTree,
+    client,
+  } = streamData;
 
   // Effect to handle general errors from useStream and specific invalid threadId errors
   useEffect(() => {
@@ -389,6 +416,15 @@ export function StreamProvider({ children }: StreamProviderProps) {
       // Use urlThreadId as the source of truth, updated by onThreadId via setUrlThreadId
       // Fallback to localSdkThreadId if urlThreadId hasn't caught up yet (e.g. during the re-render cycle)
       threadId: urlThreadId || localSdkThreadId || null,
+      values,
+      getMessagesMetadata,
+      interrupt,
+      setBranch,
+      branch: branch || "main",
+      history,
+      experimental_branchTree,
+      client,
+      assistantId: assistantId as string,
     }),
     [
       messages,
@@ -400,6 +436,15 @@ export function StreamProvider({ children }: StreamProviderProps) {
       rfpId,
       localSdkThreadId, // Add localSdkThreadId to dependencies
       streamError, // Add streamError to context value dependencies
+      values,
+      getMessagesMetadata,
+      interrupt,
+      setBranch,
+      branch,
+      history,
+      experimental_branchTree,
+      client,
+      assistantId,
     ]
   );
 

@@ -1,4 +1,4 @@
-import { Database } from "@/lib/supabase/db/schema/database";
+import { Database } from "@/lib/schema/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 // Type definition for the result of the helper

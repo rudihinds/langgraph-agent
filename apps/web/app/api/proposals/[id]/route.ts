@@ -2,30 +2,32 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 /**
  * GET /api/proposals/[id] - Get a specific proposal
  * Requires authentication
  */
-export async function GET(req: Request, { params }: RouteParams) {
-  const { id } = params;
-  
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
   if (!id) {
-    return NextResponse.json({ message: "Missing proposal ID" }, { status: 400 });
+    return NextResponse.json(
+      { message: "Missing proposal ID" },
+      { status: 400 }
+    );
   }
 
   try {
     // Create a Supabase client
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookies());
 
     // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -40,13 +42,19 @@ export async function GET(req: Request, { params }: RouteParams) {
 
     if (error) {
       console.error("Error fetching proposal:", error);
-      return NextResponse.json({ message: "Proposal not found or access denied" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Proposal not found or access denied" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(proposal);
   } catch (error) {
     console.error("Error in GET /api/proposals/[id]:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -54,20 +62,28 @@ export async function GET(req: Request, { params }: RouteParams) {
  * PATCH /api/proposals/[id] - Update a specific proposal
  * Requires authentication
  */
-export async function PATCH(req: Request, { params }: RouteParams) {
-  const { id } = params;
-  
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
   if (!id) {
-    return NextResponse.json({ message: "Missing proposal ID" }, { status: 400 });
+    return NextResponse.json(
+      { message: "Missing proposal ID" },
+      { status: 400 }
+    );
   }
 
   try {
     // Create a Supabase client
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookies());
 
     // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -81,12 +97,15 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       .single();
 
     if (checkError || !existingProposal) {
-      return NextResponse.json({ message: "Proposal not found or access denied" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Proposal not found or access denied" },
+        { status: 404 }
+      );
     }
 
     // Parse request body
     const body = await req.json();
-    
+
     // Add updated_at timestamp
     const updateData = {
       ...body,
@@ -103,13 +122,19 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
     if (error) {
       console.error("Error updating proposal:", error);
-      return NextResponse.json({ message: "Failed to update proposal" }, { status: 500 });
+      return NextResponse.json(
+        { message: "Failed to update proposal" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(updatedProposal);
   } catch (error) {
     console.error("Error in PATCH /api/proposals/[id]:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -117,20 +142,28 @@ export async function PATCH(req: Request, { params }: RouteParams) {
  * DELETE /api/proposals/[id] - Delete a specific proposal
  * Requires authentication
  */
-export async function DELETE(req: Request, { params }: RouteParams) {
-  const { id } = params;
-  
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
   if (!id) {
-    return NextResponse.json({ message: "Missing proposal ID" }, { status: 400 });
+    return NextResponse.json(
+      { message: "Missing proposal ID" },
+      { status: 400 }
+    );
   }
 
   try {
     // Create a Supabase client
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookies());
 
     // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -144,34 +177,41 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       .single();
 
     if (checkError || !existingProposal) {
-      return NextResponse.json({ message: "Proposal not found or access denied" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Proposal not found or access denied" },
+        { status: 404 }
+      );
     }
 
     // Delete any associated files first
-    const { data: files, error: filesError } = await supabase
-      .storage
-      .from('proposal-documents')
+    const { data: files, error: filesError } = await supabase.storage
+      .from("proposal-documents")
       .list(`${user.id}/${id}`);
 
     if (!filesError && files && files.length > 0) {
-      const filePaths = files.map(file => `${user.id}/${id}/${file.name}`);
-      await supabase.storage.from('proposal-documents').remove(filePaths);
+      const filePaths = files.map(
+        (file: any) => `${user.id}/${id}/${file.name}`
+      );
+      await supabase.storage.from("proposal-documents").remove(filePaths);
     }
 
     // Delete the proposal
-    const { error } = await supabase
-      .from("proposals")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("proposals").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting proposal:", error);
-      return NextResponse.json({ message: "Failed to delete proposal" }, { status: 500 });
+      return NextResponse.json(
+        { message: "Failed to delete proposal" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ message: "Proposal deleted successfully" });
   } catch (error) {
     console.error("Error in DELETE /api/proposals/[id]:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

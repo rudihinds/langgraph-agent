@@ -10,7 +10,7 @@
  */
 import { ComponentType, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@/features/auth/utils/client";
+import { createBrowserClient } from "@/lib/supabase/client";
 import { createAuthInterceptor } from "@/features/auth/api/auth-interceptor";
 
 // Configuration constants

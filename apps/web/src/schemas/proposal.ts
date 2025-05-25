@@ -89,6 +89,9 @@ const ProposalSchema = z.object({
   metadata: MetadataSchema.optional().default({}),
 });
 
+// Export schemas
+export { ProposalSchema, QuestionSchema, FunderDetailsSchema, DocumentSchema };
+
 // Export type definitions
 type Question = z.infer<typeof QuestionSchema>;
 type FunderDetails = z.infer<typeof FunderDetailsSchema>;

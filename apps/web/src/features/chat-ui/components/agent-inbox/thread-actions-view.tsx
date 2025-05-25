@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/features/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/components/card";
+import { Separator } from "@/features/ui/components/separator";
 import { constructOpenInStudioURL } from "../../utils/agent-inbox-utils";
 import { ExternalLink } from "lucide-react";
 

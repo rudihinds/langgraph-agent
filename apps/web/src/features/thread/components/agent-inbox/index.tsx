@@ -2,7 +2,7 @@ import { StateView } from "./components/state-view";
 import { ThreadActionsView } from "./components/thread-actions-view";
 import { useState } from "react";
 import { HumanInterrupt } from "@langchain/langgraph/prebuilt";
-import { useStreamContext } from '@/features/providers/Stream';
+import { useStreamContext } from '@/features/chat-ui/providers/StreamProvider';
 
 interface ThreadViewProps {
   interrupt: HumanInterrupt | HumanInterrupt[];

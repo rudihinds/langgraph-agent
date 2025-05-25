@@ -7,11 +7,11 @@ import {
   unknownToPrettyDate,
 } from "../../utils/agent-inbox-utils";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { BaseMessage } from "@langchain/core/messages";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { ToolCallTable } from "./tool-call-table";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { MarkdownText } from "../markdown-text";
 
 interface StateViewRecursiveProps {

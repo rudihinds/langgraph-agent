@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "@/hooks/useSession";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 
 export default function DashboardTestPage() {
   const { user, isLoading } = useSession();

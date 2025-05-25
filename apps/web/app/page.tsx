@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { getSession } from "@/lib/supabase";
 import Header from "@/features/layout/components/Header";
-import LoginButton from "@/features/auth/components/LoginButton"
+import LoginButton from "@/features/auth/components/LoginButton";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);

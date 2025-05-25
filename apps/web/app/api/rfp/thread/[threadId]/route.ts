@@ -13,15 +13,13 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:3001";
  * For development, it returns mock data when the backend is not available.
  */
 
-interface Params {
-  params: {
-    threadId: string;
-  };
-}
-
 // GET /api/rfp/thread/[threadId] - Get a thread by ID or create for RFP
-export async function GET(request: NextRequest, { params }: Params) {
-  console.log(`[RFP Thread API] GET request for threadId: ${params.threadId}`);
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ threadId: string }> }
+) {
+  const { threadId } = await params;
+  console.log(`[RFP Thread API] GET request for threadId: ${threadId}`);
 
   try {
     // Get the session
@@ -36,8 +34,6 @@ export async function GET(request: NextRequest, { params }: Params) {
     console.log(
       `[RFP Thread API] Session authenticated with token of length: ${session.access_token.length}`
     );
-
-    const { threadId } = params;
 
     // Determine if this is a request to get/create a thread for an RFP
     // If the ID is not a UUID format, it's probably an RFP ID
@@ -115,10 +111,12 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/rfp/thread/[threadId] - Delete a thread by ID
-export async function DELETE(request: NextRequest, { params }: Params) {
-  console.log(
-    `[RFP Thread API] DELETE request for threadId: ${params.threadId}`
-  );
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ threadId: string }> }
+) {
+  const { threadId } = await params;
+  console.log(`[RFP Thread API] DELETE request for threadId: ${threadId}`);
 
   try {
     // Get the session
@@ -133,8 +131,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     console.log(
       `[RFP Thread API] Session authenticated with token of length: ${session.access_token.length}`
     );
-
-    const { threadId } = params;
 
     // Try to forward to backend API
     try {

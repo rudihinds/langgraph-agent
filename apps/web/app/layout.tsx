@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { SessionProvider } from "@/hooks/useSession";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { SessionProvider } from "@/hooks/useSession";
 import { DashboardLayoutProvider } from "@/features/layout/components/DashboardLayoutContext";
 import MainContent from "@/features/layout/components/MainContent";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
@@ -29,13 +29,13 @@ export default function RootLayout({
           disableTransitionOnChange
           storageKey="proposal-writer-theme"
         >
-          <NuqsAdapter>
-            <SessionProvider>
+          <SessionProvider>
+            <NuqsAdapter>
               <DashboardLayoutProvider>
                 <MainContent>{children}</MainContent>
               </DashboardLayoutProvider>
-            </SessionProvider>
-          </NuqsAdapter>
+            </NuqsAdapter>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

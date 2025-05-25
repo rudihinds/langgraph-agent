@@ -1,8 +1,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Thread } from "../../../components/chat-ui/thread/index.js";
-import { Message } from "../../../components/chat-ui/lib/types.js";
+import { Thread } from "@/features/chat-ui/components/thread/index.js";
+import { Message } from "@/features/chat-ui/types/index.js";
 
 // Mock the providers that Thread component might depend on
 const mockStreamContext: {
@@ -22,11 +22,11 @@ const mockStreamContext: {
 };
 
 // Mock component providers
-vi.mock("../../../components/chat-ui/providers/Stream.js", () => ({
+vi.mock("@/features/chat-ui/providers/StreamProvider.js", () => ({
   useStream: () => mockStreamContext,
 }));
 
-vi.mock("../../../components/chat-ui/providers/Thread.js", () => ({
+vi.mock("@/features/chat-ui/providers/ThreadProvider.js", () => ({
   useThread: () => ({
     threads: [],
     selectedThread: null,

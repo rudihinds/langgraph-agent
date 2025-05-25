@@ -105,14 +105,14 @@ function useReviewProposal({
               // Handle different question formats
               if (typeof q === "string") {
                 return { question: q, required: true };
-              } else if (q.text) {
+              } else if ((q as any).text) {
                 // Convert from { text: "..." } to { question: "..." }
                 return {
-                  question: q.text,
-                  required: q.required ?? true,
-                  maxLength: q.maxLength,
+                  question: (q as any).text,
+                  required: (q as any).required ?? true,
+                  maxLength: (q as any).maxLength,
                 };
-              } else if (q.question) {
+              } else if ((q as any).question) {
                 // Already in the right format
                 return q;
               } else {
@@ -184,6 +184,7 @@ interface ReviewProposalViewComponentProps extends ReviewProposalViewProps {
   handleEdit: (step: number) => void;
   formattedBudget: string;
   preparedFormData: Record<string, any>;
+  onCancel?: () => void;
 }
 
 function ReviewProposalViewComponent({
@@ -324,7 +325,9 @@ function ReviewProposalViewComponent({
                         <p className="font-medium">
                           {typeof question === "string"
                             ? question
-                            : question.question}
+                            : (question as any).question ||
+                              (question as any).text ||
+                              String(question)}
                         </p>
                       </div>
                     ))

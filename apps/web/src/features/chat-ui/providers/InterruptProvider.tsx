@@ -29,7 +29,7 @@ const InterruptContext = createContext<InterruptContextType | undefined>(
 );
 
 export function InterruptProvider({ children }: { children: ReactNode }) {
-  const { submit, threadId, stream } = useStreamContext();
+  const { submit, threadId, interrupt } = useStreamContext();
   const [isInterrupted, setInterrupted] = useState(false);
   const [interruptState, setInterruptState] =
     useState<InterruptResponse | null>(null);
@@ -51,16 +51,12 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Submit the approval action to continue the flow
+      // Submit a message to continue the flow with approval
       await submit({
-        threadId,
-        action: "continue",
-        input: {
-          feedback: {
-            type: "approval",
-            content: null,
-          },
-        },
+        messages: [{
+          type: "human",
+          content: "APPROVED: Continue with the current content."
+        }]
       });
 
       // Clear interrupt state after approval
@@ -87,16 +83,12 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
       setLoading(true);
       try {
-        // Submit the revision feedback to continue the flow
+        // Submit the revision feedback as a message to continue the flow
         await submit({
-          threadId,
-          action: "continue",
-          input: {
-            feedback: {
-              type: "revision",
-              content: feedback,
-            },
-          },
+          messages: [{
+            type: "human",
+            content: `REVISION REQUESTED: ${feedback}`
+          }]
         });
 
         // Clear interrupt state after revision
@@ -124,16 +116,12 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Submit the regenerate action to restart the flow
+      // Submit a message to request regeneration
       await submit({
-        threadId,
-        action: "continue",
-        input: {
-          feedback: {
-            type: "regenerate",
-            content: null,
-          },
-        },
+        messages: [{
+          type: "human",
+          content: "REGENERATE: Please regenerate the content completely."
+        }]
       });
 
       // Clear interrupt state after regeneration request

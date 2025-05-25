@@ -1,13 +1,14 @@
 import { ToolCall } from "@langchain/core/messages/tool";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/features/ui/components/separator";
 
 export function ToolCallTable({ toolCall }: { toolCall: ToolCall }) {
   const [expanded, setExpanded] = useState(false);
   const hasArgs = toolCall.args && Object.keys(toolCall.args).length > 0;
-  const hasOutput = !!toolCall.output;
+  const hasOutput = !!(toolCall as any).output;
+  const output = (toolCall as any).output;
 
   return (
     <div className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
@@ -60,9 +61,9 @@ export function ToolCallTable({ toolCall }: { toolCall: ToolCall }) {
                 )}
               >
                 <pre className="whitespace-pre-wrap break-words">
-                  {typeof toolCall.output === "string"
-                    ? toolCall.output
-                    : JSON.stringify(toolCall.output, null, 2)}
+                  {typeof output === "string"
+                    ? output
+                    : JSON.stringify(output, null, 2)}
                 </pre>
               </div>
             </div>

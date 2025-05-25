@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import Header from "../Header";
 import { User } from "@supabase/supabase-js";
-import * as useSessionModule from "@/features/auth/hooks/useSession";
+import * as useSessionModule from "@/hooks/useSession";
 
 // Mock dependencies
 vi.mock("next/link", () => ({

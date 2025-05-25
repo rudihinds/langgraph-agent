@@ -1,6 +1,6 @@
 "use client";
 
-import "./markdown-styles.css";
+import "@/features/chat-ui/components/markdown-styles.css";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -8,9 +8,9 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { FC, memo, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { SyntaxHighlighter } from "@/features/thread/components/syntax-highlighter";
+import { SyntaxHighlighter } from "@/features/chat-ui/components/syntax-highlighter";
 
-import { TooltipIconButton } from "@/features/thread/components/tooltip-icon-button";
+import { TooltipIconButton } from "@/features/chat-ui/components/tooltip-icon-button";
 import { cn } from "@/lib/utils/utils";
 
 import "katex/dist/katex.min.css";
@@ -47,7 +47,7 @@ const CodeHeader: FC<CodeHeaderProps> = ({ language, code }) => {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-t-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white">
+    <div className="flex items-center justify-between gap-4 px-4 py-2 text-sm font-semibold text-white rounded-t-lg bg-zinc-900">
       <span className="lowercase [&>span]:text-xs">{language}</span>
       <TooltipIconButton tooltip="Copy" onClick={onCopy}>
         {!isCopied && <CopyIcon />}

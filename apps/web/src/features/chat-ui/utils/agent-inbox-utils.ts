@@ -90,48 +90,52 @@ export function createDefaultHumanResponse(
   hasAccept: boolean;
 } {
   const responses: HumanResponseWithEdits[] = [];
+  const actionRequest = interrupt.action_request as any;
+
   if (interrupt.config.allow_edit) {
     if (interrupt.config.allow_accept) {
-      Object.entries(interrupt.action_request.args).forEach(([k, v]) => {
-        let stringValue = "";
-        if (typeof v === "string") {
-          stringValue = v;
-        } else {
-          stringValue = JSON.stringify(v, null);
-        }
+      if (actionRequest?.args) {
+        Object.entries(actionRequest.args).forEach(([k, v]) => {
+          let stringValue = "";
+          if (typeof v === "string") {
+            stringValue = v;
+          } else {
+            stringValue = JSON.stringify(v, null);
+          }
 
-        if (
-          !initialHumanInterruptEditValue.current ||
-          !(k in initialHumanInterruptEditValue.current)
-        ) {
-          initialHumanInterruptEditValue.current = {
-            ...initialHumanInterruptEditValue.current,
-            [k]: stringValue,
-          };
-        } else if (
-          k in initialHumanInterruptEditValue.current &&
-          initialHumanInterruptEditValue.current[k] !== stringValue
-        ) {
-          console.error(
-            "KEY AND VALUE FOUND IN initialHumanInterruptEditValue.current THAT DOES NOT MATCH THE ACTION REQUEST",
-            {
-              key: k,
-              value: stringValue,
-              expectedValue: initialHumanInterruptEditValue.current[k],
-            }
-          );
-        }
-      });
+          if (
+            !initialHumanInterruptEditValue.current ||
+            !(k in initialHumanInterruptEditValue.current)
+          ) {
+            initialHumanInterruptEditValue.current = {
+              ...initialHumanInterruptEditValue.current,
+              [k]: stringValue,
+            };
+          } else if (
+            k in initialHumanInterruptEditValue.current &&
+            initialHumanInterruptEditValue.current[k] !== stringValue
+          ) {
+            console.error(
+              "KEY AND VALUE FOUND IN initialHumanInterruptEditValue.current THAT DOES NOT MATCH THE ACTION REQUEST",
+              {
+                key: k,
+                value: stringValue,
+                expectedValue: initialHumanInterruptEditValue.current[k],
+              }
+            );
+          }
+        });
+      }
       responses.push({
         type: "edit",
-        args: interrupt.action_request,
+        args: actionRequest || {},
         acceptAllowed: true,
         editsMade: false,
       });
     } else {
       responses.push({
         type: "edit",
-        args: interrupt.action_request,
+        args: actionRequest || {},
         acceptAllowed: false,
       });
     }

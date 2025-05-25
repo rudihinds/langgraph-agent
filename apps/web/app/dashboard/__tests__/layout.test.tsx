@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import DashboardLayout from "../layout";
-import { checkUserSession } from "@/lib/auth";
+import { checkUserSession } from "@/lib/supabase/auth";
 import { redirect } from "next/navigation";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 

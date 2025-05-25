@@ -9,10 +9,16 @@ export function UserProfile() {
   useEffect(() => {
     async function loadUser() {
       try {
-        const user = await getCurrentUser();
-        setUser(user);
+        const result = await getCurrentUser();
+        if (result.success) {
+          setUser(result.data);
+        } else {
+          console.error("Error loading user:", result.error);
+          setUser(null);
+        }
       } catch (error) {
         console.error("Error loading user:", error);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }

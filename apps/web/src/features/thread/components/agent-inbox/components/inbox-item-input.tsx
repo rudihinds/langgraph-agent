@@ -1,13 +1,16 @@
-import { HumanResponseWithEdits, SubmitType } from "../types";
-import { Textarea } from '@/features/ui/components/textarea';
+import {
+  HumanResponseWithEdits,
+  SubmitType,
+} from "@/features/chat-ui/types/index";
+import { Textarea } from "@/features/ui/components/textarea";
 import React from "react";
 import { haveArgsChanged, prettifyText } from "../utils";
-import { Button } from '@/features/ui/components/button';
+import { Button } from "@/features/ui/components/button";
 import { Undo2 } from "lucide-react";
 import { MarkdownText } from "../../markdown-text";
 import { ActionRequest, HumanInterrupt } from "@langchain/langgraph/prebuilt";
 import { toast } from "sonner";
-import { Separator } from '@/features/ui/components/separator';
+import { Separator } from "@/features/ui/components/separator";
 
 function ResetButton({ handleReset }: { handleReset: () => void }) {
   return (
@@ -24,7 +27,7 @@ function ResetButton({ handleReset }: { handleReset: () => void }) {
 
 function ArgsRenderer({ args }: { args: Record<string, any> }) {
   return (
-    <div className="flex flex-col gap-6 items-start w-full">
+    <div className="flex flex-col items-start w-full gap-6">
       {Object.entries(args).map(([k, v]) => {
         let value = "";
         if (["string", "number"].includes(typeof v)) {
@@ -34,7 +37,7 @@ function ArgsRenderer({ args }: { args: Record<string, any> }) {
         }
 
         return (
-          <div key={`args-${k}`} className="flex flex-col gap-1 items-start">
+          <div key={`args-${k}`} className="flex flex-col items-start gap-1">
             <p className="text-sm leading-[18px] text-gray-600 text-wrap">
               {prettifyText(k)}:
             </p>
@@ -70,7 +73,7 @@ interface InboxItemInputProps {
   setHasEdited: React.Dispatch<React.SetStateAction<boolean>>;
 
   handleSubmit: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent
   ) => Promise<void>;
 }
 
@@ -88,7 +91,7 @@ function ResponseComponent({
   interruptValue: HumanInterrupt;
   onResponseChange: (change: string, response: HumanResponseWithEdits) => void;
   handleSubmit: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent
   ) => Promise<void>;
 }) {
   const res = humanResponse.find((r) => r.type === "response");
@@ -106,7 +109,7 @@ function ResponseComponent({
   return (
     <div className="flex flex-col gap-4 p-6 items-start w-full rounded-xl border-[1px] border-gray-300">
       <div className="flex items-center justify-between w-full">
-        <p className="font-semibold text-black text-base">
+        <p className="text-base font-semibold text-black">
           Respond to assistant
         </p>
         <ResetButton
@@ -121,7 +124,7 @@ function ResponseComponent({
       )}
 
       <div className="flex flex-col gap-[6px] items-start w-full">
-        <p className="text-sm min-w-fit font-medium">Response</p>
+        <p className="text-sm font-medium min-w-fit">Response</p>
         <Textarea
           disabled={streaming}
           value={res.args}
@@ -150,7 +153,7 @@ function AcceptComponent({
   streaming: boolean;
   actionRequestArgs: Record<string, any>;
   handleSubmit: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent
   ) => Promise<void>;
 }) {
   return (
@@ -185,10 +188,10 @@ function EditAndOrAcceptComponent({
   onEditChange: (
     text: string | string[],
     response: HumanResponseWithEdits,
-    key: string | string[],
+    key: string | string[]
   ) => void;
   handleSubmit: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent
   ) => Promise<void>;
 }) {
   const defaultRows = React.useRef<Record<string, number>>({});
@@ -253,13 +256,13 @@ function EditAndOrAcceptComponent({
   return (
     <div className="flex flex-col gap-4 items-start w-full p-6 rounded-lg border-[1px] border-gray-300">
       <div className="flex items-center justify-between w-full">
-        <p className="font-semibold text-black text-base">{header}</p>
+        <p className="text-base font-semibold text-black">{header}</p>
         <ResetButton handleReset={handleReset} />
       </div>
 
       {Object.entries(editResponse.args.args).map(([k, v], idx) => {
         const value = ["string", "number"].includes(typeof v)
-          ? v
+          ? String(v)
           : JSON.stringify(v, null);
         // Calculate the default number of rows by the total length of the initial value divided by 30
         // or 8, whichever is greater. Stored in a ref to prevent re-rendering.
@@ -267,9 +270,10 @@ function EditAndOrAcceptComponent({
           defaultRows.current[k as keyof typeof defaultRows.current] ===
           undefined
         ) {
-          defaultRows.current[k as keyof typeof defaultRows.current] = !v.length
-            ? 3
-            : Math.max(v.length / 30, 7);
+          const valueLength =
+            typeof v === "string" ? v.length : String(v).length;
+          defaultRows.current[k as keyof typeof defaultRows.current] =
+            !valueLength ? 3 : Math.max(valueLength / 30, 7);
         }
         const numRows =
           defaultRows.current[k as keyof typeof defaultRows.current] || 8;
@@ -280,7 +284,7 @@ function EditAndOrAcceptComponent({
             key={`allow-edit-args--${k}-${idx}`}
           >
             <div className="flex flex-col gap-[6px] items-start w-full">
-              <p className="text-sm min-w-fit font-medium">{prettifyText(k)}</p>
+              <p className="text-sm font-medium min-w-fit">{prettifyText(k)}</p>
               <Textarea
                 disabled={streaming}
                 className="h-full"
@@ -331,7 +335,7 @@ export function InboxItemInput({
   const onEditChange = (
     change: string | string[],
     response: HumanResponseWithEdits,
-    key: string | string[],
+    key: string | string[]
   ) => {
     if (
       (Array.isArray(change) && !Array.isArray(key)) ||
@@ -382,7 +386,7 @@ export function InboxItemInput({
         console.error(
           "Mismatched response type",
           !!response.args,
-          typeof response.args,
+          typeof response.args
         );
         return prev;
       }
@@ -408,7 +412,7 @@ export function InboxItemInput({
           (p) =>
             p.type === response.type &&
             typeof p.args === "object" &&
-            p.args?.action === (response.args as ActionRequest).action,
+            p.args?.action === (response.args as ActionRequest).action
         )
       ) {
         return prev.map((p) => {
@@ -437,7 +441,7 @@ export function InboxItemInput({
 
   const onResponseChange = (
     change: string,
-    response: HumanResponseWithEdits,
+    response: HumanResponseWithEdits
   ) => {
     if (!change) {
       setHasAddedResponse(false);
@@ -480,12 +484,12 @@ export function InboxItemInput({
   };
 
   return (
-    <div className="w-full flex flex-col items-start justify-start gap-2">
+    <div className="flex flex-col items-start justify-start w-full gap-2">
       {showArgsOutsideActionCards && (
         <ArgsRenderer args={interruptValue.action_request.args} />
       )}
 
-      <div className="flex flex-col gap-2 items-start w-full">
+      <div className="flex flex-col items-start w-full gap-2">
         <EditAndOrAccept
           humanResponse={humanResponse}
           streaming={streaming}
@@ -495,7 +499,7 @@ export function InboxItemInput({
           handleSubmit={handleSubmit}
         />
         {supportsMultipleMethods ? (
-          <div className="flex gap-3 items-center mx-auto mt-3">
+          <div className="flex items-center gap-3 mx-auto mt-3">
             <Separator className="w-[full]" />
             <p className="text-sm text-gray-500">Or</p>
             <Separator className="w-full" />
@@ -511,7 +515,7 @@ export function InboxItemInput({
         />
         {streaming && <p className="text-sm text-gray-600">Running...</p>}
         {streamFinished && (
-          <p className="text-base text-green-600 font-medium">
+          <p className="text-base font-medium text-green-600">
             Successfully finished Graph invocation.
           </p>
         )}

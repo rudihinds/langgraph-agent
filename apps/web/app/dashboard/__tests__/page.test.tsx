@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import DashboardPage from "../page";
 import { vi } from "vitest";
-import * as proposalsApi from "@/lib/api/proposals";
+import * as proposalsApi from "@/features/proposals/api/proposals";
 
 // Mock dependencies
 jest.mock("next/link", () => {
@@ -73,8 +73,8 @@ vi.mock("@/components/dashboard/NewProposalModal", () => ({
 }));
 
 // Mock the API functions
-vi.mock("@/lib/api/proposals", async () => {
-  const actual = await vi.importActual("@/lib/api/proposals");
+vi.mock("@/features/proposals/api/proposals", async () => {
+  const actual = await vi.importActual("@/features/proposals/api/proposals");
   return {
     ...actual,
     getProposals: vi.fn(),

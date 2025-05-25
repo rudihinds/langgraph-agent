@@ -1,7 +1,7 @@
 import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { Message, Metadata } from "@langchain/langgraph-sdk";
 import { ToolCall } from "@langchain/core/messages/tool";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { MarkdownText } from "../markdown-text";
 import { BranchSwitcher, CommandBar } from "./shared";
 import { getContentString } from "../../utils/message-utils";
@@ -32,19 +32,14 @@ export function AIMessage({
       {
         checkpoint: parentCheckpoint,
         streamMode: ["values"],
-        optimisticValues: (prev) => {
-          const values = undefined;
-          if (!values) return prev;
-          return {
-            ...values,
-            messages: [...(values.messages ?? []), message],
-          };
+        optimisticValues: (prev: any) => {
+          return prev;
         },
       }
     );
   };
 
-  const toolCalls = message.tool_calls as ToolCall[] | undefined;
+  const toolCalls = (message as any).tool_calls as ToolCall[] | undefined;
   const isToolCalls = toolCalls?.length ?? 0 > 0;
 
   return (

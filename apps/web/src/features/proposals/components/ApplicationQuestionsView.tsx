@@ -73,11 +73,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/features/ui/components/tooltip";
-import {
-  type Question as SharedQuestion,
-  type ApplicationQuestions,
-} from "@shared/types/ProposalSchema";
-import { z } from "zod";
 import { useToast } from "@/features/ui/components/use-toast";
 import {
   AlertDialog,
@@ -89,22 +84,38 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/features/ui/components/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/components/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/features/ui/components/tabs";
 import { Separator } from "@/features/ui/components/separator";
 import { Badge } from "@/features/ui/components/badge";
 import { Switch } from "@/features/ui/components/switch";
-import { RadioGroup, RadioGroupItem } from "@/features/ui/components/radio-group";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/features/ui/components/radio-group";
 import { slugify } from "@/lib/utils/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/features/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/features/ui/components/alert";
 import { ScrollArea } from "@/features/ui/components/scroll-area";
 import { ProgressCircle } from "@/features/ui/components/progress-circle";
 import { debounce } from "@/lib/utils/utils";
 import { SubmitButton } from "./SubmitButton";
-import { FormErrorBoundary, FieldError } from "@/features/ui/components/form-error";
+import {
+  FormErrorBoundary,
+  FieldError,
+} from "@/features/ui/components/form-error";
+import { z } from "zod";
 
 // MODEL
-// Extend the shared Question type to include ID for internal management
-export interface Question extends Omit<SharedQuestion, "id"> {
+// Define Question type for internal management
+export interface Question {
   id: string;
   text: string;
   category: string | null;

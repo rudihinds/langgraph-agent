@@ -8,7 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { TooltipIconButton } from "../tooltip-icon-button";
+import { TooltipIconButton } from "@/features/chat-ui/components/tooltip-icon-button";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Button } from '@/features/ui/components/button';

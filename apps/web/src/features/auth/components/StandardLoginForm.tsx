@@ -7,7 +7,7 @@ import { FormError, FormErrorBoundary, FieldError } from "@/features/ui/componen
 import { Button } from "@/features/ui/components/button";
 import { Input } from "@/features/ui/components/input";
 import { Form, FormItem, FormLabel, FormControl, FormMessage } from "@/features/ui/components/form";
-import { createServerAction } from "@/features/shared/errors/server-action";
+import { createServerAction } from "@/lib/errors/server-action";
 import { z } from 'zod';
 
 // Login validation schema
@@ -20,6 +20,9 @@ const loginSchema = z.object({
 const handleLogin = createServerAction(
   async (data: z.infer<typeof loginSchema>) => {
     const result = await signIn();
+    if (!result.success) {
+      throw new Error(result.error?.message || 'Login failed');
+    }
     return result.data;
   },
   {

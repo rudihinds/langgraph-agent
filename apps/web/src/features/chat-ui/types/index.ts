@@ -1,5 +1,5 @@
 import { BaseMessage } from "@langchain/core/messages";
-import { Thread, ThreadStatus } from "@langchain/langgraph-sdk";
+import { Thread as LangGraphThread, ThreadStatus } from "@langchain/langgraph-sdk";
 import { HumanInterrupt, HumanResponse } from "@langchain/langgraph/prebuilt";
 
 export type HumanResponseWithEdits = HumanResponse &
@@ -32,7 +32,7 @@ export interface ThreadValues {
 export type ThreadData<
   ThreadValues extends Record<string, any> = Record<string, any>,
 > = {
-  thread: Thread<ThreadValues>;
+  thread: LangGraphThread<ThreadValues>;
 } & (
   | {
       status: "interrupted";
@@ -103,3 +103,43 @@ export interface InterruptResponse {
   options?: string[];
   agentState?: Record<string, any>;
 }
+
+/**
+ * Represents a chat thread (basic chat interface)
+ */
+export interface ChatThread {
+  id: string;
+  title?: string;
+  messages: Message[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Export Thread as an alias for ChatThread for backward compatibility
+export type Thread = ChatThread;
+
+/**
+ * Chat context state
+ */
+export interface ChatState {
+  threads: ChatThread[];
+  activeThreadId: string | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Chat context actions
+ */
+export interface ChatActions {
+  createThread: () => Promise<string>;
+  setActiveThread: (threadId: string) => void;
+  addMessage: (message: Omit<Message, "id" | "createdAt">) => Promise<void>;
+  deleteThread: (threadId: string) => void;
+  clearThreads: () => void;
+}
+
+/**
+ * Combined chat context value
+ */
+export interface ChatContextValue extends ChatState, ChatActions {}

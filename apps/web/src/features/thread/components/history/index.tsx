@@ -1,5 +1,5 @@
 import { Button } from "@/features/ui/components/button";
-import { useThreads } from "@/features/providers/Thread";
+import { useThreads } from "@/features/chat-ui/providers/ThreadProvider";
 import { Thread } from "@langchain/langgraph-sdk";
 import { useEffect } from "react";
 
@@ -13,7 +13,7 @@ import {
 } from "@/features/ui/components/sheet";
 import { Skeleton } from "@/features/ui/components/skeleton";
 import { PanelRightOpen, PanelRightClose } from "lucide-react";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useMediaQuery } from "@/features/chat-ui/hooks/useMediaQuery";
 
 function ThreadList({
   threads,
@@ -73,7 +73,7 @@ export default function ThreadHistory() {
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const [chatHistoryOpen, setChatHistoryOpen] = useQueryState(
     "chatHistoryOpen",
-    parseAsBoolean.withDefault(false),
+    parseAsBoolean.withDefault(false)
   );
 
   const { getThreads, threads, setThreads, threadsLoading, setThreadsLoading } =

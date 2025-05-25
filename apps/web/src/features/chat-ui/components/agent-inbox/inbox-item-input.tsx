@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/features/ui/components/button";
+import { Textarea } from "@/features/ui/components/textarea";
 import { haveArgsChanged } from "../../utils/agent-inbox-utils";
-import { SubmitType } from "../../types";
+import { SubmitType } from "@/features/chat-ui/types/index";
 import { ArrowUpRight } from "lucide-react";
 
 interface InboxItemInputProps {
@@ -33,7 +33,7 @@ export function InboxItemInput({
     if (isRecord && typeof initialValue === "object") {
       Object.entries(initialValue).forEach(([k, v]) => {
         initialValuesRef.current[k] = ["string", "number"].includes(typeof v)
-          ? v.toString()
+          ? String(v)
           : JSON.stringify(v, null);
       });
     }

@@ -1,8 +1,8 @@
 import { ToolCall } from "@langchain/core/messages/tool";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/features/ui/components/separator";
 
 export function ToolCalls({ toolCalls }: { toolCalls: ToolCall[] }) {
   if (!toolCalls || toolCalls.length === 0) return null;

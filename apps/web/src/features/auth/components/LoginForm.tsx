@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import { signIn } from "@/lib/supabase";
 
 export function LoginForm() {
@@ -11,25 +11,32 @@ export function LoginForm() {
     try {
       setIsLoading(true);
       setError(null);
-      const { error } = await signIn();
-      if (error) throw error;
+      const result = await signIn();
+      if (!result.success) {
+        throw new Error(
+          result.error?.message || "An error occurred during sign in"
+        );
+      }
+      // If successful, the user will be redirected to Google OAuth
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in');
-      console.error('Error signing in with Google:', err);
+      setError(err.message || "An error occurred during sign in");
+      console.error("Error signing in with Google:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 space-y-6 bg-card rounded-lg shadow-md">
+    <div className="w-full max-w-md p-6 mx-auto space-y-6 rounded-lg shadow-md bg-card">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold">Welcome</h1>
-        <p className="text-muted-foreground">Sign in to continue to Proposal Writer</p>
+        <p className="text-muted-foreground">
+          Sign in to continue to Proposal Writer
+        </p>
       </div>
 
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive text-destructive text-sm rounded-md">
+        <div className="p-3 text-sm border rounded-md bg-destructive/10 border-destructive text-destructive">
           {error}
         </div>
       )}
@@ -38,10 +45,10 @@ export function LoginForm() {
         <button
           onClick={handleGoogleSignIn}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white hover:bg-gray-50 text-gray-900 font-medium rounded-md border border-gray-300 shadow-sm transition-colors"
+          className="flex items-center justify-center w-full gap-2 px-4 py-2 font-medium text-gray-900 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
         >
           {isLoading ? (
-            <div className="w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-gray-600 rounded-full border-t-transparent animate-spin" />
           ) : (
             <>
               <svg
@@ -58,7 +65,7 @@ export function LoginForm() {
         </button>
       </div>
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
+      <div className="mt-4 text-sm text-center text-muted-foreground">
         By continuing, you agree to our Terms of Service and Privacy Policy.
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ClipboardCheck, ClipboardCopy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/features/ui/components/button";
+import { cn } from "@/lib/utils/utils";
 
 interface ThreadIdProps {
   threadId: string;

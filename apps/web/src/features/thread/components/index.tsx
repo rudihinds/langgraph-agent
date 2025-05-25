@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/features/shared/utils/utils";
-import { useStreamContext } from "@/features/providers/Stream";
+import { cn } from "@/lib/utils/utils";
+import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { useState, FormEvent } from "react";
 import { Button } from "@/features/ui/components/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
@@ -11,9 +11,9 @@ import { HumanMessage } from "./messages/human";
 import {
   DO_NOT_RENDER_ID_PREFIX,
   ensureToolCallsHaveResponses,
-} from "@/features/shared/utils/ensure-tool-responses";
-import { LangGraphLogoSVG } from "@/components/shared/icons/langgraph";
-import { TooltipIconButton } from "./tooltip-icon-button";
+} from "@/lib/ensure-tool-responses";
+import { LangGraphLogoSVG } from "@/features/shared/components/icons/langgraph";
+import { TooltipIconButton } from "@/features/chat-ui/components/tooltip-icon-button";
 import {
   ArrowDown,
   LoaderCircle,
@@ -25,7 +25,7 @@ import { useQueryState, parseAsBoolean } from "nuqs";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import ThreadHistory from "./history";
 import { toast } from "sonner";
-import { useMediaQuery } from "@/features/shared/hooks/useMediaQuery";
+import { useMediaQuery } from "@/features/chat-ui/hooks/useMediaQuery";
 import { Label } from "@/features/ui/components/label";
 import { Switch } from "@/features/ui/components/switch";
 
@@ -145,7 +145,7 @@ export function Thread() {
       { messages: [...toolMessages, newHumanMessage] },
       {
         streamMode: ["values"],
-        optimisticValues: (prev) => ({
+        optimisticValues: (prev: any) => ({
           ...prev,
           messages: [
             ...(prev.messages ?? []),
@@ -175,9 +175,9 @@ export function Thread() {
 
   return (
     <div className="flex w-full h-screen overflow-hidden">
-      <div className="relative lg:flex hidden">
+      <div className="relative hidden lg:flex">
         <motion.div
-          className="absolute h-full border-r bg-white overflow-hidden z-20"
+          className="absolute z-20 h-full overflow-hidden bg-white border-r"
           style={{ width: 300 }}
           animate={
             isLargeScreen
@@ -217,7 +217,7 @@ export function Thread() {
         }
       >
         {!chatStarted && (
-          <div className="absolute top-0 left-0 w-full flex items-center justify-between gap-3 p-2 pl-4 z-10">
+          <div className="absolute top-0 left-0 z-10 flex items-center justify-between w-full gap-3 p-2 pl-4">
             {(!chatHistoryOpen || !isLargeScreen) && (
               <Button
                 className="hover:bg-gray-100"
@@ -234,8 +234,8 @@ export function Thread() {
           </div>
         )}
         {chatStarted && (
-          <div className="flex items-center justify-between gap-3 p-2 pl-4 z-10 relative">
-            <div className="flex items-center justify-start gap-2 relative">
+          <div className="relative z-10 flex items-center justify-between gap-3 p-2 pl-4">
+            <div className="relative flex items-center justify-start gap-2">
               <div className="absolute left-0 z-10">
                 {(!chatHistoryOpen || !isLargeScreen) && (
                   <Button
@@ -252,7 +252,7 @@ export function Thread() {
                 )}
               </div>
               <motion.button
-                className="flex gap-2 items-center cursor-pointer"
+                className="flex items-center gap-2 cursor-pointer"
                 onClick={() => setThreadId(null)}
                 animate={{
                   marginLeft: !chatHistoryOpen ? 48 : 0,
@@ -280,7 +280,7 @@ export function Thread() {
               <SquarePen className="size-5" />
             </TooltipIconButton>
 
-            <div className="absolute inset-x-0 top-full h-5 bg-gradient-to-b from-background to-background/0" />
+            <div className="absolute inset-x-0 h-5 top-full bg-gradient-to-b from-background to-background/0" />
           </div>
         )}
 
@@ -318,9 +318,9 @@ export function Thread() {
               </>
             }
             footer={
-              <div className="sticky flex flex-col items-center gap-8 bottom-0 px-4 bg-white">
+              <div className="sticky bottom-0 flex flex-col items-center gap-8 px-4 bg-white">
                 {!chatStarted && (
-                  <div className="flex gap-3 items-center">
+                  <div className="flex items-center gap-3">
                     <LangGraphLogoSVG className="flex-shrink-0 h-8" />
                     <h1 className="text-2xl font-semibold tracking-tight">
                       Agent Chat
@@ -328,9 +328,9 @@ export function Thread() {
                   </div>
                 )}
 
-                <ScrollToBottom className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 animate-in fade-in-0 zoom-in-95" />
+                <ScrollToBottom className="absolute mb-4 -translate-x-1/2 bottom-full left-1/2 animate-in fade-in-0 zoom-in-95" />
 
-                <div className="bg-muted rounded-2xl border shadow-xs mx-auto mb-8 w-full max-w-3xl relative z-10">
+                <div className="relative z-10 w-full max-w-3xl mx-auto mb-8 border shadow-xs bg-muted rounded-2xl">
                   <form
                     onSubmit={handleSubmit}
                     className="grid grid-rows-[1fr_auto] gap-2 max-w-3xl mx-auto"

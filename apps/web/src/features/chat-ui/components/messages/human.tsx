@@ -2,8 +2,8 @@ import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { Message } from "@langchain/langgraph-sdk";
 import { useState } from "react";
 import { getContentString } from "../../utils/message-utils";
-import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils/utils";
+import { Textarea } from "@/features/ui/components/textarea";
 import { BranchSwitcher, CommandBar } from "./shared";
 
 function EditableContent({
@@ -55,14 +55,9 @@ export function HumanMessage({
       {
         checkpoint: parentCheckpoint,
         streamMode: ["values"],
-        optimisticValues: (prev) => {
-          const values = undefined;
-          if (!values) return prev;
-
-          return {
-            ...values,
-            messages: [...(values.messages ?? []), newMessage],
-          };
+        optimisticValues: (prev: any) => {
+          // Since values is always undefined in this context, just return prev
+          return prev;
         },
       }
     );

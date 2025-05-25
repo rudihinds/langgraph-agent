@@ -10,7 +10,7 @@ import { z } from "zod";
  */
 async function getAuthenticatedUser() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     console.log("Cookie count:", cookieStore.getAll().length);
     console.log(
       "Cookie names:",
@@ -20,7 +20,7 @@ async function getAuthenticatedUser() {
         .join(", ")
     );
 
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookies());
     const { data, error } = await supabase.auth.getUser();
 
     if (error) {
@@ -79,8 +79,7 @@ export async function POST(req: Request) {
 
     // Create a Supabase client
     console.log("Creating Supabase client for database operations...");
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookies());
 
     // Add user_id to the proposal data
     const proposalData = {
@@ -145,8 +144,7 @@ export async function GET(req: Request) {
     console.log("User authenticated for GET /api/proposals:", user.id);
 
     // Create a Supabase client
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient(cookies());
 
     // Start building the query
     let query = supabase.from("proposals").select("*").eq("user_id", user.id);

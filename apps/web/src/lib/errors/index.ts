@@ -27,8 +27,10 @@ export function createErrorResponse(
       success: false,
       error: {
         message,
-        ...(errorCode && { code: errorCode }),
-        ...(details && { details }),
+        code: errorCode,
+        ...(details && typeof details === "object" && details !== null
+          ? { details }
+          : {}),
       },
     }),
     {
@@ -83,7 +85,9 @@ export async function handleFetchResponse<T>(
           errorData.error ||
           `HTTP error ${response.status}`,
         ...(errorData.code && { code: errorData.code }),
-        ...(errorData.details && { details: errorData.details }),
+        ...(errorData.details &&
+          typeof errorData.details === "object" &&
+          errorData.details !== null && { details: errorData.details }),
       },
     };
   }
@@ -93,7 +97,7 @@ export async function handleFetchResponse<T>(
 }
 
 // Re-export the types and constants
-export { ErrorCodes,  } from "./types";
+export { ErrorCodes } from "./types";
 // Also directly export the API response types
 export type {
   ApiResponse,

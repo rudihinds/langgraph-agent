@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { DashboardLayoutProvider } from "../DashboardLayoutContext";
 import HeaderWrapper from "../HeaderWrapper";
-import { useSession } from "@/features/auth/hooks/useSession";
+import { useSession } from "@/hooks/useSession";
 import { usePathname } from "next/navigation";
 
 // Mock the necessary hooks

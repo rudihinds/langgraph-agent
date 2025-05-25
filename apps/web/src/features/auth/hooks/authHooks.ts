@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/features/auth/utils/client";
+import { createClient } from "@/lib/supabase/client";
 import { AppUser, CurrentUserState } from "@/features/auth/types";
 
 /**

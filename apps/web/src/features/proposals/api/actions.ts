@@ -42,14 +42,14 @@ export async function createProposal(
 
     // 1. Ensure user is authenticated and exists in DB
     const userResult = await ensureUserExists(supabase);
-    if (!userResult.success) {
+    if (!userResult.success || !userResult.user) {
       console.error(
         "[Action][Auth] User not authenticated or failed verification:",
         userResult.error
       );
       return {
         success: false,
-        error: userResult.error?.message || "User authentication failed",
+        error: userResult.error || "User authentication failed",
       };
     }
     const userId = userResult.user.id;
@@ -234,7 +234,7 @@ export async function uploadProposalFile(
     // 3. Ensure user is authenticated
     const userResult = await ensureUserExists(supabase);
 
-    if (!userResult.success) {
+    if (!userResult.success || !userResult.user) {
       console.error("[UploadAction] Authentication failed");
       return {
         success: false,
@@ -358,7 +358,7 @@ export async function uploadProposalFileEnhanced(input: {
 
     // Verify user exists
     const userResult = await ensureUserExists(supabase);
-    if (!userResult.success) {
+    if (!userResult.success || !userResult.user) {
       console.error("User verification failed:", userResult.error);
       return {
         success: false,
@@ -477,7 +477,7 @@ export async function createProposalWithQuestions(input: {
 
     // Verify user exists
     const userResult = await ensureUserExists(supabase);
-    if (!userResult.success) {
+    if (!userResult.success || !userResult.user) {
       console.error("User verification failed:", userResult.error);
       return {
         success: false,

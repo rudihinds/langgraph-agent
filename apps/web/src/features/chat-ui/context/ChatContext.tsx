@@ -6,7 +6,7 @@ import {
   ReactNode,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Message, ChatContextValue, Thread } from "../types";
+import { Message, ChatContextValue, Thread, Role } from "../types";
 
 // Create the context with a default value
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -71,14 +71,14 @@ export function ChatProvider({ children }: ChatProviderProps) {
         );
 
         // If the message is from a user, simulate an assistant response
-        if (message.role === "user") {
+        if (message.role === Role.USER) {
           // Wait a bit to simulate network delay
           await new Promise((resolve) => setTimeout(resolve, 1000));
 
           // Add a simulated response
           const assistantMessage: Message = {
             id: uuidv4(),
-            role: "assistant",
+            role: Role.ASSISTANT,
             content: `This is a simulated response to: "${message.content}"`,
             createdAt: new Date(),
           };

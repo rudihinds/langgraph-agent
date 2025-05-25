@@ -1,4 +1,4 @@
-import { Message, Role } from "../../features/chat-ui/types";
+import { Message, Role } from "../../features/chat-ui/types/index";
 
 /**
  * Types of agent interrupts

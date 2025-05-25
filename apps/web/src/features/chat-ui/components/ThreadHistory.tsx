@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/features/ui/components/button";
 import { useThreads } from "../providers/ThreadProvider";
 import { Thread } from "@langchain/langgraph-sdk";
 import { useEffect, useState } from "react";
@@ -10,11 +10,11 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@/features/ui/components/sheet";
+import { Skeleton } from "@/features/ui/components/skeleton";
 import { PanelRightOpen, PanelRightClose } from "lucide-react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 function ThreadList({
   threads,

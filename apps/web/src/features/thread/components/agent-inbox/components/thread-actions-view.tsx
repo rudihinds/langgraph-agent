@@ -2,7 +2,7 @@ import { Button } from '@/features/ui/components/button';
 import { ThreadIdCopyable } from "./thread-id";
 import { InboxItemInput } from "./inbox-item-input";
 import useInterruptedActions from "../hooks/use-interrupted-actions";
-import { cn } from "@/features/shared/utils/utils";
+import { cn } from "@/lib/utils/utils";
 import { toast } from "sonner";
 import { useQueryState } from "nuqs";
 import { constructOpenInStudioURL } from "../utils";

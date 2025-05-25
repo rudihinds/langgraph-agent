@@ -1,4 +1,7 @@
-import { HumanResponseWithEdits, SubmitType } from "../types";
+import {
+  HumanResponseWithEdits,
+  SubmitType,
+} from "@/features/chat-ui/types/index";
 import {
   KeyboardEvent,
   Dispatch,
@@ -12,7 +15,7 @@ import { createDefaultHumanResponse } from "../utils";
 import { toast } from "sonner";
 import { HumanInterrupt, HumanResponse } from "@langchain/langgraph/prebuilt";
 import { END } from "@langchain/langgraph/web";
-import { useStreamContext } from '@/features/providers/Stream';
+import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 
 interface UseInterruptedActionsInput {
   interrupt: HumanInterrupt;
@@ -21,13 +24,13 @@ interface UseInterruptedActionsInput {
 interface UseInterruptedActionsValue {
   // Actions
   handleSubmit: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | KeyboardEvent,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | KeyboardEvent
   ) => Promise<void>;
   handleIgnore: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => Promise<void>;
   handleResolve: (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => Promise<void>;
 
   // State values
@@ -55,7 +58,7 @@ export default function useInterruptedActions({
 }: UseInterruptedActionsInput): UseInterruptedActionsValue {
   const thread = useStreamContext();
   const [humanResponse, setHumanResponse] = useState<HumanResponseWithEdits[]>(
-    [],
+    []
   );
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
@@ -88,7 +91,7 @@ export default function useInterruptedActions({
           command: {
             resume: response,
           },
-        },
+        }
       );
       return true;
     } catch (e: any) {
@@ -98,7 +101,7 @@ export default function useInterruptedActions({
   };
 
   const handleSubmit = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | KeyboardEvent,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent> | KeyboardEvent
   ) => {
     e.preventDefault();
     if (!humanResponse) {
@@ -144,11 +147,11 @@ export default function useInterruptedActions({
               type: r.type,
               args: r.args,
             };
-          },
+          }
         );
 
         const input = humanResponseInput.find(
-          (r) => r.type === selectedSubmitType,
+          (r) => r.type === selectedSubmitType
         );
         if (!input) {
           toast.error("Error", {
@@ -220,7 +223,7 @@ export default function useInterruptedActions({
   };
 
   const handleIgnore = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
     e.preventDefault();
 
@@ -245,7 +248,7 @@ export default function useInterruptedActions({
   };
 
   const handleResolve = async (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
     e.preventDefault();
 
@@ -259,7 +262,7 @@ export default function useInterruptedActions({
           command: {
             goto: END,
           },
-        },
+        }
       );
 
       toast("Success", {
@@ -281,7 +284,7 @@ export default function useInterruptedActions({
 
   const supportsMultipleMethods =
     humanResponse.filter(
-      (r) => r.type === "edit" || r.type === "accept" || r.type === "response",
+      (r) => r.type === "edit" || r.type === "accept" || r.type === "response"
     ).length > 1;
 
   return {

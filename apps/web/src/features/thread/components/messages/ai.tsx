@@ -1,11 +1,11 @@
 import { parsePartialJson } from "@langchain/core/output_parsers";
-import { useStreamContext } from '@/features/providers/Stream';
+import { useStreamContext } from "@/features/chat-ui/providers/StreamProvider";
 import { AIMessage, Checkpoint, Message } from "@langchain/langgraph-sdk";
 import { getContentString } from "../utils";
 import { BranchSwitcher, CommandBar } from "./shared";
 import { MarkdownText } from "../markdown-text";
 import { LoadExternalComponent } from "@langchain/langgraph-sdk/react-ui";
-import { cn } from "@/features/shared/utils/utils";
+import { cn } from "@/lib/utils/utils";
 import { ToolCalls, ToolResult } from "./tool-calls";
 import { MessageContentComplex } from "@langchain/core/messages";
 import { Fragment } from "react/jsx-runtime";
@@ -32,7 +32,7 @@ function CustomComponent({
         <LoadExternalComponent
           key={customComponent.id}
           stream={thread}
-          message={customComponent}
+          message={customComponent as any}
           meta={{ ui: customComponent }}
         />
       ))}
@@ -106,7 +106,7 @@ export function AssistantMessage({
   }
 
   return (
-    <div className="flex items-start mr-auto gap-2 group">
+    <div className="flex items-start gap-2 mr-auto group">
       {isToolResult ? (
         <ToolResult message={message} />
       ) : (
@@ -160,8 +160,8 @@ export function AssistantMessage({
 
 export function AssistantMessageLoading() {
   return (
-    <div className="flex items-start mr-auto gap-2">
-      <div className="flex items-center gap-1 rounded-2xl bg-muted px-4 py-2 h-8">
+    <div className="flex items-start gap-2 mr-auto">
+      <div className="flex items-center h-8 gap-1 px-4 py-2 rounded-2xl bg-muted">
         <div className="w-1.5 h-1.5 rounded-full bg-foreground/50 animate-[pulse_1.5s_ease-in-out_infinite]"></div>
         <div className="w-1.5 h-1.5 rounded-full bg-foreground/50 animate-[pulse_1.5s_ease-in-out_0.5s_infinite]"></div>
         <div className="w-1.5 h-1.5 rounded-full bg-foreground/50 animate-[pulse_1.5s_ease-in-out_1s_infinite]"></div>

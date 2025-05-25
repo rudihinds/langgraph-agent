@@ -1,7 +1,7 @@
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DashboardLayout from "../DashboardLayout";
-import { useSession } from "@/features/auth/hooks/useSession";
+import { useSession } from "@/hooks/useSession";
 import { usePathname, useRouter } from "next/navigation";
 
 // Mock the hooks
