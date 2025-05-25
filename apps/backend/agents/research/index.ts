@@ -10,6 +10,7 @@ import {
 import { pruneMessageHistory } from "../../lib/state/messages.js";
 import { Logger } from "@/lib/logger.js";
 import { BaseCheckpointSaver } from "@langchain/langgraph";
+import { ENV } from "../../lib/config/env.js";
 
 // Initialize logger
 const logger = Logger.getInstance();
@@ -104,8 +105,8 @@ export const researchAgent = {
       checkpointerToUse = input.checkpointer;
     } else {
       logger.debug("Creating new SupabaseCheckpointer instance.");
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const supabaseUrl = ENV.SUPABASE_URL;
+      const supabaseKey = ENV.SUPABASE_SERVICE_ROLE_KEY;
 
       if (!supabaseUrl || !supabaseKey) {
         logger.error(

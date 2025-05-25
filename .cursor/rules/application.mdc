@@ -9,7 +9,7 @@ These rules must be read and followed before executing any command or chat instr
 
 **CRITICAL: LANGGRAPH DOCUMENTATION ADHERENCE**
 
-*   **ALWAYS** prioritize and adhere to the **current, official LangGraph.js documentation** (provided context or via web search) for ALL LangGraph-related implementations. This includes, but is not limited to:
+*   **ALWAYS** prioritize and adhere to the **current, official LangGraph.js documentation** (provided context or via langgraphjs-api Docs mcp, langgraphjs/tutorials/quickstart Docs, agent-chat-ui Docs context7 mcp, or web search) for ALL LangGraph-related implementations. This includes, but is not limited to:
     *   State Definition (`Annotation.Root`, `channels`)
     *   Reducers (custom and standard)
     *   Checkpointers (`BaseCheckpointSaver` implementations)
@@ -22,7 +22,7 @@ These rules must be read and followed before executing any command or chat instr
 *   **Clarification via Search:** If confusion persists regarding LangGraph.js best practices or specific implementations, **actively use the web search tool (e.g., Brave Search)** to find the latest documentation, examples, GitHub issues, or community discussions relevant to the task.
 
 ## Project Awareness & Context
-- **Always read `PLANNING.md`** at the start of a new conversation to understand the architecture, goals, and dependencies.
+- **Always read `activeContext.md`** at the start of a new conversation to understand the architecture, goals, and dependencies.
 - **Check `TASK.md`** before starting new work - if the task isn't listed, add it with a brief description and today's date.
 - **Update task status** by marking completed items immediately after finishing them.
 - **Add discovered sub-tasks** to `TASK.md` under a "Discovered During Work" section.

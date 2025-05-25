@@ -146,13 +146,23 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - Centralized `thread_id` management within the `OrchestratorService` and API layer for all graph operations.
    - Removed redundant server startup files (`apps/backend/index.ts`, `apps/backend/server.js`) and custom persistence components.
 
-9. **Backend Refactoring - Phase 2 Complete ✅**:
+9. **Backend Refactoring - ALL 5 PHASES COMPLETE ✅**:
+
    - **Phase 1 - Removed Deprecated Services**: Deleted `[dep]orchestrator.service.ts` (1235 lines), `[dep]orchestrator-factory.ts`, `[dep]checkpointer.service.ts`, and all broken test files importing these services. Removed deprecated `agents/[dep]README.md` and `agents/[dep]index.ts` files. Eliminated obsolete LangGraph server code in `api/langgraph/index.ts` (249 lines).
    - **Phase 2 - Agent Structure Standardization**:
      - **Consolidated Agent Implementations**: Removed duplicate `proposal-agent/` directory, consolidated all functionality into `proposal-generation/`
      - **Standardized Agent Structure**: Created individual node files for stub implementations (`deepResearch.ts`, `solutionSought.ts`, `connectionPairs.ts`, `evaluateResearch.ts`, `evaluateSolution.ts`, `evaluateConnections.ts`). Refactored `nodes.ts` to be a proper barrel export file with clean separation between implementations and exports.
      - **Consolidated Agent Utilities**: Audited utility distribution, confirmed no duplicates between agents and `lib/utils/`, maintained proper separation between agent-specific and shared utilities.
-   - **Impact**: Removed ~1,700+ lines of deprecated code, established clean agent directory structure with individual node files for better maintainability, proper separation of concerns, and no duplicate utility functions. All tests continue passing.
+   - **Phase 3 - Test Structure Reorganization**: Consolidated 68 test files from 18+ scattered directories into organized structure. Standardized all tests to use Vitest. Fixed broken test files and import paths.
+   - **Phase 4 - API Layer Cleanup**: Removed obsolete routes (`feedback.ts`, `resume.ts`, `interrupt-status.ts`, `workflow.ts`, `chat.ts`). Cleaned up duplicate files and streamlined API structure.
+   - **Phase 5 - Configuration Consolidation**: Centralized all environment variables in `lib/config/env.ts`. Converted auth middleware to TypeScript. Organized prompt templates.
+   - **Impact**: Removed ~1,700+ lines of deprecated code, consolidated 68 test files, cleaned up 14+ obsolete API files, centralized configuration, and established consistent patterns throughout the backend.
+
+10. **Documentation Update Complete ✅**:
+    - **Backend File Structure Documentation**: Updated `apps/backend/docs/backend-file-structure.md` to reflect the current state after all 5 refactoring phases
+    - **Comprehensive Refactoring Documentation**: Added detailed sections documenting all phase accomplishments and impacts
+    - **Updated Architecture Guidelines**: Reflected modern patterns including centralized configuration, consolidated testing, and clean API structure
+    - **Best Practices Update**: Updated guidelines to reflect TypeScript middleware, Vitest testing, and PostgresSaver persistence patterns
 
 ### Next
 
@@ -513,3 +523,78 @@ Express backend API endpoints `/api/rfp/feedback`, `/api/rfp/resume`, and `/api/
 - **API Routing:** Refined understanding of how Express sub-routers and base paths interact. Ensured internal API prefixes are not duplicated if already handled by environment variables or primary router configurations.
 - **LangGraph Persistence:** Confirmed the critical role of `PostgresSaver.setup()` and ensured it's reliably called via our `getInitializedCheckpointer` factory. Shifted to relying on the library for its table creation rather than manual DDL for checkpointer tables.
 - **Environment Variables:** Clarified the specific roles of `NEXT_PUBLIC_API_URL` vs. `NEXT_PUBLIC_LANGGRAPH_API_URL` for frontend configuration.
+
+---
+
+## Backend Refactoring Project - Phases 4 & 5 Complete ✅
+
+### Phase 4: API Layer Cleanup ✅ COMPLETE
+
+**Objective:** Consolidate Express route handlers, remove obsolete API routes, and standardize error handling
+
+**Status:** Complete - API layer streamlined and standardized
+
+**Key Accomplishments:**
+
+- **Route Consolidation:** Removed 5 obsolete route files (`feedback.ts`, `resume.ts`, `interrupt-status.ts`, `workflow.ts`, `chat.ts`)
+- **Duplicate Cleanup:** Deleted duplicate `api/index.ts` and obsolete `api/rfp.js` files
+- **Directory Cleanup:** Removed empty `express-handlers/` and `__tests__/` directories
+- **Test Cleanup:** Removed obsolete test files for deprecated routes
+- **Error Handling:** Verified consistent error handling patterns across remaining routes
+
+**Impact Assessment:**
+
+- **Code Reduction:** Removed 14+ obsolete API files and routes
+- **Clarity:** Streamlined API structure focused on business logic only
+- **Consistency:** Maintained comprehensive error middleware and authentication patterns
+- **Maintainability:** Eliminated conflicting routes and deprecated functionality
+
+**Files Affected:** 14 files changed, significant deletions of obsolete code
+
+### Phase 5: Configuration Consolidation ✅ COMPLETE
+
+**Objective:** Consolidate configuration files, clean up environment variables, and organize prompt templates
+
+**Status:** Complete - All configuration centralized and standardized
+
+**Key Accomplishments:**
+
+- **Environment Centralization:** Updated 8+ files to use centralized `ENV` object from `lib/config/env.ts`
+- **TypeScript Migration:** Converted auth middleware from JavaScript to TypeScript
+- **Configuration Cleanup:** Removed deprecated test script for obsolete checkpointer service
+- **Prompt Organization:** Created `prompts/section_generators/` directory with `problem_statement.prompt.txt`
+- **Pattern Standardization:** Eliminated direct `process.env` usage throughout codebase
+
+**Impact Assessment:**
+
+- **Maintainability:** Centralized all environment variable access for easier management
+- **Type Safety:** Improved type safety with TypeScript auth middleware
+- **Organization:** Better structured prompt templates with clear hierarchy
+- **Consistency:** Standardized configuration patterns across entire backend
+
+**Files Affected:** 10 files changed, 86 insertions(+), 165 deletions(-)
+
+---
+
+## BACKEND REFACTORING PROJECT COMPLETE ✅
+
+**Total Impact Across All 5 Phases:**
+
+- **Code Reduction:** Removed ~1,700+ lines of deprecated code
+- **Test Organization:** Consolidated 68 test files into organized structure
+- **API Cleanup:** Removed 14+ obsolete API files and routes
+- **Configuration:** Centralized all environment variables and configuration
+- **Consistency:** Established uniform patterns throughout the backend
+
+**Final Architecture:**
+
+- Clean, maintainable backend structure
+- Consolidated agent implementations
+- Organized test structure with consistent Vitest patterns
+- Streamlined API layer focused on business logic
+- Centralized configuration management
+- Standardized prompt template organization
+
+**Branch:** `refactor/backend-phase4-api-cleanup` (contains Phases 4 & 5)
+
+The backend is now ready for continued development with a solid, well-organized foundation.

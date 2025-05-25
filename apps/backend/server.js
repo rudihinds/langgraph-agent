@@ -7,12 +7,13 @@
 
 import { app } from "./api/express-server.js";
 import { Logger } from "./lib/logger.js";
+import { ENV } from "./lib/config/env.js";
 
 // Initialize logger
 const logger = Logger.getInstance("server");
 
-// Get port from environment variable or use default
-const PORT = process.env.PORT || 3002;
+// Get port from centralized environment configuration
+const PORT = ENV.PORT;
 
 // Start the server
 app.listen(PORT, () => {

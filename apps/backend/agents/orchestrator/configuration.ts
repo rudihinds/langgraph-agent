@@ -1,6 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { BaseLanguageModel } from "@langchain/core/language_models/base";
+import { ENV } from "../../lib/config/env.js";
 import { AgentType } from "./state.js";
 
 /**
@@ -69,7 +70,8 @@ interface LLMOptions {
  */
 function createDefaultLLM(options?: Partial<LLMOptions>): BaseLanguageModel {
   const provider =
-    options?.provider || (process.env.LLM_PROVIDER as LLMProvider) || "openai";
+    options?.provider ||
+    (ENV.DEFAULT_MODEL.includes("anthropic") ? "anthropic" : "openai");
 
   switch (provider) {
     case "anthropic":

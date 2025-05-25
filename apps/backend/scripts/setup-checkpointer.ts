@@ -4,26 +4,20 @@
  * This script checks if the required database tables exist and creates them if they don't.
  * Run with: npx tsx scripts/setup-checkpointer.ts
  */
-import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
+import { ENV } from "../lib/config/env.js";
 
 // Get the directory of this script
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from both locations
-// First try the root .env (more important)
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
-// Then local .env as fallback (less important)
-dotenv.config();
-
 async function main() {
   // Check that we have the required environment variables
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = ENV.SUPABASE_URL;
+  const supabaseKey = ENV.SUPABASE_SERVICE_ROLE_KEY;
 
   if (
     !supabaseUrl ||
