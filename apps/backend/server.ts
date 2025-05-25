@@ -13,7 +13,7 @@ import { createServer } from "http";
 import { Logger } from "@/lib/logger.js";
 import { createProposalGenerationGraph } from "@/agents/proposal-generation/graph.js";
 import rfpRouter from "./api/rfp/index.js";
-import { createLangGraphRouter } from "./api/langgraph/index.js"; // Import the factory function
+
 import cookieParser from "cookie-parser"; // Import cookie-parser
 import helmet from "helmet";
 import { app } from "./api/express-server.js"; // Import the configured app
@@ -131,7 +131,6 @@ async function startServer() {
     logger.info("Available base API paths:");
     logger.info("- /api/health (from express-server)");
     logger.info("- /api/rfp (from express-server)");
-    logger.info("- /api/langgraph (mounted in server.ts)");
   });
 }
 

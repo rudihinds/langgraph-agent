@@ -140,10 +140,17 @@ The project is focused on implementing the core nodes of the `ProposalGeneration
    - ✅ Implemented client-side integration guidance
 7. **Chat UI Integration & Refactoring**: Integrated core chat UI components and refactored the connection to use a direct LangGraph endpoint, removing the API proxy. Provider structure corrected.
 8. **Server Architecture and Checkpointing Refactor**:
+
    - Consolidated server startup to use `apps/backend/server.ts` as the main entry point, which initializes LangGraph components and then starts the Express application configured in `apps/backend/api/express-server.ts`.
    - Simplified persistence by removing custom checkpointer adapters and factory. Now exclusively using the official `@langchain/langgraph-checkpoint-postgres` (`PostgresSaver`) via `createRobustCheckpointer` (which also handles DB schema setup), with a fallback to `MemorySaver`.
    - Centralized `thread_id` management within the `OrchestratorService` and API layer for all graph operations.
    - Removed redundant server startup files (`apps/backend/index.ts`, `apps/backend/server.js`) and custom persistence components.
+
+9. **Backend Refactoring - Phase 1 Complete ✅**:
+   - **Removed Deprecated Services**: Deleted `[dep]orchestrator.service.ts` (1235 lines), `[dep]orchestrator-factory.ts`, `[dep]checkpointer.service.ts`, and all broken test files importing these services.
+   - **Cleaned Up Agent Files**: Removed deprecated `agents/[dep]README.md` and `agents/[dep]index.ts` files containing obsolete documentation and commented-out code.
+   - **Eliminated Obsolete LangGraph Server Code**: Deleted `api/langgraph/index.ts` (249 lines) and the entire `api/langgraph/` directory containing deprecated server management code that conflicted with LangGraph SDK.
+   - **Impact**: Removed ~1,700+ lines of deprecated code, eliminated 8 broken test files, and simplified backend architecture to focus purely on Express.js business logic while LangGraph SDK handles agent execution.
 
 ### Next
 

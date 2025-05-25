@@ -1,7 +1,6 @@
 import express from "express";
 import { z } from "zod";
 import { Logger } from "../../lib/logger.js";
-// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
 
 // Initialize logger
 const logger = Logger.getInstance();

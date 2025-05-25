@@ -1,4 +1,4 @@
-import { ProposalState } from "../agents/proposal-agent/state.js";
+import { OverallProposalState } from "../state/modules/types.js";
 
 /**
  * Options for state serialization and pruning
@@ -30,7 +30,7 @@ const DEFAULT_OPTIONS: SerializationOptions = {
  * @returns Serialized state as a JSON-compatible object
  */
 export function serializeProposalState(
-  state: ProposalState,
+  state: OverallProposalState,
   options: SerializationOptions = {}
 ): Record<string, any> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
@@ -108,11 +108,11 @@ export function serializeProposalState(
  */
 export function deserializeProposalState(
   serializedState: Record<string, any>
-): ProposalState {
+): OverallProposalState {
   // Basic deserialization is just parsing the JSON
   // Add special handling here if needed in the future
 
-  return serializedState as ProposalState;
+  return serializedState as OverallProposalState;
 }
 
 /**

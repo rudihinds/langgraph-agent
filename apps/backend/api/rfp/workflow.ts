@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import { Logger } from "../../lib/logger.js";
-// import { getOrchestrator } from "../../services/[dep]orchestrator-factory.js"; // DEPRECATED
+
 import { AuthenticatedRequest } from "../../lib/types/auth.js";
 
 const router = express.Router();
