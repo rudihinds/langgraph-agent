@@ -18,6 +18,7 @@ import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { StateGraph, END } from "@langchain/langgraph";
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import { Logger } from "../../../lib/logger.js";
+import { ENV } from "../../../lib/config/env.js";
 import {
   OverallProposalState,
   SectionType,
@@ -266,7 +267,9 @@ async function executeSectionGenerationGraph(
   // Set up the model with tools
   const model = new ChatOpenAI({
     temperature: 0.7,
-    modelName: process.env.LLM_MODEL_NAME || "gpt-4",
+    modelName: ENV.DEFAULT_MODEL.includes("openai")
+      ? ENV.DEFAULT_MODEL.split("/")[1]
+      : "gpt-4",
   }).bindTools(tools);
 
   // Node name constants for readability

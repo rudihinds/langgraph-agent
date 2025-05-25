@@ -16,6 +16,7 @@ import { tool } from "@langchain/core/tools";
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 import { Logger } from "../../../lib/logger.js";
+import { ENV } from "../../../lib/config/env.js";
 import {
   OverallProposalState,
   SectionData,
@@ -258,7 +259,9 @@ async function executeProblemStatementGraph(
   // Set up the model with tools
   const model = new ChatOpenAI({
     temperature: 0.7,
-    modelName: process.env.LLM_MODEL_NAME || "gpt-4-1106-preview",
+    modelName: ENV.DEFAULT_MODEL.includes("openai")
+      ? ENV.DEFAULT_MODEL.split("/")[1]
+      : "gpt-4-1106-preview",
   }).bindTools(tools);
 
   // Create the model node function

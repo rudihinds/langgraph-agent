@@ -20,6 +20,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { Logger } from "../logger.js";
+import { ENV } from "../config/env.js";
 
 // Time threshold (in seconds) before token expiration when clients should be notified to refresh
 // 10 minutes provides adequate time for client-side refresh while not being too frequent
@@ -53,8 +54,8 @@ function createErrorResponse(status, errorType, message, additionalData = {}) {
  * @returns {Object|null} Error response object if validation fails, null if successful
  */
 function validateSupabaseConfig(logger, requestId) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = ENV.SUPABASE_URL;
+  const supabaseAnonKey = ENV.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     logger.error("Missing Supabase environment variables", {
@@ -293,8 +294,8 @@ export async function authMiddleware(req, res, next) {
 
     // Initialize Supabase client with proper configuration
     const supabaseClient = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
+      ENV.SUPABASE_URL,
+      ENV.SUPABASE_ANON_KEY,
       {
         global: {
           headers: {
