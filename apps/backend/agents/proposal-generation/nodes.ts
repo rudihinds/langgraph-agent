@@ -1,11 +1,30 @@
 /**
- * Proposal Generation Nodes
+ * Proposal Generation Nodes - Barrel Export
  *
- * This file defines all node functions for the proposal generation graph.
- * Each node is responsible for a specific step in the process, such as
- * document loading, research, solution generation, and section creation.
+ * This file exports all node functions for the proposal generation graph.
+ * Each node is implemented in its own file for better organization and maintainability.
  */
 
+// Import from individual node files
+export { documentLoaderNode } from "./nodes/document_loader.js";
+export { deepResearchNode } from "./nodes/deepResearch.js";
+export { solutionSoughtNode } from "./nodes/solutionSought.js";
+export { connectionPairsNode } from "./nodes/connectionPairs.js";
+export { evaluateResearchNode } from "./nodes/evaluateResearch.js";
+export { evaluateSolutionNode } from "./nodes/evaluateSolution.js";
+export { evaluateConnectionsNode } from "./nodes/evaluateConnections.js";
+
+// Import from existing individual node files
+export { sectionManagerNode } from "./nodes/section_manager.js";
+export { problemStatementNode as generateProblemStatementNode } from "./nodes/problem_statement.js";
+export { processFeedbackNode } from "./nodes/processFeedback.js";
+export { chatAgentNode, shouldContinueChat } from "./nodes/chatAgent.js";
+export { processToolsNode } from "./nodes/toolProcessor.js";
+
+// Import section nodes factory
+export { sectionNodes } from "./nodes/section_nodes.js";
+
+// Re-export types and utilities that were in the original file
 import {
   OverallProposalState,
   ProcessingStatus,
@@ -17,7 +36,6 @@ import {
   SectionType,
   InterruptProcessingStatus,
 } from "../../state/modules/constants.js";
-import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 
 /**
  * Evaluates content (research, solution, connections, or sections) against predefined criteria
@@ -198,14 +216,12 @@ export const evaluateContent = async (
           },
         };
 
-        // Update the section with its evaluation
-        sections.set(sectionId as SectionType, {
-          ...section,
-          status: ProcessingStatus.AWAITING_REVIEW,
-          evaluation: evaluationResult,
-        });
+        // Update section with evaluation
+        section.evaluation = evaluationResult;
+        section.status = ProcessingStatus.AWAITING_REVIEW;
+        sections.set(sectionId as SectionType, section);
 
-        // Return updated state with new sections and interrupt
+        // Set up interrupt for human review
         return {
           sections,
           interruptStatus: {
@@ -216,7 +232,7 @@ export const evaluateContent = async (
           },
           interruptMetadata: {
             reason: InterruptReason.EVALUATION_NEEDED,
-            nodeId: `evaluateSection_${sectionId}`,
+            nodeId: "evaluateSection",
             timestamp: new Date().toISOString(),
             contentReference: sectionId,
             evaluationResult,
@@ -226,159 +242,6 @@ export const evaluateContent = async (
     }
   }
 
-  // If no valid content type or missing sectionId for section type
-  return {};
-};
-
-/**
- * Document Loader Node
- * Loads and processes RFP documents
- */
-export { documentLoaderNode } from "./nodes/document_loader.js";
-
-/**
- * Deep Research Node
- * Performs in-depth research on the RFP domain
- */
-export const deepResearchNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return {
-    researchStatus: ProcessingStatus.RUNNING,
-    currentStep: "research",
-  };
-};
-
-/**
- * Solution Sought Node
- * Generates potential solutions based on research
- */
-export const solutionSoughtNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return {
-    solutionStatus: ProcessingStatus.RUNNING,
-    currentStep: "solution",
-  };
-};
-
-/**
- * Connection Pairs Node
- * Creates connections between research findings and solution elements
- */
-export const connectionPairsNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return {
-    connectionsStatus: ProcessingStatus.RUNNING,
-    currentStep: "connections",
-  };
-};
-
-/**
- * Section Manager Node
- * Coordinates the generation of proposal sections
- */
-export { sectionManagerNode } from "./nodes/section_manager.js";
-
-/**
- * Generate Problem Statement Node
- * Creates the problem statement section of the proposal
- */
-export { problemStatementNode as generateProblemStatementNode } from "./nodes/problem_statement.js";
-
-/**
- * Generate Methodology Node
- * Creates the methodology section of the proposal
- */
-export const generateMethodologyNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return state;
-};
-
-/**
- * Generate Budget Node
- * Creates the budget section of the proposal
- */
-export const generateBudgetNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return state;
-};
-
-/**
- * Generate Timeline Node
- * Creates the timeline section of the proposal
- */
-export const generateTimelineNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return state;
-};
-
-/**
- * Generate Conclusion Node
- * Creates the conclusion section of the proposal
- */
-export const generateConclusionNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  // Placeholder implementation
-  return state;
-};
-
-/**
- * Evaluate Research Node
- * Evaluates the quality and completeness of research
- */
-export const evaluateResearchNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  return evaluateContent(state, "research");
-};
-
-/**
- * Evaluate Solution Node
- * Evaluates the solution against requirements
- */
-export const evaluateSolutionNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  return evaluateContent(state, "solution");
-};
-
-/**
- * Evaluate Connections Node
- * Evaluates the connections between research and solution
- */
-export const evaluateConnectionsNode = async (
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  return evaluateContent(state, "connections");
-};
-
-/**
- * Evaluate Section Node
- * Evaluates a specific proposal section
- */
-export const evaluateSectionNode = async (
-  state: typeof OverallProposalStateAnnotation.State,
-  sectionId: string
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
-  return evaluateContent(state, "section", sectionId);
-};
-
-// Export evaluation nodes for testing
-export const evaluationNodes = {
-  research: evaluateResearchNode,
-  solution: evaluateSolutionNode,
-  connections: evaluateConnectionsNode,
-  section: evaluateSectionNode,
+  // Default return if no matching content type
+  return newState;
 };
