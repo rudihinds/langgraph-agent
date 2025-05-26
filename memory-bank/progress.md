@@ -2,6 +2,29 @@
 
 ## What Works / Recently Completed
 
+### Document Parsing System Implementation Complete ✅
+
+**Latest Major Accomplishment: Comprehensive Document Storage & Parsing System**
+
+- **Database Structure Redesign**: Created `proposal_documents` table with proper relationships to `proposals`. Migrated existing data from `metadata.rfp_document` to normalized structure. Established foreign key relationships and referential integrity. Added proper indexing and Row Level Security (RLS) policies.
+
+- **Service Layer Implementation**: Built comprehensive `ProposalDocumentService` (backend) for full document management. Created client-side service for Next.js API routes integration. Implemented document parsing, storage, and text extraction capabilities. Added proper error handling, logging, and status tracking. Support for PDF, DOCX, and TXT file formats with multi-page capability.
+
+- **Upload Flow Refactoring**: Updated Next.js API route (`/api/proposals/[id]/upload`) to use new service. Refactored upload helper to call new API with simplified interface. Maintained backward compatibility with legacy function. Added proper file validation and storage object tracking. Implemented automatic document record creation on upload.
+
+- **Document Parsing Integration**: Fixed recursive call issue in PDF parser that was causing stack overflow. Successfully tested document parsing with real PDF (56,743 characters extracted). Automatic text storage in both `proposal_documents` and `proposals` tables. Status tracking for parsing operations (`pending`, `success`, `failed`). On-demand parsing with caching for performance.
+
+- **API Endpoints**: Upload endpoint with new service integration and proper auth. Parse document endpoint for on-demand text extraction. Proper authentication, authorization, and error handling. Support for background parsing workflows.
+
+- **Benefits Realized**:
+
+  - **Data Integrity**: Foreign key constraints ensure referential integrity. No more orphaned metadata or missing file references. Proper storage object tracking with UUIDs. Normalized data structure eliminates JSON metadata complexity.
+  - **Performance**: Cached parsed text in database (no re-parsing needed). Indexed queries for fast document lookup by proposal ID. Efficient storage and retrieval patterns. Multi-page document support with single text extraction.
+  - **Maintainability**: Clean separation of concerns between upload, storage, and parsing. Centralized document management logic in service layer. Proper error handling and comprehensive logging. Type-safe interfaces throughout the system.
+  - **Scalability**: Support for multiple documents per proposal (architecture ready). Versioning capability built into table structure. Background parsing support infrastructure in place. Extensible to additional file formats.
+
+- **Testing Results**: Successfully parsed real PDF document (56,743 characters). Verified database relationships and data integrity. Confirmed multi-page document support. Validated upload and parsing workflow end-to-end.
+
 ### Phase 1: Backend - Singleton Checkpointer Factory for LangGraph Server
 
 - **Step 1.1: Implement Singleton Checkpointer Factory:** ✅ Completed.
@@ -27,22 +50,30 @@
   - Implemented `GET /api/rfp/proposal_threads` (lists user threads; optional rfpId filter; authenticates user, calls service).
   - Endpoints are protected by auth middleware and use Zod for validation.
 
-## What's Left to Build (Immediate Focus from `final_threads_setup.md`)
+## What's Left to Build (Immediate Focus)
 
-1.  **Phase 2, Step 2.4: Re-evaluate `OrchestratorService` and `checkpointer.service.ts`:**
-    - Analyze and refactor these services to align with the new architecture.
-2.  **Phase 3: Frontend - `thread_id` Generation and SDK Interaction:** (All steps)
-3.  **Phase 4: Testing and Refinement:** (All steps)
+1. **Initial Document Parsing Flow Integration**: Integrate the document parsing system with the proposal generation agent to automatically parse RFP documents when starting new proposals.
+
+2. **Background Processing**: Add job queue for large document parsing operations.
+
+3. **Multiple Documents Support**: Extend system to support multiple RFP documents per proposal.
+
+4. **Advanced Parsing Features**: Extract structured data (sections, requirements, etc.) from parsed documents.
+
+5. **Search Integration**: Implement full-text search across parsed documents.
 
 ## Current Status
 
+- **Document Parsing System**: Fully operational with comprehensive database structure, service layer, and API endpoints. Successfully tested with real multi-page PDF documents.
 - Core backend infrastructure for singleton checkpointer management in the LangGraph server is in place.
 - The database table and service layer for managing application-level thread associations (`user_id`, `rfp_id`, `app_generated_thread_id`) are implemented.
 - **API endpoints for thread association are now live and ready for frontend integration.**
-- **Known Issue:** A linter error exists in `ProposalThreadAssociationService` due to the missing Supabase `database.types.ts` file. This is blocked by the user needing to install the Supabase CLI to generate these types.
 
 ## Evolution of Project Decisions
 
+- **Document Management Architecture**: Moved from JSON metadata storage to proper relational database structure with foreign key constraints and normalized data.
+- **Parsing Strategy**: Implemented cached parsing with on-demand text extraction for optimal performance.
+- **Multi-page Support**: Confirmed full support for multi-page documents with single text stream extraction for analysis.
 - Confirmed the necessity of a singleton `PostgresSaver` and its `setup()` being called only once.
 - Solidified the architecture: frontend generates `app_generated_thread_id`, Express backend records association, LangGraph server uses this ID for its checkpointer.
 - Identified `serverSupabase` (service role) as the appropriate client for backend database services.

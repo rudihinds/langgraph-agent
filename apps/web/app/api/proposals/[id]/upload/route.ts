@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { ProposalDocumentService } from "@/lib/services/proposal-documents";
 
 /**
  * POST /api/proposals/[id]/upload - Upload a file for a specific proposal
@@ -87,7 +88,7 @@ export async function POST(
     }
 
     // Create a unique file path
-    const filePath = `${user.id}/${id}/${file.name}`;
+    const filePath = `${id}/${file.name}`;
 
     // Convert file to Buffer for upload
     const arrayBuffer = await file.arrayBuffer();
@@ -109,43 +110,35 @@ export async function POST(
       );
     }
 
-    // Get the public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("proposal-documents").getPublicUrl(filePath);
+    // Get storage object ID for referential integrity
+    const storageObjectId =
+      await ProposalDocumentService.getStorageObjectId(filePath);
 
-    // Update the proposal with the document information
-    const documentInfo = {
-      rfp_document: {
-        name: file.name,
-        url: publicUrl,
-        size: file.size,
-        type: file.type,
-      },
-      updated_at: new Date().toISOString(),
-    };
+    // Create document record using the new service
+    const document = await ProposalDocumentService.create({
+      proposal_id: id,
+      file_name: file.name,
+      file_path: filePath,
+      file_type: file.type,
+      size_bytes: file.size,
+      storage_object_id: storageObjectId || undefined,
+    });
 
-    const { error: updateError } = await supabase
-      .from("proposals")
-      .update(documentInfo)
-      .eq("id", id);
-
-    if (updateError) {
-      console.error("Error updating proposal with document info:", updateError);
-      return NextResponse.json(
-        { message: "Failed to update proposal with document info" },
-        { status: 500 }
-      );
-    }
+    console.log("Document upload successful", {
+      proposalId: id,
+      documentId: document.id,
+      fileName: file.name,
+    });
 
     return NextResponse.json(
       {
         message: "File uploaded successfully",
-        file: {
-          name: file.name,
-          url: publicUrl,
-          size: file.size,
-          type: file.type,
+        document: {
+          id: document.id,
+          name: document.file_name,
+          size: document.size_bytes,
+          type: document.file_type,
+          uploadedAt: document.created_at,
         },
       },
       { status: 201 }

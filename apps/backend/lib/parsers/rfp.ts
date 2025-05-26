@@ -140,22 +140,9 @@ export async function parseRfpFromBuffer(
 }
 
 // --- Helper Functions ---
+// These are kept for potential future use but not currently used by parseRfpFromBuffer
 
-async function parsePdf(buffer: ArrayBuffer): Promise<ParsedDocument> {
-  // pdf-parse expects a Buffer
-  const nodeBuffer = Buffer.from(buffer);
-  const data = await parsePdf(nodeBuffer);
-  return {
-    text: data.text || "",
-    metadata: {
-      pdfVersion: data.version,
-      pageCount: data.numpages,
-      info: data.info, // Author, Title, etc.
-    },
-  };
-}
-
-async function parseDocx(buffer: ArrayBuffer): Promise<ParsedDocument> {
+async function parseDocxHelper(buffer: ArrayBuffer): Promise<ParsedDocument> {
   // mammoth works directly with ArrayBuffer
   const { value } = await mammoth.extractRawText({ arrayBuffer: buffer });
   return {
@@ -166,7 +153,7 @@ async function parseDocx(buffer: ArrayBuffer): Promise<ParsedDocument> {
   };
 }
 
-function parseTxt(buffer: ArrayBuffer): ParsedDocument {
+function parseTxtHelper(buffer: ArrayBuffer): ParsedDocument {
   const decoder = new TextDecoder("utf-8"); // Assume UTF-8 for text files
   const text = decoder.decode(buffer);
   return {
