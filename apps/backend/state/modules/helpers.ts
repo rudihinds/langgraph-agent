@@ -17,12 +17,44 @@ import {
 } from "./constants.js";
 
 /**
- * Creates an initial planning intelligence structure with minimal data
+ * Initialize a complete planning intelligence structure
  */
-export function createInitialPlanningIntelligence(): Partial<PlanningIntelligence> {
+export function createInitialPlanningIntelligence(): PlanningIntelligence {
   return {
-    rfpCharacteristics: createInitialRFPCharacteristics(),
-    researchIntelligence: createInitialResearchResults(),
+    rfpCharacteristics: {
+      industry: "",
+      specialization: "",
+      complexity: "Medium" as const,
+      complexityFactors: [],
+      contractValueEstimate: "",
+      timelinePressure: "Medium" as const,
+      strategicFocus: [],
+      submissionRequirements: {
+        pageLimit: "not_specified" as const,
+        sectionsRequired: [],
+        attachmentsNeeded: [],
+      },
+    },
+    researchIntelligence: {
+      funderIntelligence: {
+        organizationalPriorities: [],
+        decisionMakers: [],
+        recentAwards: [],
+        redFlags: [],
+        languagePreferences: {
+          preferredTerminology: [],
+          organizationalTone: "",
+          valuesEmphasis: [],
+        },
+      },
+      researchConfidence: 0,
+      additionalResearchRequested: {
+        requested: false,
+        focusAreas: [],
+        researchType: "deep_dive" as const,
+        rationale: "",
+      },
+    },
     industryAnalysis: {
       mandatoryCompliance: [],
       professionalQualifications: [],
@@ -88,7 +120,7 @@ export function createInitialPlanningIntelligence(): Partial<PlanningIntelligenc
       predictionConfidence: 0,
     },
     strategicApproach: {
-      selectedApproach: "standard",
+      selectedApproach: "standard" as const,
       alternativeApproaches: [],
       strategicFramework: {
         positioningStatement: "",

@@ -289,52 +289,31 @@ export const StrategyPlanningSchema = z.object({
 
 // User Collaboration schema
 export const UserCollaborationSchema = z.object({
-  strategicPriorities: z.array(
-    z.object({
-      priority: z.string(),
-      rationale: z.string(),
-      timestamp: z.string(),
-    })
-  ),
-  competitiveAdvantages: z.array(
-    z.object({
-      advantage: z.string(),
-      evidence: z.string(),
-      timestamp: z.string(),
-    })
-  ),
-  riskFactors: z.array(
-    z.object({
-      factor: z.string(),
-      mitigation: z.string(),
-      severity: z.nativeEnum(RiskLevel),
-      timestamp: z.string(),
-    })
-  ),
+  strategicPriorities: z.array(z.string()),
+  competitiveAdvantages: z.array(z.string()),
+  riskFactors: z.array(z.string()),
   userQueries: z.array(
     z.object({
-      query: z.string(),
-      context: z.string(),
+      id: z.string(),
+      question: z.string(),
+      options: z.array(z.string()),
       timestamp: z.string(),
-      agentResponse: z.string().optional(),
+      response: z.string().optional(),
+      responseTimestamp: z.string().optional(),
     })
   ),
   expertiseContributions: z.array(
     z.object({
-      area: z.string(),
-      contribution: z.string(),
-      confidence: z.nativeEnum(ConfidenceLevel),
+      id: z.string(),
+      type: z.enum(["correction", "addition", "insight", "preference"]),
+      subject: z.string(),
+      content: z.string(),
       timestamp: z.string(),
+      agentId: z.string(),
+      confidence: z.enum(["High", "Medium", "Low"]),
     })
   ),
-  feedbackHistory: z.record(
-    z.object({
-      originalContent: z.string(),
-      userFeedback: z.string(),
-      agentAdjustment: z.string(),
-      timestamp: z.string(),
-    })
-  ),
+  feedbackHistory: z.record(z.any()),
   preferredApproach: z.nativeEnum(ProposalApproach).optional(),
 });
 
