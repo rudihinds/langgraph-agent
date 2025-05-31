@@ -73,3 +73,87 @@ export enum InterruptProcessingStatus {
   PROCESSED = "processed",
   FAILED = "failed",
 }
+
+// Enhanced Planning Intelligence enums
+export enum ComplexityLevel {
+  SIMPLE = "Simple",
+  MEDIUM = "Medium",
+  COMPLEX = "Complex",
+}
+
+export enum TimelinePressure {
+  LOW = "Low",
+  MEDIUM = "Medium",
+  HIGH = "High",
+}
+
+export enum StrategicImportance {
+  HIGH = "High",
+  MEDIUM = "Medium",
+  LOW = "Low",
+}
+
+export enum UserValidation {
+  CONFIRMED = "confirmed",
+  CORRECTED = "corrected",
+  UNKNOWN = "unknown",
+}
+
+export enum ConfidenceLevel {
+  HIGH = "High",
+  MEDIUM = "Medium",
+  LOW = "Low",
+}
+
+export enum RiskLevel {
+  CRITICAL = "critical",
+  HIGH = "high",
+  MEDIUM = "medium",
+  LOW = "low",
+}
+
+export enum ProposalApproach {
+  STANDARD = "standard",
+  ACCELERATED = "accelerated",
+  COMPREHENSIVE = "comprehensive",
+  MINIMAL = "minimal",
+}
+
+export enum AgentRole {
+  RFP_ANALYZER = "rfp_analyzer",
+  INDUSTRY_RESEARCHER = "industry_researcher",
+  COMPETITOR_ANALYST = "competitor_analyst",
+  REQUIREMENTS_ANALYST = "requirements_analyst",
+  STRATEGY_PLANNER = "strategy_planner",
+  SOLUTION_ARCHITECT = "solution_architect",
+  USER_COLLABORATOR = "user_collaborator",
+}
+
+// Adaptive workflow constants
+export const PHASE_STATUSES = {
+  NOT_STARTED: "not_started",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  SKIPPED: "skipped",
+} as const;
+
+export type PhaseStatus = (typeof PHASE_STATUSES)[keyof typeof PHASE_STATUSES];
+
+// Current phase options
+export const PHASES = {
+  PLANNING: "planning",
+  WRITING: "writing",
+  COMPLETE: "complete",
+} as const;
+
+export type Phase = (typeof PHASES)[keyof typeof PHASES];
+
+// Complexity level options for adaptive workflow
+export const COMPLEXITY_LEVELS = {
+  MINIMAL: "minimal",
+  MODERATE: "moderate",
+  COMPREHENSIVE: "comprehensive",
+} as const;
+
+export type WorkflowComplexityLevel =
+  (typeof COMPLEXITY_LEVELS)[keyof typeof COMPLEXITY_LEVELS];

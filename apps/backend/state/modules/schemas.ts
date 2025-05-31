@@ -9,6 +9,17 @@ import {
   InterruptReason,
   FeedbackType,
   InterruptProcessingStatus,
+  ComplexityLevel,
+  TimelinePressure,
+  StrategicImportance,
+  UserValidation,
+  ConfidenceLevel,
+  RiskLevel,
+  ProposalApproach,
+  AgentRole,
+  PHASE_STATUSES,
+  PHASES,
+  COMPLEXITY_LEVELS,
 } from "./constants.js";
 
 /**
@@ -197,4 +208,203 @@ export const OverallProposalStateSchema = z.object({
   createdAt: z.string(),
   lastUpdatedAt: z.string(),
   status: z.nativeEnum(ProcessingStatus),
+});
+
+// RFP Characteristics schema
+export const RFPCharacteristicsSchema = z.object({
+  industry: z.string(),
+  specialization: z.string(),
+  complexity: z.nativeEnum(ComplexityLevel),
+  complexityFactors: z.array(z.string()),
+  contractValueEstimate: z.string(),
+  timelinePressure: z.nativeEnum(TimelinePressure),
+  strategicFocus: z.array(z.string()),
+  submissionRequirements: z.object({
+    pageLimit: z.union([z.number(), z.literal("not_specified")]),
+    sectionsRequired: z.array(z.string()),
+    attachmentsNeeded: z.array(z.string()),
+  }),
+});
+
+// Research Results schema
+export const ResearchResultsSchema = z.object({
+  funderIntelligence: z.object({
+    organizationalPriorities: z.array(
+      z.object({
+        priority: z.string(),
+        evidence: z.string(),
+        userValidation: z.nativeEnum(UserValidation),
+        strategicImportance: z.nativeEnum(StrategicImportance),
+      })
+    ),
+    pastAwardPatterns: z.array(
+      z.object({
+        pattern: z.string(),
+        evidence: z.string(),
+        confidenceLevel: z.nativeEnum(ConfidenceLevel),
+      })
+    ),
+    evaluationCriteria: z.array(
+      z.object({
+        criterion: z.string(),
+        weight: z.number(),
+        evaluationFocus: z.string(),
+      })
+    ),
+  }),
+  marketAnalysis: z.object({
+    marketTrends: z.array(z.string()),
+    competitiveLandscape: z.array(z.string()),
+    opportunityAreas: z.array(z.string()),
+  }),
+  techRequirements: z.object({
+    coreRequirements: z.array(z.string()),
+    preferredSolutions: z.array(z.string()),
+    constraints: z.array(z.string()),
+  }),
+});
+
+// Strategy Planning schema
+export const StrategyPlanningSchema = z.object({
+  differentiationStrategy: z.array(
+    z.object({
+      approach: z.string(),
+      rationale: z.string(),
+      riskAssessment: z.nativeEnum(RiskLevel),
+    })
+  ),
+  valueProposition: z.object({
+    coreValue: z.string(),
+    supportingEvidence: z.array(z.string()),
+    competitiveAdvantage: z.string(),
+  }),
+  riskMitigation: z.array(
+    z.object({
+      risk: z.string(),
+      mitigation: z.string(),
+      priority: z.nativeEnum(StrategicImportance),
+    })
+  ),
+});
+
+// User Collaboration schema
+export const UserCollaborationSchema = z.object({
+  strategicPriorities: z.array(
+    z.object({
+      priority: z.string(),
+      rationale: z.string(),
+      timestamp: z.string(),
+    })
+  ),
+  competitiveAdvantages: z.array(
+    z.object({
+      advantage: z.string(),
+      evidence: z.string(),
+      timestamp: z.string(),
+    })
+  ),
+  riskFactors: z.array(
+    z.object({
+      factor: z.string(),
+      mitigation: z.string(),
+      severity: z.nativeEnum(RiskLevel),
+      timestamp: z.string(),
+    })
+  ),
+  userQueries: z.array(
+    z.object({
+      query: z.string(),
+      context: z.string(),
+      timestamp: z.string(),
+      agentResponse: z.string().optional(),
+    })
+  ),
+  expertiseContributions: z.array(
+    z.object({
+      area: z.string(),
+      contribution: z.string(),
+      confidence: z.nativeEnum(ConfidenceLevel),
+      timestamp: z.string(),
+    })
+  ),
+  feedbackHistory: z.record(
+    z.object({
+      originalContent: z.string(),
+      userFeedback: z.string(),
+      agentAdjustment: z.string(),
+      timestamp: z.string(),
+    })
+  ),
+  preferredApproach: z.nativeEnum(ProposalApproach).optional(),
+});
+
+// Adaptive Workflow schema
+export const AdaptiveWorkflowSchema = z.object({
+  selectedApproach: z.nativeEnum(ProposalApproach),
+  activeAgentSet: z.array(z.nativeEnum(AgentRole)),
+  complexityLevel: z.enum([
+    COMPLEXITY_LEVELS.MINIMAL,
+    COMPLEXITY_LEVELS.MODERATE,
+    COMPLEXITY_LEVELS.COMPREHENSIVE,
+  ]),
+  skipReasons: z.record(z.string()),
+  currentPhase: z.enum([PHASES.PLANNING, PHASES.WRITING, PHASES.COMPLETE]),
+  phaseCompletionStatus: z.record(
+    z.enum([
+      PHASE_STATUSES.NOT_STARTED,
+      PHASE_STATUSES.IN_PROGRESS,
+      PHASE_STATUSES.COMPLETED,
+      PHASE_STATUSES.SKIPPED,
+    ])
+  ),
+  adaptationTriggers: z.array(
+    z.object({
+      trigger: z.string(),
+      reason: z.string(),
+      timestamp: z.string(),
+      actionTaken: z.string(),
+    })
+  ),
+});
+
+// Full Planning Intelligence schema
+export const PlanningIntelligenceSchema = z.object({
+  rfpCharacteristics: RFPCharacteristicsSchema,
+  researchIntelligence: ResearchResultsSchema,
+  industryAnalysis: z.object({
+    industryTrends: z.array(z.string()),
+    marketDynamics: z.array(z.string()),
+    competitiveFactors: z.array(z.string()),
+  }),
+  competitiveIntel: z.object({
+    competitors: z.array(
+      z.object({
+        name: z.string(),
+        strengths: z.array(z.string()),
+        weaknesses: z.array(z.string()),
+        winProbability: z.nativeEnum(ConfidenceLevel),
+      })
+    ),
+    marketPosition: z.string(),
+    differentiationOpportunities: z.array(z.string()),
+  }),
+  requirementAnalysis: z.object({
+    technicalRequirements: z.array(z.string()),
+    businessRequirements: z.array(z.string()),
+    complianceRequirements: z.array(z.string()),
+    evaluationCriteria: z.array(z.string()),
+  }),
+  evaluationPrediction: z.object({
+    scoringModel: z.record(z.number()),
+    winProbability: z.number(),
+    riskFactors: z.array(z.string()),
+    mitigationStrategies: z.array(z.string()),
+  }),
+  strategicApproach: StrategyPlanningSchema,
+  solutionRequirements: z.object({
+    coreComponents: z.array(z.string()),
+    integrationPoints: z.array(z.string()),
+    deliverables: z.array(z.string()),
+    timeline: z.record(z.string()),
+  }),
 });

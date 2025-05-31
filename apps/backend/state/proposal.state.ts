@@ -25,10 +25,26 @@ import {
   Funder,
   Applicant,
   WordLength,
+  RFPDocument,
+  ProposalSection,
+  SectionEvaluationResults,
+  PlanningIntelligence,
+  UserCollaboration,
+  AdaptiveWorkflow,
+  EvaluationCriteria,
+  InterruptProcessingStatus,
+  GenerationApproach,
 } from "./modules/types.js";
 
 // Import the schema for validation
 import { OverallProposalStateSchema } from "./modules/schemas.js";
+
+// Import helper functions
+import {
+  createInitialPlanningIntelligence,
+  createInitialUserCollaboration,
+  createInitialAdaptiveWorkflow,
+} from "./modules/helpers.js";
 
 // Re-export everything for convenient access
 export * from "./modules/types.js";
@@ -120,6 +136,106 @@ const sectionToolMessagesReducer: BinaryOperator<
 function lastValueReducer<T>(a: T, b: T | undefined): T {
   return b !== undefined ? b : a;
 }
+
+// Custom reducer for planning intelligence that preserves existing data while merging new insights
+const planningIntelligenceReducer: BinaryOperator<PlanningIntelligence> = (
+  existing: PlanningIntelligence | undefined,
+  incoming: Partial<PlanningIntelligence> | undefined
+): PlanningIntelligence | undefined => {
+  if (!incoming) return existing;
+  if (!existing) return incoming as PlanningIntelligence;
+
+  return {
+    rfpCharacteristics:
+      incoming.rfpCharacteristics || existing.rfpCharacteristics,
+    researchIntelligence:
+      incoming.researchIntelligence || existing.researchIntelligence,
+    industryAnalysis: incoming.industryAnalysis || existing.industryAnalysis,
+    competitiveIntel: incoming.competitiveIntel || existing.competitiveIntel,
+    requirementAnalysis:
+      incoming.requirementAnalysis || existing.requirementAnalysis,
+    evaluationPrediction:
+      incoming.evaluationPrediction || existing.evaluationPrediction,
+    strategicApproach: incoming.strategicApproach || existing.strategicApproach,
+    solutionRequirements:
+      incoming.solutionRequirements || existing.solutionRequirements,
+  };
+};
+
+// Custom reducer for user collaboration that accumulates user input over time
+const userCollaborationReducer: BinaryOperator<UserCollaboration> = (
+  existing: UserCollaboration | undefined,
+  incoming: Partial<UserCollaboration> | undefined
+): UserCollaboration | undefined => {
+  if (!incoming) return existing;
+  if (!existing) {
+    return {
+      strategicPriorities: incoming.strategicPriorities || [],
+      competitiveAdvantages: incoming.competitiveAdvantages || [],
+      riskFactors: incoming.riskFactors || [],
+      userQueries: incoming.userQueries || [],
+      expertiseContributions: incoming.expertiseContributions || [],
+      feedbackHistory: incoming.feedbackHistory || {},
+      preferredApproach: incoming.preferredApproach,
+    };
+  }
+
+  return {
+    strategicPriorities:
+      incoming.strategicPriorities || existing.strategicPriorities,
+    competitiveAdvantages:
+      incoming.competitiveAdvantages || existing.competitiveAdvantages,
+    riskFactors: incoming.riskFactors || existing.riskFactors,
+    userQueries: [
+      ...(existing.userQueries || []),
+      ...(incoming.userQueries || []),
+    ],
+    expertiseContributions: [
+      ...(existing.expertiseContributions || []),
+      ...(incoming.expertiseContributions || []),
+    ],
+    feedbackHistory: {
+      ...existing.feedbackHistory,
+      ...incoming.feedbackHistory,
+    },
+    preferredApproach: incoming.preferredApproach || existing.preferredApproach,
+  };
+};
+
+// Custom reducer for adaptive workflow that preserves history while updating current state
+const adaptiveWorkflowReducer: BinaryOperator<AdaptiveWorkflow> = (
+  existing: AdaptiveWorkflow | undefined,
+  incoming: Partial<AdaptiveWorkflow> | undefined
+): AdaptiveWorkflow | undefined => {
+  if (!incoming) return existing;
+  if (!existing) {
+    return {
+      selectedApproach: incoming.selectedApproach || "standard",
+      activeAgentSet: incoming.activeAgentSet || [],
+      complexityLevel: incoming.complexityLevel || "moderate",
+      skipReasons: incoming.skipReasons || {},
+      currentPhase: incoming.currentPhase || "planning",
+      phaseCompletionStatus: incoming.phaseCompletionStatus || {},
+      adaptationTriggers: incoming.adaptationTriggers || [],
+    };
+  }
+
+  return {
+    selectedApproach: incoming.selectedApproach || existing.selectedApproach,
+    activeAgentSet: incoming.activeAgentSet || existing.activeAgentSet,
+    complexityLevel: incoming.complexityLevel || existing.complexityLevel,
+    skipReasons: { ...existing.skipReasons, ...incoming.skipReasons },
+    currentPhase: incoming.currentPhase || existing.currentPhase,
+    phaseCompletionStatus: {
+      ...existing.phaseCompletionStatus,
+      ...incoming.phaseCompletionStatus,
+    },
+    adaptationTriggers: [
+      ...(existing.adaptationTriggers || []),
+      ...(incoming.adaptationTriggers || []),
+    ],
+  };
+};
 
 /**
  * LangGraph state annotation with properly defined channels and reducers
@@ -290,6 +406,40 @@ export const ProposalStateAnnotation = Annotation.Root({
     reducer: lastValueReducer,
     default: () => undefined,
   }),
+
+  // Enhanced Planning Intelligence
+  planningIntelligence: Annotation<PlanningIntelligence | undefined>({
+    reducer: planningIntelligenceReducer,
+    default: () => undefined,
+  }),
+  userCollaboration: Annotation<UserCollaboration | undefined>({
+    reducer: userCollaborationReducer,
+    default: () => undefined,
+  }),
+  adaptiveWorkflow: Annotation<AdaptiveWorkflow | undefined>({
+    reducer: adaptiveWorkflowReducer,
+    default: () => undefined,
+  }),
+  currentPhase: Annotation<"planning" | "writing" | "complete" | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+
+  // Section processing
+  sectionDiscoveryStatus: Annotation<ProcessingStatus>({
+    reducer: lastValueReducer,
+    default: () => ProcessingStatus.NOT_STARTED,
+  }),
+  currentSectionBeingProcessed: Annotation<string | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
+
+  // Evaluation configuration
+  evaluationCriteria: Annotation<EvaluationCriteria | undefined>({
+    reducer: lastValueReducer,
+    default: () => undefined,
+  }),
 });
 
 /**
@@ -366,6 +516,19 @@ export function createInitialState(
 
     // Intent
     intent: undefined,
+
+    // Enhanced Planning Intelligence
+    planningIntelligence: undefined,
+    userCollaboration: undefined,
+    adaptiveWorkflow: undefined,
+    currentPhase: undefined,
+
+    // Section processing
+    sectionDiscoveryStatus: ProcessingStatus.NOT_STARTED,
+    currentSectionBeingProcessed: undefined,
+
+    // Evaluation configuration
+    evaluationCriteria: undefined,
   };
 }
 
@@ -389,3 +552,79 @@ export function validateProposalState(
 // Define a type for accessing the state based on the annotation
 export type AnnotatedOverallProposalState =
   typeof ProposalStateAnnotation.State;
+
+export function createInitialProposalState(
+  userId: string,
+  sessionId: string,
+  proposalId?: string
+): OverallProposalState {
+  const proposalIdToUse =
+    proposalId ||
+    `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const timestamp = new Date().toISOString();
+
+  return {
+    // Core identification and metadata
+    userId,
+    sessionId,
+    proposalId: proposalIdToUse,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+
+    // RFP document and basic processing status
+    rfpDocument: {
+      raw: "",
+      parsed: {
+        sections: [],
+        requirements: [],
+        evaluationCriteria: [],
+      },
+      metadata: {
+        title: "",
+        organization: "",
+        submissionDeadline: "",
+        pageLimit: 0,
+        formatRequirements: [],
+      },
+    },
+    rfpProcessingStatus: ProcessingStatus.NOT_STARTED,
+
+    // Section processing
+    sections: {},
+    sectionDiscoveryStatus: ProcessingStatus.NOT_STARTED,
+    currentSectionBeingProcessed: undefined,
+
+    // Section generation and evaluation
+    evaluationStatus: ProcessingStatus.NOT_STARTED,
+    evaluationResults: undefined,
+    researchStatus: ProcessingStatus.NOT_STARTED,
+    researchResults: undefined,
+
+    // Enhanced Planning Intelligence
+    planningIntelligence: createInitialPlanningIntelligence(),
+    userCollaboration: createInitialUserCollaboration(),
+    adaptiveWorkflow: createInitialAdaptiveWorkflow(),
+    currentPhase: "planning",
+
+    // Messages for conversation tracking
+    messages: [],
+
+    // Error handling
+    errors: {},
+
+    // Human-in-the-loop integration
+    interruptStatus: {
+      isInterrupted: false,
+      reason: undefined,
+      timestamp: undefined,
+      userFeedback: undefined,
+      processingStatus: InterruptProcessingStatus.NOT_INTERRUPTED,
+    },
+
+    // Evaluation configuration
+    evaluationCriteria: undefined,
+
+    // Intent (if needed for existing compatibility)
+    intent: undefined,
+  };
+}
