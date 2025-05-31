@@ -30,6 +30,11 @@ import {
   routeAfterEvaluation,
   routeAfterFeedback,
 } from "./conditionals.js";
+import {
+  masterOrchestratorNode,
+  routeAfterMasterOrchestrator,
+  awaitStrategicPrioritiesNode,
+} from "./nodes/planning/master_orchestrator.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 import { createSectionEvaluators } from "../../agents/evaluation/sectionEvaluators.js";
 import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
@@ -45,6 +50,8 @@ import { FeedbackType } from "../../lib/types/feedback.js";
 // Define node name constants for type safety
 const NODES = {
   DOC_LOADER: "documentLoader",
+  MASTER_ORCHESTRATOR: "masterOrchestrator",
+  AWAIT_STRATEGIC_PRIORITIES: "awaitStrategicPriorities",
   DEEP_RESEARCH: "deepResearch",
   SOLUTION_SOUGHT: "solutionSought",
   CONNECTION_PAIRS: "connectionPairs",
@@ -95,8 +102,19 @@ let proposalGenerationGraph: any = new StateGraph(
 // Add base nodes for research and analysis
 proposalGenerationGraph.addNode(NODES.DOC_LOADER, documentLoaderNode, {
   // Mark this node as potentially reachable via Command objects
-  ends: [NODES.DEEP_RESEARCH],
+  ends: [NODES.MASTER_ORCHESTRATOR],
 });
+
+// Add Master Orchestrator nodes for strategic planning
+proposalGenerationGraph.addNode(
+  NODES.MASTER_ORCHESTRATOR,
+  masterOrchestratorNode
+);
+proposalGenerationGraph.addNode(
+  NODES.AWAIT_STRATEGIC_PRIORITIES,
+  awaitStrategicPrioritiesNode
+);
+
 proposalGenerationGraph.addNode(NODES.DEEP_RESEARCH, deepResearchNode);
 proposalGenerationGraph.addNode(NODES.SOLUTION_SOUGHT, solutionSoughtNode);
 proposalGenerationGraph.addNode(NODES.CONNECTION_PAIRS, connectionPairsNode);
@@ -254,9 +272,30 @@ console.log("Adding conditional edges from CHAT_AGENT");
   } as Record<string, NodeName | string>
 );
 
-// Original edge for documentLoader to deepResearch is now removed
-// as we want to route through chat router instead
-// (proposalGenerationGraph as any).addEdge(NODES.DOC_LOADER, NODES.DEEP_RESEARCH);
+// Master Orchestrator flow: Document → Master Orchestrator → Strategic Priorities → Research
+(proposalGenerationGraph as any).addEdge(
+  NODES.DOC_LOADER,
+  NODES.MASTER_ORCHESTRATOR
+);
+
+// Conditional edges from Master Orchestrator
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.MASTER_ORCHESTRATOR,
+  routeAfterMasterOrchestrator,
+  {
+    awaiting_strategic_priorities: NODES.AWAIT_STRATEGIC_PRIORITIES,
+    research: NODES.DEEP_RESEARCH,
+    error: NODES.DEEP_RESEARCH, // Fallback to research on error
+  }
+);
+
+// From strategic priorities back to research
+(proposalGenerationGraph as any).addEdge(
+  NODES.AWAIT_STRATEGIC_PRIORITIES,
+  NODES.DEEP_RESEARCH
+);
+
+// Continue with existing research flow
 (proposalGenerationGraph as any).addEdge(
   NODES.DEEP_RESEARCH,
   NODES.EVAL_RESEARCH

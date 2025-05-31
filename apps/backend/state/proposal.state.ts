@@ -36,8 +36,8 @@ import {
   GenerationApproach,
 } from "./modules/types.js";
 
-// Import the schema for validation
-import { OverallProposalStateSchema } from "./modules/schemas.js";
+// Import the schema for validation (temporarily commented due to compilation issues)
+// import { OverallProposalStateSchema } from "./modules/schemas.js";
 
 // Import helper functions
 import {
@@ -49,7 +49,7 @@ import {
 // Re-export everything for convenient access
 export * from "./modules/types.js";
 export * from "./modules/constants.js";
-export * from "./modules/schemas.js";
+// export * from "./modules/schemas.js"; // Temporarily commented due to compilation issues
 
 /**
  * Binary operator type used by LangGraph for reducer functions
@@ -59,7 +59,7 @@ type BinaryOperator<A, B = A> = (a: A, b: B) => A;
 /**
  * Type-safe reducer for the sections map
  */
-const sectionsReducer = (
+export const sectionsReducer = (
   existing: Record<string, ProposalSection> = {},
   incoming: Record<string, ProposalSection> = {}
 ): Record<string, ProposalSection> => {
@@ -69,7 +69,7 @@ const sectionsReducer = (
 /**
  * Type-safe reducer for error arrays
  */
-const errorsReducer: BinaryOperator<string[]> = (
+export const errorsReducer: BinaryOperator<string[]> = (
   existing = [],
   incoming = []
 ) => {
@@ -551,8 +551,14 @@ export function validateProposalState(
   state: OverallProposalState
 ): OverallProposalState {
   try {
-    // TODO: Fix schema mismatch - temporarily bypassing validation
+    // TODO: Fix schema compilation issues - temporarily bypassing validation
     // return OverallProposalStateSchema.parse(state as unknown) as OverallProposalState;
+
+    // Basic validation that the required fields exist
+    if (!state.userId || !state.sessionId) {
+      throw new Error("Missing required state fields: userId and sessionId");
+    }
+
     return state;
   } catch (error) {
     console.error("State validation failed:", error);

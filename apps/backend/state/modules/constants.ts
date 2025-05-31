@@ -21,14 +21,23 @@ export enum ProcessingStatus {
   NOT_STARTED = "not_started", // Initial state
   RUNNING = "running", // Work in progress (combines LOADING/RUNNING)
   QUEUED = "queued", // Ready to run but waiting its turn/dependency
+  GENERATING = "generating", // Currently being generated
   READY_FOR_EVALUATION = "ready_for_evaluation", // Generated but not evaluated
   AWAITING_REVIEW = "awaiting_review", // Evaluated, waiting for user
   APPROVED = "approved", // User approved
   EDITED = "edited", // User edited
+  NEEDS_REVISION = "needs_revision", // Needs to be revised based on feedback
   STALE = "stale", // Dependency changed, needs attention
   COMPLETE = "complete", // Final state
   ERROR = "error", // Error occurred
 }
+
+/**
+ * @deprecated Use ProcessingStatus instead
+ * Alias for ProcessingStatus to maintain backward compatibility
+ */
+export const SectionStatus = ProcessingStatus;
+export type SectionStatus = ProcessingStatus;
 
 /**
  * Types of feedback that can be provided by users
@@ -60,9 +69,11 @@ export enum SectionType {
   IMPLEMENTATION_PLAN = "implementation_plan",
   EVALUATION = "evaluation_approach",
   BUDGET = "budget",
+  TIMELINE = "timeline",
   EXECUTIVE_SUMMARY = "executive_summary",
   CONCLUSION = "conclusion",
   STAKEHOLDER_ANALYSIS = "stakeholder_analysis",
+  METHODOLOGY = "methodology",
 }
 
 /**

@@ -18,6 +18,13 @@ const mockStateGraph = vi.hoisted(() =>
   }))
 );
 
+// Mock Annotation for LangGraph state management
+const mockAnnotation = vi.hoisted(() => {
+  const annotationFn = vi.fn((options = {}) => options);
+  annotationFn.Root = vi.fn((schema) => schema);
+  return annotationFn;
+});
+
 // Mock chat node behavior
 const mockChatNode = vi.hoisted(() => vi.fn());
 const mockDocumentLoaderNode = vi.hoisted(() => vi.fn());
@@ -32,6 +39,8 @@ const mockChatOpenAI = vi.hoisted(() => ({
 // Apply mocks
 vi.mock("@langchain/langgraph", () => ({
   StateGraph: mockStateGraph,
+  Annotation: mockAnnotation,
+  messagesStateReducer: vi.fn(),
 }));
 
 vi.mock("../nodes.js", () => ({
@@ -328,4 +337,3 @@ describe("End-to-End Chat Workflow", () => {
     ).toContain("try again");
   });
 });
- 

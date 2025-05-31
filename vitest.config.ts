@@ -15,4 +15,10 @@ export default defineConfig({
     ],
     setupFiles: ["./vitest.setup.ts"],
   },
+  resolve: {
+    alias: {
+      "@/lib": resolve(__dirname, "apps/backend/lib"),
+      "@": resolve(__dirname, "apps/backend"),
+    },
+  },
 });

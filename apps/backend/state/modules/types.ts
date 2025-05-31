@@ -530,12 +530,15 @@ export interface PlanningIntelligence {
   evaluationPrediction: EvaluationCriteria;
   strategicApproach: StrategyDecision;
   solutionRequirements: SolutionSpec;
+  earlyRiskAssessment?: EarlyRiskAssessment;
 }
 
 export interface UserQuery {
   id: string;
   question: string;
   options: string[];
+  multiSelect?: boolean;
+  context?: string;
   timestamp: string;
   response?: string;
   responseTimestamp?: string;
@@ -627,4 +630,28 @@ export interface GenerationApproach {
   description: string;
   estimatedTime: string;
   agentsInvolved: string[];
+}
+
+/**
+ * Master Orchestrator specific types for workflow decision making
+ */
+export type ComplexityLevel = "simple" | "moderate" | "complex";
+
+export type WorkflowApproach = "accelerated" | "standard" | "comprehensive";
+
+export interface WorkflowDecision {
+  approach: WorkflowApproach;
+  rationale: string;
+  estimatedTime: string;
+  agentsRequired: string[];
+  riskFactors: string[];
+}
+
+export interface EarlyRiskAssessment {
+  technicalComplexity: "Low" | "Medium" | "High";
+  complianceRequirements: "Standard" | "Extensive" | "Critical";
+  competitivePosition: "Strong" | "Moderate" | "Challenging";
+  timelinePressure: "Low" | "Medium" | "High";
+  overallRisk: "Low" | "Medium" | "High";
+  mitigationStrategies: string[];
 }
