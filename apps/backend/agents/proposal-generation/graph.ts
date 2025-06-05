@@ -46,6 +46,7 @@ import { interpretIntentTool } from "../../tools/interpretIntentTool.js";
 import { processToolsNode } from "./nodes/toolProcessor.js";
 import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { FeedbackType } from "../../lib/types/feedback.js";
+import { enhancedResearchNode } from "./nodes/planning/enhanced_research.js";
 
 // Define node name constants for type safety
 const NODES = {
@@ -72,6 +73,7 @@ const NODES = {
   EVAL_CONNECTIONS: "evaluateConnections",
   CHAT_AGENT: "chatAgent",
   CHAT_TOOLS: "chatTools",
+  ENHANCED_RESEARCH: "enhancedResearch",
 } as const;
 
 // Type-safe node names
@@ -114,6 +116,9 @@ proposalGenerationGraph.addNode(
   NODES.AWAIT_STRATEGIC_PRIORITIES,
   awaitStrategicPrioritiesNode
 );
+
+// Add Enhanced Research Agent (Phase 2.2)
+proposalGenerationGraph.addNode(NODES.ENHANCED_RESEARCH, enhancedResearchNode);
 
 proposalGenerationGraph.addNode(NODES.DEEP_RESEARCH, deepResearchNode);
 proposalGenerationGraph.addNode(NODES.SOLUTION_SOUGHT, solutionSoughtNode);
@@ -284,15 +289,23 @@ console.log("Adding conditional edges from CHAT_AGENT");
   routeAfterMasterOrchestrator,
   {
     awaiting_strategic_priorities: NODES.AWAIT_STRATEGIC_PRIORITIES,
+    enhanced_research: NODES.ENHANCED_RESEARCH,
     research: NODES.DEEP_RESEARCH,
+    deep_research: NODES.DEEP_RESEARCH,
     error: NODES.DEEP_RESEARCH, // Fallback to research on error
   }
 );
 
-// From strategic priorities back to research
+// From strategic priorities to enhanced research (new pattern)
 (proposalGenerationGraph as any).addEdge(
   NODES.AWAIT_STRATEGIC_PRIORITIES,
-  NODES.DEEP_RESEARCH
+  NODES.ENHANCED_RESEARCH
+);
+
+// From enhanced research to evaluation
+(proposalGenerationGraph as any).addEdge(
+  NODES.ENHANCED_RESEARCH,
+  NODES.EVAL_RESEARCH
 );
 
 // Continue with existing research flow

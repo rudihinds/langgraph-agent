@@ -1,5 +1,6 @@
 /**
  * Type definitions for the proposal generation system
+ * Consistent JavaScript camelCase naming throughout
  */
 import { BaseMessage } from "@langchain/core/messages";
 import {
@@ -136,105 +137,24 @@ export interface WordLength {
  * Add intent command enumeration type
  */
 export type UserCommand =
-  | "regenerate_section"
-  | "modify_section"
-  | "approve_section"
-  | "ask_question"
-  | "load_document"
+  | "regenerateSection"
+  | "modifySection"
+  | "approveSection"
+  | "askQuestion"
+  | "loadDocument"
   | "help"
   | "other";
 
 export interface UserIntent {
   command: UserCommand;
   targetSection?: string;
-  request_details?: string;
+  requestDetails?: string;
 }
 
 /**
- * Main state interface for the proposal generation system
+ * Enhanced Planning Intelligence interfaces with consistent naming
  */
-export interface OverallProposalState {
-  // Core identification and metadata
-  userId: string;
-  sessionId: string;
-  proposalId: string;
-  createdAt: string;
-  updatedAt: string;
-
-  // Document handling
-  rfpDocument: RFPDocument;
-  rfpProcessingStatus: ProcessingStatus;
-
-  // Research phase
-  researchResults?: SectionEvaluationResults;
-  researchStatus: ProcessingStatus;
-  researchEvaluation?: EvaluationResult | null;
-
-  // Solution sought phase
-  solutionResults?: Record<string, any>;
-  solutionStatus: ProcessingStatus;
-  solutionEvaluation?: EvaluationResult | null;
-
-  // Connection pairs phase
-  connections?: any[];
-  connectionsStatus: ProcessingStatus;
-  connectionsEvaluation?: EvaluationResult | null;
-
-  // Section processing
-  sections: Record<string, ProposalSection>;
-  sectionDiscoveryStatus: ProcessingStatus;
-  currentSectionBeingProcessed?: string;
-
-  // Section generation and evaluation
-  evaluationStatus: ProcessingStatus;
-  evaluationResults?: SectionEvaluationResults;
-
-  // Enhanced Planning Intelligence
-  planningIntelligence?: PlanningIntelligence;
-  userCollaboration?: UserCollaboration;
-  adaptiveWorkflow?: AdaptiveWorkflow;
-  currentPhase?: "planning" | "writing" | "complete";
-
-  // Proposal sections
-  requiredSections: SectionType[];
-
-  // Tool interaction tracking per section
-  sectionToolMessages?: Record<string, SectionToolInteraction>;
-
-  // Fields for applicant and funder info
-  funder?: Funder;
-  applicant?: Applicant;
-  wordLength?: WordLength;
-
-  // HITL Interrupt handling
-  interruptStatus: InterruptStatus;
-  interruptMetadata?: InterruptMetadata;
-  userFeedback?: UserFeedback;
-
-  // Workflow tracking
-  currentStep: string | null;
-  activeThreadId: string;
-
-  // Communication and errors
-  messages: BaseMessage[];
-  errors: string[];
-
-  // Chat router fields
-  intent?: UserIntent;
-
-  // Evaluation configuration
-  evaluationCriteria?: EvaluationCriteria;
-
-  // Metadata
-  projectName?: string;
-  lastUpdatedAt: string;
-
-  // Status for the overall proposal generation process
-  status: ProcessingStatus;
-}
-
-// Enhanced Planning Intelligence interfaces
-export interface RFPCharacteristics {
+export interface RfpCharacteristics {
   industry: string;
   specialization: string;
   complexity: "Simple" | "Medium" | "Complex";
@@ -249,7 +169,36 @@ export interface RFPCharacteristics {
   };
 }
 
-export interface ResearchResults {
+export interface EarlyRiskAssessment {
+  riskIndicators: Array<{
+    risk: string;
+    severity: "Low" | "Medium" | "High" | "Critical";
+    category:
+      | "Technical"
+      | "Compliance"
+      | "Competitive"
+      | "Timeline"
+      | "Financial";
+  }>;
+  strategicInsights?: {
+    keyOpportunities: string[];
+    competitiveFactors: string[];
+    requirementPriorities: Array<{
+      requirement: string;
+      priority: "Critical" | "High" | "Medium" | "Low";
+      rationale: string;
+    }>;
+    funderSignals: Array<{
+      signal: string;
+      interpretation: string;
+      confidence: number;
+    }>;
+  };
+  analysisConfidence: number;
+  requiresUserValidation: boolean;
+}
+
+export interface ResearchIntelligence {
   funderIntelligence: {
     organizationalPriorities: Array<{
       priority: string;
@@ -289,7 +238,7 @@ export interface ResearchResults {
   additionalResearchRequested: {
     requested: boolean;
     focusAreas: string[];
-    researchType: "deep_dive" | "specialist";
+    researchType: "deepDive" | "specialist";
     rationale: string;
   };
 }
@@ -488,7 +437,7 @@ export interface StrategyDecision {
   strategyConfidence: number;
 }
 
-export interface SolutionSpec {
+export interface SolutionSpecification {
   realPriorities: Array<{
     priority: string;
     importanceWeight: number;
@@ -521,18 +470,24 @@ export interface SolutionSpec {
   solutionConfidence: number;
 }
 
+/**
+ * Consolidated planning intelligence interface
+ */
 export interface PlanningIntelligence {
-  rfpCharacteristics: RFPCharacteristics;
-  researchIntelligence: ResearchResults;
-  industryAnalysis: IndustryInsights;
-  competitiveIntel: CompetitiveAnalysis;
-  requirementAnalysis: RequirementMapping;
-  evaluationPrediction: EvaluationCriteria;
-  strategicApproach: StrategyDecision;
-  solutionRequirements: SolutionSpec;
+  rfpCharacteristics?: RfpCharacteristics;
   earlyRiskAssessment?: EarlyRiskAssessment;
+  researchIntelligence?: ResearchIntelligence;
+  industryAnalysis?: IndustryInsights;
+  competitiveIntel?: CompetitiveAnalysis;
+  requirementAnalysis?: RequirementMapping;
+  evaluationPrediction?: EvaluationCriteria;
+  strategicApproach?: StrategyDecision;
+  solutionRequirements?: SolutionSpecification;
 }
 
+/**
+ * User collaboration interfaces
+ */
 export interface UserQuery {
   id: string;
   question: string;
@@ -555,15 +510,35 @@ export interface ExpertiseContribution {
 }
 
 export interface UserCollaboration {
-  strategicPriorities: string[];
-  competitiveAdvantages: string[];
-  riskFactors: string[];
-  userQueries: UserQuery[];
-  expertiseContributions: ExpertiseContribution[];
-  feedbackHistory: Record<string, any>;
+  strategicPriorities?: string[];
+  competitiveAdvantages?: string[];
+  riskFactors?: string[];
+  userQueries?: UserQuery[];
+  expertiseContributions?: ExpertiseContribution[];
+  feedbackHistory?: Record<string, any>;
   preferredApproach?: string;
+  refinementIteration?: number;
+  maxRefinements?: number;
+  lastFeedbackProcessed?: {
+    timestamp: string;
+    sentiment: string;
+    engagementLevel: string;
+    confidence: number;
+  };
+  strategicRecommendations?: {
+    topOpportunities: string[];
+    criticalRequirements: Array<{
+      requirement: string;
+      priority: "Critical" | "High" | "Medium" | "Low";
+      rationale: string;
+    }>;
+    confidenceLevel: number;
+  };
 }
 
+/**
+ * Workflow and processing interfaces
+ */
 export type WorkflowType =
   | "accelerated"
   | "standard"
@@ -589,14 +564,14 @@ export interface AdaptiveWorkflow {
 export { InterruptProcessingStatus };
 
 // Add missing type definitions for proposal generation
-export interface RFPDocument {
+export interface RfpDocument {
   raw: string;
-  parsed: {
+  parsed?: {
     sections: string[];
     requirements: string[];
     evaluationCriteria: string[];
   };
-  metadata: {
+  metadata?: {
     title: string;
     organization: string;
     submissionDeadline: string;
@@ -642,16 +617,89 @@ export type WorkflowApproach = "accelerated" | "standard" | "comprehensive";
 export interface WorkflowDecision {
   approach: WorkflowApproach;
   rationale: string;
-  estimatedTime: string;
   agentsRequired: string[];
   riskFactors: string[];
 }
 
-export interface EarlyRiskAssessment {
-  technicalComplexity: "Low" | "Medium" | "High";
-  complianceRequirements: "Standard" | "Extensive" | "Critical";
-  competitivePosition: "Strong" | "Moderate" | "Challenging";
-  timelinePressure: "Low" | "Medium" | "High";
-  overallRisk: "Low" | "Medium" | "High";
-  mitigationStrategies: string[];
+/**
+ * Main state interface for the proposal generation system
+ */
+export interface OverallProposalState {
+  // Core identification and metadata
+  userId: string;
+  sessionId: string;
+  proposalId: string;
+  createdAt: string;
+  updatedAt: string;
+
+  // Document handling
+  rfpDocument?: RfpDocument;
+  rfpProcessingStatus?: ProcessingStatus;
+
+  // Enhanced Planning Intelligence (replaces old research/solution/connections)
+  planningIntelligence?: PlanningIntelligence;
+  userCollaboration?: UserCollaboration;
+  adaptiveWorkflow?: AdaptiveWorkflow;
+  currentPhase?: "planning" | "writing" | "complete";
+
+  // Section processing
+  sections?: Record<string, ProposalSection>;
+  sectionDiscoveryStatus?: ProcessingStatus;
+  currentSectionBeingProcessed?: string;
+  requiredSections?: SectionType[];
+
+  // Section generation and evaluation
+  evaluationStatus?: ProcessingStatus;
+  evaluationResults?: SectionEvaluationResults;
+  evaluationCriteria?: EvaluationCriteria;
+
+  // Tool interaction tracking per section
+  sectionToolMessages?: Record<string, SectionToolInteraction>;
+
+  // Participant information
+  funder?: Funder;
+  applicant?: Applicant;
+  wordLength?: WordLength;
+
+  // HITL Interrupt handling
+  interruptStatus?: InterruptStatus;
+  interruptMetadata?: InterruptMetadata;
+  userFeedback?: UserFeedback;
+
+  // Feedback processing state
+  feedbackProcessing?: {
+    lastProcessedFeedback?: any;
+    processingTimestamp?: string;
+    nextAction?: string;
+    requiresLimitCheck?: boolean;
+  };
+
+  // Workflow tracking
+  currentStep?: string | null;
+  activeThreadId?: string;
+
+  // Communication and errors
+  messages: BaseMessage[];
+  errors?: string[];
+
+  // Chat router fields
+  intent?: UserIntent;
+
+  // Metadata
+  projectName?: string;
+  lastUpdatedAt: string;
+
+  // Overall status
+  status?: ProcessingStatus;
+
+  // Legacy fields for backward compatibility (will be removed)
+  researchResults?: any;
+  researchStatus?: ProcessingStatus;
+  researchEvaluation?: EvaluationResult | null;
+  solutionResults?: Record<string, any>;
+  solutionStatus?: ProcessingStatus;
+  solutionEvaluation?: EvaluationResult | null;
+  connections?: any[];
+  connectionsStatus?: ProcessingStatus;
+  connectionsEvaluation?: EvaluationResult | null;
 }

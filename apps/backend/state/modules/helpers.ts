@@ -1,9 +1,14 @@
 import {
-  PlanningIntelligence,
+  RfpCharacteristics,
+  ResearchIntelligence,
+  OverallProposalState,
+  LoadingStatus,
+  ProcessingStatus,
+  Funder,
+  Applicant,
   UserCollaboration,
   AdaptiveWorkflow,
-  RFPCharacteristics,
-  ResearchResults,
+  PlanningIntelligence,
   UserQuery,
   ExpertiseContribution,
 } from "./types.js";
@@ -51,7 +56,7 @@ export function createInitialPlanningIntelligence(): PlanningIntelligence {
       additionalResearchRequested: {
         requested: false,
         focusAreas: [],
-        researchType: "deep_dive" as const,
+        researchType: "deepDive",
         rationale: "",
       },
     },
@@ -168,7 +173,7 @@ export function createInitialPlanningIntelligence(): PlanningIntelligence {
 /**
  * Creates an initial RFP characteristics structure with default values
  */
-export function createInitialRFPCharacteristics(): RFPCharacteristics {
+export function createInitialRFPCharacteristics(): RfpCharacteristics {
   return {
     industry: "",
     specialization: "",
@@ -188,7 +193,7 @@ export function createInitialRFPCharacteristics(): RFPCharacteristics {
 /**
  * Creates an initial research results structure with default values
  */
-export function createInitialResearchResults(): ResearchResults {
+export function createDefaultResearchIntelligence(): ResearchIntelligence {
   return {
     funderIntelligence: {
       organizationalPriorities: [],
@@ -205,7 +210,7 @@ export function createInitialResearchResults(): ResearchResults {
     additionalResearchRequested: {
       requested: false,
       focusAreas: [],
-      researchType: "deep_dive",
+      researchType: "deepDive",
       rationale: "",
     },
   };

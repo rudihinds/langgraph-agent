@@ -164,6 +164,91 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     default: () => ProcessingStatus.QUEUED,
     value: lastValueWinsReducerStrict,
   }),
+
+  // ===== PLANNING PHASE FIELDS (from planning-agents.md specification) =====
+
+  // Enhanced research intelligence
+  funder_intelligence: Annotation<
+    | {
+        organizational_priorities: Array<{
+          priority: string;
+          evidence: string;
+          user_validation: "confirmed" | "corrected" | "unknown";
+          strategic_importance: "High" | "Medium" | "Low";
+          confidence: number;
+        }>;
+        decision_makers: Array<{
+          name: string;
+          title: string;
+          background: string;
+          user_corrections: string;
+          influence_level: "High" | "Medium" | "Low";
+          strategic_notes: string;
+        }>;
+        recent_awards: Array<{
+          winner: string;
+          project: string;
+          award_date: string;
+          winning_factors: string[];
+          lessons_learned: string;
+        }>;
+        red_flags: Array<{
+          flag: string;
+          evidence: string;
+          mitigation_strategy: string;
+          severity: "Critical" | "High" | "Medium";
+        }>;
+        language_preferences: {
+          preferred_terminology: string[];
+          organizational_tone: string;
+          values_emphasis: string[];
+        };
+      }
+    | undefined
+  >({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Research flow control
+  additional_research_requested: Annotation<{
+    requested: boolean;
+    focus_areas: string[];
+    research_type: "deep_dive" | "specialist";
+    rationale: string;
+  }>({
+    default: () => ({
+      requested: false,
+      focus_areas: [],
+      research_type: "deep_dive" as const,
+      rationale: "",
+    }),
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
+  }),
+
+  reassessment_requested: Annotation<{
+    requested: boolean;
+    reason: string;
+    new_complexity_assessment: string;
+  }>({
+    default: () => ({
+      requested: false,
+      reason: "",
+      new_complexity_assessment: "",
+    }),
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
+  }),
+
+  research_confidence: Annotation<number>({
+    default: () => 0,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Research iterations tracking
+  research_iterations: Annotation<number>({
+    default: () => 0,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
 });
 
 // Define a type for accessing the state based on the annotation
