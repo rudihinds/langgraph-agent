@@ -566,6 +566,9 @@ export { InterruptProcessingStatus };
 
 // Add missing type definitions for proposal generation
 export interface RfpDocument {
+  id?: string;
+  status?: LoadingStatus;
+  text?: string;
   raw: string;
   parsed?: {
     sections: string[];
@@ -573,11 +576,24 @@ export interface RfpDocument {
     evaluationCriteria: string[];
   };
   metadata?: {
-    title: string;
-    organization: string;
-    submissionDeadline: string;
-    pageLimit: number;
-    formatRequirements: string[];
+    title?: string;
+    organization?: string;
+    submissionDeadline?: string;
+    pageLimit?: number;
+    formatRequirements?: string[];
+    documentId?: string;
+    fileName?: string;
+    fileType?: string;
+    sizeBytes?: number;
+    filePath?: string;
+    clientType?: string;
+    loadedAt?: string;
+    source?: string;
+    raw?: string;
+    errorType?: string;
+    error?: string;
+    timestamp?: string;
+    [key: string]: any;
   };
 }
 
