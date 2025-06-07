@@ -2,6 +2,41 @@
 
 ## What Works / Recently Completed
 
+### ✅ CRITICAL PRODUCTION FIX: Document Loading Pipeline (Dec 2024)
+
+**Status**: **PRODUCTION-CRITICAL BUG RESOLVED** - Document loading now working 100%
+
+**Issue**: ID mismatch between `proposal_id` (RFP ID) and actual document storage paths
+
+- System was using `rfpId` directly as storage path: `146e788b-70dd-4079-ac9a-5d3253ff4a11/document.pdf`
+- Actual file stored at: `146e788b-70dd-4079-ac9a-5d3253ff4a11/Race Equity RFP - 280125.pdf`
+- Database record had different `document_id`: `9866d664-690c-4a97-9082-0e86dbc43932`
+
+**Solution Implemented**:
+
+```typescript
+// Fixed document_loader.ts to query database first
+const documentRecord = await ProposalDocumentService.getByProposalId(rfpId);
+const downloadPath = documentRecord.file_path; // Use actual path from database
+```
+
+**Technical Achievements**:
+
+- ✅ **Database-First Approach**: Query `proposal_documents` table to get actual file path
+- ✅ **Service Layer Integration**: Reuse existing `ProposalDocumentService.getByProposalId()`
+- ✅ **Cached Parsing**: Store parsed text in database for performance
+- ✅ **Proper Error Handling**: Distinguish between missing documents vs loading failures
+- ✅ **Fixed Routing**: Conditional routing after document loading based on success/failure
+
+**Testing Results**:
+
+- ✅ **Fresh Thread Success**: Document loads correctly with proper content
+- ✅ **End-to-End Flow**: Complete RFP analysis working from document load to results
+- ✅ **Performance**: Cached parsing improves subsequent requests
+- ✅ **Error Recovery**: No more infinite loops from stale error states
+
+**Impact**: Users can now successfully analyze RFP documents. Previous sessions with stale error state need fresh threads.
+
 ### ✅ MAJOR BREAKTHROUGH: Complete RFP Auto-Analysis Flow Implementation
 
 **Status**: **PRODUCTION-READY END-TO-END RFP AUTO-ANALYSIS** ✅

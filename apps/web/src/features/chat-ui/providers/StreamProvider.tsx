@@ -37,6 +37,12 @@ export type StateType = {
     metadata?: { message_id?: string };
     [key: string]: any;
   }>;
+  // Add metadata field for RFP context (Step 1.2)
+  metadata?: {
+    rfpId?: string;
+    autoStarted?: boolean;
+    [key: string]: any;
+  };
 };
 
 // Use the standard useStream hook, typed only for messages
@@ -167,6 +173,12 @@ export function StreamProvider({ children }: StreamProviderProps) {
   const sdkThreadIdProcessedRef = useRef(false);
   // Ref to store the rfpId for which we are awaiting an SDK threadId
   const expectingSdkThreadIdForRfpRef = useRef<string | null>(null);
+
+  // Auto-start tracking refs
+  const hasAutoStarted = useRef(false);
+  const autoStartAttempts = useRef(0);
+  const maxAutoStartAttempts = 3; // Prevent infinite loops
+  const currentRfpId = useRef<string | null>(null);
 
   // Use query state for threadId
   const [urlThreadId, setUrlThreadId] = useQueryState("threadId", {
@@ -365,6 +377,102 @@ export function StreamProvider({ children }: StreamProviderProps) {
     client,
   } = streamData;
 
+  // Reset auto-start tracking when rfpId changes (separate effect)
+  useEffect(() => {
+    if (rfpId !== currentRfpId.current) {
+      console.log(
+        `[StreamProvider] RFP ID changed from ${currentRfpId.current} to ${rfpId} - resetting auto-start tracking`
+      );
+      hasAutoStarted.current = false;
+      autoStartAttempts.current = 0;
+      currentRfpId.current = rfpId;
+    }
+  }, [rfpId]);
+
+  // Auto-start submit effect - depends on submit being available (Step 1.2)
+  useEffect(() => {
+    // Trigger auto-start for:
+    // 1. New sessions: rfpId present but no urlThreadId yet
+    // 2. Existing sessions: both rfpId and urlThreadId present
+    if (
+      rfpId &&
+      submit &&
+      !hasAutoStarted.current &&
+      autoStartAttempts.current < maxAutoStartAttempts &&
+      (!urlThreadId || (urlThreadId && !streamError))
+    ) {
+      hasAutoStarted.current = true;
+      autoStartAttempts.current += 1;
+
+      // Auto-send initial message with RFP context in state metadata, not message content
+      setTimeout(async () => {
+        const sessionType = urlThreadId ? "existing" : "new";
+        console.log(
+          `[StreamProvider] Auto-starting RFP analysis for ${sessionType} session (attempt ${autoStartAttempts.current}/${maxAutoStartAttempts}) - rfpId: ${rfpId}, threadId: ${urlThreadId || "none"}`
+        );
+
+        try {
+          await submit({
+            messages: [
+              {
+                type: "human",
+                content: "Please analyze my RFP document",
+                id: uuidv4(),
+              },
+            ],
+            // Pass RFP context in metadata, not message content for cleaner LLM processing
+            metadata: {
+              rfpId,
+              autoStarted: true,
+            },
+          });
+        } catch (error) {
+          console.error("[StreamProvider] Auto-start failed:", error);
+
+          // Check for connection refused errors (backend not running)
+          const isConnectionError =
+            error instanceof Error &&
+            (error.message.includes("ERR_CONNECTION_REFUSED") ||
+              error.message.includes("Failed to fetch") ||
+              error.message.includes("Network request failed"));
+
+          if (isConnectionError) {
+            console.error(
+              "[StreamProvider] Backend connection failed - disabling auto-start. Please start the LangGraph backend service."
+            );
+            // Don't retry for connection errors - backend is not available
+            autoStartAttempts.current = maxAutoStartAttempts; // Prevent further attempts
+            toast.error(
+              "Could not connect to chat service. Please ensure the backend is running."
+            );
+          } else if (
+            error instanceof Error &&
+            error.message.includes("Thread is already running a task")
+          ) {
+            console.log(
+              "[StreamProvider] Thread already running, resetting auto-start flag for manual retry"
+            );
+            hasAutoStarted.current = false;
+          } else if (autoStartAttempts.current >= maxAutoStartAttempts) {
+            console.error(
+              "[StreamProvider] Max auto-start attempts exceeded, disabling auto-start for this session"
+            );
+            toast.error(
+              "Auto-start failed after multiple attempts. Please try manually sending a message."
+            );
+          } else {
+            // For other errors, allow retry on next effect run
+            hasAutoStarted.current = false;
+          }
+        }
+      }, 500);
+    } else if (autoStartAttempts.current >= maxAutoStartAttempts) {
+      console.log(
+        "[StreamProvider] Auto-start disabled - max attempts exceeded. User must manually start the conversation."
+      );
+    }
+  }, [rfpId, urlThreadId, submit, streamError]);
+
   // Effect to handle general errors from useStream and specific invalid threadId errors
   useEffect(() => {
     if (streamError) {
@@ -435,7 +543,6 @@ export function StreamProvider({ children }: StreamProviderProps) {
       urlThreadId,
       rfpId,
       localSdkThreadId, // Add localSdkThreadId to dependencies
-      streamError, // Add streamError to context value dependencies
       values,
       getMessagesMetadata,
       interrupt,

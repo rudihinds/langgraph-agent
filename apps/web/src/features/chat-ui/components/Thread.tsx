@@ -8,20 +8,45 @@ import { Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
 import { Textarea } from "@/features/ui/components/textarea";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { useAgentActivity } from "../hooks/useAgentActivity";
+import { AgentLoadingState } from "./AgentLoadingState";
 
-const NoMessagesView = () => (
-  <div className="flex flex-col items-center w-full max-w-2xl gap-4 px-4 py-12 mx-auto my-4">
-    <div className="flex items-center justify-center w-12 h-12 border rounded-full border-slate-300">
-      <LayoutGrid className="w-6 h-6 text-slate-400" />
+interface NoMessagesViewProps {
+  rfpId?: string | null;
+  isAgentWorking?: boolean;
+}
+
+const NoMessagesView = ({ rfpId, isAgentWorking }: NoMessagesViewProps) => {
+  // Show agent working state when auto-start is happening
+  if (rfpId && isAgentWorking) {
+    return (
+      <div className="flex flex-col items-center w-full max-w-2xl gap-4 px-4 py-12 mx-auto my-4">
+        <div className="flex items-center justify-center w-12 h-12 border rounded-full border-slate-300">
+          <FileText className="w-6 h-6 text-slate-400 animate-pulse" />
+        </div>
+        <div className="text-xl font-medium">Analyzing RFP Document</div>
+        <div className="text-center text-slate-500">
+          Starting analysis of your RFP document...
+        </div>
+      </div>
+    );
+  }
+
+  // Default empty state
+  return (
+    <div className="flex flex-col items-center w-full max-w-2xl gap-4 px-4 py-12 mx-auto my-4">
+      <div className="flex items-center justify-center w-12 h-12 border rounded-full border-slate-300">
+        <LayoutGrid className="w-6 h-6 text-slate-400" />
+      </div>
+      <div className="text-xl font-medium">No messages yet</div>
+      <div className="text-center text-slate-500">
+        Start a conversation by typing a message below
+      </div>
     </div>
-    <div className="text-xl font-medium">No messages yet</div>
-    <div className="text-center text-slate-500">
-      Start a conversation by typing a message below
-    </div>
-  </div>
-);
+  );
+};
 
 interface ChatMessageProps {
   message: Message;
@@ -47,12 +72,21 @@ export function Thread() {
     isLoading = false,
     submit,
     stop,
+    values, // Get the complete graph state
   } = useStreamContext();
+
+  // Extract RFP context from graph state
+  const rfpId = values?.metadata?.rfpId;
+
+  // Use generic agent activity detection
+  const { isAgentWorking } = useAgentActivity(isLoading, messages);
 
   // *** ADDED LOGGING ***
   useEffect(() => {
     console.log("[Thread] Received messages from context:", messages);
-  }, [messages]);
+    console.log("[Thread] Graph state values:", values);
+    console.log("[Thread] Agent working status:", isAgentWorking);
+  }, [messages, values, isAgentWorking]);
   // *** END ADDED LOGGING ***
 
   const [inputValue, setInputValue] = useState("");
@@ -151,7 +185,7 @@ export function Thread() {
         )}
       >
         {!messages || messages.length === 0 ? (
-          <NoMessagesView />
+          <NoMessagesView rfpId={rfpId} isAgentWorking={isAgentWorking} />
         ) : (
           <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
             {(messages || []).map((message, idx) => {
@@ -170,6 +204,13 @@ export function Thread() {
                 />
               );
             })}
+
+            {/* Show loading state at bottom when agent is working */}
+            <AgentLoadingState
+              isWorking={isAgentWorking}
+              context={rfpId ? "rfp" : "general"}
+              className="justify-center py-4"
+            />
           </div>
         )}
       </div>

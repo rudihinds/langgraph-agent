@@ -24,7 +24,7 @@ import {
 } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { Annotation } from "@langchain/langgraph";
-import { ProposalStateAnnotation } from "@/state/proposal.state.js";
+import { OverallProposalStateAnnotation } from "../../../state/modules/annotations.js";
 import {
   interpretIntentTool,
   CommandSchemaType,
@@ -60,7 +60,7 @@ function safeJSON(input: unknown): any {
  * @returns Updated state with new messages and/or intent
  */
 export async function chatAgentNode(
-  state: typeof ProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State
 ) {
   const messages = state.messages as BaseMessage[];
 
@@ -70,6 +70,81 @@ export async function chatAgentNode(
       "Message Types:",
       messages.map((m) => m.constructor.name).join(", ")
     );
+  }
+
+  // Step 2.1: State-based RFP detection (replacing regex pattern matching)
+  // Check for RFP auto-start in state metadata instead of message content
+  if (state.metadata?.rfpId && state.metadata?.autoStarted) {
+    console.log(
+      `[ChatAgent] State-based RFP detection: rfpId=${state.metadata.rfpId}, autoStarted=${state.metadata.autoStarted}`
+    );
+
+    // Check if document has failed to load
+    const hasDocumentError =
+      state.rfpDocument && state.rfpDocument.status === "error";
+
+    if (hasDocumentError) {
+      console.log(
+        `[ChatAgent] Document loading failed previously, offering help to user`
+      );
+      return {
+        intent: {
+          command: "askQuestion",
+          requestDetails: "Document loading failed",
+          confidence: 0.9,
+        },
+        messages: [
+          ...state.messages,
+          new AIMessage(
+            "I had trouble loading your RFP document. This could be because:\n\n" +
+              "• The document doesn't exist in storage\n" +
+              "• There was a permission issue\n" +
+              "• The file may be corrupted\n\n" +
+              "Please try uploading the document again, or contact support if the issue persists."
+          ),
+        ],
+      };
+    }
+
+    // Check if document is already loaded and ready for analysis
+    const isDocumentLoaded =
+      state.rfpDocument &&
+      state.rfpDocument.status === "loaded" &&
+      state.rfpDocument.text;
+
+    if (isDocumentLoaded) {
+      console.log(`[ChatAgent] Document already loaded, starting analysis`);
+      return {
+        intent: {
+          command: "startAnalysis",
+          requestDetails: "RFP document analysis",
+          confidence: 0.9,
+        },
+        messages: [
+          ...state.messages,
+          new AIMessage(
+            "I can see your RFP document is loaded. Let me analyze it now..."
+          ),
+        ],
+      };
+    } else {
+      console.log(
+        `[ChatAgent] Document not loaded yet, starting document loading`
+      );
+      return {
+        intent: {
+          command: "loadDocument",
+          requestDetails: `rfpId: ${state.metadata.rfpId}`,
+          confidence: 0.9,
+        },
+        messages: [
+          ...state.messages,
+          new AIMessage(
+            "I'll analyze your RFP document. Let me load it first..."
+          ),
+        ],
+      };
+    }
   }
 
   if (messages.length === 0) return {};
@@ -161,7 +236,7 @@ export async function chatAgentNode(
       intent: {
         command: parsed.command,
         targetSection: parsed.target_section,
-        request_details: parsed.request_details,
+        requestDetails: parsed.request_details,
       },
     };
   }
@@ -290,7 +365,7 @@ Be helpful, conversational and concise while keeping them on the right path in o
  * @returns The key of the next node to execute
  */
 export function shouldContinueChat(
-  state: typeof ProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State
 ): string {
   console.log("\n--------- shouldContinueChat START ---------");
   console.log(
@@ -429,22 +504,30 @@ export function shouldContinueChat(
       `shouldContinueChat: Routing based on intent: ${state.intent.command}`
     );
 
+    // Normalize command to handle snake_case variants
+    const commandString = state.intent.command as string;
+    const normalizedCommand =
+      commandString === "load_document" ? "loadDocument" : state.intent.command;
+
     let destination;
-    switch (state.intent.command) {
-      case "regenerate_section":
+    switch (normalizedCommand) {
+      case "regenerateSection":
         destination = "regenerateSection";
         break;
-      case "modify_section":
+      case "modifySection":
         destination = "modifySection";
         break;
-      case "approve_section":
+      case "approveSection":
         destination = "approveSection";
         break;
-      case "ask_question":
+      case "askQuestion":
         destination = "answerQuestion";
         break;
-      case "load_document":
+      case "loadDocument":
         destination = "loadDocument";
+        break;
+      case "startAnalysis":
+        destination = "startAnalysis";
         break;
       default:
         console.log(

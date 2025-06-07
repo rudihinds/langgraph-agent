@@ -5,14 +5,15 @@
  * This node handles retrieving document content from Supabase storage,
  * supporting both authenticated and server-side access patterns.
  */
-import { OverallProposalState, LoadingStatus } from "@/state/proposal.state.js";
+import { LoadingStatus } from "../../../state/modules/constants.js";
+import { OverallProposalStateAnnotation } from "../../../state/modules/annotations.js";
 import { serverSupabase } from "../../../lib/supabase/client.js";
 import { parseRfpFromBuffer } from "../../../lib/parsers/rfp.js";
+import { ProposalDocumentService } from "../../../lib/db/proposal-documents.js";
 import { Logger } from "../../../lib/logger.js";
 
 const logger = Logger.getInstance();
 const BUCKET_NAME = "proposal-documents";
-const DEFAULT_FORMAT = "pdf";
 
 /**
  * Client type identifier for tracking which client was used for document access
@@ -44,6 +45,7 @@ enum ErrorType {
   AUTHORIZATION = "authorization",
   DOCUMENT_NOT_FOUND = "document_not_found",
   PARSING_ERROR = "parsing_error",
+  DATABASE_ERROR = "database_error",
   UNKNOWN = "unknown",
 }
 
@@ -53,23 +55,26 @@ enum ErrorType {
  * @param state Current state
  * @param errorType Type of error that occurred
  * @param errorMessage Detailed error message
+ * @param rfpId The extracted rfpId that was being processed
  * @param clientType Client used during the operation
  * @returns Updated state with error information
  */
 function createErrorState(
-  state: OverallProposalState,
+  state: typeof OverallProposalStateAnnotation.State,
   errorType: ErrorType,
   errorMessage: string,
+  rfpId: string,
   clientType?: ClientType
-): Partial<OverallProposalState> {
+): Partial<typeof OverallProposalStateAnnotation.State> {
   logger.error(`Document loading error: ${errorType} - ${errorMessage}`, {
-    rfpId: state.rfpDocument?.id,
+    rfpId,
     clientType,
   });
 
   return {
     rfpDocument: {
       ...state.rfpDocument,
+      id: rfpId,
       status: LoadingStatus.ERROR,
       metadata: {
         errorType,
@@ -85,53 +90,120 @@ function createErrorState(
  * Document Loader Node
  *
  * Loads and processes RFP documents from storage with authentication support.
- * Uses the authenticated client from context when available, falling back to
- * server client when needed.
+ * First queries the proposal_documents table to get the actual file path,
+ * then downloads the document from storage.
  *
  * @param state Current proposal state
  * @param context Optional context containing authenticated client and user info
  * @returns Updated state with document content or error information
  */
 export const documentLoaderNode = async (
-  state: OverallProposalState,
+  state: typeof OverallProposalStateAnnotation.State,
   context?: { supabase?: StorageClient; user?: { id: string } }
-): Promise<Partial<OverallProposalState>> => {
-  console.log("!!!! DOCUMENT LOADER NODE REACHED !!!!");
-  console.log("!!!! STATE: ", state);
-  console.log("!!!! CONTEXT: ", context);
-  console.log("!!!! STATE.INTENT: ", state.intent);
-  console.log(
-    "!!!! STATE.INTENT.REQUEST_DETAILS: ",
-    state.intent?.request_details
-  );
-  // Extract rfpId from state OR from the intent details if available
-  const rfpId = state.rfpDocument?.id || state.intent?.request_details;
+): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
+  // CRITICAL FIX: Extract rfpId from metadata first (auto-start flow), then fallback to other sources
+  const rfpId =
+    state.metadata?.rfpId ||
+    state.rfpDocument?.id ||
+    state.intent?.requestDetails;
 
   // Validate that we have an rfpId to work with
   if (!rfpId) {
     return createErrorState(
       state,
       ErrorType.MISSING_INPUT,
-      "Missing rfpId in state"
+      "Missing rfpId in state metadata, rfpDocument.id, or intent.requestDetails",
+      rfpId || "unknown",
+      "server"
     );
   }
+
+  logger.info(`Document loading initiated for rfpId: ${rfpId}`, {
+    hasContext: !!context,
+    hasSupabaseClient: !!context?.supabase,
+  });
 
   // Determine which client to use (authenticated or server)
   const storageClient = context?.supabase || serverSupabase;
   const clientType: ClientType = context?.supabase ? "authenticated" : "server";
-  const documentPath = `${rfpId}/document.${DEFAULT_FORMAT}`;
 
   try {
-    logger.info(`Loading document: ${documentPath}`, {
+    // Step 1: Query the proposal_documents table to get the actual file path
+    logger.info(`Querying proposal_documents table for proposal_id: ${rfpId}`, {
       rfpId,
       clientType,
       userId: context?.user?.id,
     });
 
-    // Download document from storage
+    const documentRecord = await ProposalDocumentService.getByProposalId(rfpId);
+
+    // Handle case where no document record is found
+    if (!documentRecord) {
+      return createErrorState(
+        state,
+        ErrorType.DOCUMENT_NOT_FOUND,
+        `No document record found for proposal_id: ${rfpId}`,
+        rfpId,
+        clientType
+      );
+    }
+
+    logger.info(`Found document record: ${documentRecord.id}`, {
+      rfpId,
+      documentId: documentRecord.id,
+      filePath: documentRecord.file_path,
+      fileName: documentRecord.file_name,
+      parsingStatus: documentRecord.parsing_status,
+    });
+
+    // Step 2: Check if we already have parsed text available
+    if (
+      documentRecord.parsed_text &&
+      documentRecord.parsing_status === "success"
+    ) {
+      logger.info(
+        `Using cached parsed text for document: ${documentRecord.id}`,
+        {
+          rfpId,
+          documentId: documentRecord.id,
+          textLength: documentRecord.parsed_text.length,
+        }
+      );
+
+      return {
+        rfpDocument: {
+          ...state.rfpDocument,
+          id: rfpId,
+          status: LoadingStatus.LOADED,
+          text: documentRecord.parsed_text,
+          metadata: {
+            documentId: documentRecord.id,
+            fileName: documentRecord.file_name,
+            fileType: documentRecord.file_type,
+            sizeBytes: documentRecord.size_bytes,
+            clientType,
+            loadedAt: new Date().toISOString(),
+            source: "cached_parsed_text",
+            raw: documentRecord.parsed_text,
+          },
+        },
+      };
+    }
+
+    // Step 3: Download document from storage using the actual file path
+    logger.info(
+      `Downloading document from storage: ${documentRecord.file_path}`,
+      {
+        rfpId,
+        documentId: documentRecord.id,
+        filePath: documentRecord.file_path,
+        clientType,
+      }
+    );
+
     const { data, error } = await storageClient.storage
       .from(BUCKET_NAME)
-      .download(documentPath);
+      .download(documentRecord.file_path);
 
     // Handle download errors
     if (error) {
@@ -155,7 +227,13 @@ export const documentLoaderNode = async (
         errorType = ErrorType.DOCUMENT_NOT_FOUND;
       }
 
-      return createErrorState(state, errorType, error.message, clientType);
+      return createErrorState(
+        state,
+        errorType,
+        `Storage download failed: ${error.message}`,
+        rfpId,
+        clientType
+      );
     }
 
     // Process document data
@@ -164,34 +242,78 @@ export const documentLoaderNode = async (
         state,
         ErrorType.DOCUMENT_NOT_FOUND,
         "No data returned from storage",
+        rfpId,
         clientType
       );
     }
 
-    // Convert data to ArrayBuffer and parse
+    // Step 4: Convert data to ArrayBuffer and parse
     try {
       const buffer = await data.arrayBuffer();
+
+      // Determine file extension from the actual file name or file path
+      const fileExtension =
+        documentRecord.file_name?.split(".").pop()?.toLowerCase() ||
+        documentRecord.file_path?.split(".").pop()?.toLowerCase() ||
+        "pdf";
+
       const { text, metadata: docMetadata } = await parseRfpFromBuffer(
         buffer,
-        DEFAULT_FORMAT
+        fileExtension,
+        documentRecord.file_name
       );
 
-      logger.info(`Document loaded successfully: ${documentPath}`, {
-        rfpId,
-        clientType,
-        format: DEFAULT_FORMAT,
-      });
+      logger.info(
+        `Document loaded and parsed successfully: ${documentRecord.file_path}`,
+        {
+          rfpId,
+          documentId: documentRecord.id,
+          filePath: documentRecord.file_path,
+          clientType,
+          fileExtension,
+          textLength: text.length,
+        }
+      );
+
+      // Step 5: Cache the parsed text for future use
+      try {
+        await ProposalDocumentService.updateParsedText(
+          documentRecord.id,
+          text,
+          docMetadata
+        );
+        logger.info(`Cached parsed text for document: ${documentRecord.id}`);
+      } catch (cacheError) {
+        // Log but don't fail - caching is optional
+        logger.warn(
+          `Failed to cache parsed text for document: ${documentRecord.id}`,
+          {
+            error:
+              cacheError instanceof Error
+                ? cacheError.message
+                : String(cacheError),
+          }
+        );
+      }
 
       // Return successful load state
       return {
         rfpDocument: {
           ...state.rfpDocument,
+          id: rfpId,
           status: LoadingStatus.LOADED,
-          text,
+          text: text,
           metadata: {
             ...docMetadata,
+            documentId: documentRecord.id,
+            fileName: documentRecord.file_name,
+            fileType: documentRecord.file_type,
+            sizeBytes: documentRecord.size_bytes,
+            filePath: documentRecord.file_path,
             clientType,
             loadedAt: new Date().toISOString(),
+            source: "storage_download_and_parse",
+            raw: text,
           },
         },
       };
@@ -207,15 +329,85 @@ export const documentLoaderNode = async (
           : typeof e === "string"
             ? e
             : JSON.stringify(e);
+
+      // Mark parsing as failed in the database
+      try {
+        await ProposalDocumentService.markParsingFailed(
+          documentRecord.id,
+          detailMessage
+        );
+      } catch (updateError) {
+        logger.warn(
+          `Failed to mark parsing as failed for document: ${documentRecord.id}`,
+          {
+            error:
+              updateError instanceof Error
+                ? updateError.message
+                : String(updateError),
+          }
+        );
+      }
+
       return createErrorState(
         state,
         ErrorType.PARSING_ERROR,
         detailMessage || "Error parsing document content or converting data",
+        rfpId,
         clientType
       );
     }
   } catch (error) {
-    console.error("!!!! MINIMAL OUTER CATCH REACHED !!!!"); // Simplest possible log
-    throw error; // Re-throw to get a stack trace
+    // Handle any unexpected errors in the document loading process
+    logger.error(
+      `[DocumentLoaderNode] Unexpected error during document loading:`,
+      {
+        error: error instanceof Error ? error.message : String(error),
+        rfpId,
+        clientType,
+      }
+    );
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return createErrorState(
+      state,
+      ErrorType.UNKNOWN,
+      errorMessage,
+      rfpId,
+      clientType
+    );
   }
+};
+
+/**
+ * Routing function to determine next step after document loading
+ */
+export const routeAfterDocumentLoading = (
+  state: typeof OverallProposalStateAnnotation.State
+): string => {
+  console.log("[routeAfterDocumentLoading] Checking document loading status");
+
+  // Check if document loading failed
+  if (state.rfpDocument?.status === LoadingStatus.ERROR) {
+    console.log(
+      "[routeAfterDocumentLoading] Document loading failed, routing back to chat"
+    );
+    return "chatAgent";
+  }
+
+  // Check if document was successfully loaded
+  if (
+    state.rfpDocument?.status === LoadingStatus.LOADED &&
+    state.rfpDocument?.text
+  ) {
+    console.log(
+      "[routeAfterDocumentLoading] Document loaded successfully, proceeding to RFP analysis"
+    );
+    return "rfpAnalyzer";
+  }
+
+  // Fallback - if status is unclear, route back to chat
+  console.log(
+    "[routeAfterDocumentLoading] Document status unclear, routing back to chat"
+  );
+  return "chatAgent";
 };

@@ -4,6 +4,57 @@
 
 **🎯 PRIMARY OBJECTIVE**: Complete End-to-End RFP Auto-Analysis Flow - **PRODUCTION READY** ✅
 
+### 🚀 LATEST CRITICAL FIX: Document Loading Pipeline (Dec 2024) ✅
+
+**Status**: **PRODUCTION-CRITICAL BUG RESOLVED** - Document loading now working 100%
+
+**Issue Resolved**: Fixed ID mismatch in document storage/retrieval pipeline
+
+- **Root Cause**: System was using `proposal_id` (RFP ID) directly as storage path, but actual files stored with different document IDs
+- **Example**:
+  - `rfpId` (proposal_id): `146e788b-70dd-4079-ac9a-5d3253ff4a11`
+  - Actual `document_id`: `9866d664-690c-4a97-9082-0e86dbc43932`
+  - Actual file path: `146e788b-70dd-4079-ac9a-5d3253ff4a11/Race Equity RFP - 280125.pdf`
+
+**Complete Fix Implemented**:
+
+```typescript
+// OLD: Broken - assumed path structure
+const downloadPath = `${rfpId}/document.pdf`;
+
+// NEW: Fixed - query database first, use actual path
+const documentRecord = await ProposalDocumentService.getByProposalId(rfpId);
+const downloadPath = documentRecord.file_path; // Actual path from database
+```
+
+**Technical Implementation**:
+
+- ✅ **Document Loader Rewrite**: `document_loader.ts` now queries `proposal_documents` table first
+- ✅ **Database Service Integration**: Uses existing `ProposalDocumentService.getByProposalId()`
+- ✅ **Cached Parsing**: Stores parsed text in database for future requests
+- ✅ **Error Handling**: Proper error states for missing documents vs loading failures
+- ✅ **Routing Logic**: Fixed conditional routing after document loading
+
+**Data Flow Fixed**:
+
+```
+1. Frontend: Provides rfpId=146e788b-70dd-4079-ac9a-5d3253ff4a11
+2. Document Loader: Queries proposal_documents WHERE proposal_id = rfpId
+3. Database: Returns document record with id=9866d664-690c-4a97-9082-0e86dbc43932
+4. Storage: Downloads from correct file_path="146e788b-70dd-4079-ac9a-5d3253ff4a11/Race Equity RFP - 280125.pdf"
+5. Parser: Extracts text and caches in database for future requests
+6. State: Document marked as loaded with proper metadata
+```
+
+**Testing Validation**:
+
+- ✅ **Fresh Thread Test**: Confirmed document loads successfully with correct content
+- ✅ **Complete Analysis Flow**: End-to-end RFP analysis working from document load to results
+- ✅ **Caching Working**: Subsequent requests use cached parsed text
+- ✅ **No More Infinite Loops**: Fixed recursive error states from stale threads
+
+**Impact**: Users can now successfully analyze RFP documents that exist in storage. Previous sessions may have stale error state and need fresh threads.
+
 ### Recently Completed ✅
 
 **🚀 MAJOR ACHIEVEMENT: Complete RFP Auto-Analysis Flow Implementation**

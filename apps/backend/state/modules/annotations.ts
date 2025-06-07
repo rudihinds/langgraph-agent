@@ -165,6 +165,30 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     value: lastValueWinsReducerStrict,
   }),
 
+  // ===== STATUS COMMUNICATION FIELDS (for RFP auto-analysis flow) =====
+
+  // Current status message for UI display
+  currentStatus: Annotation<string>({
+    reducer: (left, right) => right ?? left ?? "Ready",
+    default: () => "Ready",
+  }),
+
+  // Boolean flag for RFP analysis state
+  isAnalyzingRfp: Annotation<boolean>({
+    reducer: (left, right) => right ?? left ?? false,
+    default: () => false,
+  }),
+
+  // Metadata for RFP context and auto-start information (not message content)
+  metadata: Annotation<{
+    rfpId?: string;
+    autoStarted?: boolean;
+    [key: string]: any;
+  }>({
+    reducer: (left, right) => ({ ...left, ...right }),
+    default: () => ({}),
+  }),
+
   // ===== PLANNING PHASE FIELDS (from planning-agents.md specification) =====
 
   // Enhanced research intelligence
@@ -248,6 +272,37 @@ export const OverallProposalStateAnnotation = Annotation.Root({
   research_iterations: Annotation<number>({
     default: () => 0,
     value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // ===== PLANNING INTELLIGENCE FIELDS (for RFP analysis) =====
+
+  // Enhanced planning intelligence structure
+  planningIntelligence: Annotation<
+    OverallProposalState["planningIntelligence"]
+  >({
+    default: () => undefined,
+    value: (existing, newValue) =>
+      newValue ? { ...existing, ...newValue } : existing,
+  }),
+
+  // User collaboration tracking
+  userCollaboration: Annotation<OverallProposalState["userCollaboration"]>({
+    default: () => undefined,
+    value: (existing, newValue) =>
+      newValue ? { ...existing, ...newValue } : existing,
+  }),
+
+  // Current phase tracking
+  currentPhase: Annotation<"planning" | "writing" | "complete" | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // ===== RFP DOCUMENT ENHANCEMENTS =====
+
+  rfpProcessingStatus: Annotation<ProcessingStatus>({
+    default: () => ProcessingStatus.QUEUED,
+    value: lastValueWinsReducerStrict,
   }),
 });
 

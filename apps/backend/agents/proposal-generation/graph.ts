@@ -21,6 +21,7 @@ import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpo
 
 // Core infrastructure nodes (retained)
 import { documentLoaderNode } from "./nodes.js";
+import { routeAfterDocumentLoading } from "./nodes/document_loader.js";
 import { chatAgentNode, shouldContinueChat } from "./nodes/chatAgent.js";
 import { processToolsNode } from "./nodes/toolProcessor.js";
 
@@ -83,7 +84,7 @@ proposalGenerationGraph.addNode(NODES.CHAT_TOOLS, processToolsNode, {
 
 // Document Loader - Process uploaded RFP documents
 proposalGenerationGraph.addNode(NODES.DOC_LOADER, documentLoaderNode, {
-  ends: [NODES.RFP_ANALYZER],
+  ends: [NODES.RFP_ANALYZER, NODES.CHAT_AGENT],
 });
 
 // RFP Analyzer - Deep analysis with strategic insights and risk assessment
@@ -173,13 +174,24 @@ proposalGenerationGraph.addNode(
   {
     chatTools: NODES.CHAT_TOOLS,
     loadDocument: NODES.DOC_LOADER,
+    startAnalysis: NODES.RFP_ANALYZER,
     answerQuestion: NODES.CHAT_AGENT, // Continue conversation
     __end__: END,
   } as Record<string, NodeName | string>
 );
 
 // Document processing flow
-(proposalGenerationGraph as any).addEdge(NODES.DOC_LOADER, NODES.RFP_ANALYZER);
+// (proposalGenerationGraph as any).addEdge(NODES.DOC_LOADER, NODES.RFP_ANALYZER);
+
+// Conditional routing from document loader
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.DOC_LOADER,
+  routeAfterDocumentLoading,
+  {
+    chatAgent: NODES.CHAT_AGENT,
+    rfpAnalyzer: NODES.RFP_ANALYZER,
+  } as Record<string, NodeName | string>
+);
 
 // RFP Analysis conditional routing
 (proposalGenerationGraph as any).addConditionalEdges(

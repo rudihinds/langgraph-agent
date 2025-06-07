@@ -142,6 +142,7 @@ export type UserCommand =
   | "approveSection"
   | "askQuestion"
   | "loadDocument"
+  | "startAnalysis"
   | "help"
   | "other";
 
@@ -691,6 +692,15 @@ export interface OverallProposalState {
 
   // Overall status
   status?: ProcessingStatus;
+
+  // Status communication fields for RFP auto-analysis flow
+  currentStatus?: string;
+  isAnalyzingRfp?: boolean;
+  metadata?: {
+    rfpId?: string;
+    autoStarted?: boolean;
+    [key: string]: any;
+  };
 
   // Legacy fields for backward compatibility (will be removed)
   researchResults?: any;
