@@ -269,7 +269,7 @@ export async function uploadProposalFile(
     }
 
     // 5. Perform the actual upload using the helper
-    const result = await handleRfpUpload(supabase, user.id, proposalId, file);
+    const result = await handleRfpUpload(proposalData.id, file);
 
     // 6. Return the result
     if (result.success) {
@@ -404,12 +404,7 @@ export async function uploadProposalFileEnhanced(input: {
     }
 
     // Upload file to storage
-    const uploadResult = await handleRfpUpload(
-      supabase,
-      userId,
-      proposal.id,
-      file
-    );
+    const uploadResult = await handleRfpUpload(proposal.id, file);
 
     if (!uploadResult.success) {
       console.error("File upload failed:", uploadResult.message);
