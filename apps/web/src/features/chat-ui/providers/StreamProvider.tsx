@@ -189,52 +189,6 @@ export function StreamProvider({ children }: StreamProviderProps) {
   // This helps bridge the gap if onThreadId is slightly delayed or if we need to react to it.
   const [localSdkThreadId, setLocalSdkThreadId] = useState<string | null>(null);
 
-  // Log environment variables - THIS SECTION IS NOW HANDLED IN THE useEffect ABOVE
-  // console.log(
-  //   "[StreamProvider] NEXT_PUBLIC_API_URL (for general calls):",
-  //   process.env.NEXT_PUBLIC_API_URL
-  // );
-  // console.log(
-  //   "[StreamProvider] NEXT_PUBLIC_LANGGRAPH_API_URL (for SDK):",
-  //   process.env.NEXT_PUBLIC_LANGGRAPH_API_URL
-  // );
-  // console.log(
-  //   "[StreamProvider] NEXT_PUBLIC_ASSISTANT_ID:",
-  //   process.env.NEXT_PUBLIC_ASSISTANT_ID
-  // );
-
-  // const assistantId = process.env.NEXT_PUBLIC_ASSISTANT_ID; // Moved up
-
-  // Log the URLs being used - THIS SECTION IS NOW HANDLED IN THE useEffect ABOVE
-  // if (generalApiUrl) {
-  //   console.log(
-  //     "[StreamProvider] Using General API URL (e.g., init):",
-  //     generalApiUrl
-  //   );
-  // } else {
-  //   console.warn(
-  //     "[StreamProvider] NEXT_PUBLIC_API_URL is not set for general calls!"
-  //   );
-  // }
-  // if (langGraphSdkApiUrl) {
-  //   console.log(
-  //     "[StreamProvider] Using LangGraph SDK API URL:",
-  //     langGraphSdkApiUrl
-  //   );
-  // } else {
-  //   console.warn("[StreamProvider] NEXT_PUBLIC_LANGGRAPH_API_URL is not set!");
-  // }
-
-  // if (assistantId) {
-  //   console.log("[StreamProvider] Using Assistant ID:", assistantId);
-  // } else {
-  //   console.warn("[StreamProvider] NEXT_PUBLIC_ASSISTANT_ID is not set!");
-  // }
-
-  console.log(
-    `[StreamProvider] Initial state - rfpId: ${rfpId}, urlThreadId: ${urlThreadId}`
-  );
-
   // Effect to manage the expectingSdkThreadIdForRfpRef and reset processor flag
   useEffect(() => {
     if (rfpId && !urlThreadId) {
@@ -542,7 +496,8 @@ export function StreamProvider({ children }: StreamProviderProps) {
       stop,
       urlThreadId,
       rfpId,
-      localSdkThreadId, // Add localSdkThreadId to dependencies
+      localSdkThreadId,
+      assistantId,
       values,
       getMessagesMetadata,
       interrupt,
@@ -551,7 +506,6 @@ export function StreamProvider({ children }: StreamProviderProps) {
       history,
       experimental_branchTree,
       client,
-      assistantId,
     ]
   );
 

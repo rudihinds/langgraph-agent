@@ -81,14 +81,6 @@ export function Thread() {
   // Use generic agent activity detection
   const { isAgentWorking } = useAgentActivity(isLoading, messages);
 
-  // *** ADDED LOGGING ***
-  useEffect(() => {
-    console.log("[Thread] Received messages from context:", messages);
-    console.log("[Thread] Graph state values:", values);
-    console.log("[Thread] Agent working status:", isAgentWorking);
-  }, [messages, values, isAgentWorking]);
-  // *** END ADDED LOGGING ***
-
   const [inputValue, setInputValue] = useState("");
 
   // Ref for the scrollable messages container
@@ -96,11 +88,6 @@ export function Thread() {
   // Ref for the outer container
   const outerContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // Log availability of submit function
-  useEffect(() => {
-    console.log("[Thread] submit function available:", !!submit);
-  }, [submit]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -189,9 +176,6 @@ export function Thread() {
         ) : (
           <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
             {(messages || []).map((message, idx) => {
-              console.log(
-                `[Thread] Inline Rendering message ${idx + 1}, ID: ${message.id}, Type: ${message.type}`
-              );
               return (
                 <ChatMessage
                   key={message.id || `msg-${idx}`}
