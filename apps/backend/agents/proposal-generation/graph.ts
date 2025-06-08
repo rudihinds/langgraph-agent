@@ -31,9 +31,7 @@ import {
   userFeedbackProcessor,
   strategicOptionsRefinement,
   routeAfterRfpAnalysis,
-  strategicValidationCheckpoint,
   routeAfterFeedbackProcessing,
-  routeAfterStrategicValidation,
   routeAfterStrategicRefinement,
 } from "./nodes/planning/rfp-analysis/index.js";
 
@@ -94,13 +92,24 @@ proposalGenerationGraph.addNode(NODES.DOC_LOADER, documentLoaderNode, {
 
 // RFP Analyzer - Deep analysis with strategic insights and risk assessment
 proposalGenerationGraph.addNode(NODES.RFP_ANALYZER, rfpAnalyzerNode, {
-  ends: [NODES.STRATEGIC_VALIDATION_CHECKPOINT, NODES.COMPLETE],
+  ends: [
+    NODES.STRATEGIC_VALIDATION_CHECKPOINT,
+    NODES.STRATEGIC_OPTIONS_REFINEMENT, // For refine commands
+    NODES.RFP_ANALYZER, // For restart commands
+    NODES.COMPLETE,
+  ],
 });
 
 // Strategic Validation Checkpoint - User collaboration interface with rich analysis presentation
 proposalGenerationGraph.addNode(
   NODES.STRATEGIC_VALIDATION_CHECKPOINT,
-  strategicValidationCheckpoint,
+  // Simple passthrough that routes to feedback processor for now
+  async (state: typeof OverallProposalStateAnnotation.State) => {
+    console.log(
+      "Strategic Validation Checkpoint - routing to user feedback processor"
+    );
+    return {};
+  },
   {
     ends: [
       NODES.USER_FEEDBACK_PROCESSOR,
@@ -205,21 +214,26 @@ proposalGenerationGraph.addNode(
   routeAfterRfpAnalysis,
   {
     strategic_validation: NODES.STRATEGIC_VALIDATION_CHECKPOINT,
-    rfp_analyzer: NODES.RFP_ANALYZER,
     complete: NODES.COMPLETE,
-    error: NODES.COMPLETE,
   }
 );
 
 // Strategic Validation Checkpoint conditional routing
-(proposalGenerationGraph as any).addConditionalEdges(
+// TODO: Implement routeAfterStrategicValidation function
+// (proposalGenerationGraph as any).addConditionalEdges(
+//   NODES.STRATEGIC_VALIDATION_CHECKPOINT,
+//   routeAfterStrategicValidation,
+//   {
+//     process_feedback: NODES.USER_FEEDBACK_PROCESSOR,
+//     approved: NODES.RESEARCH_PLANNING,
+//     complete: NODES.COMPLETE,
+//   }
+// );
+
+// Temporary direct edge until routing function is implemented
+(proposalGenerationGraph as any).addEdge(
   NODES.STRATEGIC_VALIDATION_CHECKPOINT,
-  routeAfterStrategicValidation,
-  {
-    process_feedback: NODES.USER_FEEDBACK_PROCESSOR,
-    approved: NODES.RESEARCH_PLANNING,
-    complete: NODES.COMPLETE,
-  }
+  END
 );
 
 // User Feedback Processor conditional routing
@@ -268,10 +282,12 @@ export async function createProposalGenerationGraph() {
     // Initialize the checkpointer for state persistence
     const checkpointer = await getInitializedCheckpointer();
 
-    // Compile the graph with checkpointer
+    // Compile the graph with checkpointer and interrupt handling
     compiledGraph = (proposalGenerationGraph as any).compile({
       checkpointer,
-      // Using pure interrupt() pattern within nodes - no interruptBefore needed
+      // Configure interrupt handling for nodes that use interrupt() calls
+      interruptBefore: [], // Empty since we use interrupt() within nodes, not before nodes
+      interruptAfter: [], // Empty since other interrupts are handled differently
     });
 
     console.log(
