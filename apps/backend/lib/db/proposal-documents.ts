@@ -149,16 +149,18 @@ export class ProposalDocumentService {
    */
   static async updateParsedText(
     documentId: string,
-    parsedText: string,
+    parsedText: string | null,
     metadata?: any
   ): Promise<void> {
+    const updateData: any = {
+      parsed_text: parsedText,
+      parsed_at: parsedText ? new Date().toISOString() : null,
+      parsing_status: parsedText ? "success" : "pending",
+    };
+
     const { error } = await serverSupabase
       .from("proposal_documents")
-      .update({
-        parsed_text: parsedText,
-        parsed_at: new Date().toISOString(),
-        parsing_status: "success",
-      })
+      .update(updateData)
       .eq("id", documentId);
 
     if (error) {
@@ -176,14 +178,15 @@ export class ProposalDocumentService {
         .from("proposals")
         .update({
           rfp_text: parsedText,
-          rfp_parsed_at: new Date().toISOString(),
+          rfp_parsed_at: parsedText ? new Date().toISOString() : null,
         })
         .eq("id", document.proposal_id);
     }
 
     logger.info("Successfully updated parsed text", {
       documentId,
-      textLength: parsedText.length,
+      textLength: parsedText ? parsedText.length : 0,
+      action: parsedText ? "cached" : "cleared",
     });
   }
 

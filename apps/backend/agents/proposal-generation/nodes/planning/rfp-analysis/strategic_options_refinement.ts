@@ -331,9 +331,18 @@ export async function strategicOptionsRefinement(
 export function routeAfterStrategicRefinement(
   state: OverallProposalState
 ): string {
+  console.log("[routeAfterStrategicRefinement] Determining next step", {
+    currentStep: state.currentStep,
+    hasErrors: !!state.errors?.length,
+    refinementIteration: state.userCollaboration?.refinementIteration,
+  });
+
   // Check for refinement failures
   if (state.currentStep === "refinement_failed" || state.errors?.length) {
-    return "error_recovery";
+    console.log(
+      "[routeAfterStrategicRefinement] Refinement failed, routing to complete"
+    );
+    return "complete";
   }
 
   // Check if we have unresponded refined queries (user needs to validate)
@@ -344,10 +353,15 @@ export function routeAfterStrategicRefinement(
     );
 
   if (hasUnrespondedRefinedQueries) {
-    return "strategic_validation_checkpoint"; // Present refined options for validation
+    console.log(
+      "[routeAfterStrategicRefinement] Has unresponded refined queries, routing to strategic validation"
+    );
+    return "strategic_validation"; // Present refined options for validation
   }
 
-  // Should not reach here normally - routing logic handles validation responses
-  logger.warn("Unexpected state in strategic refinement routing");
-  return "strategic_validation_checkpoint";
+  // Default: return to strategic validation
+  console.log(
+    "[routeAfterStrategicRefinement] Default case, routing to strategic validation"
+  );
+  return "strategic_validation";
 }

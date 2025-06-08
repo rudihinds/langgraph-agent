@@ -487,6 +487,16 @@ export interface PlanningIntelligence {
 }
 
 /**
+ * Simplified feedback processing - just what the LLM needs
+ */
+export interface FeedbackAnalysis {
+  intent: "proceed" | "refine" | "restart";
+  feedback: string;
+  confidence: number;
+  suggestions?: string[];
+}
+
+/**
  * User collaboration interfaces
  */
 export interface UserQuery {
@@ -510,7 +520,18 @@ export interface ExpertiseContribution {
   confidence: "High" | "Medium" | "Low";
 }
 
+// Updated UserCollaboration - supporting both old and new patterns during transition
 export interface UserCollaboration {
+  // New simplified pattern for LangGraph interrupt/resume
+  lastFeedback?: {
+    content: string;
+    analysis: FeedbackAnalysis;
+    timestamp: string;
+  };
+  refinementCount?: number;
+  maxRefinements?: number;
+
+  // Legacy pattern - maintained for backward compatibility during transition
   strategicPriorities?: string[];
   competitiveAdvantages?: string[];
   riskFactors?: string[];
@@ -518,14 +539,6 @@ export interface UserCollaboration {
   expertiseContributions?: ExpertiseContribution[];
   feedbackHistory?: Record<string, any>;
   preferredApproach?: string;
-  refinementIteration?: number;
-  maxRefinements?: number;
-  lastFeedbackProcessed?: {
-    timestamp: string;
-    sentiment: string;
-    engagementLevel: string;
-    confidence: number;
-  };
   strategicRecommendations?: {
     topOpportunities: string[];
     criticalRequirements: Array<{

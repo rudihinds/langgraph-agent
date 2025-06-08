@@ -74,7 +74,12 @@ const proposalGenerationGraph = new StateGraph(
 
 // Chat Agent - Entry point for user interaction
 proposalGenerationGraph.addNode(NODES.CHAT_AGENT, chatAgentNode, {
-  ends: [NODES.CHAT_TOOLS, NODES.DOC_LOADER, END],
+  ends: [
+    NODES.CHAT_TOOLS,
+    NODES.DOC_LOADER,
+    NODES.USER_FEEDBACK_PROCESSOR,
+    END,
+  ],
 });
 
 // Chat Tools - Handle tool calls from chat agent
@@ -176,6 +181,7 @@ proposalGenerationGraph.addNode(
     loadDocument: NODES.DOC_LOADER,
     startAnalysis: NODES.RFP_ANALYZER,
     answerQuestion: NODES.CHAT_AGENT, // Continue conversation
+    userFeedbackProcessor: NODES.USER_FEEDBACK_PROCESSOR,
     __end__: END,
   } as Record<string, NodeName | string>
 );
@@ -199,6 +205,7 @@ proposalGenerationGraph.addNode(
   routeAfterRfpAnalysis,
   {
     strategic_validation: NODES.STRATEGIC_VALIDATION_CHECKPOINT,
+    rfp_analyzer: NODES.RFP_ANALYZER,
     complete: NODES.COMPLETE,
     error: NODES.COMPLETE,
   }
@@ -264,11 +271,7 @@ export async function createProposalGenerationGraph() {
     // Compile the graph with checkpointer
     compiledGraph = (proposalGenerationGraph as any).compile({
       checkpointer,
-      // Enable interrupts for human-in-the-loop functionality
-      interruptBefore: [
-        NODES.STRATEGIC_VALIDATION_CHECKPOINT,
-        NODES.USER_FEEDBACK_PROCESSOR,
-      ],
+      // Using pure interrupt() pattern within nodes - no interruptBefore needed
     });
 
     console.log(

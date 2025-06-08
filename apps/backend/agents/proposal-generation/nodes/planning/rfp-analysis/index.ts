@@ -12,12 +12,10 @@ export { strategicOptionsRefinement } from "./strategic_options_refinement.js";
 export {
   routeAfterRfpAnalysis,
   strategicValidationCheckpoint,
+  routeAfterStrategicValidation,
 } from "./rfp_analyzer.js";
 
-export {
-  routeAfterFeedbackProcessing,
-  routeAfterStrategicValidation,
-} from "./user_feedback_processor.js";
+export { routeAfterFeedbackProcessing } from "./user_feedback_processor.js";
 
 export { routeAfterStrategicRefinement } from "./strategic_options_refinement.js";
 

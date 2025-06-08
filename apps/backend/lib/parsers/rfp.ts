@@ -1,5 +1,5 @@
 // Import our custom PDF parser wrapper that handles fallbacks
-import parsePdf from "./pdf-parser.js";
+import { parsePdf } from "./pdf-parser.js";
 import mammoth from "mammoth";
 // import { Logger } from '../../../../apps/web/src/lib/logger/index.js';
 

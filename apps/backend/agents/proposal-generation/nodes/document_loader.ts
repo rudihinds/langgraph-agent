@@ -249,7 +249,8 @@ export const documentLoaderNode = async (
 
     // Step 4: Convert data to ArrayBuffer and parse
     try {
-      const buffer = await data.arrayBuffer();
+      const arrayBuffer = await data.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
 
       // Determine file extension from the actual file name or file path
       const fileExtension =
@@ -257,60 +258,52 @@ export const documentLoaderNode = async (
         documentRecord.file_path?.split(".").pop()?.toLowerCase() ||
         "pdf";
 
+      logger.info("About to parse document from buffer", {
+        bufferSize: buffer.length,
+        fileName: documentRecord.file_name,
+        fileType: documentRecord.file_type,
+      });
+
+      // DEBUG: Test the parsing function directly
+      console.log("[DOC LOADER DEBUG] Calling parseRfpFromBuffer...");
+      console.log("[DOC LOADER DEBUG] Buffer length:", buffer.length);
+      console.log("[DOC LOADER DEBUG] Buffer type:", buffer.constructor.name);
+
       const { text, metadata: docMetadata } = await parseRfpFromBuffer(
         buffer,
         fileExtension,
         documentRecord.file_name
       );
 
-      logger.info(
-        `Document loaded and parsed successfully: ${documentRecord.file_path}`,
-        {
-          rfpId,
-          documentId: documentRecord.id,
-          filePath: documentRecord.file_path,
-          clientType,
-          fileExtension,
-          textLength: text.length,
-        }
+      console.log("[DOC LOADER DEBUG] Parse result:");
+      console.log("[DOC LOADER DEBUG] Text length:", text.length);
+      console.log("[DOC LOADER DEBUG] Text preview:", text.substring(0, 200));
+      console.log(
+        "[DOC LOADER DEBUG] Is mock content?",
+        text.includes("mock PDF content generated for development")
       );
 
-      // Step 5: Cache the parsed text for future use
-      try {
-        await ProposalDocumentService.updateParsedText(
-          documentRecord.id,
-          text,
-          docMetadata
-        );
-        logger.info(`Cached parsed text for document: ${documentRecord.id}`);
-      } catch (cacheError) {
-        // Log but don't fail - caching is optional
-        logger.warn(
-          `Failed to cache parsed text for document: ${documentRecord.id}`,
-          {
-            error:
-              cacheError instanceof Error
-                ? cacheError.message
-                : String(cacheError),
-          }
-        );
-      }
+      // Cache the parsed text in database
+      await ProposalDocumentService.updateParsedText(
+        documentRecord.id,
+        text,
+        docMetadata
+      );
 
-      // Return successful load state
       return {
+        ...state,
         rfpDocument: {
-          ...state.rfpDocument,
           id: rfpId,
-          status: LoadingStatus.LOADED,
+          status: "loaded" as LoadingStatus,
           text: text,
           metadata: {
             ...docMetadata,
             documentId: documentRecord.id,
             fileName: documentRecord.file_name,
             fileType: documentRecord.file_type,
-            sizeBytes: documentRecord.size_bytes,
+            sizeBytes: buffer.length,
             filePath: documentRecord.file_path,
-            clientType,
+            clientType: "server",
             loadedAt: new Date().toISOString(),
             source: "storage_download_and_parse",
             raw: text,

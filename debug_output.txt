@@ -1,0 +1,371 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0event: metadata
+data: {
+data:   "run_id": "e12cf84a-2934-4cf1-815a-6879e9d0b888",
+data:   "attempt": 1
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "",
+data:     "status": "not_started"
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": null,
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-parsing2",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "createdAt": "2025-06-07T21:35:00.694Z",
+data:   "lastUpdatedAt": "2025-06-07T21:35:00.694Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "rfpProcessingStatus": "queued"
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "",
+data:     "status": "not_started"
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": null,
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-parsing2",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     },
+data:     {
+data:       "content": "I'll analyze your RFP document. Let me load it first...",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "f8796851-25ce-45b5-8bcb-d2e6ab0c0a0b",
+data:       "type": "ai"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "intent": {
+data:     "command": "loadDocument",
+data:     "requestDetails": "rfpId: 146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "confidence": 0.9
+data:   },
+data:   "createdAt": "2025-06-07T21:35:00.694Z",
+data:   "lastUpdatedAt": "2025-06-07T21:35:00.694Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "rfpProcessingStatus": "queued"
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "status": "loaded",
+data:     "text": "This is mock PDF content generated for development purposes.\n\nThis content is provided when the actual PDF cannot be parsed.\n\nIt simulates multiple pages of content with different sections.\n\nPage 1: Introduction\nThis document provides sample text for testing.\n\nPage 2: Requirements\100  7539    0  7281  100   258   6016    213  0:00:01  0:00:01 --:--:--  6230100  7539    0  7281  100   258   3288    116  0:00:02  0:00:02 --:--:--  3405nThe system should be able to handle various document formats.\n\nPage 3: Solution\nImplement robust parsing with proper error handling.\n\nPage 4: Implementation\nUse appropriate libraries with fallback options.\n\nPage 5: Conclusion\nEnsure graceful degradation when files cannot be found.",
+data:     "metadata": {
+data:       "documentId": "9866d664-690c-4a97-9082-0e86dbc43932",
+data:       "fileName": "Race Equity RFP - 280125.pdf",
+data:       "fileType": "application/pdf",
+data:       "sizeBytes": 112812,
+data:       "clientType": "server",
+data:       "loadedAt": "2025-06-07T21:35:00.806Z",
+data:       "source": "cached_parsed_text",
+data:       "raw": "This is mock PDF content generated for development purposes.\n\nThis content is provided when the actual PDF cannot be parsed.\n\nIt simulates multiple pages of content with different sections.\n\nPage 1: Introduction\nThis document provides sample text for testing.\n\nPage 2: Requirements\nThe system should be able to handle various document formats.\n\nPage 3: Solution\nImplement robust parsing with proper error handling.\n\nPage 4: Implementation\nUse appropriate libraries with fallback options.\n\nPage 5: Conclusion\nEnsure graceful degradation when files cannot be found."
+data:     }
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": null,
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-parsing2",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     },
+data:     {
+data:       "content": "I'll analyze your RFP document. Let me load it first...",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "f8796851-25ce-45b5-8bcb-d2e6ab0c0a0b",
+data:       "type": "ai"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "intent": {
+data:     "command": "loadDocument",
+data:     "requestDetails": "rfpId: 146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "confidence": 0.9
+data:   },
+data:   "createdAt": "2025-06-07T21:35:00.694Z",
+data:   "lastUpdatedAt": "2025-06-07T21:35:00.694Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "rfpProcessingStatus": "queued"
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "status": "loaded",
+data:     "text": "This is mock PDF content generated for development purposes.\n\nThis content is provided when the actual PDF cannot be parsed.\n\nIt simulates multiple pages of content with different sections.\n\nPage 1: Introduction\nThis document provides sample text for testing.\n\nPage 2: Requirements\nThe system should be able to handle various document formats.\n\nPage 3: Solution\nImplement robust parsing with proper error handling.\n\nPage 4: Implementation\nUse appropriate libraries with fallback options.\n\nPage 5: Conclusion\nEnsure graceful degradation when files cannot be found.",
+data:     "metadata": {
+data:       "documentId": "9866d664-690c-4a97-9082-0e86dbc43932",
+data:       "fileName": "Race Equity RFP - 280125.pdf",
+data:       "fileType": "application/pdf",
+data:       "sizeBytes": 112812,
+data:       "clientType": "server",
+data:       "loadedAt": "2025-06-07T21:35:00.806Z",
+data:       "source": "cached_parsed_text",
+data:       "raw": "This is mock PDF content generated for development purposes.\n\nThis content is provided when the actual PDF cannot be parsed.\n\nIt simulates multiple pages of content with different sections.\n\nPage 1: Introduction\nThis document provides sample text for testing.\n\nPage 2: Requirements\nThe system should be able to handle various document formats.\n\nPage 3: Solution\nImplement robust parsing with proper error handling.\n\nPage 4: Implementation\nUse appropriate libraries with fallback options.\n\nPage 5: Conclusion\nEnsure graceful degradation when files cannot be found."
+data:     }
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": "rfp_analysis_complete",
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-parsing2",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     },
+data:     {
+data:       "content": "I'll analyze your RFP document. Let me load it first...",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "f8796851-25ce-45b5-8bcb-d2e6ab0c0a0b",
+data:       "type": "ai"
+data:     },
+data:     {
+data:       "content": "## RFP Analysis Complete\n\n**Complexity Assessment:** Medium\n\n**Key Insights:**\n• The RFP requires the ability to handle various document formats, indicating a need for robust parsing capabilities\n• Proper error handling and graceful degradation when files cannot be found are key expectations\n• The use of appropriate libraries with fallback options is emphasized for the implementation\n\n**Strategic Recommendations:**\n• Propose a flexible and extensible document parsing solution that can handle a wide range of file formats\n• Highlight the team's expertise in implementing robust error handling and graceful degradation mechanisms\n• Recommend the use of well-established, reliable libraries with clear fallback strategies to ensure a reliable solution\n\n**Risk Factors to Consider:**\n• Potential challenges in supporting a comprehensive set of document formats, especially legacy or proprietary formats\n• Ensuring consistent and reliable error handling across various file types and edge cases\n• Potential performance and scalability concerns if the document processing requirements are significant\n\n**Recommended Next Steps:**\n• Conduct a thorough assessment of the supported document formats and identify any potential gaps or limitations\n• Develop a detailed technical approach that addresses the error handling and graceful degradation requirements\n• Research and evaluate suitable library options, considering their capabilities, performance, and maintainability\n• Prepare a comprehensive proposal that showcases the team's expertise and the proposed solution's ability to meet the RFP requirements\n\nI'm ready to help you develop your proposal response. What would you like to focus on first?",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "c00a0fc9-29e1-4a74-94b6-d8df7c78968a",
+data:       "type": "ai"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "intent": {
+data:     "command": "loadDocument",
+data:     "requestDetails": "rfpId: 146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "confidence": 0.9
+data:   },
+data:   "createdAt": "2025-06-07T21:35:00.694Z",
+data:   "lastUpdatedAt": "2025-06-07T21:35:00.694Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "planningIntelligence": {
+data:     "rfpCharacteristics": {
+data:       "complexity": "Medium",
+data:       "complexityFactors": [
+data:         "The RFP requires the ability to handle various document formats, indicating a need for robust parsing capabilities",
+data:         "Proper error handling and graceful degradation when files cannot be found are key expectations",
+data:         "The use of appropriate libraries with fallback options is emphasized for the implementation"
+data:       ],
+data:       "industry": "To be determined",
+data:       "specialization": "To be determined",
+data:       "contractValueEstimate": "To be determined",
+data:       "timelinePressure": "Medium",
+data:       "strategicFocus": [
+data:         "Propose a flexible and extensible document parsing solution that can handle a wide range of file formats",
+data:         "Highlight the team's expertise in implementing robust error handling and graceful degradation mechanisms",
+data:         "Recommend the use of well-established, reliable libraries with clear fallback strategies to ensure a reliable solution"
+data:       ],
+data:       "submissionRequirements": {
+data:         "pageLimit": "not_specified",
+data:         "sectionsRequired": [],
+data:         "attachmentsNeeded": []
+data:       }
+data:     },
+data:     "earlyRiskAssessment": {
+data:       "riskIndicators": [
+data:         {
+data:           "risk": "Potential challenges in supporting a comprehensive set of document formats, especially legacy or proprietary formats",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         },
+data:         {
+data:           "risk": "Ensuring consistent and reliable error handling across various file types and edge cases",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         },
+data:         {
+data:           "risk": "Potential performance and scalability concerns if the document processing requirements are significant",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         }
+data:       ],
+data:       "analysisConfidence": 0.7,
+data:       "requiresUserValidation": false
+data:     }
+data:   },
+data:   "userCollaboration": {
+data:     "strategicRecommendations": {
+data:       "topOpportunities": [
+data:         "Propose a flexible and extensible document parsing solution that can handle a wide range of file formats",
+data:         "Highlight the team's expertise in implementing robust error handling and graceful degradation mechanisms",
+data:         "Recommend the use of well-established, reliable libraries with clear fallback strategies to ensure a reliable solution"
+data:       ],
+data:       "criticalRequirements": [
+data:         {
+data:           "requirement": "Conduct a thorough assessment of the supported document formats and identify any potential gaps or limitations",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Develop a detailed technical approach that addresses the error handling and graceful degradation requirements",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Research and evaluate suitable library options, considering their capabilities, performance, and maintainability",
+data:           "pri100 17145    0 16887  100   258   5577     85  0:00:03  0:00:03 --:--:--  5664100 17145    0 16887  100   258   4784     73  0:00:03  0:00:03 --:--:--  4858
+ority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Prepare a comprehensive proposal that showcases the team's expertise and the proposed solution's ability to meet the RFP requirements",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         }
+data:       ],
+data:       "confidenceLevel": 0.7
+data:     }
+data:   },
+data:   "rfpProcessingStatus": "complete"
+data: }
+

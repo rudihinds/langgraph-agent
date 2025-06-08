@@ -44,6 +44,18 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     value: (existing, newValue) => ({ ...existing, ...newValue }),
   }),
 
+  // RFP processing status
+  rfpProcessingStatus: Annotation<ProcessingStatus>({
+    default: () => ProcessingStatus.QUEUED,
+    value: lastValueWinsReducerStrict,
+  }),
+
+  // Feedback intent for RFP analysis routing
+  feedbackIntent: Annotation<"approve" | "refine" | "reject" | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
   // Research phase
   researchResults: Annotation<Record<string, any> | undefined>({
     default: () => undefined,
