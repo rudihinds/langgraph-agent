@@ -77,10 +77,12 @@ export async function chatAgentNode(
   const last = messages[messages.length - 1];
 
   // STEP 1.1 FIX: Use Command pattern for feedback routing (LangGraph convention)
-  if (
-    state.currentStep === "rfp_analysis_complete" &&
-    last instanceof HumanMessage
-  ) {
+  // Check if we have RFP analysis completion based on state structure instead of currentStep
+  const hasCompletedAnalysis =
+    state.planningIntelligence?.rfpCharacteristics &&
+    state.planningIntelligence?.earlyRiskAssessment;
+
+  if (hasCompletedAnalysis && last instanceof HumanMessage) {
     console.log(
       "ChatAgentNode: Feedback detected, routing directly to userFeedbackProcessor using Command pattern"
     );
@@ -286,7 +288,6 @@ export function shouldContinueChat(
   state: typeof OverallProposalStateAnnotation.State
 ): string {
   console.log("\n--------- shouldContinueChat START (SIMPLIFIED) ---------");
-  console.log("Current step:", state.currentStep);
   console.log("RFP ID:", state.metadata?.rfpId);
   console.log("Auto-started:", state.metadata?.autoStarted);
 
@@ -302,8 +303,12 @@ export function shouldContinueChat(
     return "__end__";
   }
 
-  // Priority 1: If at strategic checkpoint, user input = feedback
-  if (state.currentStep === "rfp_analysis_complete") {
+  // Priority 1: If RFP analysis complete, user input = feedback
+  const hasCompletedAnalysis =
+    state.planningIntelligence?.rfpCharacteristics &&
+    state.planningIntelligence?.earlyRiskAssessment;
+
+  if (hasCompletedAnalysis && last instanceof HumanMessage) {
     console.log(
       "shouldContinueChat: Analysis complete, routing to feedback processor"
     );

@@ -92,6 +92,17 @@ export function AssistantMessage({
     ? parseAnthropicStreamedToolCalls(message.content)
     : undefined;
 
+  // DEBUG: Log interrupt detection
+  console.log(`[AIMessage] Rendering contentString: "${contentString}"`);
+  if (interrupt) {
+    console.log("[AIMessage] Interrupt detected:", interrupt);
+    console.log("[AIMessage] Is last message:", isLastMessage);
+    console.log(
+      "[AIMessage] Agent inbox schema check:",
+      isAgentInboxInterruptSchema(interrupt?.value)
+    );
+  }
+
   const hasToolCalls =
     "tool_calls" in message &&
     message.tool_calls &&
@@ -133,6 +144,23 @@ export function AssistantMessage({
           )}
 
           <CustomComponent message={message} thread={thread} />
+
+          {/* DEBUG: Show interrupt info even if schema doesn't match */}
+          {interrupt && isLastMessage && (
+            <div className="p-4 bg-yellow-100 border border-yellow-300 rounded">
+              <h4 className="font-bold">DEBUG: Interrupt Detected</h4>
+              <p>
+                Schema check:{" "}
+                {isAgentInboxInterruptSchema(interrupt?.value)
+                  ? "PASS"
+                  : "FAIL"}
+              </p>
+              <pre className="overflow-auto text-xs">
+                {JSON.stringify(interrupt, null, 2)}
+              </pre>
+            </div>
+          )}
+
           {isAgentInboxInterruptSchema(interrupt?.value) && isLastMessage && (
             <ThreadView interrupt={interrupt.value} />
           )}

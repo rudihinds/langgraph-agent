@@ -1,6 +1,11 @@
 /**
- * RFP Analyzer Node - State-driven RFP analysis with natural language feedback
- * Follows modern LangGraph patterns: interrupt() for HITL and Command for external resume
+ * RFP Analyzer Node - Clean internal feedback loop following LangGraph best practices
+ *
+ * Key principles:
+ * - interrupt() is NEVER in a try/catch block (GraphInterrupt must propagate)
+ * - Separate error handling for specific operations (analysis, refinement)
+ * - Clean JSON parsing with markdown cleanup
+ * - Simple internal feedback loop
  */
 
 import { ChatAnthropic } from "@langchain/anthropic";
@@ -17,13 +22,8 @@ import {
 } from "@/state/modules/types.js";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
-
-// Import the dedicated intent interpreter
-import {
-  interpretUserFeedback,
-  type AnalysisResult,
-  type FeedbackIntent,
-} from "./intent_interpreter.js";
+import { Command } from "@langchain/langgraph";
+import { ChatOpenAI } from "@langchain/openai";
 
 // Create simple logger to avoid import issues
 const logger = {
@@ -35,275 +35,339 @@ const logger = {
     console.warn(`[WARN] ${message}`, meta || ""),
 };
 
-// Analysis result schema - now using the type from intent_interpreter
+// Initialize LLM
+const llm = new ChatAnthropic({
+  modelName: "claude-3-5-sonnet-20241022",
+  temperature: 0.3,
+  maxTokens: 4000,
+});
+
+// Schemas for structured outputs
 const AnalysisSchema = z.object({
-  complexity: z.enum(["Simple", "Medium", "Complex"]),
-  keyInsights: z.array(z.string()),
-  strategicRecommendations: z.array(z.string()),
-  riskFactors: z.array(z.string()),
-  nextSteps: z.array(z.string()),
-  competitiveAdvantages: z.array(z.string()).optional(),
-  complianceRequirements: z.array(z.string()).optional(),
+  complexity: z.enum(["Simple", "Medium", "Complex"]), // Match existing type
+  keyInsights: z.array(z.string()).min(3).max(8),
+  strategicRecommendations: z.array(z.string()).min(3).max(6),
+  riskFactors: z.array(z.string()).min(2).max(5),
+  nextSteps: z.array(z.string()).min(3).max(6),
+  competitiveAdvantages: z.array(z.string()).max(5).optional(),
+  complianceRequirements: z.array(z.string()).max(4).optional(),
+});
+
+const FeedbackIntentSchema = z.object({
+  intent: z.enum(["approve", "refine", "reject"]),
+  reasoning: z.string(),
+  specificChanges: z.array(z.string()).optional(),
+});
+
+const ContextualQuestionSchema = z.object({
+  question: z.string(),
+  context: z.string(),
+  suggestedActions: z.array(z.string()).min(2).max(4),
 });
 
 type RfpAnalysisResult = z.infer<typeof AnalysisSchema>;
+type LocalFeedbackIntent = z.infer<typeof FeedbackIntentSchema>; // Renamed to avoid conflict
+type ContextualQuestion = z.infer<typeof ContextualQuestionSchema>;
 
 /**
- * Node function type for RFP analyzer with proper state handling
+ * Helper function to extract current analysis from state
  */
-type RfpAnalyzerNodeFunction = (
-  state: typeof OverallProposalStateAnnotation.State,
-  config?: LangGraphRunnableConfig
-) => Promise<Partial<typeof OverallProposalStateAnnotation.State>>;
+function getCurrentAnalysisFromState(
+  state: typeof OverallProposalStateAnnotation.State
+): RfpAnalysisResult | null {
+  const rfpChars = state.planningIntelligence?.rfpCharacteristics;
+  const riskAssess = state.planningIntelligence?.earlyRiskAssessment;
+
+  if (!rfpChars) return null;
+
+  // Reconstruct analysis from state structure
+  return {
+    complexity: rfpChars.complexity || "Medium",
+    keyInsights: riskAssess?.strategicInsights?.keyOpportunities || [],
+    strategicRecommendations:
+      riskAssess?.strategicInsights?.requirementPriorities?.map(
+        (rp) => rp.requirement
+      ) || [],
+    riskFactors: riskAssess?.riskIndicators?.map((ri) => ri.risk) || [],
+    nextSteps: [], // Will be populated from strategic recommendations if available
+    competitiveAdvantages:
+      riskAssess?.strategicInsights?.competitiveFactors || [],
+    complianceRequirements:
+      rfpChars.submissionRequirements?.sectionsRequired || [],
+  };
+}
 
 /**
- * Main RFP analyzer node - follows new state-driven pattern with natural language feedback
- *
- * Flow:
- * 1. Check if this is initial analysis or refinement
- * 2. Perform analysis (initial or refined based on feedback)
- * 3. Present analysis using interrupt() for natural language feedback
- * 4. Use dedicated intent interpreter to determine user intent
- * 5. Return state with analysis results and feedbackIntent for routing
+ * Main RFP Analyzer Node with Command-based routing (following LangGraph best practices)
  */
-export const rfpAnalyzerNode: RfpAnalyzerNodeFunction = async (
+export const rfpAnalyzerNode = async (
   state: typeof OverallProposalStateAnnotation.State,
   config?: LangGraphRunnableConfig
-) => {
-  // Check if we're resuming from interrupt to avoid duplicate side effects
-  const isResuming = !!config?.configurable?.resume_value;
+): Promise<Partial<typeof OverallProposalStateAnnotation.State> | Command> => {
+  logger.info("[RFP Analyzer] Starting analysis");
 
-  if (!isResuming) {
-    logger.info("[RFP Analyzer] Starting analysis node");
-  } else {
-    logger.info("[RFP Analyzer] Resuming analysis node after user feedback");
+  // Check if resuming from an interrupt with user feedback
+  const resumeValue = config?.configurable?.resume_value;
+
+  if (resumeValue) {
+    logger.info("[RFP Analyzer] Resuming with user feedback", resumeValue);
+
+    // Get current analysis from planningIntelligence
+    const currentAnalysis = getCurrentAnalysisFromState(state);
+
+    // Interpret the user feedback and route accordingly
+    try {
+      const feedbackIntent = await interpretUserFeedback(
+        resumeValue,
+        currentAnalysis
+      );
+
+      if (feedbackIntent.intent === "approve") {
+        logger.info(
+          "[RFP Analyzer] User approved analysis - proceeding to next phase"
+        );
+        return {
+          planningIntelligence: {
+            ...state.planningIntelligence,
+            rfpCharacteristics: createRfpCharacteristics(currentAnalysis),
+            earlyRiskAssessment: createEarlyRiskAssessment(currentAnalysis),
+          },
+          messages: [
+            ...state.messages,
+            new AIMessage(formatFinalAnalysis(currentAnalysis)),
+          ],
+          rfpProcessingStatus: ProcessingStatus.COMPLETE,
+        };
+      } else if (feedbackIntent.intent === "refine") {
+        logger.info(
+          "[RFP Analyzer] User requested refinement - routing to refinement"
+        );
+        return new Command({
+          update: {
+            intent: {
+              command: "refine_analysis",
+              requestDetails: resumeValue,
+            },
+          },
+          goto: "strategicOptionsRefinement",
+        });
+      } else {
+        logger.info(
+          "[RFP Analyzer] User requested restart - restarting analysis"
+        );
+        // Clear previous analysis and start fresh
+        return new Command({
+          update: {
+            planningIntelligence: {
+              ...state.planningIntelligence,
+              rfpCharacteristics: undefined,
+              earlyRiskAssessment: undefined,
+            },
+            intent: {
+              command: "restart_analysis",
+              requestDetails: resumeValue,
+            },
+          },
+          goto: "rfpAnalyzer",
+        });
+      }
+    } catch (error) {
+      logger.error("[RFP Analyzer] Failed to interpret feedback", error);
+      // Fallback to strategic validation for manual handling
+      return new Command({
+        goto: "strategicValidationCheckpoint",
+      });
+    }
   }
 
-  const hasExistingAnalysis = !!state.planningIntelligence?.rfpCharacteristics;
+  // Cache RFP content once
+  const rfpContent = getRfpContent(state);
+  if (!rfpContent) {
+    logger.error("[RFP Analyzer] No RFP content available");
+    return {
+      messages: [
+        ...state.messages,
+        new AIMessage("No RFP document available for analysis."),
+      ],
+      errors: [
+        ...(state.errors || []),
+        "No RFP content available for analysis",
+      ],
+      rfpProcessingStatus: ProcessingStatus.ERROR,
+    };
+  }
 
+  let analysis: RfpAnalysisResult;
+
+  // Perform analysis (initial or refinement)
   try {
-    if (hasExistingAnalysis) {
-      // This is a refinement - incorporate previous feedback
-      logger.info(
-        "[RFP Analyzer] Performing refinement based on user feedback"
+    const existingAnalysis = getCurrentAnalysisFromState(state);
+    if (existingAnalysis) {
+      logger.info("[RFP Analyzer] Refining existing analysis");
+      analysis = await refineAnalysisWithFeedback(
+        existingAnalysis,
+        state.intent?.requestDetails || "Please improve the analysis",
+        rfpContent
       );
-      const refinedAnalysis = await refineAnalysisWithUserFeedback(state);
-
-      const userFeedback = interrupt({
-        analysis: formatAnalysis(refinedAnalysis),
-        question:
-          "How does this refined analysis look? Any further changes needed?",
-      });
-
-      // Use the dedicated intent interpreter
-      const intent = await interpretUserFeedback(
-        userFeedback,
-        refinedAnalysis as AnalysisResult
-      );
-
-      return {
-        planningIntelligence: {
-          ...state.planningIntelligence,
-          rfpCharacteristics: createRfpCharacteristics(refinedAnalysis),
-          earlyRiskAssessment: createEarlyRiskAssessment(refinedAnalysis),
-        },
-        feedbackIntent: intent.intent,
-        messages: [
-          ...state.messages,
-          new AIMessage(formatAnalysis(refinedAnalysis)),
-        ],
-        rfpProcessingStatus: ProcessingStatus.COMPLETE,
-        lastUpdatedAt: new Date().toISOString(),
-      };
     } else {
-      // Initial analysis
       logger.info("[RFP Analyzer] Performing initial analysis");
-      const analysis = await performInitialAnalysis(state);
-
-      // Present analysis and collect natural language feedback
-      const userFeedback = interrupt({
-        analysis: formatAnalysis(analysis),
-        question:
-          "Please review this RFP analysis. What would you like me to focus on or change?",
-      });
-
-      // Use the dedicated intent interpreter
-      const intent = await interpretUserFeedback(
-        userFeedback,
-        analysis as AnalysisResult
-      );
-
-      return {
-        planningIntelligence: {
-          ...state.planningIntelligence,
-          rfpCharacteristics: createRfpCharacteristics(analysis),
-          earlyRiskAssessment: createEarlyRiskAssessment(analysis),
-        },
-        feedbackIntent: intent.intent, // "approve" | "refine" | "reject"
-        messages: [...state.messages, new AIMessage(formatAnalysis(analysis))],
-        rfpProcessingStatus: ProcessingStatus.COMPLETE,
-        lastUpdatedAt: new Date().toISOString(),
-      };
+      analysis = await performInitialAnalysis(state);
     }
   } catch (error) {
     logger.error("[RFP Analyzer] Analysis failed", error);
     return {
       messages: [
         ...state.messages,
-        new AIMessage(
-          "I encountered an error while analyzing the RFP document. Please try again or contact support if the issue persists."
-        ),
+        new AIMessage("Failed to analyze RFP document. Please try again."),
       ],
       errors: [
         ...(state.errors || []),
         `RFP analysis failed: ${error.message}`,
       ],
       rfpProcessingStatus: ProcessingStatus.ERROR,
-      feedbackIntent: "reject", // Indicate failure
     };
   }
+
+  // Format and return analysis results immediately (no interrupt)
+  let formattedOutput: { analysis: string; question: string };
+  try {
+    formattedOutput = await formatAnalysisWithContextualQuestion(
+      analysis,
+      getCurrentAnalysisFromState(state) ? "refined" : "initial"
+    );
+  } catch (error) {
+    logger.error("[RFP Analyzer] Failed to format analysis", error);
+    // Fallback to simple formatting
+    formattedOutput = {
+      analysis: formatSimpleAnalysis(analysis),
+      question:
+        "Would you like me to proceed with this analysis, refine it, or start over?",
+    };
+  }
+
+  // Return analysis results immediately without interrupt
+  return {
+    planningIntelligence: {
+      ...state.planningIntelligence,
+      rfpCharacteristics: createRfpCharacteristics(analysis),
+      earlyRiskAssessment: createEarlyRiskAssessment(analysis),
+    },
+    messages: [
+      ...state.messages,
+      new AIMessage(
+        `${formattedOutput.analysis}\n\n---\n\n${formattedOutput.question}`
+      ),
+    ],
+    rfpProcessingStatus: ProcessingStatus.COMPLETE,
+  };
 };
 
 /**
- * Perform initial RFP analysis
+ * Perform initial RFP analysis with improved JSON parsing
  */
 async function performInitialAnalysis(
   state: typeof OverallProposalStateAnnotation.State
 ): Promise<RfpAnalysisResult> {
-  logger.info("[RFP Analyzer] Starting initial analysis");
-
-  // Get RFP content from state
   const rfpContent = getRfpContent(state);
 
-  if (!rfpContent) {
-    throw new Error("No RFP document found in state");
-  }
+  const analysisPrompt = `Analyze the following RFP document and provide a comprehensive strategic analysis.
 
-  if (rfpContent.length < 100) {
-    throw new Error("RFP document appears to be too short or empty");
-  }
+RFP CONTENT:
+${rfpContent}
 
-  // Initialize LLM
-  const llm = new ChatAnthropic({
-    model: "claude-3-haiku-20240307",
-    temperature: 0.3,
-    maxTokens: 2000,
-  });
-
-  // Enhanced analysis prompt
-  const analysisPrompt = `You are an expert RFP analyst. Analyze this SPECIFIC RFP document and provide:
-
-1. Complexity assessment (Simple/Medium/Complex)
-2. Key insights about requirements and expectations
-3. Strategic recommendations for the proposal response
-4. Risk factors to consider
-5. Next steps for proposal development
-6. Competitive advantages to emphasize
-7. Compliance requirements to address
-
-IMPORTANT: Base your analysis on the ACTUAL CONTENT below, not generic responses.
-
-RFP Content:
-${rfpContent.substring(0, 8000)}${rfpContent.length > 8000 ? "..." : ""}
-
-Respond with a structured analysis in JSON format matching this schema:
+Please provide your analysis in the following JSON format:
 {
-  "complexity": "Simple" | "Medium" | "Complex",
-  "keyInsights": ["insight1", "insight2", ...],
-  "strategicRecommendations": ["rec1", "rec2", ...],
-  "riskFactors": ["risk1", "risk2", ...],
-  "nextSteps": ["step1", "step2", ...],
-  "competitiveAdvantages": ["advantage1", "advantage2", ...],
-  "complianceRequirements": ["requirement1", "requirement2", ...]
-}`;
+  "complexity": "Simple|Medium|Complex",
+  "keyInsights": ["insight1", "insight2", "insight3"],
+  "strategicRecommendations": ["rec1", "rec2", "rec3"],
+  "riskFactors": ["risk1", "risk2"],
+  "nextSteps": ["step1", "step2", "step3"],
+  "competitiveAdvantages": ["advantage1", "advantage2"],
+  "complianceRequirements": ["req1", "req2"]
+}
 
-  logger.info("[RFP Analyzer] Calling LLM for initial analysis");
+Focus on strategic insights that will guide proposal development. Be specific and actionable.`;
+
   const response = await llm.invoke([
     { role: "user", content: analysisPrompt },
   ]);
 
-  // Parse and validate response
-  const jsonContent = response.content.toString();
-  const parsedContent = JSON.parse(jsonContent);
-  const analysisResult = AnalysisSchema.parse(parsedContent);
+  // ✅ Clean potential markdown formatting from LLM response
+  const cleanJsonResponse = (response.content as string)
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "")
+    .trim();
 
-  logger.info("[RFP Analyzer] Initial analysis completed", {
-    complexity: analysisResult.complexity,
-    keyInsightsCount: analysisResult.keyInsights.length,
-  });
-
-  return analysisResult;
+  try {
+    const parsedContent = JSON.parse(cleanJsonResponse);
+    const analysisResult = AnalysisSchema.parse(parsedContent);
+    logger.info("[RFP Analyzer] Initial analysis completed successfully");
+    return analysisResult;
+  } catch (parseError) {
+    logger.error("[RFP Analyzer] JSON parsing failed", {
+      originalResponse: response.content,
+      cleanedResponse: cleanJsonResponse,
+      parseError: parseError.message,
+    });
+    throw new Error(`Failed to parse LLM response: ${parseError.message}`);
+  }
 }
 
 /**
- * Refine analysis based on user feedback from previous iteration
+ * Format analysis with LLM-generated contextual question
  */
-async function refineAnalysisWithUserFeedback(
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<RfpAnalysisResult> {
-  logger.info("[RFP Analyzer] Starting analysis refinement");
+async function formatAnalysisWithContextualQuestion(
+  analysis: RfpAnalysisResult,
+  stage: "initial" | "refined"
+): Promise<{ analysis: string; question: string }> {
+  const formattedAnalysis = formatSimpleAnalysis(analysis);
 
-  const rfpContent = getRfpContent(state);
-  const previousAnalysis = state.planningIntelligence?.rfpCharacteristics;
-  const lastFeedback = getLastUserFeedback(state);
+  // Generate contextual question using LLM
+  const questionPrompt = `Based on this RFP analysis, generate a contextual question for the user.
 
-  if (!rfpContent || !previousAnalysis || !lastFeedback) {
-    // Fallback to initial analysis if we can't find previous context
-    return performInitialAnalysis(state);
-  }
+ANALYSIS STAGE: ${stage}
+ANALYSIS SUMMARY:
+- Complexity: ${analysis.complexity}
+- Key Insights: ${analysis.keyInsights.slice(0, 3).join(", ")}
+- Main Risks: ${analysis.riskFactors.slice(0, 2).join(", ")}
 
-  const llm = new ChatAnthropic({
-    model: "claude-3-haiku-20240307",
-    temperature: 0.3,
-    maxTokens: 2000,
-  });
-
-  const refinementPrompt = `You are an expert RFP analyst refining your analysis based on user feedback.
-
-ORIGINAL RFP CONTENT:
-${rfpContent.substring(0, 6000)}${rfpContent.length > 6000 ? "..." : ""}
-
-PREVIOUS ANALYSIS:
-- Complexity: ${previousAnalysis.complexity}
-- Key Insights: ${previousAnalysis.complexityFactors?.join(", ") || "None"}
-- Strategic Focus: ${previousAnalysis.strategicFocus?.join(", ") || "None"}
-
-USER FEEDBACK: "${lastFeedback}"
-
-Based on the user's feedback, refine your analysis. Pay special attention to their concerns and requests.
-Maintain the same JSON structure but update the content based on their feedback:
-
+Generate a JSON response with a contextual question that helps the user understand what they should focus on:
 {
-  "complexity": "Simple" | "Medium" | "Complex",
-  "keyInsights": ["insight1", "insight2", ...],
-  "strategicRecommendations": ["rec1", "rec2", ...],
-  "riskFactors": ["risk1", "risk2", ...],
-  "nextSteps": ["step1", "step2", ...],
-  "competitiveAdvantages": ["advantage1", "advantage2", ...],
-  "complianceRequirements": ["requirement1", "requirement2", ...]
+  "question": "A specific, contextual question about the analysis",
+  "context": "Brief context about why this question matters",
+  "suggestedActions": ["action1", "action2", "action3"]
 }`;
 
-  logger.info("[RFP Analyzer] Calling LLM for refinement");
-  const response = await llm.invoke([
-    { role: "user", content: refinementPrompt },
-  ]);
+  try {
+    const response = await llm.invoke([
+      { role: "user", content: questionPrompt },
+    ]);
+    const cleanResponse = (response.content as string)
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
 
-  const jsonContent = response.content.toString();
-  const parsedContent = JSON.parse(jsonContent);
-  const refinedResult = AnalysisSchema.parse(parsedContent);
+    const questionData = ContextualQuestionSchema.parse(
+      JSON.parse(cleanResponse)
+    );
 
-  logger.info("[RFP Analyzer] Analysis refinement completed", {
-    complexity: refinedResult.complexity,
-    refinedInsightsCount: refinedResult.keyInsights.length,
-  });
-
-  return refinedResult;
+    return {
+      analysis: formattedAnalysis,
+      question: `${questionData.question}\n\n**Context:** ${questionData.context}\n\n**Suggested actions:**\n${questionData.suggestedActions.map((action) => `• ${action}`).join("\n")}`,
+    };
+  } catch (error) {
+    // Fallback to simple question
+    return {
+      analysis: formattedAnalysis,
+      question: `How does this ${stage} analysis look? Would you like me to proceed, refine any aspects, or start over?`,
+    };
+  }
 }
 
 /**
- * Format analysis for user presentation
+ * Format analysis in a simple, readable format
  */
-function formatAnalysis(analysis: RfpAnalysisResult): string {
+function formatSimpleAnalysis(analysis: RfpAnalysisResult): string {
   return `## RFP Analysis Complete
 
 **Complexity Assessment:** ${analysis.complexity}
@@ -334,39 +398,122 @@ ${
 ${analysis.complianceRequirements.map((req) => `• ${req}`).join("\n")}
 `
     : ""
-}
-
-I'm ready to help you develop your proposal response. What would you like to focus on first?`;
+}`;
 }
 
 /**
- * Helper functions
+ * Interpret user feedback to determine intent
+ */
+async function interpretUserFeedback(
+  feedback: string,
+  currentAnalysis: RfpAnalysisResult
+): Promise<LocalFeedbackIntent> {
+  const interpretPrompt = `Interpret the user's feedback about the RFP analysis.
+
+USER FEEDBACK: "${feedback}"
+
+CURRENT ANALYSIS SUMMARY:
+- Complexity: ${currentAnalysis.complexity}
+- Insights: ${currentAnalysis.keyInsights.length} insights provided
+- Recommendations: ${currentAnalysis.strategicRecommendations.length} recommendations
+
+Determine the user's intent and respond in JSON format:
+{
+  "intent": "approve|refine|reject",
+  "reasoning": "explanation of why you chose this intent",
+  "specificChanges": ["change1", "change2"] (only if intent is refine)
+}
+
+INTENT GUIDELINES:
+- "approve": User is satisfied and wants to proceed
+- "refine": User wants improvements/changes to current analysis
+- "reject": User wants to completely start over`;
+
+  const response = await llm.invoke([
+    { role: "user", content: interpretPrompt },
+  ]);
+  const cleanResponse = (response.content as string)
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "")
+    .trim();
+
+  return FeedbackIntentSchema.parse(JSON.parse(cleanResponse));
+}
+
+/**
+ * Refine analysis based on user feedback
+ */
+async function refineAnalysisWithFeedback(
+  currentAnalysis: RfpAnalysisResult,
+  feedback: string,
+  rfpContent: string
+): Promise<RfpAnalysisResult> {
+  const refinementPrompt = `Refine the RFP analysis based on user feedback.
+
+ORIGINAL RFP CONTENT:
+${rfpContent}
+
+CURRENT ANALYSIS:
+${JSON.stringify(currentAnalysis, null, 2)}
+
+USER FEEDBACK:
+"${feedback}"
+
+Please provide a refined analysis that addresses the user's feedback while maintaining the same JSON structure:
+{
+  "complexity": "Simple|Medium|Complex",
+  "keyInsights": ["insight1", "insight2", "insight3"],
+  "strategicRecommendations": ["rec1", "rec2", "rec3"],
+  "riskFactors": ["risk1", "risk2"],
+  "nextSteps": ["step1", "step2", "step3"],
+  "competitiveAdvantages": ["advantage1", "advantage2"],
+  "complianceRequirements": ["req1", "req2"]
+}
+
+Make specific improvements based on the feedback while keeping what works well.`;
+
+  const response = await llm.invoke([
+    { role: "user", content: refinementPrompt },
+  ]);
+  const cleanResponse = (response.content as string)
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "")
+    .trim();
+
+  return AnalysisSchema.parse(JSON.parse(cleanResponse));
+}
+
+/**
+ * Format final analysis for state
+ */
+function formatFinalAnalysis(analysis: RfpAnalysisResult): string {
+  return `✅ **RFP Analysis Approved**
+
+${formatSimpleAnalysis(analysis)}
+
+**Status:** Analysis complete and approved. Ready to proceed to strategic validation.`;
+}
+
+/**
+ * Helper function to extract RFP content from state
  */
 function getRfpContent(
   state: typeof OverallProposalStateAnnotation.State
 ): string {
-  return state.rfpDocument?.text || state.rfpDocument?.metadata?.raw || "";
+  return state.rfpDocument?.text || "";
 }
 
-function getLastUserFeedback(
-  state: typeof OverallProposalStateAnnotation.State
-): string {
-  const messages = state.messages || [];
-  const lastHumanMessage = messages
-    .filter((msg) => msg instanceof HumanMessage)
-    .slice(-1)[0];
-
-  return (lastHumanMessage?.content as string) || "";
-}
-
+/**
+ * Create RFP characteristics from analysis
+ */
 function createRfpCharacteristics(
   analysis: RfpAnalysisResult
 ): RfpCharacteristics {
   return {
-    complexity: analysis.complexity,
-    complexityFactors: analysis.keyInsights,
     industry: "To be determined",
     specialization: "To be determined",
+    complexity: analysis.complexity,
+    complexityFactors: analysis.keyInsights,
     contractValueEstimate: "To be determined",
     timelinePressure: "Medium",
     strategicFocus: analysis.strategicRecommendations,
@@ -378,6 +525,9 @@ function createRfpCharacteristics(
   };
 }
 
+/**
+ * Create early risk assessment from analysis
+ */
 function createEarlyRiskAssessment(
   analysis: RfpAnalysisResult
 ): EarlyRiskAssessment {
@@ -396,36 +546,24 @@ function createEarlyRiskAssessment(
 export default rfpAnalyzerNode;
 
 /**
- * Routing function to determine next step after RFP analysis - now uses feedbackIntent
+ * Simplified routing function - no longer needs complex logic
+ * Always proceed to strategic validation since approval is handled internally
  */
-export const routeAfterAnalysis = (
+export const routeAfterRfpAnalysis = (
   state: typeof OverallProposalStateAnnotation.State
 ): string => {
-  logger.info("[routeAfterAnalysis] Determining next step");
+  logger.info(
+    "[routeAfterRfpAnalysis] Analysis complete - proceeding to strategic validation"
+  );
 
-  const intent = state.feedbackIntent;
-
-  logger.info("[routeAfterAnalysis] Feedback intent:", intent);
-
-  switch (intent) {
-    case "approve":
-      logger.info(
-        "[routeAfterAnalysis] User approved - proceeding to strategic validation"
-      );
-      return "strategic_validation";
-    case "refine":
-    case "reject":
-      logger.info(
-        "[routeAfterAnalysis] User wants changes - looping back for refinement"
-      );
-      return "rfp_analyzer"; // Loop back for refinement
-    default:
-      logger.info(
-        "[routeAfterAnalysis] No clear intent - defaulting to strategic validation"
-      );
-      return "strategic_validation"; // Safe fallback - let strategic validation handle it
+  // Check for errors
+  if (state.rfpProcessingStatus === ProcessingStatus.ERROR) {
+    return "complete";
   }
+
+  // Analysis was approved internally, proceed to next phase
+  return "strategic_validation";
 };
 
-// Keep existing exports for backward compatibility during transition
-export const routeAfterRfpAnalysis = routeAfterAnalysis;
+// Keep existing export for backward compatibility
+export const routeAfterAnalysis = routeAfterRfpAnalysis;

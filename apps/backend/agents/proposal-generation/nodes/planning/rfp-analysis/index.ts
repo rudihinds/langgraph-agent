@@ -9,11 +9,7 @@ export { userFeedbackProcessor } from "./user_feedback_processor.js";
 export { strategicOptionsRefinement } from "./strategic_options_refinement.js";
 
 // Conditional edge routing functions
-export {
-  routeAfterRfpAnalysis,
-  strategicValidationCheckpoint,
-  routeAfterStrategicValidation,
-} from "./rfp_analyzer.js";
+export { routeAfterRfpAnalysis } from "./rfp_analyzer.js";
 
 export { routeAfterFeedbackProcessing } from "./user_feedback_processor.js";
 
