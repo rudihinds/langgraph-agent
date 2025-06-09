@@ -35,11 +35,20 @@ const logger = {
     console.warn(`[WARN] ${message}`, meta || ""),
 };
 
-// Initialize LLM
-const llm = new ChatAnthropic({
+// Initialize internal LLM with no-stream tag to prevent internal calls from streaming to UI
+const internalLlm = new ChatAnthropic({
   modelName: "claude-3-5-sonnet-20241022",
   temperature: 0.3,
   maxTokens: 4000,
+  tags: ["langsmith:nostream"], // Prevents internal LLM calls from appearing in message stream
+});
+
+// Initialize streaming LLM for user-facing responses
+const streamingLlm = new ChatAnthropic({
+  modelName: "claude-3-5-sonnet-20241022",
+  temperature: 0.3,
+  maxTokens: 4000,
+  // No nostream tag - this will stream to the UI
 });
 
 // Schemas for structured outputs
@@ -228,38 +237,54 @@ export const rfpAnalyzerNode = async (
     };
   }
 
-  // Format and return analysis results immediately (no interrupt)
-  let formattedOutput: { analysis: string; question: string };
+  // Generate streaming user-facing response
+  const userFacingPrompt = `Present this RFP analysis to the user in a clear, professional format with a contextual follow-up question.
+
+ANALYSIS DATA:
+${JSON.stringify(analysis, null, 2)}
+
+STAGE: ${getCurrentAnalysisFromState(state) ? "refined" : "initial"} analysis
+
+Please format this as a comprehensive analysis report with:
+1. Clear section headers
+2. Bullet points for insights, recommendations, and risks
+3. A contextual question asking what the user wants to do next
+
+Make it conversational and professional. Ask if they want to proceed, refine, or start over.`;
+
   try {
-    formattedOutput = await formatAnalysisWithContextualQuestion(
-      analysis,
-      getCurrentAnalysisFromState(state) ? "refined" : "initial"
-    );
+    // Use streaming LLM for user-facing response
+    const streamingResponse = await streamingLlm.invoke([
+      { role: "user", content: userFacingPrompt },
+    ]);
+
+    // Update state with analysis data and streaming message
+    return {
+      planningIntelligence: {
+        ...state.planningIntelligence,
+        rfpCharacteristics: createRfpCharacteristics(analysis),
+        earlyRiskAssessment: createEarlyRiskAssessment(analysis),
+      },
+      messages: [...state.messages, streamingResponse],
+      rfpProcessingStatus: ProcessingStatus.COMPLETE,
+    };
   } catch (error) {
-    logger.error("[RFP Analyzer] Failed to format analysis", error);
-    // Fallback to simple formatting
-    formattedOutput = {
-      analysis: formatSimpleAnalysis(analysis),
-      question:
-        "Would you like me to proceed with this analysis, refine it, or start over?",
+    logger.error("[RFP Analyzer] Failed to generate streaming response", error);
+    // Fallback to formatted static message
+    const fallbackAnalysis = formatSimpleAnalysis(analysis);
+    return {
+      planningIntelligence: {
+        ...state.planningIntelligence,
+        rfpCharacteristics: createRfpCharacteristics(analysis),
+        earlyRiskAssessment: createEarlyRiskAssessment(analysis),
+      },
+      messages: [
+        ...state.messages,
+        new AIMessage(`${fallbackAnalysis}\n\nHow would you like to proceed?`),
+      ],
+      rfpProcessingStatus: ProcessingStatus.COMPLETE,
     };
   }
-
-  // Return analysis results immediately without interrupt
-  return {
-    planningIntelligence: {
-      ...state.planningIntelligence,
-      rfpCharacteristics: createRfpCharacteristics(analysis),
-      earlyRiskAssessment: createEarlyRiskAssessment(analysis),
-    },
-    messages: [
-      ...state.messages,
-      new AIMessage(
-        `${formattedOutput.analysis}\n\n---\n\n${formattedOutput.question}`
-      ),
-    ],
-    rfpProcessingStatus: ProcessingStatus.COMPLETE,
-  };
 };
 
 /**
@@ -288,7 +313,7 @@ Please provide your analysis in the following JSON format:
 
 Focus on strategic insights that will guide proposal development. Be specific and actionable.`;
 
-  const response = await llm.invoke([
+  const response = await internalLlm.invoke([
     { role: "user", content: analysisPrompt },
   ]);
 
@@ -339,7 +364,7 @@ Generate a JSON response with a contextual question that helps the user understa
 }`;
 
   try {
-    const response = await llm.invoke([
+    const response = await internalLlm.invoke([
       { role: "user", content: questionPrompt },
     ]);
     const cleanResponse = (response.content as string)
@@ -429,7 +454,7 @@ INTENT GUIDELINES:
 - "refine": User wants improvements/changes to current analysis
 - "reject": User wants to completely start over`;
 
-  const response = await llm.invoke([
+  const response = await internalLlm.invoke([
     { role: "user", content: interpretPrompt },
   ]);
   const cleanResponse = (response.content as string)
@@ -472,7 +497,7 @@ Please provide a refined analysis that addresses the user's feedback while maint
 
 Make specific improvements based on the feedback while keeping what works well.`;
 
-  const response = await llm.invoke([
+  const response = await internalLlm.invoke([
     { role: "user", content: refinementPrompt },
   ]);
   const cleanResponse = (response.content as string)
