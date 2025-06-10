@@ -95,19 +95,21 @@ export async function rfpAnalyzer(
   const systemPrompt = hasAnalysis
     ? `You are an RFP analysis expert. The user has provided feedback on your previous analysis. 
        Refine your analysis based on their feedback. Consider the entire conversation history.`
-    : `You are an RFP analysis expert. Analyze this RFP document and provide strategic insights.
+    : `You are an RFP analysis expert. I have an RFP document that needs analysis. Please provide strategic insights.
+       
+       Start with a brief acknowledgment that you're analyzing the document, then provide:
        
        RFP Document:
        ${rfpContent}
        
-       Include:
+       Analysis should include:
        1. Complexity assessment (Simple/Medium/Complex)
        2. Key insights (3-8 points)
        3. Strategic recommendations (3-6 points)  
        4. Risk factors (2-5 points)
        5. Next steps (3-6 points)
        
-       Format as a clear, professional analysis report.`;
+       Format as a clear, professional analysis report with an appropriate greeting.`;
 
   const llmMessages = [
     new SystemMessage(systemPrompt), 
