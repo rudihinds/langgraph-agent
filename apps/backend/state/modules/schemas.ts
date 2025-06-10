@@ -630,7 +630,6 @@ export const OverallProposalStateSchema = z.object({
   userFeedback: userFeedbackSchema.optional(),
 
   // Workflow tracking
-  currentStep: z.string().nullable(),
   activeThreadId: z.string(),
 
   // Communication and errors

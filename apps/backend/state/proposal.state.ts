@@ -319,10 +319,6 @@ export const ProposalStateAnnotation = Annotation.Root({
   }),
 
   // Flow state
-  currentStep: Annotation<string | null>({
-    reducer: lastValueReducer,
-    default: () => null,
-  }),
   status: Annotation<ProcessingStatus>({
     reducer: lastValueReducer,
     default: () => ProcessingStatus.NOT_STARTED,
@@ -509,7 +505,6 @@ export function createInitialState(
     wordLength: undefined,
 
     // Flow state
-    currentStep: null,
     status: ProcessingStatus.NOT_STARTED,
 
     // Interrupt handling
@@ -659,7 +654,6 @@ export function createInitialProposalState(
     userFeedback: undefined,
 
     // Workflow tracking
-    currentStep: null,
     activeThreadId: sessionId,
 
     // Communication and errors

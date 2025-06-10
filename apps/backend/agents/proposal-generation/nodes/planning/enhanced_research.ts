@@ -219,9 +219,7 @@ function assessReassessmentNeeds(content: string, funderName: string): any {
 export async function enhancedResearchNode(
   state: typeof OverallProposalStateAnnotation.State
 ): Promise<Partial<typeof OverallProposalStateAnnotation.State>> {
-  logger.info("Enhanced Research Agent starting", {
-    currentStep: state.currentStep,
-  });
+  logger.info("Enhanced Research Agent starting");
 
   try {
     // Create Claude 3.5 model with BOTH web search and deep research tools
@@ -376,7 +374,6 @@ Begin by using web_search to gather recent information about ${funderName}, then
       // Standard flow control fields
       researchStatus: ProcessingStatus.COMPLETE,
       lastUpdatedAt: new Date().toISOString(),
-      currentStep: "enhanced_research_completed",
     };
 
     logger.info("Enhanced Research Agent completed with dual-tool strategy", {
@@ -395,7 +392,6 @@ Begin by using web_search to gather recent information about ${funderName}, then
 
     return {
       researchStatus: ProcessingStatus.ERROR,
-      currentStep: "enhanced_research_error",
       errors: [
         `Enhanced Research error: ${error instanceof Error ? error.message : "Unknown error"}`,
       ],

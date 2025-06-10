@@ -178,7 +178,6 @@ export async function sectionManagerNode(
   return {
     sections: sectionsMap,
     requiredSections,
-    currentStep: "section_generation",
     status: ProcessingStatus.RUNNING,
   };
 }

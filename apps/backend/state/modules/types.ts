@@ -705,7 +705,6 @@ export interface OverallProposalState {
   };
 
   // Workflow tracking
-  currentStep?: string | null;
   activeThreadId?: string;
 
   // Communication and errors

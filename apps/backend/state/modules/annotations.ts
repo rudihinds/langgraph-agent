@@ -128,10 +128,6 @@ export const OverallProposalStateAnnotation = Annotation.Root({
   }),
 
   // Workflow tracking
-  currentStep: Annotation<string | null>({
-    default: () => null,
-    value: (existing, newValue) => newValue ?? existing,
-  }),
   activeThreadId: Annotation<string>({
     // No default as this is required at creation time
     value: (existing, newValue) => newValue ?? existing,
@@ -311,11 +307,7 @@ export const OverallProposalStateAnnotation = Annotation.Root({
   }),
 
   // ===== RFP DOCUMENT ENHANCEMENTS =====
-
-  rfpProcessingStatus: Annotation<ProcessingStatus>({
-    default: () => ProcessingStatus.QUEUED,
-    value: lastValueWinsReducerStrict,
-  }),
+  // (rfpProcessingStatus already defined above)
 });
 
 // Define a type for accessing the state based on the annotation

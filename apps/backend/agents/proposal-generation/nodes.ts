@@ -246,7 +246,6 @@ export const deepResearchNode = async (
   // Placeholder implementation
   return {
     researchStatus: ProcessingStatus.RUNNING,
-    currentStep: "research",
   };
 };
 
@@ -260,7 +259,6 @@ export const solutionSoughtNode = async (
   // Placeholder implementation
   return {
     solutionStatus: ProcessingStatus.RUNNING,
-    currentStep: "solution",
   };
 };
 
@@ -274,7 +272,6 @@ export const connectionPairsNode = async (
   // Placeholder implementation
   return {
     connectionsStatus: ProcessingStatus.RUNNING,
-    currentStep: "connections",
   };
 };
 

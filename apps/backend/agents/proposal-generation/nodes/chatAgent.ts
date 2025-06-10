@@ -5,7 +5,7 @@
  *
  * Key components:
  * 1. chatAgentNode - The main function that processes messages and generates responses
- * 2. shouldContinueChat - Determines the next step in the workflow based on message state
+ * 2. routeFromChatAgent - LangGraph-native routing function based on state data
  * 3. Helper functions for parsing and processing messages
  *
  * The system follows a structured workflow:
@@ -75,30 +75,6 @@ export async function chatAgentNode(
   if (messages.length === 0) return {};
 
   const last = messages[messages.length - 1];
-
-  // STEP 1.1 FIX: Use Command pattern for feedback routing (LangGraph convention)
-  // Check if we have RFP analysis completion based on state structure instead of currentStep
-  const hasCompletedAnalysis =
-    state.planningIntelligence?.rfpCharacteristics &&
-    state.planningIntelligence?.earlyRiskAssessment;
-
-  if (hasCompletedAnalysis && last instanceof HumanMessage) {
-    console.log(
-      "ChatAgentNode: Feedback detected, routing directly to userFeedbackProcessor using Command pattern"
-    );
-
-    return new Command({
-      update: {
-        // Store the feedback message and mark as user feedback
-        messages: [...messages],
-        intent: {
-          command: "process_feedback",
-          requestDetails: last.content,
-        },
-      },
-      goto: "userFeedbackProcessor",
-    });
-  }
 
   // Enhanced logging to identify exact message type
   console.log(
@@ -175,7 +151,7 @@ export async function chatAgentNode(
     // ** CORRECTED LOGIC: **
     // This node's responsibility ends after processing the tool result
     // and setting the intent. It should NOT generate a user-facing reply here.
-    // The graph routing logic (shouldContinueChat) will use the updated intent
+    // The graph routing logic (routeFromChatAgent) will use the updated intent
     // to determine the next step, and *that* step will handle the next user interaction.
 
     console.log(
@@ -201,7 +177,7 @@ export async function chatAgentNode(
     }).bindTools([interpretIntentTool]);
 
     // STEP 1.1 FIX: Simplified system prompt - no routing decisions
-    // shouldContinueChat() handles all routing, this node just processes messages
+    // routeFromChatAgent() handles all routing, this node just processes messages
     const systemPrompt = `You are a helpful assistant for a proposal generation system.
 
 WHEN TO USE TOOLS:
@@ -270,92 +246,49 @@ Be helpful, conversational and concise. The system will handle workflow routing 
 }
 
 /**
- * Determines the next node in the workflow based on the current state.
- * STEP 1.1: Ultra-simplified routing following LangGraph patterns.
- *
- * Routes to:
- * - "userFeedbackProcessor" when user provides feedback after analysis completion
- * - "chatTools" when tool calls are pending
- * - "startAnalysis" when ready for RFP analysis
- * - "loadDocument" when RFP needs to be loaded
- * - "answerQuestion" for normal conversation
- * - "__end__" when no further action is needed
- *
- * @param state - The current state of the proposal workflow
- * @returns The key of the next node to execute
+ * LangGraph-native routing function for chat agent
+ * Routes based on state data following LangGraph best practices
  */
-export function shouldContinueChat(
+export function routeFromChatAgent(
   state: typeof OverallProposalStateAnnotation.State
 ): string {
-  console.log("\n--------- shouldContinueChat START (SIMPLIFIED) ---------");
-  console.log("RFP ID:", state.metadata?.rfpId);
-  console.log("Auto-started:", state.metadata?.autoStarted);
+  console.log("[routeFromChatAgent] Determining next step");
 
   const msgs = state.messages;
   if (!msgs || msgs.length === 0) {
-    console.log("shouldContinueChat: No messages, ending");
+    console.log("[routeFromChatAgent] → __end__: No messages");
     return "__end__";
   }
 
-  const last = msgs[msgs.length - 1];
-  if (!last) {
-    console.log("shouldContinueChat: No last message, ending");
-    return "__end__";
-  }
+  const lastMessage = msgs[msgs.length - 1];
 
-  // Priority 1: If RFP analysis complete, user input = feedback
-  const hasCompletedAnalysis =
-    state.planningIntelligence?.rfpCharacteristics &&
-    state.planningIntelligence?.earlyRiskAssessment;
-
-  if (hasCompletedAnalysis && last instanceof HumanMessage) {
-    console.log(
-      "shouldContinueChat: Analysis complete, routing to feedback processor"
-    );
-    return "userFeedbackProcessor";
-  }
-
-  // Priority 2: Tool calls need processing
-  const hasToolCalls = checkForToolCalls(last);
+  // Check for tool calls that need processing
+  const hasToolCalls = checkForToolCalls(lastMessage);
   if (hasToolCalls) {
-    console.log("shouldContinueChat: Tool calls found, routing to chatTools");
+    console.log("[routeFromChatAgent] → chatTools: Tool calls detected");
     return "chatTools";
   }
 
-  // Priority 3: RFP flow (either starting or continuing auto-started flow)
+  // Check if we have an RFP to process
   if (state.metadata?.rfpId) {
-    // Case 3a: RFP not started yet
-    if (!state.metadata?.autoStarted) {
-      console.log(
-        "shouldContinueChat: RFP ready for analysis, routing to startAnalysis"
-      );
-      return "startAnalysis";
-    }
-
-    // Case 3b: RFP auto-started, check document status
+    // Check if document is loaded
     const isDocumentLoaded =
       state.rfpDocument &&
       state.rfpDocument.status === "loaded" &&
       (state.rfpDocument.text || state.rfpDocument.metadata?.raw);
 
-    if (isDocumentLoaded) {
-      console.log(
-        "shouldContinueChat: Document loaded, routing to startAnalysis"
-      );
-      return "startAnalysis";
+    if (!isDocumentLoaded) {
+      console.log("[routeFromChatAgent] → documentLoader: Need to load document");
+      return "documentLoader";
     } else {
-      console.log(
-        "shouldContinueChat: Document not loaded, routing to loadDocument"
-      );
-      return "loadDocument";
+      console.log("[routeFromChatAgent] → rfpAnalyzer: Document ready for analysis");
+      return "rfpAnalyzer";
     }
   }
 
-  // Priority 4: Continue conversation
-  console.log(
-    "shouldContinueChat: Normal conversation, routing to answerQuestion"
-  );
-  return "answerQuestion";
+  // Default: continue conversation
+  console.log("[routeFromChatAgent] → __end__: Normal conversation complete");
+  return "__end__";
 }
 
 /**

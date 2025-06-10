@@ -68,7 +68,6 @@ export function createInitialProposalState(
       processingStatus: null,
     },
 
-    currentStep: null,
     activeThreadId: threadId,
     messages: [],
     errors: [],

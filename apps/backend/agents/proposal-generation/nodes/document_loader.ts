@@ -11,6 +11,7 @@ import { serverSupabase } from "../../../lib/supabase/client.js";
 import { parseRfpFromBuffer } from "../../../lib/parsers/rfp.js";
 import { ProposalDocumentService } from "../../../lib/db/proposal-documents.js";
 import { Logger } from "../../../lib/logger.js";
+import { Command } from "@langchain/langgraph";
 
 const logger = Logger.getInstance();
 const BUCKET_NAME = "proposal-documents";
@@ -50,40 +51,45 @@ enum ErrorType {
 }
 
 /**
- * Creates an error state for document loading
+ * Creates an error command for document loading
  *
  * @param state Current state
  * @param errorType Type of error that occurred
  * @param errorMessage Detailed error message
  * @param rfpId The extracted rfpId that was being processed
  * @param clientType Client used during the operation
- * @returns Updated state with error information
+ * @returns Command with error information and routing to chatAgent
  */
-function createErrorState(
+function createErrorCommand(
   state: typeof OverallProposalStateAnnotation.State,
   errorType: ErrorType,
   errorMessage: string,
   rfpId: string,
   clientType?: ClientType
-): Partial<typeof OverallProposalStateAnnotation.State> {
+): Command {
   logger.error(`Document loading error: ${errorType} - ${errorMessage}`, {
     rfpId,
     clientType,
   });
 
-  return {
-    rfpDocument: {
-      ...state.rfpDocument,
-      id: rfpId,
-      status: LoadingStatus.ERROR,
-      metadata: {
-        errorType,
-        error: errorMessage,
-        clientType,
-        timestamp: new Date().toISOString(),
+  return new Command({
+    goto: "chatAgent",
+    update: {
+      rfpDocument: {
+        ...state.rfpDocument,
+        id: rfpId,
+        status: LoadingStatus.ERROR,
+        metadata: {
+          errorType,
+          error: errorMessage,
+          clientType,
+          timestamp: new Date().toISOString(),
+        },
       },
+      currentStatus: `Document loading failed: ${errorMessage}`,
+      isAnalyzingRfp: false,
     },
-  };
+  });
 }
 
 /**
@@ -95,12 +101,12 @@ function createErrorState(
  *
  * @param state Current proposal state
  * @param context Optional context containing authenticated client and user info
- * @returns Updated state with document content or error information
+ * @returns Command with document content or error information
  */
 export const documentLoaderNode = async (
   state: typeof OverallProposalStateAnnotation.State,
   context?: { supabase?: StorageClient; user?: { id: string } }
-): Promise<Partial<typeof OverallProposalStateAnnotation.State>> => {
+): Promise<Command> => {
   // CRITICAL FIX: Extract rfpId from metadata first (auto-start flow), then fallback to other sources
   const rfpId =
     state.metadata?.rfpId ||
@@ -109,7 +115,7 @@ export const documentLoaderNode = async (
 
   // Validate that we have an rfpId to work with
   if (!rfpId) {
-    return createErrorState(
+    return createErrorCommand(
       state,
       ErrorType.MISSING_INPUT,
       "Missing rfpId in state metadata, rfpDocument.id, or intent.requestDetails",
@@ -139,7 +145,7 @@ export const documentLoaderNode = async (
 
     // Handle case where no document record is found
     if (!documentRecord) {
-      return createErrorState(
+      return createErrorCommand(
         state,
         ErrorType.DOCUMENT_NOT_FOUND,
         `No document record found for proposal_id: ${rfpId}`,
@@ -170,24 +176,29 @@ export const documentLoaderNode = async (
         }
       );
 
-      return {
-        rfpDocument: {
-          ...state.rfpDocument,
-          id: rfpId,
-          status: LoadingStatus.LOADED,
-          text: documentRecord.parsed_text,
-          metadata: {
-            documentId: documentRecord.id,
-            fileName: documentRecord.file_name,
-            fileType: documentRecord.file_type,
-            sizeBytes: documentRecord.size_bytes,
-            clientType,
-            loadedAt: new Date().toISOString(),
-            source: "cached_parsed_text",
-            raw: documentRecord.parsed_text,
+      return new Command({
+        goto: "rfpAnalyzer",
+        update: {
+          rfpDocument: {
+            ...state.rfpDocument,
+            id: rfpId,
+            status: LoadingStatus.LOADED,
+            text: documentRecord.parsed_text,
+            metadata: {
+              documentId: documentRecord.id,
+              fileName: documentRecord.file_name,
+              fileType: documentRecord.file_type,
+              sizeBytes: documentRecord.size_bytes,
+              clientType,
+              loadedAt: new Date().toISOString(),
+              source: "cached_parsed_text",
+              raw: documentRecord.parsed_text,
+            },
           },
+          currentStatus: "Document loaded successfully. Starting analysis...",
+          isAnalyzingRfp: true,
         },
-      };
+      });
     }
 
     // Step 3: Download document from storage using the actual file path
@@ -227,7 +238,7 @@ export const documentLoaderNode = async (
         errorType = ErrorType.DOCUMENT_NOT_FOUND;
       }
 
-      return createErrorState(
+      return createErrorCommand(
         state,
         errorType,
         `Storage download failed: ${error.message}`,
@@ -238,7 +249,7 @@ export const documentLoaderNode = async (
 
     // Process document data
     if (!data) {
-      return createErrorState(
+      return createErrorCommand(
         state,
         ErrorType.DOCUMENT_NOT_FOUND,
         "No data returned from storage",
@@ -290,26 +301,30 @@ export const documentLoaderNode = async (
         docMetadata
       );
 
-      return {
-        ...state,
-        rfpDocument: {
-          id: rfpId,
-          status: "loaded" as LoadingStatus,
-          text: text,
-          metadata: {
-            ...docMetadata,
-            documentId: documentRecord.id,
-            fileName: documentRecord.file_name,
-            fileType: documentRecord.file_type,
-            sizeBytes: buffer.length,
-            filePath: documentRecord.file_path,
-            clientType: "server",
-            loadedAt: new Date().toISOString(),
-            source: "storage_download_and_parse",
-            raw: text,
+      return new Command({
+        goto: "rfpAnalyzer",
+        update: {
+          rfpDocument: {
+            id: rfpId,
+            status: "loaded" as LoadingStatus,
+            text: text,
+            metadata: {
+              ...docMetadata,
+              documentId: documentRecord.id,
+              fileName: documentRecord.file_name,
+              fileType: documentRecord.file_type,
+              sizeBytes: buffer.length,
+              filePath: documentRecord.file_path,
+              clientType: "server",
+              loadedAt: new Date().toISOString(),
+              source: "storage_download_and_parse",
+              raw: text,
+            },
           },
+          currentStatus: "Document loaded and parsed successfully. Starting analysis...",
+          isAnalyzingRfp: true,
         },
-      };
+      });
     } catch (e) {
       // Handle parsing errors separately
       logger.error(
@@ -341,7 +356,7 @@ export const documentLoaderNode = async (
         );
       }
 
-      return createErrorState(
+      return createErrorCommand(
         state,
         ErrorType.PARSING_ERROR,
         detailMessage || "Error parsing document content or converting data",
@@ -361,7 +376,7 @@ export const documentLoaderNode = async (
     );
 
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorState(
+    return createErrorCommand(
       state,
       ErrorType.UNKNOWN,
       errorMessage,
@@ -371,36 +386,5 @@ export const documentLoaderNode = async (
   }
 };
 
-/**
- * Routing function to determine next step after document loading
- */
-export const routeAfterDocumentLoading = (
-  state: typeof OverallProposalStateAnnotation.State
-): string => {
-  console.log("[routeAfterDocumentLoading] Checking document loading status");
-
-  // Check if document loading failed
-  if (state.rfpDocument?.status === LoadingStatus.ERROR) {
-    console.log(
-      "[routeAfterDocumentLoading] Document loading failed, routing back to chat"
-    );
-    return "chatAgent";
-  }
-
-  // Check if document was successfully loaded
-  if (
-    state.rfpDocument?.status === LoadingStatus.LOADED &&
-    state.rfpDocument?.text
-  ) {
-    console.log(
-      "[routeAfterDocumentLoading] Document loaded successfully, proceeding to RFP analysis"
-    );
-    return "rfpAnalyzer";
-  }
-
-  // Fallback - if status is unclear, route back to chat
-  console.log(
-    "[routeAfterDocumentLoading] Document status unclear, routing back to chat"
-  );
-  return "chatAgent";
-};
+// Note: routeAfterDocumentLoading function removed - documentLoader now uses Command pattern
+// for integrated state updates and routing decisions within the node itself

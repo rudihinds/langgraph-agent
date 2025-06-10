@@ -1,19 +1,15 @@
 /**
- * RFP Analysis Module - Focused RFP analysis with intelligent user collaboration
- * Exports all nodes and routing functions for the RFP analysis subgraph
+ * RFP Analysis Module - LangGraph-native multi-agent implementation
  */
 
-// Main analysis and feedback processing nodes
-export { rfpAnalyzerNode } from "./rfp_analyzer.js";
-export { userFeedbackProcessor } from "./user_feedback_processor.js";
-export { strategicOptionsRefinement } from "./strategic_options_refinement.js";
-
-// Conditional edge routing functions
-export { routeAfterRfpAnalysis } from "./rfp_analyzer.js";
-
-export { routeAfterFeedbackProcessing } from "./user_feedback_processor.js";
-
-export { routeAfterStrategicRefinement } from "./strategic_options_refinement.js";
+// Export V2 nodes
+export {
+  rfpAnalyzer,
+  humanReview,
+  feedbackRouter,
+  approvalHandler,
+  rejectionHandler
+} from "./rfp_analyzer_v2.js";
 
 // Re-export key types for convenience
 export type { OverallProposalState } from "@/state/modules/types.js";
