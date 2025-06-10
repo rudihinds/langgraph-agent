@@ -2,7 +2,13 @@
  * Utility functions for state management
  */
 import { OverallProposalStateSchema } from "./schemas.js";
-import { OverallProposalState, SectionType, SectionData } from "./types.js";
+import {
+  OverallProposalState,
+  SectionType,
+  SectionData,
+  ProposalSection,
+  RfpDocument,
+} from "./types.js";
 import { ProcessingStatus, LoadingStatus } from "./constants.js";
 
 /**
@@ -14,20 +20,44 @@ import { ProcessingStatus, LoadingStatus } from "./constants.js";
  */
 export function createInitialProposalState(
   threadId: string,
-  userId?: string,
+  userId: string = "default-user",
+  proposalId: string = "default-proposal",
+  sessionId: string = "default-session",
   projectName?: string
 ): OverallProposalState {
   const timestamp = new Date().toISOString();
 
-  return {
-    rfpDocument: {
-      id: "",
-      status: LoadingStatus.NOT_STARTED,
+  const rfpDocument: RfpDocument = {
+    raw: "",
+    parsed: {
+      sections: [],
+      requirements: [],
+      evaluationCriteria: [],
     },
-    researchStatus: ProcessingStatus.QUEUED,
-    solutionStatus: ProcessingStatus.QUEUED,
-    connectionsStatus: ProcessingStatus.QUEUED,
-    sections: new Map(),
+    metadata: {
+      title: "",
+      organization: "",
+      submissionDeadline: "",
+      pageLimit: 0,
+      formatRequirements: [],
+    },
+  };
+
+  return {
+    // Required core fields
+    userId,
+    sessionId,
+    proposalId,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    lastUpdatedAt: timestamp,
+
+    // Document handling
+    rfpDocument,
+    rfpProcessingStatus: ProcessingStatus.NOT_STARTED,
+
+    // Section processing - using Record as defined in types
+    sections: {},
     requiredSections: [],
 
     // Initial HITL interrupt state
@@ -38,15 +68,16 @@ export function createInitialProposalState(
       processingStatus: null,
     },
 
-    currentStep: null,
     activeThreadId: threadId,
     messages: [],
     errors: [],
-    userId,
     projectName,
-    createdAt: timestamp,
-    lastUpdatedAt: timestamp,
-    status: ProcessingStatus.QUEUED,
+    status: ProcessingStatus.NOT_STARTED,
+
+    // Legacy fields for backward compatibility
+    researchStatus: ProcessingStatus.NOT_STARTED,
+    solutionStatus: ProcessingStatus.NOT_STARTED,
+    connectionsStatus: ProcessingStatus.NOT_STARTED,
   };
 }
 
@@ -56,7 +87,7 @@ export function createInitialProposalState(
  * @returns The validated state or throws error if invalid
  */
 export function validateProposalState(
-  state: OverallProposalState
+  state: Partial<OverallProposalState>
 ): OverallProposalState {
   return OverallProposalStateSchema.parse(state);
 }
@@ -95,32 +126,24 @@ export function isSectionReady(
       SectionType.PROBLEM_STATEMENT,
       SectionType.METHODOLOGY,
     ],
-    [SectionType.OUTCOMES]: [SectionType.SOLUTION],
     [SectionType.BUDGET]: [SectionType.METHODOLOGY, SectionType.SOLUTION],
     [SectionType.TIMELINE]: [
       SectionType.METHODOLOGY,
       SectionType.BUDGET,
       SectionType.SOLUTION,
     ],
-    [SectionType.TEAM]: [SectionType.METHODOLOGY, SectionType.SOLUTION],
-    [SectionType.EVALUATION_PLAN]: [SectionType.SOLUTION, SectionType.OUTCOMES],
-    [SectionType.SUSTAINABILITY]: [
-      SectionType.SOLUTION,
-      SectionType.BUDGET,
-      SectionType.TIMELINE,
-    ],
-    [SectionType.RISKS]: [
-      SectionType.SOLUTION,
-      SectionType.TIMELINE,
-      SectionType.TEAM,
-    ],
     [SectionType.CONCLUSION]: [
       SectionType.PROBLEM_STATEMENT,
       SectionType.SOLUTION,
-      SectionType.OUTCOMES,
       SectionType.BUDGET,
       SectionType.TIMELINE,
     ],
+    // Add all sections from SectionType enum
+    [SectionType.ORGANIZATIONAL_CAPACITY]: [SectionType.PROBLEM_STATEMENT],
+    [SectionType.IMPLEMENTATION_PLAN]: [SectionType.SOLUTION],
+    [SectionType.EVALUATION]: [SectionType.SOLUTION],
+    [SectionType.EXECUTIVE_SUMMARY]: [SectionType.SOLUTION, SectionType.BUDGET],
+    [SectionType.STAKEHOLDER_ANALYSIS]: [SectionType.PROBLEM_STATEMENT],
   };
 
   const sectionDependencies = dependencies[sectionType] || [];
@@ -130,10 +153,10 @@ export function isSectionReady(
     return true;
   }
 
-  // Check if all dependencies are met (APPROVED)
+  // Check if all dependencies are met (APPROVED) - now using Record access
   const allDependenciesMet = sectionDependencies.every((depType) => {
-    const depSection = state.sections.get(depType);
-    // Use enum for check - A dependency is met if it's APPROVED
+    const depSection = state.sections?.[depType];
+    // A dependency is met if it's APPROVED
     return depSection && depSection.status === ProcessingStatus.APPROVED;
   });
 

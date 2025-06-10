@@ -1,5 +1,6 @@
 /**
  * Type definitions for the proposal generation system
+ * Consistent JavaScript camelCase naming throughout
  */
 import { BaseMessage } from "@langchain/core/messages";
 import {
@@ -136,82 +137,607 @@ export interface WordLength {
  * Add intent command enumeration type
  */
 export type UserCommand =
-  | "regenerate_section"
-  | "modify_section"
-  | "approve_section"
-  | "ask_question"
-  | "load_document"
+  | "regenerateSection"
+  | "modifySection"
+  | "approveSection"
+  | "askQuestion"
+  | "loadDocument"
+  | "startAnalysis"
   | "help"
   | "other";
 
 export interface UserIntent {
   command: UserCommand;
   targetSection?: string;
-  request_details?: string;
+  requestDetails?: string;
+}
+
+/**
+ * Enhanced Planning Intelligence interfaces with consistent naming
+ */
+export interface RfpCharacteristics {
+  industry: string;
+  specialization: string;
+  complexity: "Simple" | "Medium" | "Complex";
+  complexityFactors: string[];
+  contractValueEstimate: string;
+  timelinePressure: "Low" | "Medium" | "High";
+  strategicFocus: string[];
+  submissionRequirements: {
+    pageLimit: number | "not_specified";
+    sectionsRequired: string[];
+    attachmentsNeeded: string[];
+  };
+}
+
+export interface EarlyRiskAssessment {
+  riskIndicators: Array<{
+    risk: string;
+    severity: "Low" | "Medium" | "High" | "Critical";
+    category:
+      | "Technical"
+      | "Compliance"
+      | "Competitive"
+      | "Timeline"
+      | "Financial";
+  }>;
+  strategicInsights?: {
+    keyOpportunities: string[];
+    competitiveFactors: string[];
+    requirementPriorities: Array<{
+      requirement: string;
+      priority: "Critical" | "High" | "Medium" | "Low";
+      rationale: string;
+    }>;
+    funderSignals: Array<{
+      signal: string;
+      interpretation: string;
+      confidence: number;
+    }>;
+  };
+  analysisConfidence: number;
+  requiresUserValidation: boolean;
+}
+
+export interface ResearchIntelligence {
+  funderIntelligence: {
+    organizationalPriorities: Array<{
+      priority: string;
+      evidence: string;
+      userValidation: "confirmed" | "corrected" | "unknown";
+      strategicImportance: "High" | "Medium" | "Low";
+      confidence: number;
+    }>;
+    decisionMakers: Array<{
+      name: string;
+      title: string;
+      background: string;
+      userCorrections: string;
+      influenceLevel: "High" | "Medium" | "Low";
+      strategicNotes: string;
+    }>;
+    recentAwards: Array<{
+      winner: string;
+      project: string;
+      awardDate: string;
+      winningFactors: string[];
+      lessonsLearned: string;
+    }>;
+    redFlags: Array<{
+      flag: string;
+      evidence: string;
+      mitigationStrategy: string;
+      severity: "Critical" | "High" | "Medium";
+    }>;
+    languagePreferences: {
+      preferredTerminology: string[];
+      organizationalTone: string;
+      valuesEmphasis: string[];
+    };
+  };
+  researchConfidence: number;
+  additionalResearchRequested: {
+    requested: boolean;
+    focusAreas: string[];
+    researchType: "deepDive" | "specialist";
+    rationale: string;
+  };
+}
+
+export interface IndustryInsights {
+  mandatoryCompliance: Array<{
+    requirement: string;
+    regulationSource: string;
+    complianceMethod: string;
+    verificationNeeded: string;
+    userNotes: string;
+  }>;
+  professionalQualifications: Array<{
+    qualification: string;
+    requiredFor: string;
+    certificationBody: string;
+    typicalCostTime: string;
+  }>;
+  technicalStandards: Array<{
+    standard: string;
+    application: string;
+    performanceBenchmark: string;
+    measurementMethod: string;
+  }>;
+  commonOversights: Array<{
+    oversight: string;
+    frequency: "Very Common" | "Common" | "Occasional";
+    impact: "Elimination" | "Point Deduction" | "Competitive Disadvantage";
+    preventionMethod: string;
+    userExperience: string;
+  }>;
+  evaluationBenchmarks: {
+    technicalCompetence: string;
+    complianceDemonstration: string;
+    qualityIndicators: string[];
+  };
+  industryConfidence: number;
+}
+
+export interface CompetitiveAnalysis {
+  likelyCompetitors: Array<{
+    name: string;
+    probability: "High" | "Medium" | "Low";
+    strengths: string[];
+    weaknesses: string[];
+    typicalPositioning: string;
+    pastPerformanceWithFunder: string;
+    userInsights: string;
+  }>;
+  marketPositioning: {
+    positioningGaps: string[];
+    differentiationOpportunities: string[];
+    competitiveAdvantagesAvailable: string[];
+  };
+  pricingIntelligence: {
+    typicalRange: string;
+    pricingStrategies: string[];
+    costFactors: string[];
+    valuePositioningOpportunities: string[];
+  };
+  winningStrategies: Array<{
+    strategy: string;
+    successExamples: string;
+    applicability: "High" | "Medium" | "Low";
+  }>;
+  competitiveThreats: Array<{
+    threat: string;
+    competitor: string;
+    mitigation: string;
+    urgency: "High" | "Medium" | "Low";
+  }>;
+  competitiveConfidence: number;
+}
+
+export interface RequirementMapping {
+  explicitRequirements: Array<{
+    requirement: string;
+    sourceLocation: string;
+    exactLanguage: string;
+    category: "Technical" | "Administrative" | "Qualification" | "Performance";
+    mandatoryLevel: "Mandatory" | "Optional" | "Preferred";
+    complianceMethod: string;
+    verificationNeeded: string;
+  }>;
+  implicitRequirements: Array<{
+    requirement: string;
+    sourceBasis:
+      | "Industry Standard"
+      | "Funder Pattern"
+      | "User Intelligence"
+      | "Regulatory Compliance";
+    rationale: string;
+    recommendedApproach: string;
+    riskIfMissed: "High" | "Medium" | "Low";
+  }>;
+  requirementPriorities: Array<{
+    requirementId: string;
+    priorityScore: number;
+    priorityBasis: string;
+    competitiveImportance: "Critical" | "Important" | "Standard";
+  }>;
+  requirementInterdependencies: Array<{
+    primaryRequirement: string;
+    dependentRequirements: string[];
+    relationshipType: "Prerequisite" | "Supporting" | "Alternative";
+  }>;
+  complianceRoadmap: {
+    criticalPathRequirements: string[];
+    earlyActionItems: string[];
+    documentationNeeded: string[];
+  };
+  analysisConfidence: number;
+}
+
+export interface EvaluationCriteria {
+  evaluationStages: Array<{
+    stage: string;
+    purpose: string;
+    timeline: string;
+    criteria: string[];
+    eliminationPotential: boolean;
+  }>;
+  realVsStatedWeighting: {
+    statedWeights: Record<string, number>;
+    predictedActualWeights: Record<string, number>;
+    weightingRationale: Record<string, string>;
+  };
+  eliminationFactors: Array<{
+    factor: string;
+    stage: string;
+    evidence: string;
+    mitigation: string;
+  }>;
+  decisionProcess: {
+    primaryEvaluators: string[];
+    decisionMakers: string[];
+    influenceFactors: string[];
+    politicalConsiderations: string[];
+  };
+  scoringMethodology: {
+    scoringApproach: string;
+    evaluatorPriorities: string[];
+    tieBreakingFactors: string[];
+    commonPointDeductions: string[];
+  };
+  successFactors: Array<{
+    factor: string;
+    importance: "Critical" | "Important" | "Helpful";
+    evidenceNeeded: string;
+    competitiveAdvantagePotential: boolean;
+  }>;
+  predictionConfidence: number;
+}
+
+export interface StrategyDecision {
+  selectedApproach: WorkflowType;
+  alternativeApproaches: Array<{
+    name: string;
+    methodology: string;
+    competitivePositioning: string;
+    tradeOffs: string[];
+    bestFor: string;
+  }>;
+  strategicFramework: {
+    positioningStatement: string;
+    valueProposition: string;
+    primaryMessage: string;
+    supportingMessages: string[];
+    winThemes: string[];
+  };
+  proofPointStrategy: Array<{
+    claim: string;
+    evidence: string;
+    source: string;
+    competitiveAdvantage: string;
+    strength: "Strong" | "Moderate" | "Adequate";
+  }>;
+  competitiveDifferentiation: {
+    uniqueStrengths: string[];
+    competitiveAdvantages: string[];
+    marketPositioning: string;
+    differentiationSustainability: string;
+  };
+  riskMitigation: Array<{
+    concern: string;
+    mitigationMessage: string;
+    supportingEvidence: string;
+    confidenceLevel: number;
+  }>;
+  messagingFramework: {
+    keyTerminology: string[];
+    toneAndStyle: string;
+    emphasisAreas: string[];
+    consistencyGuidelines: string[];
+  };
+  strategyConfidence: number;
+}
+
+export interface SolutionSpecification {
+  realPriorities: Array<{
+    priority: string;
+    importanceWeight: number;
+    evidenceBasis: string;
+    requiredApproach: string;
+  }>;
+  optimalSolutionApproach: {
+    methodology: string;
+    keyComponents: string[];
+    differentiatingFactors: string[];
+    successMetrics: string[];
+  };
+  successCriteria: Array<{
+    criterion: string;
+    measurementMethod: string;
+    targetPerformance: string;
+    competitiveBenchmark: string;
+  }>;
+  riskFactors: Array<{
+    risk: string;
+    impact: "Elimination" | "Significant" | "Moderate";
+    mitigationRequired: string;
+    monitoringNeeded: boolean;
+  }>;
+  competitiveRequirements: {
+    mustHaves: string[];
+    differentiators: string[];
+    tableStakes: string[];
+  };
+  solutionConfidence: number;
+}
+
+/**
+ * Consolidated planning intelligence interface
+ */
+export interface PlanningIntelligence {
+  rfpCharacteristics?: RfpCharacteristics;
+  earlyRiskAssessment?: EarlyRiskAssessment;
+  researchIntelligence?: ResearchIntelligence;
+  industryAnalysis?: IndustryInsights;
+  competitiveIntel?: CompetitiveAnalysis;
+  requirementAnalysis?: RequirementMapping;
+  evaluationPrediction?: EvaluationCriteria;
+  strategicApproach?: StrategyDecision;
+  solutionRequirements?: SolutionSpecification;
+}
+
+/**
+ * Simplified feedback processing - just what the LLM needs
+ */
+export interface FeedbackAnalysis {
+  intent: "proceed" | "refine" | "restart";
+  feedback: string;
+  confidence: number;
+  suggestions?: string[];
+}
+
+/**
+ * User collaboration interfaces
+ */
+export interface UserQuery {
+  id: string;
+  question: string;
+  options: string[];
+  multiSelect?: boolean;
+  context?: string;
+  timestamp: string;
+  response?: string;
+  responseTimestamp?: string;
+}
+
+export interface ExpertiseContribution {
+  id: string;
+  type: "correction" | "addition" | "insight" | "preference";
+  subject: string;
+  content: string;
+  timestamp: string;
+  agentId: string;
+  confidence: "High" | "Medium" | "Low";
+}
+
+// Updated UserCollaboration - supporting both old and new patterns during transition
+export interface UserCollaboration {
+  // New simplified pattern for LangGraph interrupt/resume
+  lastFeedback?: {
+    content: string;
+    analysis: FeedbackAnalysis;
+    timestamp: string;
+  };
+  refinementCount?: number;
+  maxRefinements?: number;
+
+  // Legacy pattern - maintained for backward compatibility during transition
+  strategicPriorities?: string[];
+  competitiveAdvantages?: string[];
+  riskFactors?: string[];
+  userQueries?: UserQuery[];
+  expertiseContributions?: ExpertiseContribution[];
+  feedbackHistory?: Record<string, any>;
+  preferredApproach?: string;
+  strategicRecommendations?: {
+    topOpportunities: string[];
+    criticalRequirements: Array<{
+      requirement: string;
+      priority: "Critical" | "High" | "Medium" | "Low";
+      rationale: string;
+    }>;
+    confidenceLevel: number;
+  };
+}
+
+/**
+ * Workflow and processing interfaces
+ */
+export type WorkflowType =
+  | "accelerated"
+  | "standard"
+  | "comprehensive"
+  | "custom";
+
+export interface AdaptiveWorkflow {
+  selectedApproach: WorkflowType;
+  activeAgentSet: string[];
+  complexityLevel: "simple" | "moderate" | "complex";
+  skipReasons: Record<string, string>;
+  currentPhase: "planning" | "writing" | "complete";
+  phaseCompletionStatus: Record<string, boolean>;
+  adaptationTriggers: Array<{
+    trigger: string;
+    reason: string;
+    timestamp: string;
+    actionTaken: string;
+  }>;
+}
+
+// Re-export InterruptProcessingStatus for use in other files
+export { InterruptProcessingStatus };
+
+// Add missing type definitions for proposal generation
+export interface RfpDocument {
+  id?: string;
+  status?: LoadingStatus;
+  text?: string;
+  raw: string;
+  parsed?: {
+    sections: string[];
+    requirements: string[];
+    evaluationCriteria: string[];
+  };
+  metadata?: {
+    title?: string;
+    organization?: string;
+    submissionDeadline?: string;
+    pageLimit?: number;
+    formatRequirements?: string[];
+    documentId?: string;
+    fileName?: string;
+    fileType?: string;
+    sizeBytes?: number;
+    filePath?: string;
+    clientType?: string;
+    loadedAt?: string;
+    source?: string;
+    raw?: string;
+    errorType?: string;
+    error?: string;
+    timestamp?: string;
+    [key: string]: any;
+  };
+}
+
+export interface ProposalSection {
+  id: string;
+  title: string;
+  content: string;
+  status: ProcessingStatus;
+  requirements: string[];
+  evidence: string[];
+  wordCount: number;
+  lastUpdated: string;
+}
+
+export interface SectionEvaluationResults {
+  sectionId: string;
+  score: number;
+  feedback: string;
+  requirementsCovered: string[];
+  improvementSuggestions: string[];
+  evaluatedAt: string;
+}
+
+export interface GenerationApproach {
+  type: "standard" | "accelerated" | "comprehensive";
+  description: string;
+  estimatedTime: string;
+  agentsInvolved: string[];
+}
+
+/**
+ * Master Orchestrator specific types for workflow decision making
+ */
+export type ComplexityLevel = "simple" | "moderate" | "complex";
+
+export type WorkflowApproach = "accelerated" | "standard" | "comprehensive";
+
+export interface WorkflowDecision {
+  approach: WorkflowApproach;
+  rationale: string;
+  agentsRequired: string[];
+  riskFactors: string[];
 }
 
 /**
  * Main state interface for the proposal generation system
  */
 export interface OverallProposalState {
+  // Core identification and metadata
+  userId: string;
+  sessionId: string;
+  proposalId: string;
+  createdAt: string;
+  updatedAt: string;
+
   // Document handling
-  rfpDocument: {
-    id: string;
-    fileName?: string;
-    text?: string;
-    metadata?: Record<string, any>;
-    status: LoadingStatus;
-  };
+  rfpDocument?: RfpDocument;
+  rfpProcessingStatus?: ProcessingStatus;
 
-  // Research phase
-  researchResults?: Record<string, any>;
-  researchStatus: ProcessingStatus;
-  researchEvaluation?: EvaluationResult | null;
+  // Enhanced Planning Intelligence (replaces old research/solution/connections)
+  planningIntelligence?: PlanningIntelligence;
+  userCollaboration?: UserCollaboration;
+  adaptiveWorkflow?: AdaptiveWorkflow;
+  currentPhase?: "planning" | "writing" | "complete";
 
-  // Solution sought phase
-  solutionResults?: Record<string, any>;
-  solutionStatus: ProcessingStatus;
-  solutionEvaluation?: EvaluationResult | null;
+  // Section processing
+  sections?: Record<string, ProposalSection>;
+  sectionDiscoveryStatus?: ProcessingStatus;
+  currentSectionBeingProcessed?: string;
+  requiredSections?: SectionType[];
 
-  // Connection pairs phase
-  connections?: any[];
-  connectionsStatus: ProcessingStatus;
-  connectionsEvaluation?: EvaluationResult | null;
-
-  // Proposal sections
-  sections: Map<SectionType, SectionData>;
-  requiredSections: SectionType[];
+  // Section generation and evaluation
+  evaluationStatus?: ProcessingStatus;
+  evaluationResults?: SectionEvaluationResults;
+  evaluationCriteria?: EvaluationCriteria;
 
   // Tool interaction tracking per section
   sectionToolMessages?: Record<string, SectionToolInteraction>;
 
-  // Fields for applicant and funder info
+  // Participant information
   funder?: Funder;
   applicant?: Applicant;
   wordLength?: WordLength;
 
   // HITL Interrupt handling
-  interruptStatus: InterruptStatus;
+  interruptStatus?: InterruptStatus;
   interruptMetadata?: InterruptMetadata;
   userFeedback?: UserFeedback;
 
+  // Feedback processing state
+  feedbackProcessing?: {
+    lastProcessedFeedback?: any;
+    processingTimestamp?: string;
+    nextAction?: string;
+    requiresLimitCheck?: boolean;
+  };
+
   // Workflow tracking
-  currentStep: string | null;
-  activeThreadId: string;
+  activeThreadId?: string;
 
   // Communication and errors
   messages: BaseMessage[];
-  errors: string[];
+  errors?: string[];
 
   // Chat router fields
   intent?: UserIntent;
 
   // Metadata
   projectName?: string;
-  userId?: string;
-  createdAt: string;
   lastUpdatedAt: string;
 
-  // Status for the overall proposal generation process
-  status: ProcessingStatus;
+  // Overall status
+  status?: ProcessingStatus;
+
+  // Status communication fields for RFP auto-analysis flow
+  currentStatus?: string;
+  isAnalyzingRfp?: boolean;
+  metadata?: {
+    rfpId?: string;
+    autoStarted?: boolean;
+    [key: string]: any;
+  };
+
+  // Legacy fields for backward compatibility (will be removed)
+  researchResults?: any;
+  researchStatus?: ProcessingStatus;
+  researchEvaluation?: EvaluationResult | null;
+  solutionResults?: Record<string, any>;
+  solutionStatus?: ProcessingStatus;
+  solutionEvaluation?: EvaluationResult | null;
+  connections?: any[];
+  connectionsStatus?: ProcessingStatus;
+  connectionsEvaluation?: EvaluationResult | null;
 }

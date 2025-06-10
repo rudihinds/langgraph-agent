@@ -2,38 +2,37 @@
  * Tests for the proposal state management
  */
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
+import { SectionType } from "../modules/constants.js";
+import { ProcessingStatus, ProposalSection } from "../modules/types.js";
 import {
   OverallProposalState,
   ProposalStateAnnotation,
-  SectionData,
   createInitialProposalState,
   sectionsReducer,
   errorsReducer,
   validateProposalState,
-} from "../proposal.state";
+} from "../proposal.state.ts";
 
 describe("Proposal State Management", () => {
   describe("Initial State Creation", () => {
     it("should create a valid initial state", () => {
-      const threadId = "test-thread-123";
       const userId = "user-123";
-      const projectName = "Test Project";
+      const sessionId = "test-thread-123";
 
-      const state = createInitialProposalState(threadId, userId, projectName);
+      const state = createInitialProposalState(userId, sessionId);
 
-      expect(state.activeThreadId).toBe(threadId);
+      expect(state.activeThreadId).toBe(sessionId);
       expect(state.userId).toBe(userId);
-      expect(state.projectName).toBe(projectName);
-      expect(state.rfpDocument.status).toBe("not_started");
-      expect(state.researchStatus).toBe("queued");
-      expect(state.sections).toEqual(new Map());
+      expect(state.rfpProcessingStatus).toBe(ProcessingStatus.NOT_STARTED);
+      expect(state.researchStatus).toBe(ProcessingStatus.NOT_STARTED);
+      expect(state.sections).toEqual({});
       expect(state.requiredSections).toEqual([]);
       expect(state.messages).toEqual([]);
       expect(state.errors).toEqual([]);
     });
 
     it("should validate the initial state", () => {
-      const state = createInitialProposalState("thread-123");
+      const state = createInitialProposalState("user-123", "thread-123");
 
       // Should not throw
       const validatedState = validateProposalState(state);
@@ -44,96 +43,107 @@ describe("Proposal State Management", () => {
   describe("State Reducers", () => {
     describe("sectionsReducer", () => {
       it("should add a new section", () => {
-        const initialSections = new Map<SectionType, SectionData>();
-        const newSection: Partial<SectionData> & { id: SectionType } = {
-          id: "introduction",
-          content: "This is the introduction",
-          status: "queued",
+        const initialSections: Record<string, ProposalSection> = {};
+        const newSection: Record<string, ProposalSection> = {
+          introduction: {
+            id: "introduction",
+            title: "Introduction",
+            content: "This is the introduction",
+            status: ProcessingStatus.RUNNING,
+            requirements: [],
+            evidence: [],
+            wordCount: 0,
+            lastUpdated: new Date().toISOString(),
+          },
         };
 
         const result = sectionsReducer(initialSections, newSection);
 
-        expect(result.get("introduction")).toBeDefined();
-        expect(result.get("introduction")?.id).toBe("introduction");
-        expect(result.get("introduction")?.content).toBe(
-          "This is the introduction"
-        );
-        expect(result.get("introduction")?.status).toBe("queued");
-        expect(result.get("introduction")?.lastUpdated).toBeDefined();
+        expect(result.introduction).toBeDefined();
+        expect(result.introduction.id).toBe("introduction");
+        expect(result.introduction.content).toBe("This is the introduction");
+        expect(result.introduction.status).toBe(ProcessingStatus.RUNNING);
+        expect(result.introduction.lastUpdated).toBeDefined();
       });
 
       it("should update an existing section", () => {
-        const initialSections = new Map<SectionType, SectionData>([
-          [
-            "introduction",
-            {
-              id: "introduction",
-              content: "Initial content",
-              status: "queued",
-              lastUpdated: "2023-01-01T00:00:00Z",
-            },
-          ],
-        ]);
+        const initialSections: Record<string, ProposalSection> = {
+          introduction: {
+            id: "introduction",
+            title: "Introduction",
+            content: "Initial content",
+            status: ProcessingStatus.RUNNING,
+            requirements: [],
+            evidence: [],
+            wordCount: 0,
+            lastUpdated: "2023-01-01T00:00:00Z",
+          },
+        };
 
-        const update: Partial<SectionData> & { id: SectionType } = {
-          id: "introduction",
-          content: "New content",
-          status: "approved",
+        const update: Record<string, ProposalSection> = {
+          introduction: {
+            id: "introduction",
+            title: "Introduction",
+            content: "New content",
+            status: ProcessingStatus.COMPLETE,
+            requirements: [],
+            evidence: [],
+            wordCount: 100,
+            lastUpdated: new Date().toISOString(),
+          },
         };
 
         const result = sectionsReducer(initialSections, update);
 
-        expect(result.size).toBe(1);
-        expect(result.get("introduction")?.content).toBe("New content");
-        expect(result.get("introduction")?.status).toBe("approved");
-        expect(result.get("introduction")?.lastUpdated).not.toBe(
+        expect(Object.keys(result)).toHaveLength(1);
+        expect(result.introduction.content).toBe("New content");
+        expect(result.introduction.status).toBe(ProcessingStatus.COMPLETE);
+        expect(result.introduction.lastUpdated).not.toBe(
           "2023-01-01T00:00:00Z"
         );
       });
 
       it("should merge multiple sections", () => {
-        const initialSections = new Map<SectionType, SectionData>([
-          [
-            "introduction",
-            {
-              id: "introduction",
-              content: "Intro content",
-              status: "approved",
-              lastUpdated: "2023-01-01T00:00:00Z",
-            },
-          ],
-        ]);
+        const initialSections: Record<string, ProposalSection> = {
+          introduction: {
+            id: "introduction",
+            title: "Introduction",
+            content: "Intro content",
+            status: ProcessingStatus.COMPLETE,
+            requirements: [],
+            evidence: [],
+            wordCount: 50,
+            lastUpdated: "2023-01-01T00:00:00Z",
+          },
+        };
 
-        const newSections = new Map<SectionType, SectionData>([
-          [
-            "methodology",
-            {
-              id: "methodology",
-              content: "Methodology content",
-              status: "queued",
-              lastUpdated: "2023-01-02T00:00:00Z",
-            },
-          ],
-        ]);
+        const newSections: Record<string, ProposalSection> = {
+          methodology: {
+            id: "methodology",
+            title: "Methodology",
+            content: "Methodology content",
+            status: ProcessingStatus.RUNNING,
+            requirements: [],
+            evidence: [],
+            wordCount: 75,
+            lastUpdated: "2023-01-02T00:00:00Z",
+          },
+        };
 
         const result = sectionsReducer(initialSections, newSections);
 
-        expect(result.size).toBe(2); // Check map size
-        expect(result.get("introduction")).toEqual(
-          initialSections.get("introduction")
-        );
-        expect(result.get("methodology")).toEqual(
-          newSections.get("methodology")
-        );
+        expect(Object.keys(result)).toHaveLength(2);
+        expect(result.introduction).toEqual(initialSections.introduction);
+        expect(result.methodology).toEqual(newSections.methodology);
       });
     });
 
     describe("errorsReducer", () => {
-      it("should add a string error", () => {
+      it("should add error arrays", () => {
         const initialErrors = ["Error 1"];
-        const newError = "Error 2";
+        const newErrors = ["Error 2"];
 
-        const result = errorsReducer(initialErrors, newError);
+        const result = errorsReducer(initialErrors, newErrors);
 
         expect(result).toHaveLength(2);
         expect(result).toEqual(["Error 1", "Error 2"]);
@@ -150,7 +160,7 @@ describe("Proposal State Management", () => {
       });
 
       it("should work with undefined initial value", () => {
-        const result = errorsReducer(undefined, "New error");
+        const result = errorsReducer(undefined, ["New error"]);
 
         expect(result).toHaveLength(1);
         expect(result[0]).toBe("New error");

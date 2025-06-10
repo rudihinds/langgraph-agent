@@ -12,6 +12,12 @@ import {
   interruptStatusReducer,
 } from "../../modules/reducers.js";
 import { SectionType, SectionData } from "../../modules/types.js";
+import { ProcessingStatus } from "../../modules/constants.js";
+import {
+  updateSectionData,
+  updateSectionStatus,
+  addNewSection,
+} from "../../modules/reducers.js";
 
 describe("State Reducers Module", () => {
   describe("sectionsReducer", () => {
@@ -289,6 +295,81 @@ describe("State Reducers Module", () => {
       const result = interruptStatusReducer(current, update);
 
       expect(result.feedback).toBeNull();
+    });
+  });
+
+  describe("updateSectionData", () => {
+    it("should update an existing section", () => {
+      const existingSection: SectionData = {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Original content",
+        status: ProcessingStatus.QUEUED,
+        lastUpdated: "2023-01-01T00:00:00Z",
+      };
+
+      const updateData = {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Updated content",
+        status: ProcessingStatus.GENERATING,
+      };
+
+      const initialSections: Record<string, SectionData> = {
+        [SectionType.PROBLEM_STATEMENT]: existingSection,
+      };
+
+      const result = updateSectionData(initialSections, updateData);
+
+      expect(result[SectionType.PROBLEM_STATEMENT].content).toBe(
+        "Updated content"
+      );
+      expect(result[SectionType.PROBLEM_STATEMENT].status).toBe(
+        ProcessingStatus.GENERATING
+      );
+      expect(result[SectionType.PROBLEM_STATEMENT].lastUpdated).not.toBe(
+        "2023-01-01T00:00:00Z"
+      );
+    });
+
+    it("should update status for an existing section", () => {
+      const existingSection: SectionData = {
+        id: SectionType.PROBLEM_STATEMENT,
+        content: "Content",
+        status: ProcessingStatus.APPROVED,
+        lastUpdated: "2023-01-01T00:00:00Z",
+      };
+
+      const initialSections: Record<string, SectionData> = {
+        [SectionType.PROBLEM_STATEMENT]: existingSection,
+      };
+
+      const result = updateSectionStatus(
+        initialSections,
+        SectionType.PROBLEM_STATEMENT,
+        ProcessingStatus.COMPLETE
+      );
+
+      expect(result[SectionType.PROBLEM_STATEMENT].status).toBe(
+        ProcessingStatus.COMPLETE
+      );
+    });
+
+    it("should add a new section", () => {
+      const newSections: Record<string, SectionData> = {};
+
+      const result = addNewSection(newSections, {
+        id: SectionType.METHODOLOGY,
+        content: "New methodology content",
+        status: ProcessingStatus.QUEUED,
+        lastUpdated: new Date().toISOString(),
+      });
+
+      expect(result[SectionType.METHODOLOGY]).toBeDefined();
+      expect(result[SectionType.METHODOLOGY].content).toBe(
+        "New methodology content"
+      );
+      expect(result[SectionType.METHODOLOGY].status).toBe(
+        ProcessingStatus.QUEUED
+      );
     });
   });
 });

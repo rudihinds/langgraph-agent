@@ -18,11 +18,12 @@ export enum StepStatus {
 }
 
 // Define and export AgentType
-export type AgentType =
-  | "proposal"
-  | "research"
-  | "solution_analysis"
-  | "evaluation";
+export enum AgentType {
+  PROPOSAL = "proposal",
+  RESEARCH = "research",
+  SOLUTION_ANALYSIS = "solution_analysis",
+  EVALUATION = "evaluation",
+}
 
 /**
  * Agent roles in the system

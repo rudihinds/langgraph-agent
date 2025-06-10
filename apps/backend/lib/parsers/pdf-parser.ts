@@ -47,6 +47,7 @@ export async function parsePdf(buffer: Buffer) {
     if (pdfParse?.default) {
       try {
         // Try to use the real implementation
+        console.log("Using real pdf-parse module");
         return await pdfParse.default(buffer);
       } catch (error) {
         console.warn(

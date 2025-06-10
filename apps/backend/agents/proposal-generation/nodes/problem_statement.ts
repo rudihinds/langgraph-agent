@@ -213,7 +213,6 @@ export async function problemStatementNode(
     // Return the updated state
     return {
       sections: sectionsMap,
-      currentStep: "problem_statement_evaluation",
       status: ProcessingStatus.RUNNING,
       sectionToolMessages: updatedSectionToolMessages,
     };

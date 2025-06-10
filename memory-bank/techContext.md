@@ -180,8 +180,49 @@
 
 Phase 2 of the Chat UI integration is complete. All UI components and utilities have been implemented in their correct locations. Linter errors for missing dependencies (e.g., '@/components/ui/tooltip', '@/components/ui/button', '@/lib/utils') must be resolved in the next phase, which will focus on backend integration, tool call handling, and UI polish.
 
-## Recent Updates (2024-06)
+## LangGraph Streaming Best Practices (2025-01)
 
+### Streaming Message Control
+
+**Critical Pattern**: LangGraph automatically streams all LLM calls from within nodes using `streamMode="messages"`. This can cause unwanted internal processing messages to appear in the UI.
+
+**Solution - Dual LLM Pattern**:
+```typescript
+// Internal LLM for processing (no streaming)
+const internalLlm = new ChatAnthropic({
+  modelName: "claude-3-5-sonnet-20241022",
+  temperature: 0.3,
+  maxTokens: 4000,
+  tags: ["langsmith:nostream"], // Prevents streaming to UI
+});
+
+// Streaming LLM for user-facing responses
+const streamingLlm = new ChatAnthropic({
+  modelName: "claude-3-5-sonnet-20241022", 
+  temperature: 0.3,
+  maxTokens: 4000,
+  // No nostream tag - will stream naturally
+});
+```
+
+**Technical Terms**:
+- `langsmith:nostream` tag: Official LangGraph tag to prevent LLM calls from appearing in message stream
+- `streamMode="messages"`: LangGraph streaming mode that captures all LLM token outputs
+- Message stream filtering: Using metadata `langgraph_node` field to filter outputs by node
+
+**Pattern Application**:
+1. Use `internalLlm` for JSON parsing, analysis, and data processing
+2. Use `streamingLlm` for final user-facing responses that should stream token-by-token
+3. Static `AIMessage` construction appears instantly - use live LLM calls for proper streaming UX
+
+**Anti-patterns to Avoid**:
+- Adding structured data as messages (causes JSON to appear in chat)
+- Using single LLM instance for both internal and user-facing calls
+- Creating static AIMessage for final responses (no streaming)
+
+## Recent Updates (2024-06 / 2025-01)
+
+- **Streaming Architecture**: Implemented dual LLM pattern with `langsmith:nostream` for clean message streaming
 - Chat UI integration Phase 2 is complete: all UI components and utilities are implemented in their correct locations. Linter errors remain due to missing dependencies (e.g., @/components/ui/tooltip, @/components/ui/button, @/lib/utils), to be resolved in the next phase.
 - Backend integration, tool call handling, and UI polish are the next focus areas.
 - Supabase Auth SSR integration is robust and follows best practices (getAll/setAll, getUser()).

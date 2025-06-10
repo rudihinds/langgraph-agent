@@ -1,0 +1,392 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0event: metadata
+data: {
+data:   "run_id": "f4438eff-f14d-4952-817a-ba102b50c2c1",
+data:   "attempt": 1
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "",
+data:     "status": "not_started"
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": null,
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-full",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "createdAt": "2025-06-07T21:52:03.874Z",
+data:   "lastUpdatedAt": "2025-06-07T21:52:03.874Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "rfpProcessingStatus": "queued"
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "",
+data:     "status": "not_started"
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": null,
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-full",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     },
+data:     {
+data:       "content": "I'll analyze your RFP document. Let me load it first...",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "4f09c56b-f0a4-483f-920e-00ef7c5a5782",
+data:       "type": "ai"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "intent": {
+data:     "command": "loadDocument",
+data:     "requestDetails": "rfpId: 146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "confidence": 0.9
+data:   },
+data:   "createdAt": "2025-06-07T21:52:03.874Z",
+data:   "lastUpdatedAt": "2025-06-07T21:52:03.874Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "rfpProcessingStatus": "queued"
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "status": "loaded",
+data:     "text": "\n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n1 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nRace Equity Facilitator Request for \nProposals  \n \nOverview \nSocial Finance are seeking an individual or organisations experienced in facilitating equality, diversity, \ninclusion (EDI) conversations within organisations and challenging senior leadership to develop greater \nknowledge, expertise and confidence as they identify opportunities for disruption and transformation \nto create an equitable and inclusive workplace.  \n \nThis document is intended to provide a background and outline the scope of work and instructions on \nhow you/your organisation can support. \n \nAbout Social Finance \nSocial Finance (SF) is a 120-person non-profit organisation that collaborates with partners to enable \npositive social change at scale. We do this by deploying a range of research and consultancy, data \nanalytics, innovative finance and service design tools, along with a systems thinking and social justice \nmindset. \nIn summary, our leadership structure is as follows:  \n• Our Chief Executive Officer is responsible for overall strategic and financial direction, a post \ncurrently held on an interim basis by Caroline Gadd, and an Executive Team responsible for \nthe day-to-day operations of the organisation and strategic oversight of our business. \n \n• The Executive team includes Sara Jones, Executive Director of Innovation and People at SF. \n  \n• Leadership at Social Finance is currently undergoing a redesign. With a previous structure \nof Team Heads and then a wider Senior Leadership Group, (SLG) formed of Directors we will \nmove to an Executive team and the inclusion of a wider SLG with Associates Directors.  \n \n• Oversight and governance are provided by a Board of Directors which include the CEO, \nmembers of the Executive Team, and Non-Executive members with expertise from across \nSF’s business areas and sectors. \nUnderstanding, challenging and opposing racism is core to Social Finance’s aims and values. Working \ntowards race equity means continuously and intentionally challenging structural and individual racism, \nboth in the systems we work in and within our organisation. To achieve this, we commit to being: \n- Empathetic: Look from all viewpoints and centre voices from ethnic minority backgrounds. \nConsider the power imbalances in our partnerships and the intersection between racism and \nother inequities. \n- Curious: Ask questions about how and why racism persists across all the issues we work on \nand use rigorous thinking to scrutinise the power structures that enable it. \n- Pioneering: Work with diverse partners to use insight and practical innovation to challenge the \nstatus quo and ensure that systems meet everyone’s needs. \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n2 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nContext for current RFP \nSocial Finance have been successful in identifying actions that would bring about change in how we \nwork and the work we do. Many of these actions are listed in the appendix to this RFP. However, much \nof this progress to date has resulted in a detachment from our original racial equity aims. For example, \nour EDI surveys have reiterated the lack of diversity at a senior leadership level, particularly when \ncompared to our Analyst to Manager cohort. However, this continues to be an area in which we have \nfailed to make any meaningful progress. \nSenior leadership have recognised the need to step back to re-envisage and realign on the EDI aims \nbeing set out and to bring the various activities and workstreams together and provide clarity around \nownership and accountability. Following discussions with the SF Board and our Race Equity Advisory \nGroup (REAG) it has been agreed that external facilitation would be beneficial to support senior \nleadership development. We believe that facilitation can guide nuanced and honest conversations \naround power dynamics, language, intersectionality and what inclusive leadership at SF looks like to \nachieve the aims that were originally set out. \nWhilst our entry point for this work is our commitments around racial equity, we acknowledge the \nintersectional perspective needed to genuinely shift approaches, understanding and culture regarding \nEDI. Our hope is that this work will shine a light on other elements of our EDI considerations, such as \ngender, disability, faith and class. \n \nResponsibilities for the role holder \n• To hold facilitated reflection sessions with the Executive Team and senior leadership team \nindividually and as a group.  \n• To work with the CEO and EDI Leads to identify individual and structural blockers to progressing \nEDI work amongst senior leadership.  \n• Design and/or identify training needs that ensure longevity of impact. \n• To identify the resources and infrastructure (intrinsic or external to SF) that will enable us to \nachieve our EDI aims.  \n• To review SF’s strategy and develop the underpinning EDI principles and actions that support a \nrevised EDI strategy – which may or may not be a stand-alone strategy. \n• To identify gaps in our approach and the additional work that we need to do. \nThe outputs of this work should include: \n• Identification of gaps and barriers at senior leadership level \n• A strategy to overcome these barriers, including recommendations on the internal/external \nrequired support to achieve this \n• Clearly defined inclusive behaviours, particularly in terms of leadership \n• Consideration of how to capture what ‘success’ looks like – both in response to this facilitated \nintervention and recommendations on how to the measure the impact over a longer term, \nparticularly in terms of leadership behaviour level \n \nWhat we are not asking for \nThis work will not require the facilitator to undertake a listening exercise across the organisation. This \nwork has been conducted with members of the REAG and as part of an earlier Race Equity Audit. \nOutputs from this work will be shared with the facilitator as needed.  \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n3 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nWays of working \nYou will be working closely with the Race Equity Leads (Rachelle Angeline and Yasmin Begum). Weekly \nmeetings are suggested as a minimum rhythm of engagement. Fortnightly meetings will also be \nattended by the Interim CEO (Caroline Gadd) and EDI Lead (Sara Jones) as sponsors of this work. Other \nmembers of the Executive Team may join as needed. \nWhere possible, we would encourage working from the SF offices to increase opportunities to engage \nwith the race equity team and wider organisation. \n \nHow to respond \nThe budget envelope for this scope of work is £20,000 inclusive of VAT, with the work to be delivered \nover a 6-8 week period. The scope has been designed as a short piece of work, with the prospect of a \nlonger role as we execute the strategy dependent on budget, capacity, and need for ongoing support. \nIf you or your organisation meet the criteria above and would like to work with us in this next phase of \nwork, we would be very much interested in hearing from you. \nPlease provide up to 2 pages of A4 detailing: \n• Evidence of your experience and expertise in facilitating inquiry and exploration at leadership \nlevel \n• A brief summary of your understanding of this RFP \n• Your approach and workplan including recommendations on how it would be best delivered \no We would welcome particular reference to who from our new leadership structure \nshould be involved and why \no We would like to understand how you would approach integrating feedback from \ndifferent groups into the process and outputs \no We would appreciate an outline of how a focus on race equity, could also allow space \nfor improvements across a wider EDI agenda \n• Budget allocation and resourcing \n \n \nProcess  \nThe deadline for responses is Wednesday 5th February at 5pm. Please submit your response via email \nto Rachelle Angeline (Rachelle.Angeline@socialfinance.org.uk). \nWe will conduct an internal review process and aim to respond to all applicants by Wednesday 12\nth\n \nFebruary. We will notify you directly if we have any questions on your proposal or need to shift the \ntimescales. \nThe expected start date for this work is Monday 17\nth\n February. \nIf you have any questions, please contact Rachelle Angeline. \n \n \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n4 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nAppendix: Our Race Equity Work to date \n➢ Released our race equity vision in August 2022 where we defined what race equity and racism \nmean for us as an organisation. \n➢ Established the Race Equity Advisory Group, formed of system leaders and experts in race \nequity who play a vital role in supporting Social Finance’s Senior Leadership to hold themselves \nto account for delivering our race equity vision. This group meets quarterly to stimulate check \nand challenge, signpost and support SF to practice race equity throughout the organisation. \nBiographies of our REAG members can be found here on our website. \n➢ Delivering Unlearning Racism, a learning and reflection programme to unearth and overcome \nbiases around race and intersectionality. \n➢ Management training on leading a diverse organisation. \n➢ Conduct an annual EDI staff survey – results are shared back with all staff in anonymised \nformat. \n➢ Conducted a culture audit in response to concerns around gender equity. \n➢ Developed and launched an inclusive language guide. \n \nAll relevant documents will be provided as part of an onboarding pack on commencement of this work. \n ",
+data:     "metadata": {
+data:       "documentId": "9866d664-690c-4a97-9082-0e86dbc43932",
+data:       "fileName": "Race Equity RFP - 280125.pdf",
+data:       "fileType": "application/pdf",
+data:       "sizeBytes": 112812,
+data:       "clientType": "server",
+data:       "loadedAt": "2025-06-07T21:52:04.034Z",
+data:       "source": "cached_parsed_text",
+data:       "raw": "\n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n1 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nRace Equity Facilitator Request for \nProposals  \n \nOverview \nSocial Finance are seeking an individual or organisations experienced in facilitating equality, diversity, \ninclusion (EDI) conversations within organisations and challenging senior leadership to develop greater \nknowledge, expertise and confidence as they identify opportunities for disruption and transformation \nto create an equitable and inclusive workplace.  \n \nThis document is intended to provide a background and outline the scope of work and instructions on \nhow you/your organisation can support. \n \nAbout Social Finance \nSocial Finance (SF) is a 120-person non-profit organisation that collaborates with partners to enable \npositive social change at scale. We do this by deploying a range of research and consultancy, data \nanalytics, innovative finance and service design tools, along with a systems thinking and social justice \nmindset. \nIn summary, our leadership structure is as follows:  \n• Our Chief Executive Officer is responsible for overall strategic and financial direction, a post \ncurrently held on an interim basis by Caroline Gadd, and an Executive Team responsible for \nthe day-to-day operations of the organisation and strategic oversight of our business. \n \n• The Executive team includes Sara Jones, Executive Director of Innovation and People at SF. \n  \n• Leadership at Social Finance is currently undergoing a redesign. With a previous structure \nof Team Heads and then a wider Senior Leadership Group, (SLG) formed of Directors we will \nmove to an Executive team and the inclusion of a wider SLG with Associates Directors.  \n \n• Oversight and governance are provided by a Board of Directors which include the CEO, \nmembers of the Executive Team, and Non-Executive members with expertise from across \nSF’s business areas and sectors. \nUnderstanding, challenging and opposing racism is core to Social Finance’s aims and values. Working \ntowards race equity means continuously and intentionally challenging structural and individual racism, \nboth in the systems we work in and within our organisation. To achieve this, we commit to being: \n- Empathetic: Look from all viewpoints and centre voices from ethnic minority backgrounds. \nConsider the power imbalances in our partnerships and the intersection between racism and \nother inequities. \n- Curious: Ask questions about how and why racism persists across all the issues we work on \nand use rigorous thinking to scrutinise the power structures that enable it. \n- Pioneering: Work with diverse partners to use insight and practical innovation to challenge the \nstatus quo and ensure that systems meet everyone’s needs. \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n2 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nContext for current RFP \nSocial Finance have been successful in identifying actions that would bring about change in how we \nwork and the work we do. Many of these actions are listed in the appendix to this RFP. However, much \nof this progress to date has resulted in a detachment from our original racial equity aims. For example, \nour EDI surveys have reiterated the lack of diversity at a senior leadership level, particularly when \ncompared to our Analyst to Manager cohort. However, this continues to be an area in which we have \nfailed to make any meaningful progress. \nSenior leadership have recognised the need to step back to re-envisage and realign on the EDI aims \nbeing set out and to bring the various activities and workstreams together and provide clarity around \nownership and accountability. Following discussions with the SF Board and our Race Equity Advisory \nGroup (REAG) it has been agreed that external facilitation would be beneficial to support senior \nleadership development. We believe that facilitation can guide nuanced and honest conversations \naround power dynamics, language, intersectionality and what inclusive leadership at SF looks like to \nachieve the aims that were originally set out. \nWhilst our entry point for this work is our commitments around racial equity, we acknowledge the \nintersectional perspective needed to genuinely shift approaches, understanding and culture regarding \nEDI. Our hope is that this work will shine a light on other elements of our EDI considerations, such as \ngender, disability, faith and class. \n \nResponsibilities for the role holder \n• To hold facilitated reflection sessions with the Executive Team and senior leadership team \nindividually and as a group.  \n• To work with the CEO and EDI Leads to identify individual and structural blockers to progressing \nEDI work amongst senior leadership.  \n• Design and/or identify training needs that ensure longevity of impact. \n• To identify the resources and infrastructure (intrinsic or external to SF) that will enable us to \nachieve our EDI aims.  \n• To review SF’s strategy and develop the underpinning EDI principles and actions that support a \nrevised EDI strategy – which may or may not be a stand-alone strategy. \n• To identify gaps in our approach and the additional work that we need to do. \nThe outputs of this work should include: \n• Identification of gaps and barriers at senior leadership level \n• A strategy to overcome these barriers, including recommendations on the internal/external \nrequired support to achieve this \n• Clearly defined inclusive behaviours, particularly in terms of leadership \n• Consideration of how to capture what ‘success’ looks like – both in response to this facilitated \nintervention and recommendations on how to the measure the impact over a longer term, \nparticularly in terms of leadership behaviour level \n \nWhat we are not asking for \nThis work will not require the facilitator to undertake a listening exercise across the organisation. This \nwork has been conducted with members of the REAG and as part of an earlier Race Equity Audit. \nOutputs from this work will be shared with the facilitator as needed.  \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n3 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nWays of working \nYou will be working closely with the Race Equity Leads (Rachelle Angeline and Yasmin Begum). Weekly \nmeetings are suggested as a minimum rhythm of engagement. Fortnightly meetings will also be \nattended by the Interim CEO (Caroline Gadd) and EDI Lead (Sara Jones) as sponsors of this work. Other \nmembers of the Executive Team may join as needed. \nWhere possible, we would encourage working from the SF offices to increase opportunities to engage \nwith the race equity team and wider organisation. \n \nHow to respond \nThe budget envelope for this scope of work is £20,000 inclusive of VAT, with the work to be delivered \nover a 6-8 week period. The scope has been designed as a short piece of work, with the prospect of a \nlonger role as we execute the strategy dependent on budget, capacity, and need for ongoing support. \nIf you or your organisation meet the criteria above and would like to work with us in this next phase of \nwork, we would be very much interested in hearing from you. \nPlease provide up to 2 pages of A4 detailing: \n• Evidence of your experience and expertise in facilitating inquiry and exploration at leadership \nlevel \n• A brief summary of your understanding of this RFP \n• Your approach and workplan including recommendations on how it would be best delivered \no We would welcome particular reference to who from our new leadership structure \nshould be involved and why \no We would like to understand how you would approach integrating feedback from \ndifferent groups into the process and outputs \no We would appreciate an outline of how a focus on race equity, could also allow space \nfor improvements across a wider EDI agenda \n• Budget allocation and resourcing \n \n \nProcess  \nThe deadline for responses is Wednesday 5th February at 5pm. Please submit your response via email \nto Rachelle Angeline (Rachelle.Angeline@socialfinance.org.uk). \nWe will conduct an internal review process and aim to respond to all applicants by Wednesday 12\nth\n \nFebruary. We will notify you directly if we have any questions on your proposal or need to shift the \ntimescales. \nThe expected start date for this work is Monday 17\nth\n February. \nIf you have any questions, please contact Rachelle Angeline. \n \n \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n4 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nAppendix: Our Race Equity Work to date \n➢ Released our race equity vision in August 2022 where we defined what race equity and racism \nmean for us as an organisation. \n➢ Established the Race Equity Advisory Group, formed of system leaders and experts in race \nequity who play a vital role in supporting Social Finance’s Senior Leadership to hold themselves \nto account for delivering our race equity vision. This group meets quarterly to stimulate check \nand challenge, signpost and support SF to practice race equity throughout the organisation. \nBiographies of our REAG members can be found here on our website. \n➢ Delivering Unlearning Racism, a learning and reflection programme to unearth and overcome \nbiases around race and intersectionality. \n➢ Management training on leading a diverse organisation. \n➢ Conduct an annual EDI staff survey – results are shared back with all staff in anonymised \nformat. \n➢ Conducted a culture audit in respons100 26963    0 26709  100   254  21707    206  0:00:01  0:00:01 --:--:-- 21921100 26963    0 26709  100   254  11957    113  0:00:02  0:00:02 --:--:-- 12074100 26963    0 26709  100   254   8258     78  0:00:03  0:00:03 --:--:--  8337100 26963    0 26709  100   254   6304     59  0:00:04  0:00:04 --:--:--  6365100 26963    0 26709  100   254   5094     48  0:00:05  0:00:05 --:--:--  5143e to concerns around gender equity. \n➢ Developed and launched an inclusive language guide. \n \nAll relevant documents will be provided as part of an onboarding pack on commencement of this work. \n "
+data:     }
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": null,
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-full",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     },
+data:     {
+data:       "content": "I'll analyze your RFP document. Let me load it first...",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "4f09c56b-f0a4-483f-920e-00ef7c5a5782",
+data:       "type": "ai"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "intent": {
+data:     "command": "loadDocument",
+data:     "requestDetails": "rfpId: 146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "confidence": 0.9
+data:   },
+data:   "createdAt": "2025-06-07T21:52:03.874Z",
+data:   "lastUpdatedAt": "2025-06-07T21:52:03.874Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "rfpProcessingStatus": "queued"
+data: }
+
+event: values
+data: {
+data:   "rfpDocument": {
+data:     "id": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "status": "loaded",
+data:     "text": "\n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n1 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nRace Equity Facilitator Request for \nProposals  \n \nOverview \nSocial Finance are seeking an individual or organisations experienced in facilitating equality, diversity, \ninclusion (EDI) conversations within organisations and challenging senior leadership to develop greater \nknowledge, expertise and confidence as they identify opportunities for disruption and transformation \nto create an equitable and inclusive workplace.  \n \nThis document is intended to provide a background and outline the scope of work and instructions on \nhow you/your organisation can support. \n \nAbout Social Finance \nSocial Finance (SF) is a 120-person non-profit organisation that collaborates with partners to enable \npositive social change at scale. We do this by deploying a range of research and consultancy, data \nanalytics, innovative finance and service design tools, along with a systems thinking and social justice \nmindset. \nIn summary, our leadership structure is as follows:  \n• Our Chief Executive Officer is responsible for overall strategic and financial direction, a post \ncurrently held on an interim basis by Caroline Gadd, and an Executive Team responsible for \nthe day-to-day operations of the organisation and strategic oversight of our business. \n \n• The Executive team includes Sara Jones, Executive Director of Innovation and People at SF. \n  \n• Leadership at Social Finance is currently undergoing a redesign. With a previous structure \nof Team Heads and then a wider Senior Leadership Group, (SLG) formed of Directors we will \nmove to an Executive team and the inclusion of a wider SLG with Associates Directors.  \n \n• Oversight and governance are provided by a Board of Directors which include the CEO, \nmembers of the Executive Team, and Non-Executive members with expertise from across \nSF’s business areas and sectors. \nUnderstanding, challenging and opposing racism is core to Social Finance’s aims and values. Working \ntowards race equity means continuously and intentionally challenging structural and individual racism, \nboth in the systems we work in and within our organisation. To achieve this, we commit to being: \n- Empathetic: Look from all viewpoints and centre voices from ethnic minority backgrounds. \nConsider the power imbalances in our partnerships and the intersection between racism and \nother inequities. \n- Curious: Ask questions about how and why racism persists across all the issues we work on \nand use rigorous thinking to scrutinise the power structures that enable it. \n- Pioneering: Work with diverse partners to use insight and practical innovation to challenge the \nstatus quo and ensure that systems meet everyone’s needs. \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n2 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nContext for current RFP \nSocial Finance have been successful in identifying actions that would bring about change in how we \nwork and the work we do. Many of these actions are listed in the appendix to this RFP. However, much \nof this progress to date has resulted in a detachment from our original racial equity aims. For example, \nour EDI surveys have reiterated the lack of diversity at a senior leadership level, particularly when \ncompared to our Analyst to Manager cohort. However, this continues to be an area in which we have \nfailed to make any meaningful progress. \nSenior leadership have recognised the need to step back to re-envisage and realign on the EDI aims \nbeing set out and to bring the various activities and workstreams together and provide clarity around \nownership and accountability. Following discussions with the SF Board and our Race Equity Advisory \nGroup (REAG) it has been agreed that external facilitation would be beneficial to support senior \nleadership development. We believe that facilitation can guide nuanced and honest conversations \naround power dynamics, language, intersectionality and what inclusive leadership at SF looks like to \nachieve the aims that were originally set out. \nWhilst our entry point for this work is our commitments around racial equity, we acknowledge the \nintersectional perspective needed to genuinely shift approaches, understanding and culture regarding \nEDI. Our hope is that this work will shine a light on other elements of our EDI considerations, such as \ngender, disability, faith and class. \n \nResponsibilities for the role holder \n• To hold facilitated reflection sessions with the Executive Team and senior leadership team \nindividually and as a group.  \n• To work with the CEO and EDI Leads to identify individual and structural blockers to progressing \nEDI work amongst senior leadership.  \n• Design and/or identify training needs that ensure longevity of impact. \n• To identify the resources and infrastructure (intrinsic or external to SF) that will enable us to \nachieve our EDI aims.  \n• To review SF’s strategy and develop the underpinning EDI principles and actions that support a \nrevised EDI strategy – which may or may not be a stand-alone strategy. \n• To identify gaps in our approach and the additional work that we need to do. \nThe outputs of this work should include: \n• Identification of gaps and barriers at senior leadership level \n• A strategy to overcome these barriers, including recommendations on the internal/external \nrequired support to achieve this \n• Clearly defined inclusive behaviours, particularly in terms of leadership \n• Consideration of how to capture what ‘success’ looks like – both in response to this facilitated \nintervention and recommendations on how to the measure the impact over a longer term, \nparticularly in terms of leadership behaviour level \n \nWhat we are not asking for \nThis work will not require the facilitator to undertake a listening exercise across the organisation. This \nwork has been conducted with members of the REAG and as part of an earlier Race Equity Audit. \nOutputs from this work will be shared with the facilitator as needed.  \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n3 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nWays of working \nYou will be working closely with the Race Equity Leads (Rachelle Angeline and Yasmin Begum). Weekly \nmeetings are suggested as a minimum rhythm of engagement. Fortnightly meetings will also be \nattended by the Interim CEO (Caroline Gadd) and EDI Lead (Sara Jones) as sponsors of this work. Other \nmembers of the Executive Team may join as needed. \nWhere possible, we would encourage working from the SF offices to increase opportunities to engage \nwith the race equity team and wider organisation. \n \nHow to respond \nThe budget envelope for this scope of work is £20,000 inclusive of VAT, with the work to be delivered \nover a 6-8 week period. The scope has been designed as a short piece of work, with the prospect of a \nlonger role as we execute the strategy dependent on budget, capacity, and need for ongoing support. \nIf you or your organisation meet the criteria above and would like to work with us in this next phase of \nwork, we would be very much interested in hearing from you. \nPlease provide up to 2 pages of A4 detailing: \n• Evidence of your experience and expertise in facilitating inquiry and exploration at leadership \nlevel \n• A brief summary of your understanding of this RFP \n• Your approach and workplan including recommendations on how it would be best delivered \no We would welcome particular reference to who from our new leadership structure \nshould be involved and why \no We would like to understand how you would approach integrating feedback from \ndifferent groups into the process and outputs \no We would appreciate an outline of how a focus on race equity, could also allow space \nfor improvements across a wider EDI agenda \n• Budget allocation and resourcing \n \n \nProcess  \nThe deadline for responses is Wednesday 5th February at 5pm. Please submit your response via email \nto Rachelle Angeline (Rachelle.Angeline@socialfinance.org.uk). \nWe will conduct an internal review process and aim to respond to all applicants by Wednesday 12\nth\n \nFebruary. We will notify you directly if we have any questions on your proposal or need to shift the \ntimescales. \nThe expected start date for this work is Monday 17\nth\n February. \nIf you have any questions, please contact Rachelle Angeline. \n \n \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n4 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nAppendix: Our Race Equity Work to date \n➢ Released our race equity vision in August 2022 where we defined what race equity and racism \nmean for us as an organisation. \n➢ Established the Race Equity Advisory Group, formed of system leaders and experts in race \nequity who play a vital role in supporting Social Finance’s Senior Leadership to hold themselves \nto account for delivering our race equity vision. This group meets quarterly to stimulate check \nand challenge, signpost and support SF to practice race equity throughout the organisation. \nBiographies of our REAG members can be found here on our website. \n➢ Delivering Unlearning Racism, a learning and reflection programme to unearth and overcome \nbiases around race and intersectionality. \n➢ Management training on leading a diverse organisation. \n➢ Conduct an annual EDI staff survey – results are shared back with all staff in anonymised \nformat. \n➢ Conducted a culture audit in response to concerns around gender equity. \n➢ Developed and launched an inclusive language guide. \n \nAll relevant documents will be provided as part of an onboarding pack on commencement of this work. \n ",
+data:     "metadata": {
+data:       "documentId": "9866d664-690c-4a97-9082-0e86dbc43932",
+data:       "fileName": "Race Equity RFP - 280125.pdf",
+data:       "fileType": "application/pdf",
+data:       "sizeBytes": 112812,
+data:       "clientType": "server",
+data:       "loadedAt": "2025-06-07T21:52:04.034Z",
+data:       "source": "cached_parsed_text",
+data:       "raw": "\n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n1 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nRace Equity Facilitator Request for \nProposals  \n \nOverview \nSocial Finance are seeking an individual or organisations experienced in facilitating equality, diversity, \ninclusion (EDI) conversations within organisations and challenging senior leadership to develop greater \nknowledge, expertise and confidence as they identify opportunities for disruption and transformation \nto create an equitable and inclusive workplace.  \n \nThis document is intended to provide a background and outline the scope of work and instructions on \nhow you/your organisation can support. \n \nAbout Social Finance \nSocial Finance (SF) is a 120-person non-profit organisation that collaborates with partners to enable \npositive social change at scale. We do this by deploying a range of research and consultancy, data \nanalytics, innovative finance and service design tools, along with a systems thinking and social justice \nmindset. \nIn summary, our leadership structure is as follows:  \n• Our Chief Executive Officer is responsible for overall strategic and financial direction, a post \ncurrently held on an interim basis by Caroline Gadd, and an Executive Team responsible for \nthe day-to-day operations of the organisation and strategic oversight of our business. \n \n• The Executive team includes Sara Jones, Executive Director of Innovation and People at SF. \n  \n• Leadership at Social Finance is currently undergoing a redesign. With a previous structure \nof Team Heads and then a wider Senior Leadership Group, (SLG) formed of Directors we will \nmove to an Executive team and the inclusion of a wider SLG with Associates Directors.  \n \n• Oversight and governance are provided by a Board of Directors which include the CEO, \nmembers of the Executive Team, and Non-Executive members with expertise from across \nSF’s business areas and sectors. \nUnderstanding, challenging and opposing racism is core to Social Finance’s aims and values. Working \ntowards race equity means continuously and intentionally challenging structural and individual racism, \nboth in the systems we work in and within our organisation. To achieve this, we commit to being: \n- Empathetic: Look from all viewpoints and centre voices from ethnic minority backgrounds. \nConsider the power imbalances in our partnerships and the intersection between racism and \nother inequities. \n- Curious: Ask questions about how and why racism persists across all the issues we work on \nand use rigorous thinking to scrutinise the power structures that enable it. \n- Pioneering: Work with diverse partners to use insight and practical innovation to challenge the \nstatus quo and ensure that systems meet everyone’s needs. \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n2 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nContext for current RFP \nSocial Finance have been successful in identifying actions that would bring about change in how we \nwork and the work we do. Many of these actions are listed in the appendix to this RFP. However, much \nof this progress to date has resulted in a detachment from our original racial equity aims. For example, \nour EDI surveys have reiterated the lack of diversity at a senior leadership level, particularly when \ncompared to our Analyst to Manager cohort. However, this continues to be an area in which we have \nfailed to make any meaningful progress. \nSenior leadership have recognised the need to step back to re-envisage and realign on the EDI aims \nbeing set out and to bring the various activities and workstreams together and provide clarity around \nownership and accountability. Following discussions with the SF Board and our Race Equity Advisory \nGroup (REAG) it has been agreed that external facilitation would be beneficial to support senior \nleadership development. We believe that facilitation can guide nuanced and honest conversations \naround power dynamics, language, intersectionality and what inclusive leadership at SF looks like to \nachieve the aims that were originally set out. \nWhilst our entry point for this work is our commitments around racial equity, we acknowledge the \nintersectional perspective needed to genuinely shift approaches, understanding and culture regarding \nEDI. Our hope is that this work will shine a light on other elements of our EDI considerations, such as \ngender, disability, faith and class. \n \nResponsibilities for the role holder \n• To hold facilitated reflection sessions with the Executive Team and senior leadership team \nindividually and as a group.  \n• To work with the CEO and EDI Leads to identify individual and structural blockers to progressing \nEDI work amongst senior leadership.  \n• Design and/or identify training needs that ensure longevity of impact. \n• To identify the resources and infrastructure (intrinsic or external to SF) that will enable us to \nachieve our EDI aims.  \n• To review SF’s strategy and develop the underpinning EDI principles and actions that support a \nrevised EDI strategy – which may or may not be a stand-alone strategy. \n• To identify gaps in our approach and the additional work that we need to do. \nThe outputs of this work should include: \n• Identification of gaps and barriers at senior leadership level \n• A strategy to overcome these barriers, including recommendations on the internal/external \nrequired support to achieve this \n• Clearly defined inclusive behaviours, particularly in terms of leadership \n• Consideration of how to capture what ‘success’ looks like – both in response to this facilitated \nintervention and recommendations on how to the measure the impact over a longer term, \nparticularly in terms of leadership behaviour level \n \nWhat we are not asking for \nThis work will not require the facilitator to undertake a listening exercise across the organisation. This \nwork has been conducted with members of the REAG and as part of an earlier Race Equity Audit. \nOutputs from this work will be shared with the facilitator as needed.  \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n3 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \n \nWays of working \nYou will be working closely with the Race Equity Leads (Rachelle Angeline and Yasmin Begum). Weekly \nmeetings are suggested as a minimum rhythm of engagement. Fortnightly meetings will also be \nattended by the Interim CEO (Caroline Gadd) and EDI Lead (Sara Jones) as sponsors of this work. Other \nmembers of the Executive Team may join as needed. \nWhere possible, we would encourage working from the SF offices to increase opportunities to engage \nwith the race equity team and wider organisation. \n \nHow to respond \nThe budget envelope for this scope of work is £20,000 inclusive of VAT, with the work to be delivered \nover a 6-8 week period. The scope has been designed as a short piece of work, with the prospect of a \nlonger role as we execute the strategy dependent on budget, capacity, and need for ongoing support. \nIf you or your organisation meet the criteria above and would like to work with us in this next phase of \nwork, we would be very much interested in hearing from you. \nPlease provide up to 2 pages of A4 detailing: \n• Evidence of your experience and expertise in facilitating inquiry and exploration at leadership \nlevel \n• A brief summary of your understanding of this RFP \n• Your approach and workplan including recommendations on how it would be best delivered \no We would welcome particular reference to who from our new leadership structure \nshould be involved and why \no We would like to understand how you would approach integrating feedback from \ndifferent groups into the process and outputs \no We would appreciate an outline of how a focus on race equity, could also allow space \nfor improvements across a wider EDI agenda \n• Budget allocation and resourcing \n \n \nProcess  \nThe deadline for responses is Wednesday 5th February at 5pm. Please submit your response via email \nto Rachelle Angeline (Rachelle.Angeline@socialfinance.org.uk). \nWe will conduct an internal review process and aim to respond to all applicants by Wednesday 12\nth\n \nFebruary. We will notify you directly if we have any questions on your proposal or need to shift the \ntimescales. \nThe expected start date for this work is Monday 17\nth\n February. \nIf you have any questions, please contact Rachelle Angeline. \n \n \n\n Social Finance Limited \n +44 (0) 20 7770 6836 \n87 Vauxhall Walk, London SE11 \n5HJ \nsocialfinance.org.uk \n \n4 Social Finance is authorised and regulated by the Financial Conduct Authority FCA No. 497568 \n \nAppendix: Our Race Equity Work to date \n➢ Released our race equity vision in August 2022 where we defined what race equity and racism \nmean for us as an organisation. \n➢ Established the Race Equity Advisory Group, formed of system leaders and experts in race \nequity who play a vital role in supporting Social Finance’s Senior Leadership to hold themselves \nto account for delivering our race equity vision. This group meets quarterly to stimulate check \nand challenge, signpost and support SF to practice race equity throughout the organisation. \nBiographies of our REAG members can be found here on our website. \n➢ Delivering Unlearning Racism, a learning and reflection programme to unearth and overcome \nbiases around race and intersectionality. \n➢ Management training on leading a diverse organisation. \n➢ Conduct an annual EDI staff survey – results are shared back with all staff in anonymised \nformat. \n➢ Conducted a culture audit in response to concerns around gender equity. \n➢ Developed and launched an inclusive language guide. \n \nAll relevant documents will be provided as part of an onboarding pack on commencement of this work. \n "
+data:     }
+data:   },
+data:   "researchStatus": "queued",
+data:   "solutionStatus": "queued",
+data:   "connectionsStatus": "queued",
+data:   "sections": {},
+data:   "requiredSections": [],
+data:   "interruptStatus": {
+data:     "isInterrupted": false,
+data:     "interruptionPoint": null,
+data:     "feedback": null,
+data:     "processingStatus": null
+data:   },
+data:   "currentStep": "rfp_analysis_complete",
+data:   "messages": [
+data:     {
+data:       "content": "Please analyze my RFP document",
+data:       "id": "test-debug-full",
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "type": "human"
+data:     },
+data:     {
+data:       "content": "I'll analyze your RFP document. Let me load it first...",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "4f09c56b-f0a4-483f-920e-00ef7c5a5782",
+data:       "type": "ai"
+data:     },
+data:     {
+data:       "content": "## RFP Analysis Complete\n\n**Complexity Assessment:** Medium\n\n**Key Insights:**\n• The RFP is seeking an experienced facilitator to guide senior leadership at Social Finance through a process of reflection, training, and strategy development around equity, diversity, and inclusion (EDI), with a specific focus on racial equity.\n• The facilitator will be expected to work closely with the Race Equity Leads, Interim CEO, and EDI Lead to identify barriers and develop a strategy to overcome them, as well as define inclusive leadership behaviors and measures of success.\n• The work is intended to be a short-term engagement (6-8 weeks) with the potential for a longer-term role depending on needs and budget.\n• The RFP acknowledges the intersectional nature of EDI considerations and the need to address issues beyond just racial equity.\n\n**Strategic Recommendations:**\n• Emphasize your experience in facilitating sensitive, nuanced conversations around power dynamics, language, and intersectionality with senior leadership teams.\n• Propose a collaborative approach that involves key stakeholders (Race Equity Leads, Interim CEO, EDI Lead) throughout the process to ensure buy-in and alignment.\n• Suggest ways to integrate feedback from different groups (e.g., REAG) into the process and output to ensure a holistic perspective.\n• Outline a clear plan for identifying gaps, barriers, and resources needed to achieve the desired EDI outcomes, as well as recommendations for measuring long-term impact.\n• Highlight your understanding of the organizational context and your ability to tailor your approach to the unique needs and culture of Social Finance.\n\n**Risk Factors to Consider:**\n• Potential resistance or lack of commitment from senior leadership to engage fully in the process and implement recommended changes.\n• Difficulty in defining clear, measurable success criteria and a sustainable approach to tracking progress over time.\n• Potential challenges in integrating feedback from diverse stakeholders and balancing different perspectives.\n• Scope creep or underestimation of the time and resources required to achieve the desired outcomes.\n\n**Recommended Next Steps:**\n• Thoroughly review the RFP and any additional materials provided to gain a deep understanding of Social Finance's context, challenges, and goals.\n• Prepare a well-structured proposal that demonstrates your relevant experience, a clear understanding of the requirements, and a thoughtful, tailored approach.\n• Highlight your ability to work collaboratively with the key stakeholders and your commitment to delivering tangible, sustainable outcomes.\n• Propose a detailed work plan with clear milestones, deliverables, and a timeline that aligns with the 6-8 week timeframe.\n• Be prepared to discuss your proposed approach and address any questions or concerns during the selection process.\n\nI'm ready to help you develop your proposal response. What would you like to focus on first?",
+data:       "tool_calls": [],
+data:       "invalid_tool_calls": [],
+data:       "additional_kwargs": {},
+data:       "response_metadata": {},
+data:       "id": "0313c01f-4b2c-4c4b-80bb-4b71e2b9f186",
+data:       "type": "ai"
+data:     }
+data:   ],
+data:   "errors": [],
+data:   "intent": {
+data:     "command": "loadDocument",
+data:     "requestDetails": "rfpId: 146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "confidence": 0.9
+data:   },
+data:   "createdAt": "2025-06-07T21:52:03.874Z",
+data:   "lastUpdatedAt": "2025-06-07T21:52:03.874Z",
+data:   "status": "queued",
+data:   "currentStatus": "Ready",
+data:   "isAnalyzingRfp": false,
+data:   "metadata": {
+data:     "rfpId": "146e788b-70dd-4079-ac9a-5d3253ff4a11",
+data:     "autoStarted": true
+data:   },
+data:   "additional_research_requested": {
+data:     "requested": false,
+data:     "focus_areas": [],
+data:     "research_type": "deep_dive",
+data:     "rationale": ""
+data:   },
+data:   "reassessment_requested": {
+data:     "requested": false,
+data:     "reason": "",
+data:     "new_complexity_assessment": ""
+data:   },
+data:   "research_confidence": 0,
+data:   "research_iterations": 0,
+data:   "planningIntelligence": {
+data:     "rfpCharacteristics": {
+data:       "complexity": "Medium",
+data:       "complexityFactors": [
+data:         "The RFP is seeking an experienced facilitator to guide senior leadership at Social Finance through a process of reflection, training, and strategy development around equity, diversity, and inclusion (EDI), with a specific focus on racial equity.",
+data:         "The facilitator will be expected to work closely with the Race Equity Leads, Interim CEO, and EDI Lead to identify barriers and develop a strategy to overcome them, as well as define inclusive leadership behaviors and measures of success.",
+data:         "The work is intended to be a short-term engagement (6-8 weeks) with the potential for a longer-term role depending on needs and budget.",
+data:         "The RFP acknowledges the intersectional nature of EDI considerations and the need to address issues beyond just racial equity."
+data:       ],
+data:       "industry": "To be determined",
+data:       "specialization": "To be determined",
+data:       "contractValueEstimate": "To be determined",
+data:       "timelinePressure": "Medium",
+data:       "strategicFocus": [
+data:         "Emphasize your experience in facilitating sensitive, nuanced conversations around power dynamics, language, and intersectionality with senior leadership teams.",
+data:         "Propose a collaborative approach that involves key stakeholders (Race Equity Leads, Interim CEO, EDI Lead) throughout the process to ensure buy-in and alignment.",
+data:         "Suggest ways to integrate feedback from different groups (e.g., REAG) into the process and output to ensure a holistic perspective.",
+data:         "Outline a clear plan for identifying gaps, barriers, and resources needed to achieve the desired EDI outcomes, as well as recommendations for measuring long-term impact.",
+data:         "Highlight your understanding of the organizational context and your ability to tailor your approach to the unique needs and culture of Social Finance."
+data:       ],
+data:       "submissionRequirements": {
+data:         "pageLimit": "not_specified",
+data:         "sectionsRequired": [],
+data:         "attachmentsNeeded": []
+data:       }
+data:     },
+data:     "earlyRiskAssessment": {
+data:       "riskIndicators": [
+data:         {
+data:           "risk": "Potential resistance or lack of commitment from senior leadership to engage fully in the process and implement recommended changes.",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         },
+data:         {
+data:           "risk": "Difficulty in defining clear, measurable success criteria and a sustainable approach to tracking progress over time.",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         },
+data:         {
+data:           "risk": "Potential challenges in integrating feedback from diverse stakeholders and balancing different perspectives.",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         },
+data:         {
+data:           "risk": "Scope creep or underestimation of the time and resources required to achieve the desired outcomes.",
+data:           "severity": "Medium",
+data:           "category": "Technical"
+data:         }
+data:       ],
+data:       "analysisConfidence": 0.7,
+data:       "requiresUserValidation": false
+data:     }
+data:   },
+data:   "userCollaboration": {
+data:     "strategicRecommendations": {
+data:       "topOpportunities": [
+data:         "Emphasize your experience in facilitating sensitive, nuanced conversations around power dynamics, language, and intersectionality with senior leadership teams.",
+data:         "Propose a collaborative approach that involves key stakeholders (Race Equity Leads, Interim CEO, EDI Lead) throughout the process to ensure buy-in and alignment.",
+data:         "Suggest ways to integrate feedback from different groups (e.g., REAG) into the process and output to ensure a holistic perspective.",
+data:         "Outline a clear plan for identifying gaps, barriers, and resources needed to achieve the desired EDI outcomes, as well as recommendations for measuring long-term impact.",
+data:         "Highlight your understanding of the 100 59359    0 59105  100   254  10319     44  0:00:05  0:00:05 --:--:--  7202100 59490    0 59236  100   254   9505     40  0:00:06  0:00:06 --:--:--  8133
+organizational context and your ability to tailor your approach to the unique needs and culture of Social Finance."
+data:       ],
+data:       "criticalRequirements": [
+data:         {
+data:           "requirement": "Thoroughly review the RFP and any additional materials provided to gain a deep understanding of Social Finance's context, challenges, and goals.",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Prepare a well-structured proposal that demonstrates your relevant experience, a clear understanding of the requirements, and a thoughtful, tailored approach.",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Highlight your ability to work collaboratively with the key stakeholders and your commitment to delivering tangible, sustainable outcomes.",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Propose a detailed work plan with clear milestones, deliverables, and a timeline that aligns with the 6-8 week timeframe.",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         },
+data:         {
+data:           "requirement": "Be prepared to discuss your proposed approach and address any questions or concerns during the selection process.",
+data:           "priority": "Medium",
+data:           "rationale": "Based on RFP analysis"
+data:         }
+data:       ],
+data:       "confidenceLevel": 0.7
+data:     }
+data:   },
+data:   "rfpProcessingStatus": "complete"
+data: }
+
+event: error
+data: {
+data:   "error": "Error",
+data:   "message": "Branch condition returned unknown or null destination"
+data: }
+

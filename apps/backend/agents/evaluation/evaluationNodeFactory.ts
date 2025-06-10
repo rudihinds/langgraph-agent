@@ -341,3 +341,14 @@ async function loadJSONFile(filePath: string): Promise<any> {
     return null;
   }
 }
+
+/**
+ * Convenience wrapper function for creating evaluation nodes
+ * @param options Configuration options for the evaluation node
+ * @returns An evaluation node function
+ */
+export function createEvaluationNode(
+  options: EvaluationNodeOptions
+): EvaluationNodeFunction {
+  return EvaluationNodeFactory.createNode(options);
+}

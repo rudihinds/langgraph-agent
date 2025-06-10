@@ -5,7 +5,7 @@
  *
  * Key components:
  * 1. chatAgentNode - The main function that processes messages and generates responses
- * 2. shouldContinueChat - Determines the next step in the workflow based on message state
+ * 2. routeFromChatAgent - LangGraph-native routing function based on state data
  * 3. Helper functions for parsing and processing messages
  *
  * The system follows a structured workflow:
@@ -23,8 +23,8 @@ import {
   ToolMessage,
 } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
-import { Annotation } from "@langchain/langgraph";
-import { ProposalStateAnnotation } from "@/state/proposal.state.js";
+import { Annotation, Command } from "@langchain/langgraph";
+import { OverallProposalStateAnnotation } from "../../../state/modules/annotations.js";
 import {
   interpretIntentTool,
   CommandSchemaType,
@@ -60,7 +60,7 @@ function safeJSON(input: unknown): any {
  * @returns Updated state with new messages and/or intent
  */
 export async function chatAgentNode(
-  state: typeof ProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State
 ) {
   const messages = state.messages as BaseMessage[];
 
@@ -75,6 +75,7 @@ export async function chatAgentNode(
   if (messages.length === 0) return {};
 
   const last = messages[messages.length - 1];
+
   // Enhanced logging to identify exact message type
   console.log(
     "ChatAgentNode processing message type:",
@@ -150,7 +151,7 @@ export async function chatAgentNode(
     // ** CORRECTED LOGIC: **
     // This node's responsibility ends after processing the tool result
     // and setting the intent. It should NOT generate a user-facing reply here.
-    // The graph routing logic (shouldContinueChat) will use the updated intent
+    // The graph routing logic (routeFromChatAgent) will use the updated intent
     // to determine the next step, and *that* step will handle the next user interaction.
 
     console.log(
@@ -161,7 +162,7 @@ export async function chatAgentNode(
       intent: {
         command: parsed.command,
         targetSection: parsed.target_section,
-        request_details: parsed.request_details,
+        requestDetails: parsed.request_details,
       },
     };
   }
@@ -175,59 +176,25 @@ export async function chatAgentNode(
       temperature: 0,
     }).bindTools([interpretIntentTool]);
 
-    // Check state for context awareness
-    const rfpLoaded =
-      state.rfpDocument &&
-      state.rfpDocument.status === "loaded" &&
-      state.rfpDocument.text;
-
-    const researchStarted =
-      state.researchStatus && state.researchStatus !== "not_started";
-
-    const solutionStarted =
-      state.solutionStatus && state.solutionStatus !== "not_started";
-
-    const sectionsGenerated = state.sections && state.sections.size > 0;
-
-    // Prepare a system message that helps guide the model's tool usage
-    const systemPrompt = `You are a helpful assistant for a proposal generation system. 
+    // STEP 1.1 FIX: Simplified system prompt - no routing decisions
+    // routeFromChatAgent() handles all routing, this node just processes messages
+    const systemPrompt = `You are a helpful assistant for a proposal generation system.
 
 WHEN TO USE TOOLS:
 - When users ask to generate or regenerate proposal sections
-- When users want to modify existing proposal content
+- When users want to modify existing proposal content  
 - When users want to approve sections
-- When users want to load or upload documents
 - When users ask for help with the proposal system
 
 WHEN TO RESPOND DIRECTLY (WITHOUT TOOLS):
 - General questions about proposal writing best practices
-- Simple greetings or conversation
+- Simple greetings or conversation  
 - Clarification questions
 - When user asks factual questions that don't require system actions
 
-Always use the interpret_intent tool when the user request involves any actions related to the proposal content, workflow, or system functionality. 
-This helps the system understand what actions to take.
+Always use the interpret_intent tool when the user request involves any actions related to the proposal content, workflow, or system functionality.
 
-CURRENT WORKFLOW STATE:
-- RFP Document: ${rfpLoaded ? "Loaded" : "Not loaded"}
-- Research: ${researchStarted ? "Started" : "Not started"}
-- Solution: ${solutionStarted ? "Started" : "Not started"}
-- Sections: ${sectionsGenerated ? "Some generated" : "None generated"}
-
-WORKFLOW GUIDANCE:
-${
-  !rfpLoaded
-    ? "The user needs to load an RFP document as the first step. Guide them to provide an RFP ID or text."
-    : researchStarted
-      ? solutionStarted
-        ? sectionsGenerated
-          ? "The user is in the section refinement phase. Help them modify, approve, or regenerate sections."
-          : "The user needs to generate proposal sections. Guide them to start generating specific sections."
-        : "The user needs to develop a solution approach next. Guide them to start the solution development phase."
-      : "The user needs to start the research phase next. Guide them to initiate research."
-}
-
-Be helpful, conversational and concise while keeping them on the right path in our workflow.`;
+Be helpful, conversational and concise. The system will handle workflow routing automatically.`;
 
     // Construct the messages array with a system prompt
     const promptMessages = [
@@ -279,186 +246,81 @@ Be helpful, conversational and concise while keeping them on the right path in o
 }
 
 /**
- * Determines the next node in the workflow based on the current state.
- *
- * Routes to:
- * - "chatTools" when tool calls are pending
- * - Specific handlers based on the intent (regenerateSection, modifySection, etc.)
- * - "__end__" when no further action is needed
- *
- * @param state - The current state of the proposal workflow
- * @returns The key of the next node to execute
+ * LangGraph-native routing function for chat agent
+ * Routes based on state data following LangGraph best practices
  */
-export function shouldContinueChat(
-  state: typeof ProposalStateAnnotation.State
+export function routeFromChatAgent(
+  state: typeof OverallProposalStateAnnotation.State
 ): string {
-  console.log("\n--------- shouldContinueChat START ---------");
-  console.log(
-    "Intent in state:",
-    state.intent ? JSON.stringify(state.intent) : "none"
-  );
+  console.log("[routeFromChatAgent] Determining next step");
 
   const msgs = state.messages;
   if (!msgs || msgs.length === 0) {
-    console.log("shouldContinueChat: No messages, ending");
-    console.log("--------- shouldContinueChat END ---------\n");
+    console.log("[routeFromChatAgent] → __end__: No messages");
     return "__end__";
   }
 
-  // Print message chain summary for debugging
-  console.log(
-    "Message chain:",
-    msgs
-      .map(
-        (m, i) =>
-          `[${i}] ${m.constructor.name}${m instanceof ToolMessage && m.tool_call_id ? ` (tool_call_id: ${m.tool_call_id})` : ""}`
-      )
-      .join(" → ")
-  );
+  const lastMessage = msgs[msgs.length - 1];
 
-  const last = msgs[msgs.length - 1];
-  if (!last) {
-    console.log("shouldContinueChat: No last message, ending");
-    console.log("--------- shouldContinueChat END ---------\n");
-    return "__end__";
-  }
-
-  console.log(
-    "shouldContinueChat processing last message type:",
-    last.constructor.name,
-    last.id ? `(ID: ${last.id})` : ""
-  );
-
-  // Enhanced tool call detection with deep inspection of message structure
-  let hasToolCalls = false;
-  let toolCalls = null;
-
-  // Log the full message structure for debugging
-  console.log(
-    "Message structure:",
-    JSON.stringify(last, (key, value) =>
-      key === "content" && typeof value === "string" && value.length > 100
-        ? value.substring(0, 100) + "..."
-        : value
-    )
-  );
-
-  // Case 1: Standard AIMessage with tool_calls property
-  if (
-    last instanceof AIMessage &&
-    Array.isArray(last.tool_calls) &&
-    last.tool_calls.length > 0
-  ) {
-    hasToolCalls = true;
-    toolCalls = last.tool_calls;
-  }
-
-  // Case 2: AIMessageChunk inspection - check various possible locations
-  else if (last.constructor.name.includes("AIMessage")) {
-    // Check additional_kwargs
-    if (
-      last.additional_kwargs &&
-      last.additional_kwargs.tool_calls &&
-      Array.isArray(last.additional_kwargs.tool_calls) &&
-      last.additional_kwargs.tool_calls.length > 0
-    ) {
-      hasToolCalls = true;
-      toolCalls = last.additional_kwargs.tool_calls;
-      console.log("Found tool_calls in additional_kwargs");
-    }
-    // Direct property
-    else if (
-      "tool_calls" in last &&
-      Array.isArray((last as any).tool_calls) &&
-      (last as any).tool_calls.length > 0
-    ) {
-      hasToolCalls = true;
-      toolCalls = (last as any).tool_calls;
-      console.log("Found tool_calls directly on the message");
-    }
-  }
-
-  // Case 3: Generic object inspection (last resort)
-  else if (typeof last === "object" && last !== null) {
-    // Direct property check
-    if (
-      "tool_calls" in last &&
-      Array.isArray((last as any).tool_calls) &&
-      (last as any).tool_calls.length > 0
-    ) {
-      hasToolCalls = true;
-      toolCalls = (last as any).tool_calls;
-      console.log("Found tool_calls on generic object");
-    }
-    // Check additional_kwargs
-    else if (
-      "additional_kwargs" in last &&
-      (last as any).additional_kwargs &&
-      "tool_calls" in (last as any).additional_kwargs &&
-      Array.isArray((last as any).additional_kwargs.tool_calls) &&
-      (last as any).additional_kwargs.tool_calls.length > 0
-    ) {
-      hasToolCalls = true;
-      toolCalls = (last as any).additional_kwargs.tool_calls;
-      console.log("Found tool_calls in additional_kwargs of generic object");
-    }
-  }
-
-  // If tool calls were found, route to chatTools
-  if (hasToolCalls && toolCalls) {
-    console.log(
-      `shouldContinueChat: Found ${toolCalls.length} tool calls, routing to chatTools`
-    );
-    console.log(
-      "Tool calls:",
-      JSON.stringify(
-        toolCalls.map((tc: any) => ({
-          name: tc.name || "unnamed",
-          id: tc.id || "no-id",
-          type: tc.type || "no-type",
-        }))
-      )
-    );
-    console.log("--------- shouldContinueChat END ---------\n");
+  // Check for tool calls that need processing
+  const hasToolCalls = checkForToolCalls(lastMessage);
+  if (hasToolCalls) {
+    console.log("[routeFromChatAgent] → chatTools: Tool calls detected");
     return "chatTools";
   }
 
-  // Route based on intent if present
-  if (state.intent?.command) {
-    console.log(
-      `shouldContinueChat: Routing based on intent: ${state.intent.command}`
-    );
+  // Check if we have an RFP to process
+  if (state.metadata?.rfpId) {
+    // Check if document is loaded
+    const isDocumentLoaded =
+      state.rfpDocument &&
+      state.rfpDocument.status === "loaded" &&
+      (state.rfpDocument.text || state.rfpDocument.metadata?.raw);
 
-    let destination;
-    switch (state.intent.command) {
-      case "regenerate_section":
-        destination = "regenerateSection";
-        break;
-      case "modify_section":
-        destination = "modifySection";
-        break;
-      case "approve_section":
-        destination = "approveSection";
-        break;
-      case "ask_question":
-        destination = "answerQuestion";
-        break;
-      case "load_document":
-        destination = "loadDocument";
-        break;
-      default:
-        console.log(
-          `shouldContinueChat: Unrecognized command "${state.intent.command}", ending`
-        );
-        destination = "__end__";
+    if (!isDocumentLoaded) {
+      console.log("[routeFromChatAgent] → documentLoader: Need to load document");
+      return "documentLoader";
+    } else {
+      console.log("[routeFromChatAgent] → rfpAnalyzer: Document ready for analysis");
+      return "rfpAnalyzer";
     }
-
-    console.log(`shouldContinueChat: Routing to ${destination}`);
-    console.log("--------- shouldContinueChat END ---------\n");
-    return destination;
   }
 
-  console.log("shouldContinueChat: No recognized routing condition, ending");
-  console.log("--------- shouldContinueChat END ---------\n");
+  // Default: continue conversation
+  console.log("[routeFromChatAgent] → __end__: Normal conversation complete");
   return "__end__";
+}
+
+/**
+ * Helper function to detect tool calls in messages
+ */
+function checkForToolCalls(message: any): boolean {
+  // Case 1: Standard AIMessage with tool_calls property
+  if (
+    message instanceof AIMessage &&
+    Array.isArray(message.tool_calls) &&
+    message.tool_calls.length > 0
+  ) {
+    return true;
+  }
+
+  // Case 2: Check additional_kwargs
+  if (
+    message.additional_kwargs?.tool_calls &&
+    Array.isArray(message.additional_kwargs.tool_calls) &&
+    message.additional_kwargs.tool_calls.length > 0
+  ) {
+    return true;
+  }
+
+  // Case 3: Direct property check
+  if (
+    "tool_calls" in message &&
+    Array.isArray(message.tool_calls) &&
+    message.tool_calls.length > 0
+  ) {
+    return true;
+  }
+
+  return false;
 }
