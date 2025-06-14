@@ -9,11 +9,16 @@ import { BaseMessage, AIMessage, HumanMessage, SystemMessage } from "@langchain/
 import {
   MessagesAnnotation,
   Command,
-  interrupt,
   END
 } from "@langchain/langgraph";
 import { ProcessingStatus } from "@/state/modules/types.js";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
+import { 
+  createApprovalNode, 
+  createRejectionNode,
+  createHumanReviewNode,
+  createFeedbackRouterNode
+} from "@/lib/langgraph/node-utils.js";
 
 // Initialize LLMs
 const model = new ChatAnthropic({
@@ -28,20 +33,11 @@ const AnalysisOutputSchema = z.object({
   goto: z.enum(["humanReview"]).describe("Always go to humanReview after analysis"),
 });
 
-const FeedbackIntentSchema = z.object({
-  response: z.string().describe("Response to user about their feedback"),
-  goto: z.enum(["approve", "refine", "reject"]).describe("User's intent based on their feedback"),
-});
-
 /**
  * Call LLM with structured output following documented pattern
  */
 function callAnalysisLlm(messages: BaseMessage[]) {
   return model.withStructuredOutput(AnalysisOutputSchema, { name: "AnalysisResponse" }).invoke(messages);
-}
-
-function callFeedbackLlm(messages: BaseMessage[]) {
-  return model.withStructuredOutput(FeedbackIntentSchema, { name: "FeedbackResponse" }).invoke(messages);
 }
 
 /**
@@ -134,96 +130,51 @@ export async function rfpAnalyzer(
 }
 
 /**
- * Human Review Node - Following documented pattern exactly
+ * Human Review Node - Using reusable utility
  */
-export function humanReview(
-  state: typeof OverallProposalStateAnnotation.State
-): Command {
-  const userInput: string = interrupt("Ready for your feedback on the analysis.");
-  
-  return new Command({
-    goto: "feedbackRouter",
-    update: {
-      messages: [
-        new HumanMessage(userInput)
-      ]
-    }
-  });
-}
+export const humanReview = createHumanReviewNode<typeof OverallProposalStateAnnotation.State>({
+  nodeName: "humanReview",
+  llm: model,
+  interruptType: "rfp_analysis_review",
+  reviewPromptTemplate: "Generate a natural question asking the user to review and provide feedback on the RFP analysis",
+  options: ["approve", "refine", "reject"],
+  nextNode: "feedbackRouter"
+});
 
 /**
- * Feedback Router Node - Interprets user intent
+ * Feedback Router Node - Using reusable utility with structured output
  */
-export async function feedbackRouter(
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Command> {
-  const systemPrompt = 
-    "You are analyzing user feedback about an RFP analysis. " +
-    "Determine if they want to: approve (satisfied), refine (want changes), or reject (start over). " +
-    "Respond naturally acknowledging their feedback.";
+export const feedbackRouter = createFeedbackRouterNode<typeof OverallProposalStateAnnotation.State>({
+  nodeName: "feedbackRouter",
+  llm: model,
+  intentPrompt: "You are analyzing user feedback about an RFP analysis. Determine if they want to: approve (satisfied), refine (want changes), or reject (start over). Respond naturally acknowledging their feedback.",
+  routingMap: {
+    "approve": "approvalHandler",
+    "refine": "rfpAnalyzer",
+    "reject": "rejectionHandler"
+  },
+  defaultRoute: "rfpAnalyzer"
+});
 
-  const messages = [
-    new SystemMessage(systemPrompt),
-    ...state.messages
-  ];
-
-  const response = await callFeedbackLlm(messages);
-  
-  const aiMsg = new AIMessage({
-    content: response.response,
-    name: "feedbackRouter"
-  });
-
-  let goto: string = response.goto;
-  if (goto === "approve") {
-    goto = "approvalHandler";
-  } else if (goto === "reject") {
-    goto = "rejectionHandler";
-  } else {
-    goto = "rfpAnalyzer"; // refine goes back to analyzer
+/**
+ * Approval Handler Node - Using reusable utility with dynamic responses
+ */
+export const approvalHandler = createApprovalNode<typeof OverallProposalStateAnnotation.State>({
+  nodeName: "approvalHandler",
+  llm: model,
+  responsePrompt: "Generate a professional, enthusiastic confirmation that the RFP analysis has been approved and we're ready to move to the research planning phase. Keep it concise and natural.",
+  nextNode: "researchPlanning",
+  stateUpdates: {
+    rfpProcessingStatus: ProcessingStatus.COMPLETE
   }
-
-  return new Command({
-    goto,
-    update: { messages: [aiMsg] }
-  });
-}
+});
 
 /**
- * Approval Handler Node
+ * Rejection Handler Node - Using reusable utility with dynamic responses
  */
-export async function approvalHandler(
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Command> {
-  const aiMsg = new AIMessage({
-    content: "✅ Analysis approved. Ready to proceed to research planning phase.",
-    name: "approvalHandler"
-  });
-
-  return new Command({
-    goto: "researchPlanning",
-    update: { 
-      messages: [aiMsg],
-      rfpProcessingStatus: ProcessingStatus.COMPLETE
-    }
-  });
-}
-
-/**
- * Rejection Handler Node
- */
-export async function rejectionHandler(
-  state: typeof OverallProposalStateAnnotation.State
-): Promise<Command> {
-  const aiMsg = new AIMessage({
-    content: "Starting fresh analysis. Please provide any specific requirements for the new analysis.",
-    name: "rejectionHandler"
-  });
-
-  return new Command({
-    goto: "rfpAnalyzer",
-    update: { 
-      messages: [aiMsg]
-    }
-  });
-}
+export const rejectionHandler = createRejectionNode<typeof OverallProposalStateAnnotation.State>({
+  nodeName: "rejectionHandler",
+  llm: model,
+  responsePrompt: "Generate a professional, understanding response acknowledging the user wants to start the RFP analysis fresh. Ask if they have any specific requirements or focus areas for the new analysis. Keep it natural and conversational.",
+  nextNode: "rfpAnalyzer"
+});
