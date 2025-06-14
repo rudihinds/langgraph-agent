@@ -18,7 +18,7 @@ import {
   createRejectionNode,
   createHumanReviewNode,
   createFeedbackRouterNode
-} from "@/lib/langgraph/node-utils.js";
+} from "@/lib/langgraph/common/hitl-nodes.js";
 
 // Initialize LLMs
 const model = new ChatAnthropic({
