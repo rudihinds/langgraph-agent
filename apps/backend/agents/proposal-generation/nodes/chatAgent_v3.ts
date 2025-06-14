@@ -69,15 +69,10 @@ export async function chatAgent(
   // Auto-start document loading if RFP ID is present but document not loaded
   if (hasRfpId && isDocumentNotStarted) {
     console.log("[Chat Agent V3] Auto-routing to document loader for RFP:", hasRfpId);
-    const statusMsg = new AIMessage({
-      content: "I see you have an RFP document to process. Let me load it for analysis...",
-      name: "chatAgent"
-    });
     
     return new Command({
       goto: "documentLoader",
       update: { 
-        messages: [statusMsg],
         currentStatus: "Loading RFP document...",
         isAnalyzingRfp: true
       }
@@ -87,15 +82,10 @@ export async function chatAgent(
   // Auto-start RFP analysis if document is loaded but not analyzed
   if (needsAnalysis) {
     console.log("[Chat Agent V3] Auto-routing to RFP analyzer for loaded document");
-    const statusMsg = new AIMessage({
-      content: "Great! Your RFP document is loaded. Let me analyze it and provide strategic insights...",
-      name: "chatAgent"
-    });
     
     return new Command({
       goto: "rfpAnalyzer",
       update: { 
-        messages: [statusMsg],
         currentStatus: "Analyzing RFP document...",
         isAnalyzingRfp: true
       }

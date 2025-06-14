@@ -275,3 +275,39 @@ The system now has:
 - ✅ **Clean implementation** ready for testing and integration
 
 **Next focus**: Real-world testing, error scenario validation, and integration with existing collaboration systems to create a complete proposal development pipeline.
+
+### ✅ LATEST FIX: Hardcoded Message Removal (Jan 2025)
+
+**Status**: **UX IMPROVEMENT COMPLETED** - Clean LLM-driven responses
+
+**Issue**: Users saw hardcoded "Great! Your RFP document is loaded. Let me analyze it and provide strategic insights..." message before the actual LLM response, creating a confusing double-message experience.
+
+**Root Cause**: Chat agent was being overly proactive by adding hardcoded messages before routing to the RFP analyzer.
+
+**Solution Implemented**:
+
+```typescript
+// BEFORE: Hardcoded message + LLM response
+const statusMsg = new AIMessage({
+  content: "Great! Your RFP document is loaded. Let me analyze it and provide strategic insights...",
+  name: "chatAgent"
+});
+
+// AFTER: Clean routing with LLM-generated response only
+return new Command({
+  goto: "rfpAnalyzer",
+  update: { 
+    currentStatus: "Analyzing RFP document...",
+    isAnalyzingRfp: true
+  }
+});
+```
+
+**Files Modified**:
+- ✅ `chatAgent_v3.ts`: Removed hardcoded messages from auto-routing logic
+- ✅ `rfp_analyzer_v2.ts`: Enhanced system prompt to include appropriate greeting
+
+**Impact**: 
+- Users now see only one, contextual LLM-generated response
+- Cleaner user experience with natural conversation flow
+- RFP analyzer provides appropriate greeting and analysis in a single message
