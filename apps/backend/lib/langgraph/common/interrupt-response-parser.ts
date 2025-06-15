@@ -28,11 +28,12 @@ export type InterruptResponse = z.infer<typeof InterruptResponseSchema>;
 
 // Schema for RFP synthesis responses specifically
 export const RFPSynthesisResponseSchema = z.object({
-  action: z.enum(["approve", "modify", "reject"]).describe("The user's decision on the RFP analysis"),
+  action: z.enum(["approve", "modify", "reject", "ask_question"]).describe("The user's decision on the RFP analysis"),
   confidence: z.number().min(0).max(1).describe("Confidence in parsing accuracy"),
-  feedback: z.string().optional().describe("Specific feedback or modification requests"),
+  feedback: z.string().optional().describe("Specific feedback, modification requests, or question"),
   reasoning: z.string().describe("Brief explanation of why this action was chosen"),
   specific_requests: z.array(z.string()).optional().describe("Specific areas user wants modified"),
+  is_question: z.boolean().optional().describe("Whether the user is asking a question"),
 });
 
 export type RFPSynthesisResponse = z.infer<typeof RFPSynthesisResponseSchema>;
@@ -64,9 +65,11 @@ Common response patterns:
 - Approval: "looks good", "approve", "proceed", "perfect", "yes", "continue"
 - Modification: "change X", "update Y", "add more detail", "revise", "modify", "improve"
 - Rejection: "no", "reject", "start over", "redo", "completely wrong"
+- Question: Contains "?", starts with question words (what, why, how, when, where, who, which, can you explain, tell me about)
 
+IMPORTANT: If the user is asking a question (contains "?" or question patterns), always return action: "ask_question"
 Be flexible with language variations and focus on the core intent.
-If unclear, default to "modify" as it's the safest option.`;
+If unclear and not a question, default to "modify" as it's the safest option.`;
 
   const humanPrompt = `Context: User is reviewing RFP analysis results.
 ${synthesisContext ? `Analysis Summary: ${synthesisContext}` : ''}

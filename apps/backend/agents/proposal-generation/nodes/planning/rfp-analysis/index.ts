@@ -33,6 +33,7 @@ export {
   rfpAnalysisFeedbackRouter,
   rfpAnalysisApprovalHandler,
   rfpAnalysisRejectionHandler,
+  rfpAnalysisQuestionAnswering,
   rfpAnalysisHitlReviewCustom,
   rfpAnalysisHitlRouter
 } from "./hitl-review.js";
@@ -54,6 +55,7 @@ export const RFP_ANALYSIS_NODES = {
   SYNTHESIS: "rfpAnalysisSynthesis",
   HITL_REVIEW: "rfpAnalysisHumanReview",
   FEEDBACK_ROUTER: "rfpAnalysisFeedbackRouter",
+  QUESTION_ANSWERING: "rfpAnalysisQuestionAnswering",
   
   // Handlers
   APPROVAL: "rfpAnalysisApprovalHandler",

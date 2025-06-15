@@ -15,6 +15,7 @@ import {
   RFPSynthesisResponse,
   ApprovalResponse 
 } from "./interrupt-response-parser.js";
+import { createQuestionAnsweringNode } from "./qa-hitl-nodes.js";
 
 // Enhanced configuration types
 interface EnhancedHumanReviewNodeConfig<TState = any> {
@@ -80,11 +81,18 @@ export function createEnhancedHumanReviewNode<TState extends Record<string, any>
     // Pass JSON payload to interrupt() per LangGraph.js best practices
     const userInput = interrupt(interruptPayload);
     
+    // Create human message for the user's response
+    const userMessage = new HumanMessage({
+      content: typeof userInput === 'string' ? userInput : JSON.stringify(userInput),
+      name: "user"
+    });
+    
     return new Command({
       goto: config.nextNode,
       update: {
         userFeedback: userInput,
-        lastInterruptType: config.interruptType
+        lastInterruptType: config.interruptType,
+        messages: [userMessage] // Add user response to message history
       }
     });
   };
@@ -94,7 +102,7 @@ export function createEnhancedHumanReviewNode<TState extends Record<string, any>
  * Enhanced feedback router that uses natural language parsing
  */
 export function createEnhancedFeedbackRouterNode<TState extends Record<string, any>>(
-  config: EnhancedFeedbackRouterConfig<TState>
+  config: EnhancedFeedbackRouterConfig<TState> & { llm?: any }
 ) {
   return async function(state: TState): Promise<Command> {
     console.log(`[${config.nodeName}] Parsing natural language feedback with ${config.parserType} parser`);
@@ -112,13 +120,25 @@ export function createEnhancedFeedbackRouterNode<TState extends Record<string, a
         case "rfp_synthesis":
           parsedResponse = await parseRFPSynthesisResponse(userFeedback, context) as RFPSynthesisResponse;
           detectedAction = parsedResponse.action;
-          acknowledgmentText = generateRFPSynthesisAcknowledgment(parsedResponse);
+          acknowledgmentText = await generateContextualAcknowledgment(
+            config.llm,
+            userFeedback,
+            detectedAction,
+            "RFP analysis",
+            parsedResponse
+          );
           break;
 
         case "approval":
           parsedResponse = await parseApprovalResponse(userFeedback, context) as ApprovalResponse;
           detectedAction = parsedResponse.action;
-          acknowledgmentText = generateApprovalAcknowledgment(parsedResponse);
+          acknowledgmentText = await generateContextualAcknowledgment(
+            config.llm,
+            userFeedback,
+            detectedAction,
+            "content approval",
+            parsedResponse
+          );
           break;
 
         case "generic":
@@ -128,7 +148,13 @@ export function createEnhancedFeedbackRouterNode<TState extends Record<string, a
           // For generic, we'll use simple intent extraction as fallback
           detectedAction = extractSimpleIntent(userFeedback, config.validActions);
           parsedResponse = { action: detectedAction, feedback: userFeedback };
-          acknowledgmentText = `Got it! I understand you want to ${detectedAction}.`;
+          acknowledgmentText = await generateContextualAcknowledgment(
+            config.llm,
+            userFeedback,
+            detectedAction,
+            "request",
+            parsedResponse
+          );
           break;
 
         default:
@@ -144,8 +170,22 @@ export function createEnhancedFeedbackRouterNode<TState extends Record<string, a
       const fallbackActions = Object.keys(config.routingMap);
       detectedAction = extractSimpleIntent(userFeedback, fallbackActions);
       parsedResponse = { action: detectedAction, feedback: userFeedback, confidence: 0.3 };
-      acknowledgmentText = `I'll interpret that as "${detectedAction}". Let me proceed with your request.`;
+      acknowledgmentText = config.llm 
+        ? await generateContextualAcknowledgment(
+            config.llm,
+            userFeedback,
+            detectedAction,
+            "request",
+            parsedResponse
+          )
+        : `I'll interpret that as "${detectedAction}". Let me proceed with your request.`;
     }
+
+    // Create user message for the feedback
+    const userMessage = new HumanMessage({
+      content: typeof userFeedback === 'string' ? userFeedback : JSON.stringify(userFeedback),
+      name: "user"
+    });
 
     // Create acknowledgment message
     const aiMsg = new AIMessage({
@@ -161,7 +201,7 @@ export function createEnhancedFeedbackRouterNode<TState extends Record<string, a
       update: { 
         parsedFeedback: parsedResponse,
         acknowledgment: acknowledgmentText,
-        messages: [aiMsg]
+        messages: [userMessage, aiMsg] // Preserve both user feedback and AI response
       }
     });
   };
@@ -174,12 +214,13 @@ function generateRFPSynthesisAcknowledgment(response: RFPSynthesisResponse): str
   const baseMessages = {
     approve: "Perfect! I'm glad the RFP analysis meets your expectations.",
     modify: "I understand you'd like some adjustments to the analysis.",
-    reject: "No problem! I'll start fresh with a new approach to the RFP analysis."
+    reject: "No problem! I'll start fresh with a new approach to the RFP analysis.",
+    ask_question: "Great question! Let me provide you with a detailed answer based on the analysis."
   };
 
   let message = baseMessages[response.action];
 
-  if (response.feedback && response.action !== "approve") {
+  if (response.feedback && response.action !== "approve" && response.action !== "ask_question") {
     message += ` I'll focus on: ${response.feedback}`;
   }
 
@@ -210,7 +251,54 @@ function generateApprovalAcknowledgment(response: ApprovalResponse): string {
 }
 
 /**
- * Create a complete HITL flow for RFP synthesis review
+ * Generate contextual acknowledgment using LLM based on user's actual feedback
+ */
+async function generateContextualAcknowledgment(
+  llm: any,
+  userFeedback: string,
+  detectedAction: string,
+  contextType: string,
+  parsedResponse: any
+): Promise<string> {
+  if (!llm) {
+    // Fallback to basic acknowledgment if no LLM provided
+    return `I understand you want to ${detectedAction}. Let me proceed with that.`;
+  }
+
+  try {
+    const prompt = `Generate a brief, natural acknowledgment (1 sentence, max 20 words) for this user feedback about ${contextType}.
+
+User said: "${userFeedback}"
+Detected intent: ${detectedAction}
+Additional context: ${parsedResponse.feedback || 'none'}
+
+Create a conversational acknowledgment that shows you understood their specific request. Be natural and engaging, not robotic.
+
+Examples:
+- "Got it! Let me address those concerns about the risk assessment."
+- "Perfect! I'll revise the competitive analysis section."
+- "Great question about the budget breakdown - let me explain that."
+
+Your acknowledgment:`;
+
+    const response = await llm.invoke([{ type: "human", content: prompt }]);
+    const acknowledgment = response.content.trim();
+    
+    // Ensure it's not too long and ends properly
+    const maxLength = 120;
+    return acknowledgment.length > maxLength 
+      ? acknowledgment.substring(0, maxLength - 3) + "..."
+      : acknowledgment;
+      
+  } catch (error) {
+    console.warn(`[generateContextualAcknowledgment] LLM call failed:`, error);
+    // Fallback to simple acknowledgment
+    return `I understand you want to ${detectedAction}. Let me proceed with that.`;
+  }
+}
+
+/**
+ * Create a complete HITL flow for RFP synthesis review with Q&A support
  */
 export function createRFPSynthesisReviewFlow<TState extends Record<string, any>>(
   config: {
@@ -219,28 +307,34 @@ export function createRFPSynthesisReviewFlow<TState extends Record<string, any>>
     approvalNodeName: string;
     rejectionNodeName: string;
     modificationNodeName: string;
+    qaNodeName?: string;
     llm: any;
   }
 ) {
+  // Default QA node name if not provided
+  const qaNodeName = config.qaNodeName || "rfpQuestionAnswering";
+
   // Human review node
   const humanReview = createEnhancedHumanReviewNode<TState>({
     nodeName: config.reviewNodeName,
     llm: config.llm,
     interruptType: "rfp_analysis_review",
-    question: "Please review the comprehensive RFP analysis results. Do you approve these findings and strategic recommendations?",
-    options: ["approve", "modify", "reject"],
+    question: "Please review the comprehensive RFP analysis results. Do you approve these findings and strategic recommendations? You can also ask questions about the analysis.",
+    options: ["approve", "modify", "reject", "ask a question"],
     nextNode: config.routerNodeName,
     contextExtractor: (state: TState) => (state as any).synthesisAnalysis
   });
 
-  // Enhanced feedback router
+  // Enhanced feedback router with QA support
   const feedbackRouter = createEnhancedFeedbackRouterNode<TState>({
     nodeName: config.routerNodeName,
     parserType: "rfp_synthesis",
+    llm: config.llm, // Pass LLM for contextual acknowledgments
     routingMap: {
       "approve": config.approvalNodeName,
       "modify": config.modificationNodeName,
-      "reject": config.rejectionNodeName
+      "reject": config.rejectionNodeName,
+      "ask_question": qaNodeName
     },
     defaultRoute: config.modificationNodeName,
     contextExtractor: (state: TState) => {
@@ -249,9 +343,43 @@ export function createRFPSynthesisReviewFlow<TState extends Record<string, any>>
     }
   });
 
+  // Question answering node
+  const qaNode = createQuestionAnsweringNode<TState>({
+    nodeName: qaNodeName,
+    llm: config.llm,
+    systemPromptTemplate: `You are an expert RFP analyst helping users understand the comprehensive RFP analysis results.
+    
+You have access to:
+- Complete synthesis analysis with risks, opportunities, and strategic recommendations
+- Linguistic pattern analysis
+- Requirements extraction analysis  
+- Document structure analysis
+- Strategic signals analysis
+
+Answer questions clearly and concisely, referencing specific findings from the analysis.
+If asked about something not in the analysis, explain what's available instead.`,
+    contextExtractor: (state: TState) => ({
+      primaryContext: (state as any).synthesisAnalysis,
+      additionalContext: {
+        linguistic: (state as any).linguisticAnalysis,
+        requirements: (state as any).requirementsAnalysis,
+        structure: (state as any).structureAnalysis,
+        strategic: (state as any).strategicAnalysis,
+        rfpDocument: {
+          name: (state as any).documentMetadata?.name,
+          complexity: (state as any).documentMetadata?.complexity,
+          pageCount: (state as any).documentMetadata?.pageCount
+        }
+      }
+    }),
+    returnNode: config.reviewNodeName,
+    maxContextLength: 50000 // Prevent token overflow
+  });
+
   return {
     humanReview,
-    feedbackRouter
+    feedbackRouter,
+    qaNode
   };
 }
 
@@ -285,6 +413,7 @@ export function createApprovalFlow<TState extends Record<string, any>>(
   const feedbackRouter = createEnhancedFeedbackRouterNode<TState>({
     nodeName: config.routerNodeName,
     parserType: "approval",
+    llm: config.llm, // Pass LLM for contextual acknowledgments
     routingMap: {
       "approve": config.approvalNodeName,
       "reject": config.rejectionNodeName,

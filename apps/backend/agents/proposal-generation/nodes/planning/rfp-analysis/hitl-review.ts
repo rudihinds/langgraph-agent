@@ -16,6 +16,9 @@ import {
   createApprovalNode,
   createRejectionNode
 } from "@/lib/langgraph/common/hitl-nodes.js";
+import { 
+  createRFPSynthesisReviewFlow
+} from "@/lib/langgraph/common/enhanced-hitl-nodes.js";
 
 // Initialize LLM for HITL interactions
 const model = new ChatAnthropic({
@@ -25,42 +28,22 @@ const model = new ChatAnthropic({
 });
 
 /**
- * Human Review Node for RFP Analysis Results
- * Uses reusable HITL utility with RFP-specific configuration
+ * Enhanced HITL Flow for RFP Analysis Review with Q&A Support
  */
-export const rfpAnalysisHumanReview = createHumanReviewNode<typeof OverallProposalStateAnnotation.State>({
-  nodeName: "rfpAnalysisHumanReview",
-  llm: model,
-  interruptType: "rfp_analysis_review",
-  reviewPromptTemplate: `Generate a professional, contextual question asking the user to review the comprehensive RFP analysis results. 
-    Reference the synthesis findings and ask for their feedback on the strategic recommendations. 
-    Keep the tone collaborative and focused on validating the analysis before proceeding to proposal development.`,
-  options: ["approve", "modify", "reject"],
-  nextNode: "rfpAnalysisFeedbackRouter"
+const rfpAnalysisReviewFlow = createRFPSynthesisReviewFlow<typeof OverallProposalStateAnnotation.State>({
+  reviewNodeName: "rfpAnalysisHumanReview",
+  routerNodeName: "rfpAnalysisFeedbackRouter",
+  approvalNodeName: "rfpAnalysisApprovalHandler",
+  rejectionNodeName: "rfpAnalysisRejectionHandler",
+  modificationNodeName: "rfpAnalysisDispatcher",
+  qaNodeName: "rfpAnalysisQuestionAnswering",
+  llm: model
 });
 
-/**
- * Feedback Router for RFP Analysis Review
- * Routes user feedback to appropriate handlers
- */
-export const rfpAnalysisFeedbackRouter = createFeedbackRouterNode<typeof OverallProposalStateAnnotation.State>({
-  nodeName: "rfpAnalysisFeedbackRouter",
-  llm: model,
-  intentPrompt: `You are analyzing user feedback about comprehensive RFP analysis results including linguistic patterns, requirements extraction, document structure, and strategic signals.
-    
-    Determine if they want to:
-    - approve: They're satisfied with the analysis and ready to proceed to proposal development
-    - modify: They want adjustments to the analysis or synthesis 
-    - reject: They want to restart the analysis with different parameters
-    
-    Respond naturally acknowledging their feedback about the RFP analysis.`,
-  routingMap: {
-    "approve": "rfpAnalysisApprovalHandler",
-    "modify": "rfpAnalysisDispatcher", // Back to dispatcher for re-analysis
-    "reject": "rfpAnalysisRejectionHandler"
-  },
-  defaultRoute: "rfpAnalysisDispatcher"
-});
+// Export the enhanced nodes from the flow
+export const rfpAnalysisHumanReview = rfpAnalysisReviewFlow.humanReview;
+export const rfpAnalysisFeedbackRouter = rfpAnalysisReviewFlow.feedbackRouter;
+export const rfpAnalysisQuestionAnswering = rfpAnalysisReviewFlow.qaNode;
 
 /**
  * Approval Handler for RFP Analysis

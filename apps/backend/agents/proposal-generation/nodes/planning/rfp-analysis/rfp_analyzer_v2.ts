@@ -131,7 +131,7 @@ export async function rfpAnalyzer(
 }
 
 /**
- * Enhanced HITL Flow for RFP Analysis Review - Uses natural language parsing
+ * Enhanced HITL Flow for RFP Analysis Review - Uses natural language parsing with Q&A
  */
 const rfpReviewFlow = createRFPSynthesisReviewFlow<typeof OverallProposalStateAnnotation.State>({
   reviewNodeName: "humanReview",
@@ -139,12 +139,14 @@ const rfpReviewFlow = createRFPSynthesisReviewFlow<typeof OverallProposalStateAn
   approvalNodeName: "approvalHandler",
   rejectionNodeName: "rejectionHandler",
   modificationNodeName: "rfpAnalyzer", // Route back to analyzer for modifications
+  qaNodeName: "rfpQuestionAnswering", // Question answering node
   llm: model
 });
 
 // Export the nodes from the flow
 export const humanReview = rfpReviewFlow.humanReview;
 export const feedbackRouter = rfpReviewFlow.feedbackRouter;
+export const rfpQuestionAnswering = rfpReviewFlow.qaNode;
 
 /**
  * Approval Handler Node - Using reusable utility with dynamic responses

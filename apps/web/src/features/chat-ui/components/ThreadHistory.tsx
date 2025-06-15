@@ -12,9 +12,51 @@ import {
   SheetTitle,
 } from "@/features/ui/components/sheet";
 import { Skeleton } from "@/features/ui/components/skeleton";
-import { PanelRightOpen, PanelRightClose } from "lucide-react";
+import { PanelRightOpen, PanelRightClose, MessageCircle, Pause, CheckCircle, AlertCircle } from "lucide-react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { cn } from "@/lib/utils/utils";
+
+// Thread status helper function
+function getThreadStatus(thread: Thread): {
+  status: 'active' | 'paused' | 'idle' | 'error' | 'unknown';
+  icon: React.ReactNode;
+  color: string;
+} {
+  const status = thread.status;
+  
+  switch (status) {
+    case 'busy':
+      return {
+        status: 'active',
+        icon: <MessageCircle className="h-3 w-3" />,
+        color: 'text-blue-500'
+      };
+    case 'interrupted':
+      return {
+        status: 'paused',
+        icon: <Pause className="h-3 w-3" />,
+        color: 'text-yellow-500'
+      };
+    case 'idle':
+      return {
+        status: 'idle',
+        icon: <CheckCircle className="h-3 w-3" />,
+        color: 'text-green-500'
+      };
+    case 'error':
+      return {
+        status: 'error',
+        icon: <AlertCircle className="h-3 w-3" />,
+        color: 'text-red-500'
+      };
+    default:
+      return {
+        status: 'unknown',
+        icon: <MessageCircle className="h-3 w-3" />,
+        color: 'text-gray-400'
+      };
+  }
+}
 
 function ThreadList({
   threads,
@@ -39,11 +81,18 @@ function ThreadList({
           const firstMessage = t.values.messages[0];
           itemText = getContentString(firstMessage.content);
         }
+        
+        const threadStatus = getThreadStatus(t);
+        const isActive = t.thread_id === threadId;
+        
         return (
           <div key={t.thread_id} className="w-full px-1">
             <Button
               variant="ghost"
-              className="w-full max-w-[250px] items-start justify-start text-left font-normal overflow-hidden"
+              className={cn(
+                "w-full max-w-[250px] items-start justify-start text-left font-normal overflow-hidden",
+                isActive && "bg-accent"
+              )}
               onClick={(e) => {
                 e.preventDefault();
                 onThreadClick?.(t.thread_id);
@@ -51,7 +100,12 @@ function ThreadList({
                 setThreadId(t.thread_id);
               }}
             >
-              <p className="truncate text-ellipsis">{itemText}</p>
+              <div className="flex items-center gap-2 w-full min-w-0">
+                <span className={cn("flex-shrink-0", threadStatus.color)}>
+                  {threadStatus.icon}
+                </span>
+                <p className="truncate text-ellipsis flex-1 min-w-0">{itemText}</p>
+              </div>
             </Button>
           </div>
         );
@@ -82,6 +136,7 @@ export function ThreadHistory() {
   const { getThreads, threads, setThreads, threadsLoading, setThreadsLoading } =
     useThreads();
 
+  // Initial thread loading
   useEffect(() => {
     if (typeof window === "undefined") return;
     setThreadsLoading(true);
@@ -90,6 +145,22 @@ export function ThreadHistory() {
       .catch(console.error)
       .finally(() => setThreadsLoading(false));
   }, [getThreads, setThreads, setThreadsLoading]);
+
+  // Auto-refresh threads every 30 seconds when sidebar is open for real-time updates
+  useEffect(() => {
+    if (!isOpen && !mobileOpen) return; // Only refresh when sidebar is visible
+    
+    const interval = setInterval(async () => {
+      try {
+        const updatedThreads = await getThreads();
+        setThreads(updatedThreads);
+      } catch (error) {
+        console.warn("[ThreadHistory] Auto-refresh failed:", error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isOpen, mobileOpen, getThreads, setThreads]);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);

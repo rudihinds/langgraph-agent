@@ -45,6 +45,7 @@ import {
   rfpAnalysisFeedbackRouter,
   rfpAnalysisApprovalHandler,
   rfpAnalysisRejectionHandler,
+  rfpAnalysisQuestionAnswering,
   RFP_ANALYSIS_NODES
 } from "./nodes/planning/rfp-analysis/index.js";
 
@@ -63,6 +64,7 @@ const NODES = {
   RFP_SYNTHESIS: RFP_ANALYSIS_NODES.SYNTHESIS,
   RFP_HITL_REVIEW: RFP_ANALYSIS_NODES.HITL_REVIEW,
   RFP_FEEDBACK_ROUTER: RFP_ANALYSIS_NODES.FEEDBACK_ROUTER,
+  RFP_QA: RFP_ANALYSIS_NODES.QUESTION_ANSWERING,
   RFP_APPROVAL: RFP_ANALYSIS_NODES.APPROVAL,
   RFP_REJECTION: RFP_ANALYSIS_NODES.REJECTION,
 
@@ -134,7 +136,12 @@ proposalGenerationGraph.addNode(NODES.RFP_HITL_REVIEW, rfpAnalysisHumanReview, {
 
 // Feedback Router - Interprets user decisions
 proposalGenerationGraph.addNode(NODES.RFP_FEEDBACK_ROUTER, rfpAnalysisFeedbackRouter, {
-  ends: [NODES.RFP_DISPATCHER, NODES.RFP_APPROVAL, NODES.RFP_REJECTION],
+  ends: [NODES.RFP_DISPATCHER, NODES.RFP_APPROVAL, NODES.RFP_REJECTION, NODES.RFP_QA],
+});
+
+// Question Answering - Answers user questions about analysis
+proposalGenerationGraph.addNode(NODES.RFP_QA, rfpAnalysisQuestionAnswering, {
+  ends: [NODES.RFP_HITL_REVIEW],
 });
 
 // Approval Handler - Proceed to next phase

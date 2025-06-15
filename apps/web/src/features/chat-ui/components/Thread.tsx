@@ -273,7 +273,7 @@ export function Thread() {
               disabled={isLoading && (messages.length > 0 || !!threadId) && !isInterrupted}
               placeholder={
                 isInterrupted
-                  ? "Type your response (e.g., 'looks good', 'please modify the risks section', 'reject and start over')..."
+                  ? "Type your response (e.g., 'looks good', 'what are the main risks?', 'modify the opportunities section', 'reject')..."
                   : isLoading && (messages.length > 0 || !!threadId)
                   ? "Waiting for response..."
                   : "Type a message..."
