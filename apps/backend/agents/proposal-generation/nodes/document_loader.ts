@@ -177,7 +177,7 @@ export const documentLoaderNode = async (
       );
 
       return new Command({
-        goto: "rfpAnalyzer",
+        goto: "rfpAnalysisDispatcher",
         update: {
           rfpDocument: {
             ...state.rfpDocument,
@@ -302,7 +302,7 @@ export const documentLoaderNode = async (
       );
 
       return new Command({
-        goto: "rfpAnalyzer",
+        goto: "rfpAnalysisDispatcher",
         update: {
           rfpDocument: {
             id: rfpId,

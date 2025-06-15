@@ -77,8 +77,18 @@ export function createHumanReviewNode<TState extends Record<string, any>>(
   return function(state: TState): Command {
     console.log(`[${config.nodeName}] Preparing human review`);
 
-    // For MVP, use simpler interrupt without complex payload generation
-    const userInput = interrupt("Ready for your feedback on the analysis.");
+    // Create JSON-serializable payload for frontend display
+    const interruptPayload = {
+      type: config.interruptType,
+      question: "Please review the comprehensive RFP analysis results. Do you approve these findings and strategic recommendations?",
+      options: config.options,
+      synthesisData: (state as any).synthesisAnalysis, // The synthesis results for display
+      timestamp: new Date().toISOString(),
+      nodeName: config.nodeName
+    };
+
+    // Pass JSON payload to interrupt() per LangGraph.js best practices
+    const userInput = interrupt(interruptPayload);
     
     return new Command({
       goto: config.nextNode,

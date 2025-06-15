@@ -15,10 +15,11 @@ import { ProcessingStatus } from "@/state/modules/types.js";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { 
   createApprovalNode, 
-  createRejectionNode,
-  createHumanReviewNode,
-  createFeedbackRouterNode
+  createRejectionNode
 } from "@/lib/langgraph/common/hitl-nodes.js";
+import { 
+  createRFPSynthesisReviewFlow
+} from "@/lib/langgraph/common/enhanced-hitl-nodes.js";
 
 // Initialize LLMs
 const model = new ChatAnthropic({
@@ -130,31 +131,20 @@ export async function rfpAnalyzer(
 }
 
 /**
- * Human Review Node - Using reusable utility
+ * Enhanced HITL Flow for RFP Analysis Review - Uses natural language parsing
  */
-export const humanReview = createHumanReviewNode<typeof OverallProposalStateAnnotation.State>({
-  nodeName: "humanReview",
-  llm: model,
-  interruptType: "rfp_analysis_review",
-  reviewPromptTemplate: "Generate a natural question asking the user to review and provide feedback on the RFP analysis",
-  options: ["approve", "refine", "reject"],
-  nextNode: "feedbackRouter"
+const rfpReviewFlow = createRFPSynthesisReviewFlow<typeof OverallProposalStateAnnotation.State>({
+  reviewNodeName: "humanReview",
+  routerNodeName: "feedbackRouter", 
+  approvalNodeName: "approvalHandler",
+  rejectionNodeName: "rejectionHandler",
+  modificationNodeName: "rfpAnalyzer", // Route back to analyzer for modifications
+  llm: model
 });
 
-/**
- * Feedback Router Node - Using reusable utility with structured output
- */
-export const feedbackRouter = createFeedbackRouterNode<typeof OverallProposalStateAnnotation.State>({
-  nodeName: "feedbackRouter",
-  llm: model,
-  intentPrompt: "You are analyzing user feedback about an RFP analysis. Determine if they want to: approve (satisfied), refine (want changes), or reject (start over). Respond naturally acknowledging their feedback.",
-  routingMap: {
-    "approve": "approvalHandler",
-    "refine": "rfpAnalyzer",
-    "reject": "rejectionHandler"
-  },
-  defaultRoute: "rfpAnalyzer"
-});
+// Export the nodes from the flow
+export const humanReview = rfpReviewFlow.humanReview;
+export const feedbackRouter = rfpReviewFlow.feedbackRouter;
 
 /**
  * Approval Handler Node - Using reusable utility with dynamic responses

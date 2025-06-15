@@ -6,7 +6,7 @@
  */
 
 import { ChatAnthropic } from "@langchain/anthropic";
-import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
@@ -157,6 +157,7 @@ export async function synthesisNode(
   synthesisAnalysis?: any;
   rfpProcessingStatus?: ProcessingStatus;
   currentStatus?: string;
+  messages?: any[];
   errors?: string[];
 }> {
   console.log("[Synthesis Agent] Starting competitive intelligence synthesis");
@@ -221,10 +222,33 @@ Provide a comprehensive synthesis that integrates all insights into actionable c
 
     console.log(`[Synthesis Agent] Synthesis complete. Identified ${synthesis.critical_elimination_risks.length} critical risks, ${synthesis.highest_scoring_opportunities.length} high-scoring opportunities`);
 
+    // Create AI message with synthesis summary for user review
+    const synthesisDisplayText = `## 🎯 RFP Analysis Complete
+
+**Executive Summary:**
+${synthesis.executive_summary.strategic_recommendation}
+
+**🔍 Key Insights:**
+${synthesis.executive_summary.key_insights.map(insight => `• ${insight}`).join('\n')}
+
+**⚠️ Critical Elimination Risks (${synthesis.critical_elimination_risks.length}):**
+${synthesis.critical_elimination_risks.slice(0, 3).map(risk => `• **${risk.risk_id}**: ${risk.risk_description} (Impact: ${risk.impact})`).join('\n')}
+
+**🚀 High-Scoring Opportunities (${synthesis.highest_scoring_opportunities.length}):**
+${synthesis.highest_scoring_opportunities.slice(0, 3).map(opp => `• **${opp.opportunity_id}**: ${opp.opportunity_description} (Potential: ${opp.scoring_potential})`).join('\n')}
+
+**📋 Immediate Actions Required:**
+${synthesis.implementation_roadmap.immediate_actions.slice(0, 3).map(action => `• ${action.action} (${action.urgency_reason})`).join('\n')}
+
+**Win Probability Assessment:** ${synthesis.executive_summary.win_probability_factors.overall_assessment}
+
+Ready for your review and feedback on this comprehensive analysis.`;
+
     return {
       synthesisAnalysis: synthesis,
       rfpProcessingStatus: ProcessingStatus.AWAITING_REVIEW,
-      currentStatus: "RFP analysis synthesis complete - ready for human review"
+      currentStatus: "RFP analysis synthesis complete - ready for human review",
+      messages: [new AIMessage(synthesisDisplayText)]
     };
 
   } catch (error) {

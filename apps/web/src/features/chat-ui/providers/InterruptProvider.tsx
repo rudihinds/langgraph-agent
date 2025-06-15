@@ -42,7 +42,7 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
     // You could also play a sound or show a notification here
   }, []);
 
-  // Handle user approving the current content
+  // Handle user approving the current content - LangGraph SDK compliant
   const handleApprove = useCallback(async () => {
     if (!interruptState || !threadId) {
       toast.error("No interrupt state found");
@@ -51,12 +51,9 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Submit a message to continue the flow with approval
-      await submit({
-        messages: [{
-          type: "human",
-          content: "APPROVED: Continue with the current content."
-        }]
+      // Use LangGraph Command resume pattern instead of message submission
+      await submit(undefined, {
+        command: { resume: "approve" }
       });
 
       // Clear interrupt state after approval
@@ -73,7 +70,7 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
     }
   }, [interruptState, threadId, submit]);
 
-  // Handle user providing revision feedback
+  // Handle user providing revision feedback - LangGraph SDK compliant
   const handleRevise = useCallback(
     async (feedback: string) => {
       if (!interruptState || !threadId || !feedback.trim()) {
@@ -83,12 +80,9 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
       setLoading(true);
       try {
-        // Submit the revision feedback as a message to continue the flow
-        await submit({
-          messages: [{
-            type: "human",
-            content: `REVISION REQUESTED: ${feedback}`
-          }]
+        // Use LangGraph Command resume pattern with feedback
+        await submit(undefined, {
+          command: { resume: { action: "modify", feedback: feedback.trim() } }
         });
 
         // Clear interrupt state after revision
@@ -107,7 +101,7 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
     [interruptState, threadId, submit]
   );
 
-  // Handle user requesting complete regeneration
+  // Handle user requesting complete regeneration - LangGraph SDK compliant
   const handleRegenerate = useCallback(async () => {
     if (!interruptState || !threadId) {
       toast.error("No interrupt state found");
@@ -116,12 +110,9 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Submit a message to request regeneration
-      await submit({
-        messages: [{
-          type: "human",
-          content: "REGENERATE: Please regenerate the content completely."
-        }]
+      // Use LangGraph Command resume pattern for rejection/regeneration
+      await submit(undefined, {
+        command: { resume: "reject" }
       });
 
       // Clear interrupt state after regeneration request
