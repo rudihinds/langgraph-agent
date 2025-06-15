@@ -142,3 +142,10 @@ agent-name/
 - Use streaming for long-running operations
 - Test error scenarios and edge cases
 - Maintain backwards compatibility when updating APIs
+- Do not include Claude attributions in commits or pull requests
+
+### Development Environment Notes
+- **Do not start the backend or LangGraph servers** - The user keeps these running with hot reloading
+- **LangGraph agents run on a separate LangGraph server** (port 2024), not the main backend
+- The user will test functionality manually when needed
+- Focus on code implementation rather than testing by running servers

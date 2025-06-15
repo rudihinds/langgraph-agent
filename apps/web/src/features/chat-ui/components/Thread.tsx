@@ -12,6 +12,7 @@ import { LayoutGrid, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAgentActivity } from "../hooks/useAgentActivity";
 import { AgentLoadingState } from "./AgentLoadingState";
+import { BaseInterruptPayload } from "../providers/StreamProvider";
 
 interface NoMessagesViewProps {
   rfpId?: string | null;
@@ -73,6 +74,7 @@ export function Thread() {
     submit,
     stop,
     values, // Get the complete graph state
+    interrupt, // Get interrupt state for HITL handling
   } = useStreamContext();
 
   // Extract RFP context from graph state
@@ -122,7 +124,14 @@ export function Thread() {
     try {
       console.log("[Thread] Sending message:", messageContent);
 
-      // Use the submit method from our context
+      // Check if we're responding to an interrupt
+      if (isInterrupted) {
+        console.log("[Thread] Responding to interrupt with natural language");
+        await handleInterruptResume(messageContent);
+        return;
+      }
+
+      // Use the submit method from our context for normal messages
       if (submit) {
         console.log("[Thread] Using submit to send message");
 
@@ -159,6 +168,30 @@ export function Thread() {
     }
   };
 
+  // Handle interrupt resume with natural language - user types response normally
+  const handleInterruptResume = async (naturalLanguageResponse: string) => {
+    if (!submit) {
+      toast.error("Unable to respond to interrupt");
+      return;
+    }
+
+    try {
+      console.log("[Thread] Resuming interrupt with natural language response:", naturalLanguageResponse);
+      
+      // Use LangGraph Command resume pattern with natural language
+      // The backend will parse the natural language into structured actions
+      await submit(undefined, {
+        command: { resume: naturalLanguageResponse }
+      });
+    } catch (error) {
+      console.error("Error handling interrupt resume:", error);
+      toast.error("Failed to respond to interrupt");
+    }
+  };
+
+  // Check if there's an active interrupt
+  const isInterrupted = !!interrupt;
+
   return (
     <div
       className="relative flex flex-col w-full h-full bg-background"
@@ -174,7 +207,7 @@ export function Thread() {
         {!messages || messages.length === 0 ? (
           <NoMessagesView rfpId={rfpId} isAgentWorking={isAgentWorking} />
         ) : (
-          <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
+          <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-24 mx-auto">
             {(messages || []).map((message, idx) => {
               return (
                 <ChatMessage
@@ -195,6 +228,31 @@ export function Thread() {
               context={rfpId ? "rfp" : "general"}
               className="justify-center py-4"
             />
+
+            {/* Show interrupt information in conversation flow */}
+            {isInterrupted && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-400 rounded-full animate-pulse"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-blue-900 mb-1">
+                      Review Required
+                    </div>
+                    <div className="text-sm text-blue-700">
+                      {typeof interrupt === 'string' 
+                        ? interrupt 
+                        : (interrupt as BaseInterruptPayload)?.question || 'Please provide your feedback in the message box below.'
+                      }
+                    </div>
+                    {typeof interrupt !== 'string' && (interrupt as BaseInterruptPayload)?.options && (
+                      <div className="mt-2 text-xs text-blue-600">
+                        Options: {(interrupt as BaseInterruptPayload).options.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -212,9 +270,11 @@ export function Thread() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isLoading && (messages.length > 0 || !!threadId)}
+              disabled={isLoading && (messages.length > 0 || !!threadId) && !isInterrupted}
               placeholder={
-                isLoading && (messages.length > 0 || !!threadId)
+                isInterrupted
+                  ? "Type your response (e.g., 'looks good', 'what are the main risks?', 'modify the opportunities section', 'reject')..."
+                  : isLoading && (messages.length > 0 || !!threadId)
                   ? "Waiting for response..."
                   : "Type a message..."
               }
@@ -228,7 +288,7 @@ export function Thread() {
                 type="submit"
                 size="sm"
                 disabled={
-                  (isLoading && (messages.length > 0 || !!threadId)) ||
+                  (isLoading && (messages.length > 0 || !!threadId) && !isInterrupted) ||
                   !inputValue.trim() ||
                   !submit
                 }

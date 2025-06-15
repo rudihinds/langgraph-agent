@@ -25,14 +25,29 @@ import { documentLoaderNode } from "./nodes.js";
 // V3 Chat agent - Pure multi-agent implementation following documented pattern
 import { chatAgent } from "./nodes/chatAgent_v3.js";
 
-// New RFP Analysis flow nodes - V2 LangGraph-native implementation
+// New RFP Analysis flow nodes - Multi-agent system with competitive intelligence
 import {
-  rfpAnalyzer,
-  humanReview,
-  feedbackRouter,
-  approvalHandler,
-  rejectionHandler,
-} from "./nodes/planning/rfp-analysis/rfp_analyzer_v2.js";
+  // Legacy V2 (deprecated)
+  rfpAnalyzer as legacyRfpAnalyzer,
+  humanReview as legacyHumanReview,
+  feedbackRouter as legacyFeedbackRouter,
+  approvalHandler as legacyApprovalHandler,
+  rejectionHandler as legacyRejectionHandler,
+  // New multi-agent system
+  parallelDispatcherNode,
+  parallelAnalysisRouter,
+  linguisticPatternsNode,
+  requirementsExtractionNode,
+  documentStructureNode,
+  strategicSignalsNode,
+  synthesisNode,
+  rfpAnalysisHumanReview,
+  rfpAnalysisFeedbackRouter,
+  rfpAnalysisApprovalHandler,
+  rfpAnalysisRejectionHandler,
+  rfpAnalysisQuestionAnswering,
+  RFP_ANALYSIS_NODES
+} from "./nodes/planning/rfp-analysis/index.js";
 
 // Define node name constants for type safety and clarity
 const NODES = {
@@ -40,12 +55,25 @@ const NODES = {
   CHAT_AGENT: "chatAgent",
   DOC_LOADER: "documentLoader",
 
-  // New RFP Analysis V2 Flow
-  RFP_ANALYZER: "rfpAnalyzer",
-  HUMAN_REVIEW: "humanReview",
-  FEEDBACK_ROUTER: "feedbackRouter",
-  APPROVAL_HANDLER: "approvalHandler",
-  REJECTION_HANDLER: "rejectionHandler",
+  // Multi-Agent RFP Analysis Flow
+  RFP_DISPATCHER: RFP_ANALYSIS_NODES.DISPATCHER,
+  RFP_LINGUISTIC: RFP_ANALYSIS_NODES.LINGUISTIC,
+  RFP_REQUIREMENTS: RFP_ANALYSIS_NODES.REQUIREMENTS,
+  RFP_STRUCTURE: RFP_ANALYSIS_NODES.STRUCTURE,
+  RFP_STRATEGIC: RFP_ANALYSIS_NODES.STRATEGIC,
+  RFP_SYNTHESIS: RFP_ANALYSIS_NODES.SYNTHESIS,
+  RFP_HITL_REVIEW: RFP_ANALYSIS_NODES.HITL_REVIEW,
+  RFP_FEEDBACK_ROUTER: RFP_ANALYSIS_NODES.FEEDBACK_ROUTER,
+  RFP_QA: RFP_ANALYSIS_NODES.QUESTION_ANSWERING,
+  RFP_APPROVAL: RFP_ANALYSIS_NODES.APPROVAL,
+  RFP_REJECTION: RFP_ANALYSIS_NODES.REJECTION,
+
+  // Legacy RFP Analysis V2 Flow (deprecated)
+  LEGACY_RFP_ANALYZER: "rfpAnalyzer",
+  LEGACY_HUMAN_REVIEW: "humanReview",
+  LEGACY_FEEDBACK_ROUTER: "feedbackRouter",
+  LEGACY_APPROVAL_HANDLER: "approvalHandler",
+  LEGACY_REJECTION_HANDLER: "rejectionHandler",
 
   // Future Integration Points (Placeholder for next development phases)
   RESEARCH_PLANNING: "researchPlanning",
@@ -73,39 +101,57 @@ const proposalGenerationGraph = new StateGraph(
 proposalGenerationGraph.addNode(NODES.CHAT_AGENT, chatAgent, {
   ends: [
     NODES.DOC_LOADER,
-    NODES.RFP_ANALYZER,
+    NODES.RFP_DISPATCHER,
     END,
   ],
 });
 
 // Document Loader - Process uploaded RFP documents
 proposalGenerationGraph.addNode(NODES.DOC_LOADER, documentLoaderNode, {
-  ends: [NODES.RFP_ANALYZER, NODES.CHAT_AGENT],
+  ends: [NODES.RFP_DISPATCHER, NODES.CHAT_AGENT],
 });
 
-// RFP Analyzer V2 - LangGraph-native multi-agent flow
-proposalGenerationGraph.addNode(NODES.RFP_ANALYZER, rfpAnalyzer, {
-  ends: [NODES.HUMAN_REVIEW, END],
+// Multi-Agent RFP Analysis System
+// ================================
+
+// Parallel Dispatcher - Orchestrates multi-agent analysis
+proposalGenerationGraph.addNode(NODES.RFP_DISPATCHER, parallelDispatcherNode);
+
+// Individual Analysis Agents (run in parallel)
+proposalGenerationGraph.addNode(NODES.RFP_LINGUISTIC, linguisticPatternsNode);
+
+proposalGenerationGraph.addNode(NODES.RFP_REQUIREMENTS, requirementsExtractionNode);
+
+proposalGenerationGraph.addNode(NODES.RFP_STRUCTURE, documentStructureNode);
+
+proposalGenerationGraph.addNode(NODES.RFP_STRATEGIC, strategicSignalsNode);
+
+// Synthesis - Integrates all agent outputs
+proposalGenerationGraph.addNode(NODES.RFP_SYNTHESIS, synthesisNode);
+
+// Human Review - HITL checkpoint for analysis validation
+proposalGenerationGraph.addNode(NODES.RFP_HITL_REVIEW, rfpAnalysisHumanReview, {
+  ends: [NODES.RFP_FEEDBACK_ROUTER],
 });
 
-// Human Review - Collect user feedback
-proposalGenerationGraph.addNode(NODES.HUMAN_REVIEW, humanReview, {
-  ends: [NODES.FEEDBACK_ROUTER],
+// Feedback Router - Interprets user decisions
+proposalGenerationGraph.addNode(NODES.RFP_FEEDBACK_ROUTER, rfpAnalysisFeedbackRouter, {
+  ends: [NODES.RFP_DISPATCHER, NODES.RFP_APPROVAL, NODES.RFP_REJECTION, NODES.RFP_QA],
 });
 
-// Feedback Router - Interpret user intent
-proposalGenerationGraph.addNode(NODES.FEEDBACK_ROUTER, feedbackRouter, {
-  ends: [NODES.RFP_ANALYZER, NODES.APPROVAL_HANDLER, NODES.REJECTION_HANDLER],
+// Question Answering - Answers user questions about analysis
+proposalGenerationGraph.addNode(NODES.RFP_QA, rfpAnalysisQuestionAnswering, {
+  ends: [NODES.RFP_HITL_REVIEW],
 });
 
 // Approval Handler - Proceed to next phase
-proposalGenerationGraph.addNode(NODES.APPROVAL_HANDLER, approvalHandler, {
+proposalGenerationGraph.addNode(NODES.RFP_APPROVAL, rfpAnalysisApprovalHandler, {
   ends: [NODES.RESEARCH_PLANNING],
 });
 
-// Rejection Handler - Start fresh
-proposalGenerationGraph.addNode(NODES.REJECTION_HANDLER, rejectionHandler, {
-  ends: [NODES.RFP_ANALYZER],
+// Rejection Handler - Start fresh analysis
+proposalGenerationGraph.addNode(NODES.RFP_REJECTION, rfpAnalysisRejectionHandler, {
+  ends: [NODES.RFP_DISPATCHER],
 });
 
 
@@ -151,6 +197,23 @@ proposalGenerationGraph.addNode(
 
 // Entry point
 (proposalGenerationGraph as any).addEdge(START, NODES.CHAT_AGENT);
+
+// RFP Analysis Parallel Execution - Critical for multi-agent flow
+// This conditional edge dispatches from dispatcher to all 4 analysis agents in parallel
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.RFP_DISPATCHER,
+  parallelAnalysisRouter
+);
+
+// Critical: Connect all 4 parallel analysis agents to synthesis node
+// This ensures synthesis waits for ALL agents to complete before executing
+(proposalGenerationGraph as any).addEdge(NODES.RFP_LINGUISTIC, NODES.RFP_SYNTHESIS);
+(proposalGenerationGraph as any).addEdge(NODES.RFP_REQUIREMENTS, NODES.RFP_SYNTHESIS);
+(proposalGenerationGraph as any).addEdge(NODES.RFP_STRUCTURE, NODES.RFP_SYNTHESIS);
+(proposalGenerationGraph as any).addEdge(NODES.RFP_STRATEGIC, NODES.RFP_SYNTHESIS);
+
+// Connect synthesis to HITL review
+(proposalGenerationGraph as any).addEdge(NODES.RFP_SYNTHESIS, NODES.RFP_HITL_REVIEW);
 
 // V2 Chat flow - Clean routing without recursion
 // All routing decisions are handled within nodes using Command pattern

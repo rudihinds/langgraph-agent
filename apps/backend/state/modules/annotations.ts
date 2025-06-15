@@ -308,6 +308,66 @@ export const OverallProposalStateAnnotation = Annotation.Root({
 
   // ===== RFP DOCUMENT ENHANCEMENTS =====
   // (rfpProcessingStatus already defined above)
+
+  // ===== MULTI-AGENT RFP ANALYSIS FIELDS =====
+  
+  // Analysis metadata
+  rfpAnalysisId: Annotation<string | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  documentMetadata: Annotation<{
+    wordCount: number;
+    sectionCount: number;
+    complexity: "Simple" | "Medium" | "Complex";
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Individual agent analysis results
+  linguisticAnalysis: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  requirementsAnalysis: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  structureAnalysis: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  strategicAnalysis: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Synthesis analysis result
+  synthesisAnalysis: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Human review data for RFP analysis
+  rfpHumanReview: Annotation<{
+    action: "approve" | "modify" | "reject";
+    feedback?: string;
+    timestamp: string;
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Final RFP analysis output
+  rfpAnalysisOutput: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
 });
 
 // Define a type for accessing the state based on the annotation

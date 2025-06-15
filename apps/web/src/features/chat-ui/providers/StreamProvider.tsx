@@ -17,19 +17,21 @@ import React, {
   useRef,
 } from "react";
 import { useSearchParams } from "next/navigation";
-import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
+import { useStream } from "@langchain/langgraph-sdk/react";
 import { toast } from "sonner";
 import { useQueryState } from "nuqs";
 import { Message } from "@langchain/langgraph-sdk";
 import { v4 as uuidv4 } from "uuid";
 import { recordNewProposalThread } from "@/lib/api/client";
-import { User } from "@supabase/supabase-js";
 
 // Import the Supabase client creation utility
 // Trying path alias based on project structure
 import { createClient } from "@/lib/supabase/client";
 
-// Define the StateType with ui channel for custom components
+// Import ThreadProvider for thread state synchronization
+import { useThreads } from "./ThreadProvider";
+
+// Define the StateType with ui channel for custom components and synthesis interrupt support
 export type StateType = {
   messages: Message[];
   ui?: Array<{
@@ -43,11 +45,30 @@ export type StateType = {
     autoStarted?: boolean;
     [key: string]: any;
   };
+  // RFP Analysis state for synthesis interrupt
+  synthesisAnalysis?: any;
+  rfpProcessingStatus?: string;
+  currentStatus?: string;
 };
 
-// Use the standard useStream hook, typed only for messages
-// Explicitly provide BagTemplate to avoid potential generic issues
-const useTypedStream = useStream<StateType>;
+// Define generic interrupt payload types - reusable for all interrupt types
+export type BaseInterruptPayload = {
+  type: string;
+  question: string;
+  options: string[];
+  timestamp: string;
+  nodeName: string;
+  [key: string]: any; // Allow additional fields for specific interrupt types
+};
+
+// Specific interrupt payload for synthesis review
+export type SynthesisInterruptPayload = BaseInterruptPayload & {
+  type: 'rfp_analysis_review';
+  synthesisData: any;
+};
+
+// Use the standard useStream hook, properly typed for state and interrupts
+const useTypedStream = useStream<StateType, { InterruptType: BaseInterruptPayload | string }>;
 
 // Context Type remains largely the same, but uses the standard hook's return type
 // export type StreamContextType = ReturnType<typeof useTypedStream>; // <<< REMOVE THIS LINE
@@ -67,7 +88,7 @@ export interface StreamContextType {
   // Additional properties from useStream hook
   values: StateType;
   getMessagesMetadata: (message: Message) => any;
-  interrupt: any;
+  interrupt: any; // Compatible with LangGraph SDK's Interrupt type
   setBranch: (branch: string) => void;
   // Properties needed for LoadExternalComponent
   branch: string;
@@ -101,6 +122,9 @@ export function StreamProvider({ children }: StreamProviderProps) {
     errorMessages: [],
     warningMessages: [],
   });
+
+  // Use ThreadProvider for thread synchronization and history management
+  const { getThreads, setThreads, getApplicationThreads } = useThreads();
 
   // URL for general API calls (e.g., workflow init)
   const generalApiUrl = process.env.NEXT_PUBLIC_API_URL || "";
@@ -280,6 +304,17 @@ export function StreamProvider({ children }: StreamProviderProps) {
           `[StreamProvider onThreadId] Set SDK-generated threadId in query state: ${sdkGeneratedThreadId}`
         );
         expectingSdkThreadIdForRfpRef.current = null; // Successfully processed, clear expectation.
+        
+        // Sync with ThreadProvider to update thread history
+        try {
+          await getThreads(); // Refresh thread list in sidebar
+          if (rfpId) {
+            await getApplicationThreads(rfpId); // Refresh proposal threads
+          }
+        } catch (syncError) {
+          console.warn("[StreamProvider onThreadId] Thread sync warning:", syncError);
+          // Don't fail the main flow if sync fails
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(
@@ -310,6 +345,18 @@ export function StreamProvider({ children }: StreamProviderProps) {
     apiUrl: langGraphSdkApiUrl,
     assistantId: assistantId as string,
     onThreadId: handleSdkThreadIdGeneration, // Callback for when SDK sets/generates threadId
+    onFinish: async (state) => {
+      // Sync with ThreadProvider when stream finishes
+      console.log("[StreamProvider] Stream finished, syncing thread state");
+      try {
+        await getThreads(); // Refresh thread list in sidebar
+        if (rfpId) {
+          await getApplicationThreads(rfpId); // Refresh proposal threads
+        }
+      } catch (syncError) {
+        console.warn("[StreamProvider onFinish] Thread sync warning:", syncError);
+      }
+    },
     // streamConfig: { ... }
     // initialMessages: [],
   });
@@ -345,24 +392,23 @@ export function StreamProvider({ children }: StreamProviderProps) {
 
   // Auto-start submit effect - depends on submit being available (Step 1.2)
   useEffect(() => {
-    // Trigger auto-start for:
-    // 1. New sessions: rfpId present but no urlThreadId yet
-    // 2. Existing sessions: both rfpId and urlThreadId present
+    // Trigger auto-start ONLY for new sessions: rfpId present but no urlThreadId yet
+    // For existing sessions (with urlThreadId), the user should manually resume or the thread should auto-resume
     if (
       rfpId &&
       submit &&
+      !urlThreadId && // CRITICAL FIX: Only auto-start for NEW threads (no threadId)
       !hasAutoStarted.current &&
       autoStartAttempts.current < maxAutoStartAttempts &&
-      (!urlThreadId || (urlThreadId && !streamError))
+      !streamError
     ) {
       hasAutoStarted.current = true;
       autoStartAttempts.current += 1;
 
       // Auto-send initial message with RFP context in state metadata, not message content
-      setTimeout(async () => {
-        const sessionType = urlThreadId ? "existing" : "new";
+      const autoStart = async () => {
         console.log(
-          `[StreamProvider] Auto-starting RFP analysis for ${sessionType} session (attempt ${autoStartAttempts.current}/${maxAutoStartAttempts}) - rfpId: ${rfpId}, threadId: ${urlThreadId || "none"}`
+          `[StreamProvider] Auto-starting RFP analysis for NEW session (attempt ${autoStartAttempts.current}/${maxAutoStartAttempts}) - rfpId: ${rfpId}`
         );
 
         try {
@@ -419,7 +465,9 @@ export function StreamProvider({ children }: StreamProviderProps) {
             hasAutoStarted.current = false;
           }
         }
-      }, 500);
+      };
+      
+      setTimeout(autoStart, 500);
     } else if (autoStartAttempts.current >= maxAutoStartAttempts) {
       console.log(
         "[StreamProvider] Auto-start disabled - max attempts exceeded. User must manually start the conversation."
@@ -480,7 +528,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
       threadId: urlThreadId || localSdkThreadId || null,
       values,
       getMessagesMetadata,
-      interrupt,
+      interrupt: (interrupt as any)?.value || interrupt || null,
       setBranch,
       branch: branch || "main",
       history,
