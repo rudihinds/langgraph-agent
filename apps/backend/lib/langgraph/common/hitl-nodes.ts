@@ -71,7 +71,7 @@ interface HandlerNodeConfig<TState = any> {
  * });
  * ```
  */
-export function createHumanReviewNode<TState extends { messages: BaseMessage[] }>(
+export function createHumanReviewNode<TState extends Record<string, any>>(
   config: HumanReviewNodeConfig<TState>
 ) {
   return function(state: TState): Command {
@@ -83,7 +83,7 @@ export function createHumanReviewNode<TState extends { messages: BaseMessage[] }
     return new Command({
       goto: config.nextNode,
       update: {
-        messages: [new HumanMessage(userInput)]
+        userFeedback: userInput
       }
     });
   };
@@ -110,20 +110,19 @@ export function createHumanReviewNode<TState extends { messages: BaseMessage[] }
  * });
  * ```
  */
-export function createFeedbackRouterNode<TState extends { messages: BaseMessage[] }>(
+export function createFeedbackRouterNode<TState extends Record<string, any>>(
   config: FeedbackRouterConfig<TState>
 ) {
   return async function(state: TState): Promise<Command> {
     console.log(`[${config.nodeName}] Routing user feedback`);
 
-    const lastMessage = state.messages[state.messages.length - 1];
+    const userFeedback = (state as any).userFeedback || "No feedback provided";
     
     // Analyze user intent
     const intentMessages = [
       new SystemMessage(config.intentPrompt),
-      new HumanMessage(`User feedback: "${lastMessage.content}"`),
-      new HumanMessage(`Available routes: ${Object.keys(config.routingMap).join(", ")}`),
-      new HumanMessage(`Conversation context: ${getConversationSummary(state.messages.slice(-5))}`)
+      new HumanMessage(`User feedback: "${userFeedback}"`),
+      new HumanMessage(`Available routes: ${Object.keys(config.routingMap).join(", ")}`)
     ];
 
     const intentResponse = await config.llm.invoke(intentMessages);
@@ -132,7 +131,7 @@ export function createFeedbackRouterNode<TState extends { messages: BaseMessage[
     // Generate acknowledgment response
     const ackMessages = [
       new SystemMessage("Generate a brief, natural acknowledgment of the user's feedback"),
-      new HumanMessage(`User said: "${lastMessage.content}"`),
+      new HumanMessage(`User said: "${userFeedback}"`),
       new HumanMessage(`Detected intent: ${detectedIntent}`)
     ];
 
@@ -147,7 +146,7 @@ export function createFeedbackRouterNode<TState extends { messages: BaseMessage[
 
     return new Command({
       goto: targetNode,
-      update: { messages: [aiMsg] }
+      update: { acknowledgment: acknowledgment.content }
     });
   };
 }
@@ -169,7 +168,7 @@ export function createFeedbackRouterNode<TState extends { messages: BaseMessage[
  * });
  * ```
  */
-export function createApprovalNode<TState extends { messages: BaseMessage[] }>(
+export function createApprovalNode<TState extends Record<string, any>>(
   config: HandlerNodeConfig<TState>
 ) {
   return async function(state: TState): Promise<Command> {
@@ -177,21 +176,15 @@ export function createApprovalNode<TState extends { messages: BaseMessage[] }>(
 
     const responseMessages = [
       new SystemMessage(config.responsePrompt),
-      new HumanMessage(`Conversation context: ${getConversationSummary(state.messages)}`),
       new HumanMessage("User has approved the previous output")
     ];
 
     const response = await config.llm.invoke(responseMessages);
-    
-    const aiMsg = new AIMessage({
-      content: response.content,
-      name: config.nodeName
-    });
 
     return new Command({
       goto: config.nextNode,
       update: { 
-        messages: [aiMsg],
+        approvalResponse: response.content,
         ...config.stateUpdates
       }
     });
@@ -215,7 +208,7 @@ export function createApprovalNode<TState extends { messages: BaseMessage[] }>(
  * });
  * ```
  */
-export function createRejectionNode<TState extends { messages: BaseMessage[] }>(
+export function createRejectionNode<TState extends Record<string, any>>(
   config: HandlerNodeConfig<TState>
 ) {
   return async function(state: TState): Promise<Command> {
@@ -223,21 +216,15 @@ export function createRejectionNode<TState extends { messages: BaseMessage[] }>(
 
     const responseMessages = [
       new SystemMessage(config.responsePrompt),
-      new HumanMessage(`Conversation context: ${getConversationSummary(state.messages)}`),
       new HumanMessage("User has rejected the previous output")
     ];
 
     const response = await config.llm.invoke(responseMessages);
-    
-    const aiMsg = new AIMessage({
-      content: response.content,
-      name: config.nodeName
-    });
 
     return new Command({
       goto: config.nextNode,
       update: { 
-        messages: [aiMsg],
+        rejectionResponse: response.content,
         ...config.stateUpdates
       }
     });

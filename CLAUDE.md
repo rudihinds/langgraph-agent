@@ -142,3 +142,4 @@ agent-name/
 - Use streaming for long-running operations
 - Test error scenarios and edge cases
 - Maintain backwards compatibility when updating APIs
+- Do not include Claude attributions in commits or pull requests
