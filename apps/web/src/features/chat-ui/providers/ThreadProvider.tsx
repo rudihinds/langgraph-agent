@@ -54,7 +54,9 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     searchParams.get("apiUrl") ||
     process.env.NEXT_PUBLIC_LANGGRAPH_API_URL ||
     "http://localhost:2024";
-  const assistantId = searchParams.get("assistantId") || "proposal-agent";
+  const assistantId = searchParams.get("assistantId") || 
+    process.env.NEXT_PUBLIC_ASSISTANT_ID || 
+    "proposal-agent";
 
   const [loading, setLoading] = useState(false);
   const [threadsLoading, setThreadsLoading] = useState(false);
@@ -114,13 +116,23 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
             targetAgentId
           );
 
+        const searchQuery = isUuid
+          ? { assistant_id: targetAgentId }
+          : { graph_id: targetAgentId };
+          
+        console.log("[ThreadProvider] Searching threads with query:", {
+          targetAgentId,
+          isUuid,
+          searchQuery,
+          apiUrl
+        });
+
         const threads = await client.threads.search({
-          metadata: isUuid
-            ? { assistant_id: targetAgentId }
-            : { graph_id: targetAgentId },
+          metadata: searchQuery,
           limit: 100,
         });
 
+        console.log("[ThreadProvider] Found threads:", threads.length);
         setThreads(threads);
         return threads;
       } catch (err) {
