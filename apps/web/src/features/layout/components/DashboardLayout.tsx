@@ -276,10 +276,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Content area */}
-        <main className="relative flex-1 overflow-auto">
+        <main className={cn(
+          "relative flex-1",
+          isChatPage ? "overflow-hidden" : "overflow-auto"
+        )}>
           <div className={cn(
-            "p-6",
-            isChatPage ? "w-full" : "mx-auto max-w-7xl"
+            isChatPage ? "h-full" : "p-6",
+            !isChatPage && "mx-auto max-w-7xl"
           )}>{children}</div>
         </main>
 

@@ -19,9 +19,9 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
     <ThreadProvider>
       <StreamProvider>
         <InterruptProvider>
-          <div className="flex h-full">
+          <div className="flex h-full max-h-full overflow-hidden">
             <ThreadHistory />
-            <div className="flex-1">
+            <div className="flex-1 flex flex-col min-h-0">
               {children}
             </div>
           </div>

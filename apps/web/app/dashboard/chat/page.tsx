@@ -12,7 +12,7 @@ export default function ChatPage(): React.ReactNode {
   console.log("[ChatPage] Rendering with rfpId:", rfpId);
 
   return (
-    <main className="flex flex-col h-full p-4">
+    <main className="flex flex-col h-full min-h-0">
       <Toaster />
       <Thread />
     </main>

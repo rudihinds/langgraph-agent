@@ -178,7 +178,7 @@ export function ThreadHistory() {
       {/* Desktop sidebar */}
       <div
         className={cn(
-          "h-full border-r border-slate-200 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 flex flex-col -ml-6",
+          "h-full border-r border-slate-200 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 flex flex-col",
           isOpen && isDesktop ? "w-64" : "w-0"
         )}
       >
