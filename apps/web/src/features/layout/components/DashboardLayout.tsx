@@ -61,10 +61,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     (path) => pathname === path || pathname?.startsWith(`${path}/`)
   );
 
-  // Check if on mobile screen
+  // Check if on mobile screen and set initial state
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsSidebarCollapsed(window.innerWidth < 768);
+      // Collapse sidebar on mobile OR on chat pages (for better thread history visibility)
+      setIsSidebarCollapsed(window.innerWidth < 768 || isChatPage);
     };
 
     // Set initial state
@@ -75,7 +76,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     // Cleanup
     return () => window.removeEventListener("resize", checkScreenSize);
-  }, []);
+  }, [isChatPage]);
 
   // Authentication check
   useEffect(() => {
@@ -168,7 +169,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
           {isChatPage ? (
-            <ProposalThreadsList />
+            // On chat pages, show essential nav icons in collapsed state
+            isSidebarCollapsed ? (
+              <ul className="px-2 space-y-1">
+                <NavItem
+                  href="/dashboard"
+                  icon={<HomeIcon size={20} />}
+                  label="Dashboard"
+                  isActive={pathname === "/dashboard"}
+                  isCollapsed={true}
+                />
+                <NavItem
+                  href="/dashboard/chat"
+                  icon={<MessageSquare size={20} />}
+                  label="Chat"
+                  isActive={pathname.startsWith("/dashboard/chat")}
+                  isCollapsed={true}
+                />
+                <NavItem
+                  href="/proposals/new"
+                  icon={<PlusIcon size={20} />}
+                  label="New Proposal"
+                  isActive={pathname === "/proposals/new"}
+                  isCollapsed={true}
+                />
+                <NavItem
+                  href="/settings"
+                  icon={<SettingsIcon size={20} />}
+                  label="Settings"
+                  isActive={pathname === "/settings"}
+                  isCollapsed={true}
+                />
+              </ul>
+            ) : (
+              <ProposalThreadsList />
+            )
           ) : (
             <ul className="px-2 space-y-1">
               <NavItem
@@ -241,8 +276,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Content area */}
-        <main className="relative flex-1 overflow-auto">
-          <div className="p-6 mx-auto max-w-7xl">{children}</div>
+        <main className={cn(
+          "relative flex-1",
+          isChatPage ? "overflow-hidden" : "overflow-auto"
+        )}>
+          <div className={cn(
+            isChatPage ? "h-full" : "p-6",
+            !isChatPage && "mx-auto max-w-7xl"
+          )}>{children}</div>
         </main>
 
         {/* Footer */}

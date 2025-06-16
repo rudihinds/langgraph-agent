@@ -194,20 +194,20 @@ export function Thread() {
 
   return (
     <div
-      className="relative flex flex-col w-full h-full bg-background"
+      className="relative flex flex-col w-full h-full min-h-0 bg-background"
       ref={outerContainerRef}
     >
       <div
         ref={messagesContainerRef}
         className={cn(
-          "scrollbar-pretty flex-1 overflow-y-auto overscroll-contain",
-          "pt-4 pb-0"
+          "scrollbar-pretty flex-1 overflow-y-auto overscroll-contain min-h-0",
+          "pt-4 pb-4"
         )}
       >
         {!messages || messages.length === 0 ? (
           <NoMessagesView rfpId={rfpId} isAgentWorking={isAgentWorking} />
         ) : (
-          <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-24 mx-auto">
+          <div className="flex flex-col w-full max-w-4xl gap-8 px-4 pb-4 mx-auto">
             {(messages || []).map((message, idx) => {
               return (
                 <ChatMessage
@@ -259,11 +259,11 @@ export function Thread() {
 
       <div
         className={cn(
-          "sticky bottom-0 z-10 w-full",
-          "border-t border-border/50 bg-background/80 backdrop-blur"
+          "flex-shrink-0 w-full",
+          "border-t border-border/50 bg-background"
         )}
       >
-        <div className="max-w-4xl px-4 py-2 mx-auto">
+        <div className="max-w-4xl px-4 py-3 mx-auto">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <Textarea
               ref={inputRef}
