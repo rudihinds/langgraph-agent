@@ -154,6 +154,12 @@ export function createFeedbackRouterNode<TState extends Record<string, any>>(
 
     const targetNode = config.routingMap[detectedIntent] || config.defaultRoute;
 
+    console.log(`[${config.nodeName}] Routing to ${targetNode}`);
+    console.log(`[${config.nodeName}] Detected intent: ${detectedIntent}`);
+    console.log(`[${config.nodeName}] User feedback: ${userFeedback}`);
+    console.log(`[${config.nodeName}] Acknowledgment: ${acknowledgment.content}`);
+    console.log(`[${config.nodeName}] Routing map: ${JSON.stringify(config.routingMap)}`);
+
     return new Command({
       goto: targetNode,
       update: { acknowledgment: acknowledgment.content }

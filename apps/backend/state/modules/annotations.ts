@@ -187,6 +187,12 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     default: () => false,
   }),
 
+  // Boolean flag for HITL review state
+  isInHitlReview: Annotation<boolean>({
+    reducer: (left, right) => right ?? left ?? false,
+    default: () => false,
+  }),
+
   // Metadata for RFP context and auto-start information (not message content)
   metadata: Annotation<{
     rfpId?: string;

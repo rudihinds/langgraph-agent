@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { HumanInterrupt, HumanResponse } from "@langchain/langgraph/prebuilt";
 import { END } from "@langchain/langgraph/web";
 import { useStreamContext } from "../providers/StreamProvider";
+import { Command } from "@/lib/langgraph/command";
 
 interface UseInterruptedActionsInput {
   interrupt: HumanInterrupt;
@@ -85,14 +86,13 @@ export default function useInterruptedActions({
 
   const resumeRun = (response: HumanResponse[]): boolean => {
     try {
-      thread.submit(
-        {},
-        {
-          command: {
-            resume: response,
-          },
-        }
-      );
+      // When resuming from an interrupt, we need to pass a Command instance
+      // The response array should contain a single HumanResponse
+      const resumeValue = response.length === 1 ? response[0] : response;
+      
+      // The LangGraph SDK's submit method signature is (values, options)
+      // When resuming from interrupt, the Command should be passed as the values parameter
+      thread.submit(new Command({ resume: resumeValue }), {});
       return true;
     } catch (e: any) {
       console.error("Error sending human response", e);
@@ -256,14 +256,8 @@ export default function useInterruptedActions({
     initialHumanInterruptEditValue.current = {};
 
     try {
-      thread.submit(
-        {},
-        {
-          command: {
-            goto: END,
-          },
-        }
-      );
+      // Use Command instance to route to END
+      thread.submit(new Command({ goto: END }), {});
 
       toast("Success", {
         description: "Marked thread as resolved.",

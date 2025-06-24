@@ -724,6 +724,7 @@ export interface OverallProposalState {
   // Status communication fields for RFP auto-analysis flow
   currentStatus?: string;
   isAnalyzingRfp?: boolean;
+  isInHitlReview?: boolean;
   metadata?: {
     rfpId?: string;
     autoStarted?: boolean;

@@ -177,12 +177,16 @@ export function Thread() {
 
     try {
       console.log("[Thread] Resuming interrupt with natural language response:", naturalLanguageResponse);
+      console.log("[Thread] Current interrupt state:", interrupt);
       
-      // Use LangGraph Command resume pattern with natural language
-      // The backend will parse the natural language into structured actions
-      await submit(undefined, {
-        command: { resume: naturalLanguageResponse }
+      // Use LangGraph SDK resume pattern - pass undefined as first param, command in options
+      await submit(undefined, { 
+        command: { 
+          resume: naturalLanguageResponse 
+        } 
       });
+      
+      console.log("[Thread] Resume command submitted successfully");
     } catch (error) {
       console.error("Error handling interrupt resume:", error);
       toast.error("Failed to respond to interrupt");

@@ -51,9 +51,11 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Use LangGraph Command resume pattern instead of message submission
-      await submit(undefined, {
-        command: { resume: "approve" }
+      // Use LangGraph SDK resume pattern
+      await submit(undefined, { 
+        command: { 
+          resume: "approve" 
+        } 
       });
 
       // Clear interrupt state after approval
@@ -80,9 +82,11 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
       setLoading(true);
       try {
-        // Use LangGraph Command resume pattern with feedback
-        await submit(undefined, {
-          command: { resume: { action: "modify", feedback: feedback.trim() } }
+        // Use LangGraph SDK resume pattern with feedback
+        await submit(undefined, { 
+          command: { 
+            resume: { action: "modify", feedback: feedback.trim() } 
+          } 
         });
 
         // Clear interrupt state after revision
@@ -110,9 +114,11 @@ export function InterruptProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Use LangGraph Command resume pattern for rejection/regeneration
-      await submit(undefined, {
-        command: { resume: "reject" }
+      // Use LangGraph SDK resume pattern for rejection/regeneration
+      await submit(undefined, { 
+        command: { 
+          resume: "reject" 
+        } 
       });
 
       // Clear interrupt state after regeneration request

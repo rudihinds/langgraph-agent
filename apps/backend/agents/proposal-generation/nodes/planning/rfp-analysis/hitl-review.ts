@@ -1,24 +1,19 @@
 /**
  * RFP Analysis HITL Review Nodes
- * 
- * Human-in-the-loop review nodes for RFP analysis results using the reusable
- * HITL utilities for natural conversation flow.
+ *
+ * Simplified human-in-the-loop review nodes for RFP analysis using
+ * native LangGraph.js patterns and existing state fields.
  */
 
+import { Command } from "@langchain/langgraph";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { interrupt } from "@langchain/langgraph";
-import { HumanMessage } from "@langchain/core/messages";
-import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
-import { ProcessingStatus } from "@/state/modules/types.js";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
+import { z } from "zod";
 import {
-  createHumanReviewNode,
-  createFeedbackRouterNode,
-  createApprovalNode,
-  createRejectionNode
-} from "@/lib/langgraph/common/hitl-nodes.js";
-import { 
-  createRFPSynthesisReviewFlow
-} from "@/lib/langgraph/common/enhanced-hitl-nodes.js";
+  createInterruptNode,
+  createIntentDetector,
+} from "@/lib/langgraph/common/simple-hitl.js";
+import { ProcessingStatus } from "@/state/modules/types.js";
 
 // Initialize LLM for HITL interactions
 const model = new ChatAnthropic({
@@ -27,140 +22,221 @@ const model = new ChatAnthropic({
   maxTokens: 4000,
 });
 
-/**
- * Enhanced HITL Flow for RFP Analysis Review with Q&A Support
- */
-const rfpAnalysisReviewFlow = createRFPSynthesisReviewFlow<typeof OverallProposalStateAnnotation.State>({
-  reviewNodeName: "rfpAnalysisHumanReview",
-  routerNodeName: "rfpAnalysisFeedbackRouter",
-  approvalNodeName: "rfpAnalysisApprovalHandler",
-  rejectionNodeName: "rfpAnalysisRejectionHandler",
-  modificationNodeName: "rfpAnalysisDispatcher",
+// Schema for modification planning
+const ModificationPlanSchema = z.object({
+  fieldsToModify: z.array(z.enum([
+    'linguisticAnalysis',
+    'requirementsAnalysis', 
+    'structureAnalysis',
+    'strategicAnalysis',
+    'synthesisAnalysis'
+  ])).describe("Which analysis fields need to be modified"),
+  modifications: z.record(z.string(), z.any()).describe("Field name -> updated content mapping"),
+  explanation: z.string().describe("User-friendly explanation of what changes are being made")
+});
+
+// Human review - just interrupt and collect feedback
+export const rfpAnalysisHumanReview = createInterruptNode({
+  question: "Please review the RFP analysis. You can approve, request modifications, reject, or ask questions.",
   qaNodeName: "rfpAnalysisQuestionAnswering",
-  llm: model
+  contextField: "synthesisAnalysis",
+  fallbackQuestion: "Ready to proceed? You can approve, request modifications, reject, or ask another question about the RFP analysis."
 });
 
-// Export the enhanced nodes from the flow
-export const rfpAnalysisHumanReview = rfpAnalysisReviewFlow.humanReview;
-export const rfpAnalysisFeedbackRouter = rfpAnalysisReviewFlow.feedbackRouter;
-export const rfpAnalysisQuestionAnswering = rfpAnalysisReviewFlow.qaNode;
-
-/**
- * Approval Handler for RFP Analysis
- * Confirms approval and routes to next phase of proposal generation
- */
-export const rfpAnalysisApprovalHandler = createApprovalNode<typeof OverallProposalStateAnnotation.State>({
-  nodeName: "rfpAnalysisApprovalHandler",
-  llm: model,
-  responsePrompt: `Generate an enthusiastic, professional confirmation that the comprehensive RFP analysis has been approved.
-    Reference the key strategic insights discovered and express readiness to begin the proposal development phase.
-    Mention that the analysis will guide strategy throughout proposal creation. Keep it concise and forward-looking.`,
-  nextNode: "researchPlanning", // Continue to next phase of proposal generation
-  stateUpdates: {
-    rfpProcessingStatus: ProcessingStatus.COMPLETE,
-    isAnalyzingRfp: false,
-    currentStatus: "RFP analysis approved - proceeding to proposal development"
-  }
+// Router - detect intent and route
+export const rfpAnalysisFeedbackRouter = createIntentDetector(model, {
+  routeMap: {
+    "approve": "rfpAnalysisApprovalHandler",
+    "refine": "rfpAnalysisModificationHandler",
+    "reject": "rfpAnalysisRejectionHandler",
+    "ask_question": "rfpAnalysisQuestionAnswering"
+  },
+  qaNodeName: "rfpAnalysisQuestionAnswering",
+  contextHint: "the RFP analysis"
 });
 
-/**
- * Rejection Handler for RFP Analysis
- * Handles rejection and offers to restart with refined approach
- */
-export const rfpAnalysisRejectionHandler = createRejectionNode<typeof OverallProposalStateAnnotation.State>({
-  nodeName: "rfpAnalysisRejectionHandler", 
-  llm: model,
-  responsePrompt: `Generate a professional, understanding response acknowledging that the user wants to restart the RFP analysis.
-    Ask what specific aspects they'd like to focus on or approach differently in the new analysis.
-    Mention that we can adjust the analysis parameters or focus areas. Keep it supportive and solution-oriented.`,
-  nextNode: "rfpAnalysisDispatcher", // Back to dispatcher for fresh analysis
-  stateUpdates: {
-    // Clear previous analysis results for fresh start
-    linguisticAnalysis: undefined,
-    requirementsAnalysis: undefined,
-    structureAnalysis: undefined,
-    strategicAnalysis: undefined,
-    synthesisAnalysis: undefined,
-    rfpAnalysisOutput: undefined,
-    rfpProcessingStatus: ProcessingStatus.QUEUED,
-    currentStatus: "Restarting RFP analysis with refined approach"
-  }
-});
-
-/**
- * Custom HITL Review Node with RFP-specific interrupt payload
- * Alternative implementation with richer interrupt data
- */
-export function rfpAnalysisHitlReviewCustom(
-  state: typeof OverallProposalStateAnnotation.State
-): {
-  rfpHumanReview?: {
-    action: "approve" | "modify" | "reject";
-    feedback?: string;
-    timestamp: string;
-  };
-  currentStatus?: string;
-} {
-  console.log("[RFP Analysis HITL] Preparing human review");
-
-  // Prepare comprehensive review package
-  const reviewPackage = {
-    synthesis: state.synthesisAnalysis,
-    analyses: {
-      linguistic: state.linguisticAnalysis,
-      requirements: state.requirementsAnalysis,
-      structure: state.structureAnalysis,
-      strategic: state.strategicAnalysis
+// Approval handler - simple and clean
+export async function rfpAnalysisApprovalHandler(state: any) {
+  const message = await model.invoke([
+    {
+      role: "system",
+      content:
+        "Generate a brief confirmation that RFP analysis is approved and we're moving to intelligence gathering.",
     },
-    documentMetadata: state.documentMetadata,
-    analysisId: state.rfpAnalysisId,
-    timestamp: new Date().toISOString()
-  };
+    {
+      role: "human",
+      content: state.userFeedback || "Approved",
+    },
+  ]);
 
-  // Interrupt for human review with rich payload
-  const userInput = interrupt({
-    type: "rfp_analysis_review",
-    question: "Please review the comprehensive RFP analysis results. The analysis includes linguistic patterns, requirements extraction, document structure analysis, and strategic signals synthesis. Do you approve these findings and strategic recommendations?",
-    data: reviewPackage,
-    options: ["approve", "modify", "reject"],
-    metadata: {
-      analysisId: state.rfpAnalysisId,
-      documentComplexity: state.documentMetadata?.complexity,
-      analysisTimestamp: new Date().toISOString()
-    }
+  return new Command({
+    goto: "intelligenceGatheringAgent",
+    update: {
+      messages: [message],
+      currentStatus:
+        "RFP analysis approved - proceeding to intelligence gathering",
+      rfpProcessingStatus: ProcessingStatus.COMPLETE, // Use existing ProcessingStatus enum
+      userFeedback: undefined, // Clear userFeedback after processing
+      feedbackIntent: undefined, // Clear feedbackIntent as well
+      isInHitlReview: false, // Clear HITL flag when exiting
+    },
   });
-
-  // Process user input
-  const reviewData = {
-    action: userInput.action || "modify",
-    feedback: userInput.feedback,
-    timestamp: new Date().toISOString()
-  };
-
-  return {
-    rfpHumanReview: reviewData,
-    currentStatus: `Human review ${reviewData.action} - processing feedback`
-  };
 }
 
-/**
- * Router function for RFP Analysis HITL Review
- */
-export function rfpAnalysisHitlRouter(state: typeof OverallProposalStateAnnotation.State): string {
-  if (!state.rfpHumanReview) {
-    return "rfpAnalysisHitlReviewCustom";
-  }
-
-  const review = state.rfpHumanReview;
+// Smart modification handler - analyzes feedback and updates specific fields
+export async function rfpAnalysisModificationHandler(state: any) {
+  console.log("[RFP Modification] Processing modification request:", state.userFeedback);
   
-  switch (review.action) {
-    case "approve":
-      return "rfpAnalysisApprovalHandler";
-    case "modify":
-      return "rfpAnalysisDispatcher"; // Re-run analysis with feedback
-    case "reject":
-      return "rfpAnalysisRejectionHandler";
-    default:
-      return "rfpAnalysisDispatcher";
+  const llmWithSchema = model.withStructuredOutput(ModificationPlanSchema);
+  
+  // Create context with current analysis state
+  const currentAnalysis = {
+    linguisticAnalysis: state.linguisticAnalysis,
+    requirementsAnalysis: state.requirementsAnalysis,
+    structureAnalysis: state.structureAnalysis,
+    strategicAnalysis: state.strategicAnalysis,
+    synthesisAnalysis: state.synthesisAnalysis
+  };
+  
+  try {
+    // Get modification plan from LLM
+    const plan = await llmWithSchema.invoke([{
+      role: "system",
+      content: `You are an RFP analysis modification expert. Based on the user's feedback, determine which analysis fields need updating and provide the modifications.
+
+Current RFP Analysis State:
+${JSON.stringify(currentAnalysis, null, 2)}
+
+Instructions:
+1. Identify which fields need modification based on the user's request
+2. Generate updated content for those specific fields
+3. Preserve the structure and format of the original analysis
+4. Only modify what the user specifically asked to change
+5. Provide a clear explanation of the changes being made`
+    }, {
+      role: "human",
+      content: `User modification request: ${state.userFeedback}`
+    }]);
+    
+    console.log("[RFP Modification] Modification plan:", {
+      fieldsToModify: plan.fieldsToModify,
+      explanation: plan.explanation
+    });
+    
+    // Return command with targeted updates
+    return new Command({
+      goto: "rfpAnalysisSynthesis",
+      update: {
+        ...plan.modifications, // Spread the specific field updates
+        messages: [new AIMessage({
+          content: `✏️ Applying modifications: ${plan.explanation}`,
+          name: "rfpAnalysisModificationHandler"
+        })],
+        currentStatus: "Applying your requested modifications",
+        feedbackIntent: undefined, // Clear to avoid re-triggering modification logic
+        userFeedback: undefined // Clear user feedback after processing
+      }
+    });
+    
+  } catch (error) {
+    console.error("[RFP Modification] Error processing modifications:", error);
+    
+    // Fallback to simple message if structured output fails
+    return new Command({
+      goto: "rfpAnalysisHumanReview",
+      update: {
+        messages: [new AIMessage({
+          content: "I encountered an error processing your modification request. Could you please rephrase it or try again?",
+          name: "rfpAnalysisModificationHandler"
+        })],
+        currentStatus: "Error processing modifications",
+        feedbackIntent: undefined,
+        userFeedback: undefined
+      }
+    });
   }
+}
+
+// Rejection handler - clear analysis and restart
+export function rfpAnalysisRejectionHandler() {
+  return new Command({
+    goto: "rfpAnalysisDispatcher",
+    update: {
+      // Clear analysis results using undefined (existing pattern)
+      linguisticAnalysis: undefined,
+      requirementsAnalysis: undefined,
+      structureAnalysis: undefined,
+      strategicAnalysis: undefined,
+      synthesisAnalysis: undefined,
+      currentStatus: "Starting fresh RFP analysis",
+      userFeedback: undefined, // Clear userFeedback after processing
+      feedbackIntent: undefined, // Clear feedbackIntent as well
+      isInHitlReview: false, // Clear HITL flag when exiting
+    },
+  });
+}
+
+// Q&A handler - custom implementation for RFP analysis with full context
+export async function rfpAnalysisQuestionAnswering(state: any) {
+  console.log("[RFP Q&A] Starting question answering");
+  console.log("[RFP Q&A] User question:", state.userFeedback);
+  
+  const messages = state.messages || [];
+
+  // Build conversation with existing history - SYSTEM MESSAGE MUST BE FIRST
+  const conversationMessages = [
+    {
+      role: "system",
+      content: `You are an RFP analysis expert. Answer the user's question based on the comprehensive RFP analysis below. After answering, remind them they can approve, modify, reject, or ask another question about the analysis.
+
+## Complete RFP Analysis:
+
+### 1. Linguistic Analysis
+${JSON.stringify(state.linguisticAnalysis, null, 2)}
+
+### 2. Requirements Analysis  
+${JSON.stringify(state.requirementsAnalysis, null, 2)}
+
+### 3. Document Structure Analysis
+${JSON.stringify(state.structureAnalysis, null, 2)}
+
+### 4. Strategic Signals Analysis
+${JSON.stringify(state.strategicAnalysis, null, 2)}
+
+### 5. Synthesis & Competitive Intelligence
+${JSON.stringify(state.synthesisAnalysis, null, 2)}
+
+Use this comprehensive analysis to provide detailed, accurate answers to the user's questions.`,
+    },
+    ...messages.slice(-5), // Include recent conversation AFTER system message
+    {
+      role: "human",
+      content: state.userFeedback,
+    },
+  ];
+
+  console.log("[RFP Q&A] Invoking model with", conversationMessages.length, "messages");
+  const answer = await model.invoke(conversationMessages);
+  console.log("[RFP Q&A] Answer received from model");
+
+  // Add a gentle reminder about next steps
+  const enhancedAnswer = new AIMessage({
+    content:
+      answer.content +
+      "\n\nYou can now approve the analysis, request modifications, reject it, or ask another question.",
+    name: "rfpAnalysisQuestionAnswering",
+  });
+
+  console.log("[RFP Q&A] Returning to human review for next action");
+  return new Command({
+    goto: "rfpAnalysisHumanReview",
+    update: {
+      messages: [
+        new HumanMessage({ content: state.userFeedback, name: "user" }),
+        enhancedAnswer,
+      ],
+      currentStatus: "Question answered - ready for your decision",
+      userFeedback: undefined, // Clear userFeedback after processing
+    },
+  });
 }

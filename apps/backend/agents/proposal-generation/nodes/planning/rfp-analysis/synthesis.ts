@@ -159,6 +159,7 @@ export async function synthesisNode(
   currentStatus?: string;
   messages?: any[];
   errors?: string[];
+  isInHitlReview?: boolean;
 }> {
   console.log("[Synthesis Agent] Starting competitive intelligence synthesis");
 
@@ -170,6 +171,14 @@ export async function synthesisNode(
     }
 
     console.log("[Synthesis Agent] All 4 agent analyses found. Beginning synthesis");
+    
+    // Check if this is a modification request
+    // Note: When coming from modification handler, feedbackIntent will be cleared
+    const isModification = state.feedbackIntent === "refine" && state.userFeedback;
+    
+    if (isModification) {
+      console.log("[Synthesis Agent] Detected modification request - regenerating with user feedback");
+    }
 
     // Create system prompt with synthesis instructions
     const systemPrompt = `You are an elite competitive intelligence strategist with 15+ years of experience in procurement strategy synthesis and win-loss analysis.
@@ -191,7 +200,19 @@ Your task is to synthesize multi-agent intelligence outputs into actionable comp
 
 Synthesize intelligence systematically to create actionable competitive strategies.`;
 
-    const humanPrompt = `Please synthesize the following multi-agent RFP analysis results into comprehensive competitive intelligence:
+    // Build human prompt with optional user feedback
+    let humanPrompt = '';
+    
+    if (isModification && state.userFeedback) {
+      humanPrompt = `## USER FEEDBACK FOR MODIFICATION:
+${state.userFeedback}
+
+Please regenerate the synthesis incorporating this specific feedback. Focus on addressing the user's concerns while maintaining the comprehensive analysis quality.
+
+`;
+    }
+    
+    humanPrompt += `Please synthesize the following multi-agent RFP analysis results into comprehensive competitive intelligence:
 
 ## Agent 1 - Linguistic Analysis:
 ${JSON.stringify(state.linguisticAnalysis, null, 2)}
@@ -244,12 +265,17 @@ ${synthesis.implementation_roadmap.immediate_actions.slice(0, 3).map(action => `
 
 Ready for your review and feedback on this comprehensive analysis.`;
 
-    return {
+    const returnState = {
       synthesisAnalysis: synthesis,
       rfpProcessingStatus: ProcessingStatus.AWAITING_REVIEW,
       currentStatus: "RFP analysis synthesis complete - ready for human review",
-      messages: [new AIMessage(synthesisDisplayText)]
+      messages: [new AIMessage(synthesisDisplayText)],
+      isInHitlReview: true, // Set flag when entering HITL review
     };
+    
+    console.log("[Synthesis Agent] Returning state update with isInHitlReview: true");
+    
+    return returnState;
 
   } catch (error) {
     console.error("[Synthesis Agent] Synthesis failed:", error);

@@ -28,7 +28,7 @@ const model = new ChatAnthropic({
 // Schema matching exact node names from graph.ts
 const RoutingSchema = z.object({
   response: z.string().describe("Response to the user"),
-  goto: z.enum(["documentLoader", "rfpAnalyzer", "end"]).describe("Next node to visit based on user request and current state"),
+  goto: z.enum(["documentLoader", "rfpAnalysisDispatcher", "end"]).describe("Next node to visit based on user request and current state"),
 });
 
 /**
@@ -59,12 +59,35 @@ export async function chatAgent(
     });
   }
 
+  // Check if we're in HITL review - if so, pass through without processing
+  if (state.isInHitlReview) {
+    console.log("[Chat Agent V3] Currently in HITL review, passing through to next node");
+    console.log("[Chat Agent V3] State info - userFeedback:", state.userFeedback);
+    console.log("[Chat Agent V3] State info - currentStatus:", state.currentStatus);
+    console.log("[Chat Agent V3] State info - feedbackIntent:", state.feedbackIntent);
+    
+    // Pass through to the next node in the graph without updating state
+    // The graph should continue to the appropriate HITL handling nodes
+    // Return empty Command to continue graph execution
+    return new Command({
+      update: {}
+    });
+  }
+
   // ===== PROACTIVE STATE CHECKING =====
   // Check if there's an RFP document that needs automated processing
   const hasRfpId = state.metadata?.rfpId;
   const isDocumentLoaded = state.rfpDocument?.status === 'loaded' && state.rfpDocument?.text;
   const isDocumentNotStarted = state.rfpDocument?.status === 'not_started' || !state.rfpDocument?.status;
-  const needsAnalysis = isDocumentLoaded && !state.planningIntelligence;
+  
+  // Check if RFP analysis is already in progress or completed
+  const hasAnalysisResults = state.synthesisAnalysis || 
+                            state.linguisticAnalysis || 
+                            state.requirementsAnalysis || 
+                            state.structureAnalysis || 
+                            state.strategicAnalysis;
+  const isAnalysisInProgress = state.isAnalyzingRfp === true;
+  const needsAnalysis = isDocumentLoaded && !state.planningIntelligence && !hasAnalysisResults && !isAnalysisInProgress;
   
   // Auto-start document loading if RFP ID is present but document not loaded
   if (hasRfpId && isDocumentNotStarted) {
@@ -81,12 +104,12 @@ export async function chatAgent(
   
   // Auto-start RFP analysis if document is loaded but not analyzed
   if (needsAnalysis) {
-    console.log("[Chat Agent V3] Auto-routing to RFP analyzer for loaded document");
+    console.log("[Chat Agent V3] Auto-routing to RFP multi-agent analysis for loaded document");
     
     return new Command({
-      goto: "rfpAnalyzer",
+      goto: "rfpAnalysisDispatcher",
       update: { 
-        currentStatus: "Analyzing RFP document...",
+        currentStatus: "Starting multi-agent RFP analysis...",
         isAnalyzingRfp: true
       }
     });
@@ -102,14 +125,16 @@ AUTOMATIC WORKFLOW:
 
 Available agents to route to:
 - documentLoader: Loads and processes RFP documents (typically auto-triggered)
-- rfpAnalyzer: Analyzes RFP documents and provides strategic insights (typically auto-triggered)
+- rfpAnalysisDispatcher: Orchestrates multi-agent RFP analysis with 4 specialized agents (typically auto-triggered)
 - end: Complete the conversation (use for general questions, greetings, or when conversation is complete)
 
 Current system state:
 - Has RFP document: ${state.rfpDocument?.text ? 'Yes' : 'No'}
 - Document loaded: ${state.rfpDocument?.status === 'loaded' ? 'Yes' : 'No'}
+- RFP analysis completed: ${hasAnalysisResults ? 'Yes' : 'No'}
 - Current phase: ${state.currentPhase || 'initial'}
 - Auto-processing active: ${state.isAnalyzingRfp ? 'Yes' : 'No'}
+- Planning intelligence available: ${state.planningIntelligence ? 'Yes' : 'No'}
 
 Based on the user's message and current state, provide a helpful response and coordinate with specialized agents.
 The system handles document processing automatically - focus on user communication and workflow coordination.`;
