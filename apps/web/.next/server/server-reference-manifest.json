@@ -2,18 +2,18 @@
   "node": {
     "7f32cc6584b9410c2b4c31a1f760e5c68785ddef38": {
       "workers": {
-        "app/dashboard/chat/page": {
+        "app/dashboard/page": {
           "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f32cc6584b9410c2b4c31a1f760e5c68785ddef38%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         },
-        "app/dashboard/page": {
+        "app/dashboard/chat/page": {
           "moduleId": "(rsc)/../../node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Frudihinds%2Fcode%2Flanggraph-agent%2Fapps%2Fweb%2Fsrc%2Flib%2Fsupabase%2Fserver.ts%22%2C%5B%7B%22id%22%3A%227f32cc6584b9410c2b4c31a1f760e5c68785ddef38%22%2C%22exportedName%22%3A%22createClient%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/dashboard/chat/page": "rsc",
-        "app/dashboard/page": "rsc"
+        "app/dashboard/page": "rsc",
+        "app/dashboard/chat/page": "rsc"
       }
     },
     "40008293a159b49faa1aa6e86c40b6ac5e5919d8a0": {

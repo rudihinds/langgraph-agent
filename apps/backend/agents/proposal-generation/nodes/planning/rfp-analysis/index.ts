@@ -5,14 +5,7 @@
  * Replaces the simple rfp_analyzer_v2.ts with sophisticated competitive intelligence.
  */
 
-// Legacy V2 nodes (deprecated - use multi-agent system below)
-export {
-  rfpAnalyzer,
-  humanReview,
-  feedbackRouter,
-  approvalHandler,
-  rejectionHandler
-} from "./rfp_analyzer_v2.js";
+// Legacy V2 nodes removed - use multi-agent system below
 
 // Core analysis nodes
 export { parallelDispatcherNode } from "./parallel-dispatcher.js";
@@ -32,10 +25,9 @@ export {
   rfpAnalysisHumanReview,
   rfpAnalysisFeedbackRouter,
   rfpAnalysisApprovalHandler,
+  rfpAnalysisModificationHandler,
   rfpAnalysisRejectionHandler,
-  rfpAnalysisQuestionAnswering,
-  rfpAnalysisHitlReviewCustom,
-  rfpAnalysisHitlRouter
+  rfpAnalysisQuestionAnswering
 } from "./hitl-review.js";
 
 /**

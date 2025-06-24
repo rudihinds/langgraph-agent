@@ -20,20 +20,14 @@ import { OverallProposalStateAnnotation } from "../../state/modules/annotations.
 import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
 
 // Core infrastructure nodes (retained)
-import { documentLoaderNode } from "./nodes.js";
+import { documentLoaderNode } from "./nodes/document_loader.js";
 
 // V3 Chat agent - Pure multi-agent implementation following documented pattern
 import { chatAgent } from "./nodes/chatAgent_v3.js";
 
 // New RFP Analysis flow nodes - Multi-agent system with competitive intelligence
 import {
-  // Legacy V2 (deprecated)
-  rfpAnalyzer as legacyRfpAnalyzer,
-  humanReview as legacyHumanReview,
-  feedbackRouter as legacyFeedbackRouter,
-  approvalHandler as legacyApprovalHandler,
-  rejectionHandler as legacyRejectionHandler,
-  // New multi-agent system
+  // Multi-agent system nodes
   parallelDispatcherNode,
   parallelAnalysisRouter,
   linguisticPatternsNode,
@@ -41,13 +35,21 @@ import {
   documentStructureNode,
   strategicSignalsNode,
   synthesisNode,
+  RFP_ANALYSIS_NODES
+} from "./nodes/planning/rfp-analysis/index.js";
+
+// Import refactored HITL handlers
+import {
   rfpAnalysisHumanReview,
   rfpAnalysisFeedbackRouter,
   rfpAnalysisApprovalHandler,
+  rfpAnalysisModificationHandler,
   rfpAnalysisRejectionHandler,
-  rfpAnalysisQuestionAnswering,
-  RFP_ANALYSIS_NODES
-} from "./nodes/planning/rfp-analysis/index.js";
+  rfpAnalysisQuestionAnswering
+} from "./nodes/planning/rfp-analysis/hitl-review.js";
+
+// Import intelligence gathering agent
+import { intelligenceGatheringAgent } from "./nodes/planning/intelligence-gathering.js";
 
 // Define node name constants for type safety and clarity
 const NODES = {
@@ -65,18 +67,12 @@ const NODES = {
   RFP_HITL_REVIEW: RFP_ANALYSIS_NODES.HITL_REVIEW,
   RFP_FEEDBACK_ROUTER: RFP_ANALYSIS_NODES.FEEDBACK_ROUTER,
   RFP_QA: RFP_ANALYSIS_NODES.QUESTION_ANSWERING,
-  RFP_APPROVAL: RFP_ANALYSIS_NODES.APPROVAL,
-  RFP_REJECTION: RFP_ANALYSIS_NODES.REJECTION,
+  RFP_APPROVAL: "rfpAnalysisApprovalHandler",
+  RFP_MODIFICATION: "rfpAnalysisModificationHandler",
+  RFP_REJECTION: "rfpAnalysisRejectionHandler",
 
-  // Legacy RFP Analysis V2 Flow (deprecated)
-  LEGACY_RFP_ANALYZER: "rfpAnalyzer",
-  LEGACY_HUMAN_REVIEW: "humanReview",
-  LEGACY_FEEDBACK_ROUTER: "feedbackRouter",
-  LEGACY_APPROVAL_HANDLER: "approvalHandler",
-  LEGACY_REJECTION_HANDLER: "rejectionHandler",
-
-  // Future Integration Points (Placeholder for next development phases)
-  RESEARCH_PLANNING: "researchPlanning",
+  // Intelligence Gathering Phase
+  INTELLIGENCE_GATHERING: "intelligenceGatheringAgent",
 
   // Completion
   COMPLETE: "complete",
@@ -136,7 +132,7 @@ proposalGenerationGraph.addNode(NODES.RFP_HITL_REVIEW, rfpAnalysisHumanReview, {
 
 // Feedback Router - Interprets user decisions
 proposalGenerationGraph.addNode(NODES.RFP_FEEDBACK_ROUTER, rfpAnalysisFeedbackRouter, {
-  ends: [NODES.RFP_DISPATCHER, NODES.RFP_APPROVAL, NODES.RFP_REJECTION, NODES.RFP_QA],
+  ends: [NODES.RFP_APPROVAL, NODES.RFP_MODIFICATION, NODES.RFP_REJECTION, NODES.RFP_QA],
 });
 
 // Question Answering - Answers user questions about analysis
@@ -144,9 +140,14 @@ proposalGenerationGraph.addNode(NODES.RFP_QA, rfpAnalysisQuestionAnswering, {
   ends: [NODES.RFP_HITL_REVIEW],
 });
 
-// Approval Handler - Proceed to next phase
+// Approval Handler - Proceed to intelligence gathering
 proposalGenerationGraph.addNode(NODES.RFP_APPROVAL, rfpAnalysisApprovalHandler, {
-  ends: [NODES.RESEARCH_PLANNING],
+  ends: [NODES.INTELLIGENCE_GATHERING],
+});
+
+// Modification Handler - Route back to synthesis
+proposalGenerationGraph.addNode(NODES.RFP_MODIFICATION, rfpAnalysisModificationHandler, {
+  ends: [NODES.RFP_SYNTHESIS],
 });
 
 // Rejection Handler - Start fresh analysis
@@ -154,28 +155,10 @@ proposalGenerationGraph.addNode(NODES.RFP_REJECTION, rfpAnalysisRejectionHandler
   ends: [NODES.RFP_DISPATCHER],
 });
 
-
-
-// Research Planning - Prepare for next development phase (placeholder)
-proposalGenerationGraph.addNode(
-  NODES.RESEARCH_PLANNING,
-  async (state: typeof OverallProposalStateAnnotation.State) => {
-    // Placeholder for future research planning agent
-    console.log(
-      "Research Planning phase - to be implemented in next development phase"
-    );
-    return new Command({
-      goto: NODES.COMPLETE,
-      update: {
-        status: ProcessingStatus.COMPLETE,
-        currentPhase: "complete" as const,
-      }
-    });
-  },
-  {
-    ends: [NODES.COMPLETE],
-  }
-);
+// Intelligence Gathering - Next phase after RFP analysis approval
+proposalGenerationGraph.addNode(NODES.INTELLIGENCE_GATHERING, intelligenceGatheringAgent, {
+  ends: [NODES.COMPLETE],
+});
 
 // Complete - Final state
 proposalGenerationGraph.addNode(
@@ -214,6 +197,12 @@ proposalGenerationGraph.addNode(
 
 // Connect synthesis to HITL review
 (proposalGenerationGraph as any).addEdge(NODES.RFP_SYNTHESIS, NODES.RFP_HITL_REVIEW);
+
+// Connect HITL review to feedback router (for processing user responses)
+(proposalGenerationGraph as any).addEdge(NODES.RFP_HITL_REVIEW, NODES.RFP_FEEDBACK_ROUTER);
+
+// Connect Q&A back to human review for continued interaction
+(proposalGenerationGraph as any).addEdge(NODES.RFP_QA, NODES.RFP_HITL_REVIEW);
 
 // V2 Chat flow - Clean routing without recursion
 // All routing decisions are handled within nodes using Command pattern
