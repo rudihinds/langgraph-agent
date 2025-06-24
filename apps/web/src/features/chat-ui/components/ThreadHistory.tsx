@@ -12,57 +12,18 @@ import {
   SheetTitle,
 } from "@/features/ui/components/sheet";
 import { Skeleton } from "@/features/ui/components/skeleton";
-import { PanelRightOpen, PanelRightClose, MessageCircle, Pause, CheckCircle, AlertCircle } from "lucide-react";
+import { PanelRightOpen, PanelRightClose } from "lucide-react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { cn } from "@/lib/utils/utils";
 
-// Thread status helper function
-function getThreadStatus(thread: Thread): {
-  status: 'active' | 'paused' | 'idle' | 'error' | 'unknown';
-  icon: React.ReactNode;
-  color: string;
-} {
-  const status = thread.status;
-  
-  switch (status) {
-    case 'busy':
-      return {
-        status: 'active',
-        icon: <MessageCircle className="h-3 w-3" />,
-        color: 'text-blue-500'
-      };
-    case 'interrupted':
-      return {
-        status: 'paused',
-        icon: <Pause className="h-3 w-3" />,
-        color: 'text-yellow-500'
-      };
-    case 'idle':
-      return {
-        status: 'idle',
-        icon: <CheckCircle className="h-3 w-3" />,
-        color: 'text-green-500'
-      };
-    case 'error':
-      return {
-        status: 'error',
-        icon: <AlertCircle className="h-3 w-3" />,
-        color: 'text-red-500'
-      };
-    default:
-      return {
-        status: 'unknown',
-        icon: <MessageCircle className="h-3 w-3" />,
-        color: 'text-gray-400'
-      };
-  }
-}
 
 function ThreadList({
   threads,
+  applicationThreads,
   onThreadClick,
 }: {
   threads: Thread[];
+  applicationThreads: any[];
   onThreadClick?: (threadId: string) => void;
 }) {
   const [threadId, setThreadId] = useQueryState("threadId");
@@ -71,18 +32,69 @@ function ThreadList({
     <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-auto pb-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
       {threads.map((t) => {
         let itemText = t.thread_id;
-        if (
-          typeof t.values === "object" &&
-          t.values &&
-          "messages" in t.values &&
-          Array.isArray(t.values.messages) &&
-          t.values.messages?.length > 0
-        ) {
-          const firstMessage = t.values.messages[0];
-          itemText = getContentString(firstMessage.content);
+        
+        // First priority: Check applicationThreads for RFP info using thread ID
+        const appThread = applicationThreads?.find(
+          (app) => app.appGeneratedThreadId === t.thread_id
+        );
+        
+        if (appThread?.proposalTitle) {
+          itemText = appThread.proposalTitle;
+        }
+        // Check for RFP document info in the rfpDocument object
+        else if (t.values?.rfpDocument?.metadata?.fileName) {
+          // Remove file extension for cleaner display
+          itemText = t.values.rfpDocument.metadata.fileName.replace(/\.[^/.]+$/, "");
+        }
+        else if (t.values?.rfpDocument?.title) {
+          itemText = t.values.rfpDocument.title;
+        }
+        else if (t.values?.rfpDocument?.name) {
+          itemText = t.values.rfpDocument.name;
+        }
+        else if (t.values?.rfpDocument?.fileName) {
+          itemText = t.values.rfpDocument.fileName;
+        }
+        else if (t.values?.rfpDocument?.originalName) {
+          itemText = t.values.rfpDocument.originalName;
+        }
+        // Check for RFP document title/name in various locations
+        else if (t.values?.metadata?.rfpDocumentTitle) {
+          itemText = t.values.metadata.rfpDocumentTitle;
+        }
+        else if (t.values?.metadata?.rfpTitle) {
+          itemText = t.values.metadata.rfpTitle;
+        }
+        else if (t.values?.metadata?.documentName) {
+          itemText = t.values.metadata.documentName;
+        }
+        else if (t.values?.metadata?.fileName) {
+          itemText = t.values.metadata.fileName;
+        }
+        else if (t.metadata?.rfpDocumentTitle) {
+          itemText = t.metadata.rfpDocumentTitle;
+        }
+        else if (t.metadata?.rfpTitle) {
+          itemText = t.metadata.rfpTitle;
+        }
+        else if (t.metadata?.documentName) {
+          itemText = t.metadata.documentName;
+        }
+        else if (t.metadata?.fileName) {
+          itemText = t.metadata.fileName;
+        }
+        // Check if there's RFP info in the state values
+        else if (t.values?.rfp?.title) {
+          itemText = t.values.rfp.title;
+        }
+        else if (t.values?.rfp?.name) {
+          itemText = t.values.rfp.name;
+        }
+        // Last resort: Use a generic name
+        else {
+          itemText = "RFP Analysis";
         }
         
-        const threadStatus = getThreadStatus(t);
         const isActive = t.thread_id === threadId;
         
         return (
@@ -100,12 +112,7 @@ function ThreadList({
                 setThreadId(t.thread_id);
               }}
             >
-              <div className="flex items-center gap-2 w-full min-w-0">
-                <span className={cn("flex-shrink-0", threadStatus.color)}>
-                  {threadStatus.icon}
-                </span>
-                <p className="truncate text-ellipsis flex-1 min-w-0">{itemText}</p>
-              </div>
+              <p className="truncate text-ellipsis w-full">{itemText}</p>
             </Button>
           </div>
         );
@@ -133,8 +140,9 @@ export function ThreadHistory() {
     parseAsBoolean.withDefault(false)
   );
 
-  const { getThreads, threads, setThreads, threadsLoading, setThreadsLoading } =
+  const { getThreads, threads, setThreads, threadsLoading, setThreadsLoading, applicationThreads } =
     useThreads();
+
 
   // Initial thread loading
   useEffect(() => {
@@ -146,21 +154,7 @@ export function ThreadHistory() {
       .finally(() => setThreadsLoading(false));
   }, [getThreads, setThreads, setThreadsLoading]);
 
-  // Auto-refresh threads every 30 seconds when sidebar is open for real-time updates
-  useEffect(() => {
-    if (!isOpen && !mobileOpen) return; // Only refresh when sidebar is visible
-    
-    const interval = setInterval(async () => {
-      try {
-        const updatedThreads = await getThreads();
-        setThreads(updatedThreads);
-      } catch (error) {
-        console.warn("[ThreadHistory] Auto-refresh failed:", error);
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [isOpen, mobileOpen, getThreads, setThreads]);
+  // Auto-refresh removed - threads will be updated when new threads are created
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -203,6 +197,7 @@ export function ThreadHistory() {
               ) : (
                 <ThreadList
                   threads={threads}
+                  applicationThreads={applicationThreads}
                   onThreadClick={handleThreadClick}
                 />
               )}
@@ -246,6 +241,7 @@ export function ThreadHistory() {
                 ) : (
                   <ThreadList
                     threads={threads}
+                    applicationThreads={applicationThreads}
                     onThreadClick={handleThreadClick}
                   />
                 )}
