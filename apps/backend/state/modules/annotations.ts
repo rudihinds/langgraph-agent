@@ -158,6 +158,16 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     default: () => undefined,
     value: lastValueReducer,
   }),
+  
+  // Company and industry information extracted from RFP
+  company: Annotation<string>({
+    default: () => "",
+    value: lastValueReducer,
+  }),
+  industry: Annotation<string>({
+    default: () => "",
+    value: lastValueReducer,
+  }),
   createdAt: Annotation<string>({
     default: () => new Date().toISOString(),
     value: createdAtReducer,
@@ -310,18 +320,21 @@ export const OverallProposalStateAnnotation = Annotation.Root({
   // (rfpProcessingStatus already defined above)
 
   // ===== MULTI-AGENT RFP ANALYSIS FIELDS =====
-  
+
   // Analysis metadata
   rfpAnalysisId: Annotation<string | undefined>({
     default: () => undefined,
     value: (existing, newValue) => newValue ?? existing,
   }),
 
-  documentMetadata: Annotation<{
-    wordCount: number;
-    sectionCount: number;
-    complexity: "Simple" | "Medium" | "Complex";
-  } | undefined>({
+  documentMetadata: Annotation<
+    | {
+        wordCount: number;
+        sectionCount: number;
+        complexity: "Simple" | "Medium" | "Complex";
+      }
+    | undefined
+  >({
     default: () => undefined,
     value: (existing, newValue) => newValue ?? existing,
   }),
@@ -354,17 +367,54 @@ export const OverallProposalStateAnnotation = Annotation.Root({
   }),
 
   // Human review data for RFP analysis
-  rfpHumanReview: Annotation<{
-    action: "approve" | "modify" | "reject";
-    feedback?: string;
-    timestamp: string;
-  } | undefined>({
+  rfpHumanReview: Annotation<
+    | {
+        action: "approve" | "modify" | "reject";
+        feedback?: string;
+        timestamp: string;
+      }
+    | undefined
+  >({
     default: () => undefined,
     value: (existing, newValue) => newValue ?? existing,
   }),
 
   // Final RFP analysis output
   rfpAnalysisOutput: Annotation<Record<string, any> | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // ===== INTELLIGENCE GATHERING FIELDS =====
+
+  // Intelligence briefing result
+  intelligenceBriefing: Annotation<
+    OverallProposalState["intelligenceBriefing"]
+  >({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Intelligence gathering processing status
+  intelligenceGatheringStatus: Annotation<ProcessingStatus>({
+    default: () => ProcessingStatus.QUEUED,
+    value: lastValueWinsReducerStrict,
+  }),
+
+  // Human review data for intelligence gathering
+  intelligenceHumanReview: Annotation<
+    | {
+        action:
+          | "approve"
+          | "modify"
+          | "reject"
+          | "ask_question"
+          | "research_other_targets";
+        feedback?: string;
+        timestamp: string;
+      }
+    | undefined
+  >({
     default: () => undefined,
     value: (existing, newValue) => newValue ?? existing,
   }),

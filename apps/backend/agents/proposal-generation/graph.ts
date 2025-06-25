@@ -46,8 +46,24 @@ import {
   rfpAnalysisApprovalHandler,
   rfpAnalysisRejectionHandler,
   rfpAnalysisQuestionAnswering,
-  RFP_ANALYSIS_NODES
+  RFP_ANALYSIS_NODES,
 } from "./nodes/planning/rfp-analysis/index.js";
+
+// Intelligence Gathering flow nodes - Multi-agent intelligence system
+import {
+  intelligenceGatheringAgent,
+  intelligenceGatheringSynthesis,
+  customResearcherNode,
+  intelligenceModificationAgent,
+  companyInfoHitlCollection,
+  companyInfoProcessor,
+  intelligenceGatheringHumanReview,
+  intelligenceGatheringFeedbackRouter,
+  intelligenceGatheringApprovalHandler,
+  intelligenceGatheringRejectionHandler,
+  intelligenceGatheringQuestionAnswering,
+  INTELLIGENCE_GATHERING_NODES,
+} from "./nodes/planning/intelligence-gathering/index.js";
 
 // Define node name constants for type safety and clarity
 const NODES = {
@@ -67,6 +83,19 @@ const NODES = {
   RFP_QA: RFP_ANALYSIS_NODES.QUESTION_ANSWERING,
   RFP_APPROVAL: RFP_ANALYSIS_NODES.APPROVAL,
   RFP_REJECTION: RFP_ANALYSIS_NODES.REJECTION,
+
+  // Intelligence Gathering Flow
+  INTELLIGENCE_AGENT: INTELLIGENCE_GATHERING_NODES.INTELLIGENCE_AGENT,
+  COMPANY_INFO_HITL: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_HITL,
+  COMPANY_INFO_PROCESSOR: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_PROCESSOR,
+  INTELLIGENCE_SYNTHESIS: INTELLIGENCE_GATHERING_NODES.SYNTHESIS,
+  INTELLIGENCE_HITL_REVIEW: INTELLIGENCE_GATHERING_NODES.HITL_REVIEW,
+  INTELLIGENCE_FEEDBACK_ROUTER: INTELLIGENCE_GATHERING_NODES.FEEDBACK_ROUTER,
+  INTELLIGENCE_MODIFICATION: INTELLIGENCE_GATHERING_NODES.MODIFICATION_AGENT,
+  INTELLIGENCE_CUSTOM_RESEARCH: INTELLIGENCE_GATHERING_NODES.CUSTOM_RESEARCHER,
+  INTELLIGENCE_APPROVAL: INTELLIGENCE_GATHERING_NODES.APPROVAL,
+  INTELLIGENCE_REJECTION: INTELLIGENCE_GATHERING_NODES.REJECTION,
+  INTELLIGENCE_QA: INTELLIGENCE_GATHERING_NODES.QA,
 
   // Legacy RFP Analysis V2 Flow (deprecated)
   LEGACY_RFP_ANALYZER: "rfpAnalyzer",
@@ -99,11 +128,7 @@ const proposalGenerationGraph = new StateGraph(
 
 // Chat Agent V3 - Pure multi-agent coordinator following documented pattern
 proposalGenerationGraph.addNode(NODES.CHAT_AGENT, chatAgent, {
-  ends: [
-    NODES.DOC_LOADER,
-    NODES.RFP_DISPATCHER,
-    END,
-  ],
+  ends: [NODES.DOC_LOADER, NODES.RFP_DISPATCHER, END],
 });
 
 // Document Loader - Process uploaded RFP documents
@@ -120,7 +145,10 @@ proposalGenerationGraph.addNode(NODES.RFP_DISPATCHER, parallelDispatcherNode);
 // Individual Analysis Agents (run in parallel)
 proposalGenerationGraph.addNode(NODES.RFP_LINGUISTIC, linguisticPatternsNode);
 
-proposalGenerationGraph.addNode(NODES.RFP_REQUIREMENTS, requirementsExtractionNode);
+proposalGenerationGraph.addNode(
+  NODES.RFP_REQUIREMENTS,
+  requirementsExtractionNode
+);
 
 proposalGenerationGraph.addNode(NODES.RFP_STRUCTURE, documentStructureNode);
 
@@ -135,9 +163,18 @@ proposalGenerationGraph.addNode(NODES.RFP_HITL_REVIEW, rfpAnalysisHumanReview, {
 });
 
 // Feedback Router - Interprets user decisions
-proposalGenerationGraph.addNode(NODES.RFP_FEEDBACK_ROUTER, rfpAnalysisFeedbackRouter, {
-  ends: [NODES.RFP_DISPATCHER, NODES.RFP_APPROVAL, NODES.RFP_REJECTION, NODES.RFP_QA],
-});
+proposalGenerationGraph.addNode(
+  NODES.RFP_FEEDBACK_ROUTER,
+  rfpAnalysisFeedbackRouter,
+  {
+    ends: [
+      NODES.RFP_DISPATCHER,
+      NODES.RFP_APPROVAL,
+      NODES.RFP_REJECTION,
+      NODES.RFP_QA,
+    ],
+  }
+);
 
 // Question Answering - Answers user questions about analysis
 proposalGenerationGraph.addNode(NODES.RFP_QA, rfpAnalysisQuestionAnswering, {
@@ -145,35 +182,153 @@ proposalGenerationGraph.addNode(NODES.RFP_QA, rfpAnalysisQuestionAnswering, {
 });
 
 // Approval Handler - Proceed to next phase
-proposalGenerationGraph.addNode(NODES.RFP_APPROVAL, rfpAnalysisApprovalHandler, {
-  ends: [NODES.RESEARCH_PLANNING],
-});
+proposalGenerationGraph.addNode(
+  NODES.RFP_APPROVAL,
+  rfpAnalysisApprovalHandler,
+  {
+    ends: [NODES.INTELLIGENCE_AGENT],
+  }
+);
 
 // Rejection Handler - Start fresh analysis
-proposalGenerationGraph.addNode(NODES.RFP_REJECTION, rfpAnalysisRejectionHandler, {
-  ends: [NODES.RFP_DISPATCHER],
-});
+proposalGenerationGraph.addNode(
+  NODES.RFP_REJECTION,
+  rfpAnalysisRejectionHandler,
+  {
+    ends: [NODES.RFP_DISPATCHER],
+  }
+);
 
+// Intelligence Gathering System
+// =============================
 
+// Intelligence Gathering Agent - Core research agent
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_AGENT,
+  intelligenceGatheringAgent
+);
 
-// Research Planning - Prepare for next development phase (placeholder)
+// Company Info HITL - Collects missing company/industry information
+proposalGenerationGraph.addNode(
+  NODES.COMPANY_INFO_HITL,
+  companyInfoHitlCollection
+);
+
+// Company Info Processor - Processes user response and routes back
+proposalGenerationGraph.addNode(
+  NODES.COMPANY_INFO_PROCESSOR,
+  companyInfoProcessor
+);
+
+// Intelligence Synthesis - Synthesizes research results
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_SYNTHESIS,
+  intelligenceGatheringSynthesis
+);
+
+// Intelligence Human Review - HITL checkpoint for intelligence validation
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_HITL_REVIEW,
+  intelligenceGatheringHumanReview,
+  {
+    ends: [NODES.INTELLIGENCE_FEEDBACK_ROUTER],
+  }
+);
+
+// Intelligence Feedback Router - Interprets user decisions
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_FEEDBACK_ROUTER,
+  intelligenceGatheringFeedbackRouter,
+  {
+    ends: [
+      NODES.INTELLIGENCE_APPROVAL,
+      NODES.INTELLIGENCE_MODIFICATION,
+      NODES.INTELLIGENCE_CUSTOM_RESEARCH,
+      NODES.INTELLIGENCE_QA,
+      NODES.INTELLIGENCE_REJECTION,
+    ],
+  }
+);
+
+// Intelligence Modification Agent - Handles user feedback modifications
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_MODIFICATION,
+  intelligenceModificationAgent,
+  {
+    ends: [NODES.INTELLIGENCE_SYNTHESIS],
+  }
+);
+
+// Custom Researcher - Handles additional research requests
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_CUSTOM_RESEARCH,
+  customResearcherNode,
+  {
+    ends: [NODES.INTELLIGENCE_SYNTHESIS],
+  }
+);
+
+// Intelligence Question Answering - Answers user questions about intelligence
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_QA,
+  intelligenceGatheringQuestionAnswering,
+  {
+    ends: [NODES.INTELLIGENCE_HITL_REVIEW],
+  }
+);
+
+// Intelligence Approval Handler - Proceed to team assembly
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_APPROVAL,
+  intelligenceGatheringApprovalHandler,
+  {
+    ends: [NODES.COMPLETE], // TODO: Replace with team assembly node when implemented
+  }
+);
+
+// Intelligence Rejection Handler - Return to intelligence gathering
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_REJECTION,
+  intelligenceGatheringRejectionHandler,
+  {
+    ends: [NODES.INTELLIGENCE_AGENT],
+  }
+);
+
+// Research Planning - Entry point to intelligence gathering (replaces placeholder)
 proposalGenerationGraph.addNode(
   NODES.RESEARCH_PLANNING,
   async (state: typeof OverallProposalStateAnnotation.State) => {
-    // Placeholder for future research planning agent
-    console.log(
-      "Research Planning phase - to be implemented in next development phase"
-    );
+    // Transition message for intelligence gathering
+    console.log("Starting intelligence gathering phase");
     return new Command({
-      goto: NODES.COMPLETE,
+      goto: NODES.INTELLIGENCE_AGENT,
       update: {
-        status: ProcessingStatus.COMPLETE,
-        currentPhase: "complete" as const,
-      }
+        intelligenceGatheringStatus: ProcessingStatus.RUNNING,
+        currentPhase: "planning" as const,
+        messages: [
+          {
+            role: "assistant" as const,
+            content: `## 🔍 Intelligence Gathering Phase
+
+Great! The RFP analysis has been approved. The next step is to perform intelligence gathering.
+
+This will research **${state.rfpDocument?.metadata?.organization || "the organization"}** to understand their:
+- Strategic context and recent initiatives
+- Current vendor relationships and competitive landscape
+- Procurement history and buying patterns
+- Key decision makers and stakeholders
+
+After I have gathered intelligence, you will be able to review my findings and provide feedback.
+
+Starting intelligence gathering now...`,
+          },
+        ],
+      },
     });
   },
   {
-    ends: [NODES.COMPLETE],
+    ends: [NODES.INTELLIGENCE_AGENT],
   }
 );
 
@@ -186,7 +341,7 @@ proposalGenerationGraph.addNode(
       update: {
         status: ProcessingStatus.COMPLETE,
         currentPhase: "complete" as const,
-      }
+      },
     });
   }
 );
@@ -207,13 +362,50 @@ proposalGenerationGraph.addNode(
 
 // Critical: Connect all 4 parallel analysis agents to synthesis node
 // This ensures synthesis waits for ALL agents to complete before executing
-(proposalGenerationGraph as any).addEdge(NODES.RFP_LINGUISTIC, NODES.RFP_SYNTHESIS);
-(proposalGenerationGraph as any).addEdge(NODES.RFP_REQUIREMENTS, NODES.RFP_SYNTHESIS);
-(proposalGenerationGraph as any).addEdge(NODES.RFP_STRUCTURE, NODES.RFP_SYNTHESIS);
-(proposalGenerationGraph as any).addEdge(NODES.RFP_STRATEGIC, NODES.RFP_SYNTHESIS);
+(proposalGenerationGraph as any).addEdge(
+  NODES.RFP_LINGUISTIC,
+  NODES.RFP_SYNTHESIS
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.RFP_REQUIREMENTS,
+  NODES.RFP_SYNTHESIS
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.RFP_STRUCTURE,
+  NODES.RFP_SYNTHESIS
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.RFP_STRATEGIC,
+  NODES.RFP_SYNTHESIS
+);
 
 // Connect synthesis to HITL review
-(proposalGenerationGraph as any).addEdge(NODES.RFP_SYNTHESIS, NODES.RFP_HITL_REVIEW);
+(proposalGenerationGraph as any).addEdge(
+  NODES.RFP_SYNTHESIS,
+  NODES.RFP_HITL_REVIEW
+);
+
+// Intelligence Gathering Flow Edges
+// =================================
+
+// Company info collection edges (when missing company/industry)
+(proposalGenerationGraph as any).addEdge(
+  NODES.COMPANY_INFO_HITL,
+  NODES.COMPANY_INFO_PROCESSOR
+);
+
+// Connect intelligence agent to synthesis (when company/industry present)
+// Note: Intelligence agent uses Command routing to go to COMPANY_INFO_HITL when needed
+(proposalGenerationGraph as any).addEdge(
+  NODES.INTELLIGENCE_AGENT,
+  NODES.INTELLIGENCE_SYNTHESIS
+);
+
+// Connect synthesis to HITL review
+(proposalGenerationGraph as any).addEdge(
+  NODES.INTELLIGENCE_SYNTHESIS,
+  NODES.INTELLIGENCE_HITL_REVIEW
+);
 
 // V2 Chat flow - Clean routing without recursion
 // All routing decisions are handled within nodes using Command pattern
