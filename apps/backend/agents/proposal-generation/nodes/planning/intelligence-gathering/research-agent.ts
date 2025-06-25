@@ -7,11 +7,17 @@
  */
 
 import { ChatAnthropic } from "@langchain/anthropic";
-import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
+import { SystemMessage, HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
 import { Command } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
 import { getIntelligenceSearchTool } from "@/tools/intelligence-search.js";
+import { 
+  trimMessagesToTokenLimit, 
+  handleTokenLimitError,
+  TOKEN_LIMITS,
+  compressToolMessages 
+} from "@/lib/llm/token-management.js";
 
 // Initialize LLM for research agent
 const model = new ChatAnthropic({
@@ -123,23 +129,84 @@ ${rfpText.substring(0, 500)}...
 
 Previous searches completed: ${(state.messages || []).filter(m => m._getType() === "tool").length}
 
+IMPORTANT: You have a maximum of 10 searches. After 7-8 searches, consider if you have enough information to create a comprehensive briefing.
+
 Begin your research by analyzing what information you need and then use the intelligence_search tool to find it. Be thorough but efficient.`;
 
     // Get existing messages for context
     const existingMessages = state.messages || [];
     
-    // Keep recent message history for context (last 20 messages)
-    const recentMessages = existingMessages.slice(-20);
+    // Check if we need to compress tool messages
+    const toolMessages = existingMessages.filter(msg => msg instanceof ToolMessage);
+    const needsCompression = toolMessages.length > 5;
     
-    // Prepare messages for the model
-    const messages = [
-      new SystemMessage(systemPrompt),
-      ...recentMessages,
-      new HumanMessage(humanPrompt)
-    ];
+    let processedMessages = existingMessages;
     
-    console.log("[Research Agent] Invoking model for research decision");
-    const response = await modelWithTools.invoke(messages);
+    if (needsCompression) {
+      console.log(`[Research Agent] Compressing ${toolMessages.length} tool messages to save tokens`);
+      
+      // Get non-tool messages
+      const nonToolMessages = existingMessages.filter(msg => !(msg instanceof ToolMessage));
+      
+      // Compress older tool messages (keep last 2 uncompressed)
+      const toolsToCompress = toolMessages.slice(0, -2);
+      const recentTools = toolMessages.slice(-2);
+      
+      if (toolsToCompress.length > 0) {
+        const compressedSummary = await compressToolMessages(toolsToCompress, model);
+        processedMessages = [...nonToolMessages, compressedSummary, ...recentTools];
+      }
+    }
+    
+    // Prepare messages with token limit consideration
+    const systemMsg = new SystemMessage(systemPrompt);
+    const humanMsg = new HumanMessage(humanPrompt);
+    
+    // Trim messages to fit within token limit
+    const trimmedMessages = trimMessagesToTokenLimit(
+      [systemMsg, ...processedMessages, humanMsg],
+      {
+        maxTokens: TOKEN_LIMITS["claude-3-5-sonnet-20241022"],
+        modelName: "claude-3-5-sonnet-20241022",
+        preserveSystemMessages: true,
+        preserveRecentToolMessages: 3,
+        bufferTokens: 10000 // Reserve tokens for response and new tool calls
+      }
+    );
+    
+    console.log(`[Research Agent] Using ${trimmedMessages.length} messages (from ${existingMessages.length} total)`);
+    
+    // Invoke model with error handling
+    let response;
+    try {
+      response = await modelWithTools.invoke(trimmedMessages);
+    } catch (error) {
+      // If we hit token limit, try with even more aggressive trimming
+      if (error instanceof Error && error.message.includes('prompt is too long')) {
+        console.log("[Research Agent] Hit token limit, applying aggressive trimming");
+        
+        const minimalMessages = trimMessagesToTokenLimit(
+          [systemMsg, humanMsg],
+          {
+            maxTokens: 50000, // Much smaller context
+            modelName: "claude-3-5-sonnet-20241022",
+            preserveSystemMessages: true,
+            preserveRecentToolMessages: 1,
+            bufferTokens: 5000
+          }
+        );
+        
+        // Add a summary of what was found so far
+        const summaryMsg = new AIMessage({
+          content: `Previous research found ${toolMessages.length} results. Continuing search...`,
+          additional_kwargs: { compressed: true }
+        });
+        
+        response = await modelWithTools.invoke([...minimalMessages, summaryMsg]);
+      } else {
+        throw error;
+      }
+    }
     
     // Log the response for debugging
     if (response.tool_calls && response.tool_calls.length > 0) {

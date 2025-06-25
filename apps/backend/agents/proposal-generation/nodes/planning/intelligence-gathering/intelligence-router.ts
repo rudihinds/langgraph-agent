@@ -35,7 +35,7 @@ export function intelligenceGatheringRouter(
   const messages = state.messages || [];
   if (messages.length === 0) {
     console.log("[Intelligence Router] No messages found - routing to formatter");
-    return "formatter";
+    return "intelligenceFormatter";
   }
   
   const lastMessage = messages[messages.length - 1];
@@ -49,6 +49,26 @@ export function intelligenceGatheringRouter(
   // Check if we have enough research data by looking for tool messages in history
   const toolMessageCount = messages.filter(msg => msg._getType() === "tool").length;
   console.log(`[Intelligence Router] Found ${toolMessageCount} tool messages in history`);
+  
+  // Limit the number of searches to prevent token overflow
+  const MAX_SEARCHES = 10;
+  if (toolMessageCount >= MAX_SEARCHES) {
+    console.log(`[Intelligence Router] Reached maximum searches (${MAX_SEARCHES}) - routing to formatter`);
+    return "intelligenceFormatter";
+  }
+  
+  // Check for completion signals in the last AI message
+  if (isAIMessage(lastMessage)) {
+    const content = typeof lastMessage.content === 'string' ? lastMessage.content : '';
+    
+    // Look for completion indicators
+    if (content.toLowerCase().includes('research complete') || 
+        content.toLowerCase().includes('research phase complete') ||
+        content.toLowerCase().includes('found sufficient information')) {
+      console.log("[Intelligence Router] Agent indicated completion - routing to formatter");
+      return "intelligenceFormatter";
+    }
+  }
   
   // If we have some research data, proceed to formatting
   // The agent will have indicated it's done by not generating more tool calls

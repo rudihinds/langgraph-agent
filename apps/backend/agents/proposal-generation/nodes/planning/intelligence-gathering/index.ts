@@ -6,6 +6,7 @@
  */
 
 // Core intelligence gathering nodes
+export { researchPlanningNode } from "./research-planning.js";
 export { researchAgent } from "./research-agent.js";
 export { intelligenceFormatter } from "./intelligence-formatter.js";
 export { intelligenceGatheringRouter } from "./intelligence-router.js";

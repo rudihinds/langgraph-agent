@@ -53,6 +53,7 @@ import {
 
 // Intelligence Gathering flow nodes - Multi-agent intelligence system
 import {
+  researchPlanningNode,
   researchAgent,
   intelligenceFormatter,
   intelligenceGatheringRouter,
@@ -192,7 +193,7 @@ proposalGenerationGraph.addNode(
   NODES.RFP_APPROVAL,
   rfpAnalysisApprovalHandler,
   {
-    ends: [NODES.RESEARCH_AGENT],
+    ends: [NODES.RESEARCH_PLANNING],
   }
 );
 
@@ -312,38 +313,10 @@ proposalGenerationGraph.addNode(
   }
 );
 
-// Research Planning - Entry point to intelligence gathering (replaces placeholder)
+// Research Planning - Entry point to intelligence gathering
 proposalGenerationGraph.addNode(
   NODES.RESEARCH_PLANNING,
-  async (state: typeof OverallProposalStateAnnotation.State) => {
-    // Transition message for intelligence gathering
-    console.log("Starting intelligence gathering phase");
-    return new Command({
-      goto: NODES.RESEARCH_AGENT,
-      update: {
-        intelligenceGatheringStatus: ProcessingStatus.RUNNING,
-        currentPhase: "planning" as const,
-        messages: [
-          {
-            role: "assistant" as const,
-            content: `## 🔍 Intelligence Gathering Phase
-
-Great! The RFP analysis has been approved. The next step is to perform intelligence gathering.
-
-This will research **${state.rfpDocument?.metadata?.organization || "the organization"}** to understand their:
-- Strategic context and recent initiatives
-- Current vendor relationships and competitive landscape
-- Procurement history and buying patterns
-- Key decision makers and stakeholders
-
-After I have gathered intelligence, you will be able to review my findings and provide feedback.
-
-Starting intelligence gathering now...`,
-          },
-        ],
-      },
-    });
-  }
+  researchPlanningNode
 );
 
 // Complete - Final state
