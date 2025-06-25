@@ -52,6 +52,7 @@ export const intelligenceGatheringHumanReview = createHumanReviewNode<typeof Ove
     question: "Please review the intelligence gathering results. The briefing includes customer context, vendor landscape, procurement history, and decision maker analysis. How would you like to proceed?",
     options: ["approve", "modify", "ask_question", "research_other_targets", "reject"],
     dataExtractor: (state) => ({
+      intelligenceSynthesis: state.intelligenceSynthesis || "Intelligence synthesis not available",
       intelligenceBriefing: state.intelligenceBriefing,
       company: state.intelligenceBriefing?.customer_context?.company,
       industry: state.intelligenceBriefing?.customer_context?.industry,

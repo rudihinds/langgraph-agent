@@ -113,7 +113,7 @@ Identify vendors currently providing services similar to the RFP scope.
 - Contract dates/status if available
 - Source of information
 
-**Stop when:** You identify 2-3 relevant vendors OR exhausted government contract databases
+**Stop when:** You identify 2-3 relevant vendors OR exhausted contract databases
 
 ### Phase 3: Recent Procurement Activities
 Find similar RFPs/contracts from the past 2 years.
@@ -152,6 +152,7 @@ Research individuals mentioned in the RFP or likely involved in evaluation.
 **Prefer these sources:**
 - Official company websites (.gov, .org, official .com)
 - Government contract databases (SAM.gov, state procurement sites)
+- Procurement news sites (e.g. FedBizOpps, ProContract)
 - Established news outlets
 - LinkedIn for professional profiles
 - Industry publications

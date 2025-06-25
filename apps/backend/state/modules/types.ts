@@ -718,6 +718,7 @@ export interface OverallProposalState {
 
   // Intelligence Gathering
   intelligenceBriefing?: IntelligenceBriefing;
+  intelligenceSynthesis?: string;
   intelligenceGatheringStatus?: ProcessingStatus;
 
   // Section processing

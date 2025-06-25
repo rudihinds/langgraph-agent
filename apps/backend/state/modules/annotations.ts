@@ -395,6 +395,12 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     value: (existing, newValue) => newValue ?? existing,
   }),
 
+  // Intelligence synthesis - human readable executive briefing
+  intelligenceSynthesis: Annotation<string | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
   // Intelligence gathering processing status
   intelligenceGatheringStatus: Annotation<ProcessingStatus>({
     default: () => ProcessingStatus.QUEUED,
