@@ -14,7 +14,7 @@
  * 7. Research Planning (Prepare for next phase)
  */
 
-import { StateGraph, END, START, Command } from "@langchain/langgraph";
+import { StateGraph, END, START } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ProcessingStatus } from "../../state/modules/constants.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
@@ -316,20 +316,23 @@ proposalGenerationGraph.addNode(
 // Research Planning - Entry point to intelligence gathering
 proposalGenerationGraph.addNode(
   NODES.RESEARCH_PLANNING,
-  researchPlanningNode
+  researchPlanningNode,
+  {
+    ends: [NODES.RESEARCH_AGENT]
+  }
 );
 
 // Complete - Final state
 proposalGenerationGraph.addNode(
   NODES.COMPLETE,
-  async (state: typeof OverallProposalStateAnnotation.State) => {
-    return new Command({
-      goto: END,
-      update: {
-        status: ProcessingStatus.COMPLETE,
-        currentPhase: "complete" as const,
-      },
-    });
+  async () => {
+    return {
+      status: ProcessingStatus.COMPLETE,
+      currentPhase: "complete" as const,
+    };
+  },
+  {
+    ends: [END]
   }
 );
 

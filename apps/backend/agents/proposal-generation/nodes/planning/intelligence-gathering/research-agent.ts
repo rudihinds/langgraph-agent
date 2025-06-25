@@ -8,13 +8,11 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
-import { Command } from "@langchain/langgraph";
+import { trimMessages } from "@langchain/core/messages";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
 import { getIntelligenceSearchTool } from "@/tools/intelligence-search.js";
 import { 
-  trimMessagesToTokenLimit, 
-  handleTokenLimitError,
   TOKEN_LIMITS,
   compressToolMessages 
 } from "@/lib/llm/token-management.js";
@@ -37,18 +35,32 @@ const model = new ChatAnthropic({
  * 5. Continues until comprehensive intelligence is gathered
  */
 export async function researchAgent(
-  state: typeof OverallProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State,
+  config?: any
 ): Promise<{
   messages?: any[];
   currentStatus?: string;
   intelligenceGatheringStatus?: ProcessingStatus;
   errors?: string[];
-} | Command> {
+}> {
   console.log("[Research Agent] Starting intelligence research");
   
   const company = state.company || "";
   const industry = state.industry || "";
   const rfpText = state.rfpDocument?.text || "";
+  
+  // Emit initial status
+  if (config?.writer) {
+    config.writer(JSON.stringify({
+      type: "agent_status",
+      message: `Analyzing intelligence requirements for ${company}...`,
+      timestamp: new Date().toISOString()
+    }));
+  }
+  
+  // Get existing messages for tracking
+  const existingMessages = state.messages || [];
+  const existingToolMessages = existingMessages.filter((msg): msg is ToolMessage => msg instanceof ToolMessage);
   
   // Validation
   if (!rfpText) {
@@ -133,8 +145,7 @@ IMPORTANT: You have a maximum of 10 searches. After 7-8 searches, consider if yo
 
 Begin your research by analyzing what information you need and then use the intelligence_search tool to find it. Be thorough but efficient.`;
 
-    // Get existing messages for context
-    const existingMessages = state.messages || [];
+    // Messages are already available from outer scope
     
     // Check if we need to compress tool messages
     const toolMessages = existingMessages.filter(msg => msg instanceof ToolMessage);
@@ -162,47 +173,60 @@ Begin your research by analyzing what information you need and then use the inte
     const systemMsg = new SystemMessage(systemPrompt);
     const humanMsg = new HumanMessage(humanPrompt);
     
-    // Trim messages to fit within token limit
-    const trimmedMessages = trimMessagesToTokenLimit(
-      [systemMsg, ...processedMessages, humanMsg],
-      {
-        maxTokens: TOKEN_LIMITS["claude-3-5-sonnet-20241022"],
-        modelName: "claude-3-5-sonnet-20241022",
-        preserveSystemMessages: true,
-        preserveRecentToolMessages: 3,
-        bufferTokens: 10000 // Reserve tokens for response and new tool calls
-      }
-    );
+    // Construct the complete message history with system message first
+    const allMessages = [systemMsg, ...processedMessages, humanMsg];
+    
+    // Use LangChain's trimMessages utility which properly handles message ordering
+    const trimmedMessages = await trimMessages(allMessages, {
+      strategy: "last",
+      tokenCounter: model,
+      maxTokens: TOKEN_LIMITS["claude-3-5-sonnet-20241022"] - 10000, // Reserve tokens for response
+      // Most chat models expect that chat history starts with either:
+      // (1) a HumanMessage or
+      // (2) a SystemMessage followed by a HumanMessage
+      startOn: "human",
+      // Most chat models expect that chat history ends with either:
+      // (1) a HumanMessage or
+      // (2) a ToolMessage
+      endOn: ["human", "tool"],
+      // Keep the SystemMessage if it's present
+      includeSystem: true,
+      // Allow partial messages to be included
+      allowPartial: false
+    });
     
     console.log(`[Research Agent] Using ${trimmedMessages.length} messages (from ${existingMessages.length} total)`);
     
+    // Emit status before invoking model
+    if (config?.writer) {
+      config.writer(JSON.stringify({
+        type: "agent_status",
+        message: "Planning research strategy...",
+        timestamp: new Date().toISOString()
+      }));
+    }
+    
     // Invoke model with error handling
-    let response;
+    let response: AIMessage;
     try {
-      response = await modelWithTools.invoke(trimmedMessages);
+      response = await modelWithTools.invoke(trimmedMessages, config);
     } catch (error) {
       // If we hit token limit, try with even more aggressive trimming
       if (error instanceof Error && error.message.includes('prompt is too long')) {
         console.log("[Research Agent] Hit token limit, applying aggressive trimming");
         
-        const minimalMessages = trimMessagesToTokenLimit(
-          [systemMsg, humanMsg],
-          {
-            maxTokens: 50000, // Much smaller context
-            modelName: "claude-3-5-sonnet-20241022",
-            preserveSystemMessages: true,
-            preserveRecentToolMessages: 1,
-            bufferTokens: 5000
-          }
-        );
-        
-        // Add a summary of what was found so far
-        const summaryMsg = new AIMessage({
-          content: `Previous research found ${toolMessages.length} results. Continuing search...`,
-          additional_kwargs: { compressed: true }
+        // Use minimal context with just system and human messages
+        const minimalMessages = await trimMessages([systemMsg, humanMsg], {
+          strategy: "last",
+          tokenCounter: model,
+          maxTokens: 50000, // Much smaller context
+          startOn: "human",
+          endOn: ["human", "tool"],
+          includeSystem: true,
+          allowPartial: false
         });
         
-        response = await modelWithTools.invoke([...minimalMessages, summaryMsg]);
+        response = await modelWithTools.invoke(minimalMessages);
       } else {
         throw error;
       }
@@ -211,11 +235,30 @@ Begin your research by analyzing what information you need and then use the inte
     // Log the response for debugging
     if (response.tool_calls && response.tool_calls.length > 0) {
       console.log(`[Research Agent] Generated ${response.tool_calls.length} search queries`);
-      response.tool_calls.forEach((call, index) => {
+      response.tool_calls.forEach((call: any, index: number) => {
         console.log(`  ${index + 1}. ${call.name}: ${JSON.stringify(call.args)}`);
       });
+      
+      // Emit status about planned searches
+      if (config?.writer) {
+        config.writer(JSON.stringify({
+          type: "agent_status",
+          message: `Planning ${response.tool_calls.length} targeted searches...`,
+          searchCount: response.tool_calls.length,
+          timestamp: new Date().toISOString()
+        }));
+      }
     } else {
       console.log("[Research Agent] No tool calls generated - agent may have completed research");
+      
+      // Emit completion status
+      if (config?.writer) {
+        config.writer(JSON.stringify({
+          type: "agent_status",
+          message: "Research phase complete, preparing briefing...",
+          timestamp: new Date().toISOString()
+        }));
+      }
     }
     
     // Always return the response message to update state
@@ -230,12 +273,28 @@ Begin your research by analyzing what information you need and then use the inte
   } catch (error) {
     console.error("[Research Agent] Error during research:", error);
     
+    // Following LangGraph patterns - return error as state update, not throw
+    const errorMessage = error instanceof Error ? error.message : "Unknown error during research";
+    
+    // Check if it's a token limit error
+    if (error instanceof Error && error.message.includes('prompt is too long')) {
+      return {
+        messages: [new AIMessage({
+          content: `I've gathered substantial research data but reached the context limit. Proceeding to format the findings with the information collected so far.`,
+          name: "researchAgent"
+        })],
+        intelligenceGatheringStatus: ProcessingStatus.RUNNING,
+        currentStatus: "Research limit reached - proceeding to format",
+        errors: [`Token limit reached after ${existingToolMessages.length} searches`]
+      };
+    }
+    
     return {
-      errors: [error instanceof Error ? error.message : "Unknown error during research"],
+      errors: [errorMessage],
       intelligenceGatheringStatus: ProcessingStatus.ERROR,
       currentStatus: "Research failed",
       messages: [new AIMessage({
-        content: `Research error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        content: `Research error: ${errorMessage}`,
         name: "researchAgent"
       })]
     };

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useAgentActivity } from "../hooks/useAgentActivity";
 import { AgentLoadingState } from "./AgentLoadingState";
 import { BaseInterruptPayload } from "../providers/StreamProvider";
+import { SearchStatusIndicator } from "./SearchStatusIndicator";
 
 interface NoMessagesViewProps {
   rfpId?: string | null;
@@ -84,6 +85,7 @@ export function Thread() {
   const { isAgentWorking } = useAgentActivity(isLoading, messages);
 
   const [inputValue, setInputValue] = useState("");
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
 
   // Ref for the scrollable messages container
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -135,16 +137,67 @@ export function Thread() {
       if (submit) {
         console.log("[Thread] Using submit to send message");
 
-        // Pass message in the format expected by LangGraph
-        await submit({
-          messages: [
+        // Check if we're in intelligence gathering mode by looking at state
+        const isIntelligenceGathering = values?.intelligenceGatheringStatus === "RUNNING";
+        
+        if (isIntelligenceGathering) {
+          console.log("[Thread] Using custom streaming for intelligence gathering");
+          // Clear any existing status
+          setCurrentStatus(null);
+          
+          // Pass message with custom streaming mode to capture status events
+          await submit(
             {
-              type: "human",
-              content: messageContent,
-              id: uuidv4(),
+              messages: [
+                {
+                  type: "human",
+                  content: messageContent,
+                  id: uuidv4(),
+                },
+              ],
             },
-          ],
-        });
+            {
+              streamMode: ["custom", "updates"],
+              onChunk: (chunk: any) => {
+                // Handle different chunk types based on streamMode
+                if (Array.isArray(chunk) && chunk.length === 2) {
+                  const [mode, data] = chunk;
+                  
+                  if (mode === "custom") {
+                    // Handle custom events (status messages)
+                    try {
+                      const event = typeof data === 'string' ? JSON.parse(data) : data;
+                      
+                      if (event.type === "search_status" || event.type === "agent_status") {
+                        console.log("[Thread] Received status:", event.message);
+                        setCurrentStatus(event.message);
+                        
+                        // Clear status after delay
+                        setTimeout(() => {
+                          setCurrentStatus(prev => prev === event.message ? null : prev);
+                        }, 5000);
+                      }
+                    } catch (error) {
+                      console.warn("[Thread] Failed to parse custom event:", error);
+                    }
+                  }
+                  // State updates are handled by the provider
+                }
+              },
+            }
+          );
+        } else {
+          // Normal submit without custom streaming
+          await submit({
+            messages: [
+              {
+                type: "human",
+                content: messageContent,
+                id: uuidv4(),
+              },
+            ],
+          });
+        }
       } else {
         console.error("[Thread] No method available to send messages");
         toast.error("Failed to send message", {
@@ -222,9 +275,12 @@ export function Thread() {
               );
             })}
 
-            {/* Show loading state at bottom when agent is working */}
+            {/* Show status indicator when there's an active status */}
+            {currentStatus && <SearchStatusIndicator status={currentStatus} />}
+            
+            {/* Show loading state at bottom when agent is working but no status */}
             <AgentLoadingState
-              isWorking={isAgentWorking}
+              isWorking={isAgentWorking && !currentStatus}
               context={rfpId ? "rfp" : "general"}
               className="justify-center py-4"
             />

@@ -8,12 +8,21 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
+import { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { ChatAnthropic } from "@langchain/anthropic";
 
 // Initialize Tavily search tool
 const tavilySearch = new TavilySearchResults({
   maxResults: 5, // Optimal balance between comprehensiveness and token usage
   includeRawContent: true,
   includeAnswer: true,
+});
+
+// Initialize Haiku model for status generation (cheap and fast)
+const statusModel = new ChatAnthropic({
+  modelName: "claude-3-haiku-20240307",
+  temperature: 0.3,
+  maxTokens: 50,
 });
 
 /**
@@ -25,8 +34,45 @@ const tavilySearch = new TavilySearchResults({
  * and previous search results.
  */
 export const intelligenceSearch = tool(
-  async ({ query, focus }: { query: string; focus?: string }) => {
+  async ({ query, focus }: { query: string; focus?: string }, config?: LangGraphRunnableConfig) => {
     console.log(`[Intelligence Search] Searching for: "${query}"${focus ? ` (focus: ${focus})` : ''}`);
+    
+    // Emit status via config.writer if available
+    if (config?.writer) {
+      try {
+        // Generate human-friendly status message
+        const statusPrompt = `Convert this search query into a friendly status message (max 10 words):
+Query: ${query}
+Focus: ${focus || 'general information'}
+Format: "Looking into [specific topic]..."
+Examples:
+- "Looking into company's recent initiatives..."
+- "Researching vendor relationships..."
+- "Analyzing procurement patterns..."`;
+        
+        const statusResponse = await statusModel.invoke(statusPrompt);
+        const statusMessage = typeof statusResponse.content === 'string' 
+          ? statusResponse.content 
+          : 'Searching for information...';
+        
+        // Write to custom stream
+        config.writer(JSON.stringify({
+          type: "search_status",
+          message: statusMessage,
+          query: query,
+          focus: focus,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (error) {
+        console.warn('[Intelligence Search] Failed to generate status:', error);
+        // Fallback status
+        config.writer(JSON.stringify({
+          type: "search_status",
+          message: "Searching for information...",
+          timestamp: new Date().toISOString()
+        }));
+      }
+    }
     
     try {
       // Execute the search

@@ -114,6 +114,7 @@ type ConfigStatus = {
   warningMessages: string[];
 };
 
+
 export function StreamProvider({ children }: StreamProviderProps) {
   const searchParams = useSearchParams();
   const rfpId = searchParams.get("rfpId");
@@ -122,6 +123,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
     errorMessages: [],
     warningMessages: [],
   });
+  
 
   // Use ThreadProvider for thread synchronization and history management
   const { getThreads, setThreads, getApplicationThreads } = useThreads();
@@ -345,7 +347,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
     apiUrl: langGraphSdkApiUrl,
     assistantId: assistantId as string,
     onThreadId: handleSdkThreadIdGeneration, // Callback for when SDK sets/generates threadId
-    onFinish: async (state) => {
+    onFinish: async () => {
       // Sync with ThreadProvider when stream finishes
       console.log("[StreamProvider] Stream finished, syncing thread state");
       try {
@@ -535,6 +537,7 @@ export function StreamProvider({ children }: StreamProviderProps) {
       experimental_branchTree,
       client,
       assistantId: assistantId as string,
+      currentStatus: values?.currentStatus || null,
     }),
     [
       messages,

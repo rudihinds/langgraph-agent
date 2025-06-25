@@ -5,7 +5,7 @@
  * Displays a user-friendly message explaining the next phase.
  */
 
-import { Command } from "@langchain/langgraph";
+import { AIMessage } from "@langchain/core/messages";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
 
@@ -17,22 +17,24 @@ import { ProcessingStatus } from "@/state/modules/types.js";
  */
 export async function researchPlanningNode(
   state: typeof OverallProposalStateAnnotation.State
-) {
+): Promise<{
+  intelligenceGatheringStatus?: ProcessingStatus;
+  currentPhase?: "planning";
+  messages?: any[];
+}> {
   console.log("[Research Planning] Starting intelligence gathering phase");
   
   const organization = state.rfpDocument?.metadata?.organization || 
                       state.company || 
                       "the organization";
   
-  return new Command({
-    goto: "researchAgent", // Routes to research agent which uses intelligenceGatheringRouter
-    update: {
-      intelligenceGatheringStatus: ProcessingStatus.RUNNING,
-      currentPhase: "planning" as const,
-      messages: [
-        {
-          role: "assistant" as const,
-          content: `## 🔍 Intelligence Gathering Phase
+  // Following LangGraph pattern - return plain object for state update
+  return {
+    intelligenceGatheringStatus: ProcessingStatus.RUNNING,
+    currentPhase: "planning" as const,
+    messages: [
+      new AIMessage({
+        content: `## 🔍 Intelligence Gathering Phase
 
 Great! The RFP analysis has been approved. The next step is to perform intelligence gathering.
 
@@ -45,8 +47,8 @@ This will research **${organization}** to understand their:
 After I have gathered intelligence, you will be able to review my findings and provide feedback.
 
 Starting intelligence gathering now...`,
-        },
-      ],
-    },
-  });
+        name: "researchPlanning"
+      })
+    ]
+  };
 }

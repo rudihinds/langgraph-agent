@@ -29,7 +29,8 @@ const model = new ChatAnthropic({
  * them into a clear, actionable executive briefing.
  */
 export async function intelligenceFormatter(
-  state: typeof OverallProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State,
+  config?: any
 ): Promise<{
   intelligenceGatheringStatus?: ProcessingStatus;
   currentStatus?: string;
@@ -41,19 +42,39 @@ export async function intelligenceFormatter(
   const company = state.company || "";
   const industry = state.industry || "";
   
+  // Emit formatting status
+  if (config?.writer) {
+    config.writer(JSON.stringify({
+      type: "agent_status",
+      message: "Compiling intelligence briefing...",
+      timestamp: new Date().toISOString()
+    }));
+  }
+  
   try {
     // Extract research results from message history
     const messages = state.messages || [];
     
+    // Following LangGraph pattern - filter messages within the node
+    // Keep only recent messages to manage context
+    const MAX_MESSAGES_TO_PROCESS = 50;
+    const recentMessages = messages.slice(-MAX_MESSAGES_TO_PROCESS);
+    
     // Find all tool messages (search results)
-    const toolMessages = messages.filter(msg => {
-      const messageType = 'tool_calls' in msg ? 'ai' : msg.role || msg._getType?.() || 'unknown';
-      return messageType === 'tool';
-    });
+    const toolMessages = recentMessages.filter(msg => msg instanceof ToolMessage);
     console.log(`[Intelligence Formatter] Found ${toolMessages.length} search results to process`);
     
     if (toolMessages.length === 0) {
-      throw new Error("No research results found to format");
+      // Don't throw - return state update
+      return {
+        intelligenceGatheringStatus: ProcessingStatus.ERROR,
+        currentStatus: "No research results found to format",
+        messages: [new AIMessage({
+          content: "No research results were found. Please try searching again.",
+          name: "intelligenceFormatter"
+        })],
+        errors: ["No research results found"]
+      };
     }
     
     // Process search results in batches if needed
