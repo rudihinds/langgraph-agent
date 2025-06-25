@@ -6,8 +6,9 @@
  */
 
 // Core intelligence gathering nodes
-export { intelligenceGatheringAgent } from "./intelligence-agent.js";
-export { intelligenceGatheringSynthesis } from "./synthesis.js";
+export { researchAgent } from "./research-agent.js";
+export { intelligenceFormatter } from "./intelligence-formatter.js";
+export { intelligenceGatheringRouter } from "./intelligence-router.js";
 export { customResearcherNode } from "./custom-researcher.js";
 export { intelligenceModificationAgent } from "./modification-agent.js";
 
@@ -27,15 +28,16 @@ export {
  * Node name constants for graph construction
  */
 export const INTELLIGENCE_GATHERING_NODES = {
-  // Core flow
-  INTELLIGENCE_AGENT: "intelligenceGatheringAgent",
+  // Core flow with ToolNode pattern
+  RESEARCH_AGENT: "researchAgent",
+  TOOLS: "intelligenceTools",
+  FORMATTER: "intelligenceFormatter",
   
   // Company info collection
   COMPANY_INFO_HITL: "companyInfoHitlCollection",
   COMPANY_INFO_PROCESSOR: "companyInfoProcessor",
 
-  // Synthesis and review
-  SYNTHESIS: "intelligenceGatheringSynthesis",
+  // HITL review
   HITL_REVIEW: "intelligenceGatheringHumanReview",
   FEEDBACK_ROUTER: "intelligenceGatheringFeedbackRouter",
 

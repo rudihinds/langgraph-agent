@@ -15,9 +15,11 @@
  */
 
 import { StateGraph, END, START, Command } from "@langchain/langgraph";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ProcessingStatus } from "../../state/modules/constants.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
+import { getIntelligenceSearchTool } from "../../tools/intelligence-search.js";
 
 // Core infrastructure nodes (retained)
 import { documentLoaderNode } from "./nodes.js";
@@ -51,8 +53,9 @@ import {
 
 // Intelligence Gathering flow nodes - Multi-agent intelligence system
 import {
-  intelligenceGatheringAgent,
-  intelligenceGatheringSynthesis,
+  researchAgent,
+  intelligenceFormatter,
+  intelligenceGatheringRouter,
   customResearcherNode,
   intelligenceModificationAgent,
   companyInfoHitlCollection,
@@ -84,11 +87,14 @@ const NODES = {
   RFP_APPROVAL: RFP_ANALYSIS_NODES.APPROVAL,
   RFP_REJECTION: RFP_ANALYSIS_NODES.REJECTION,
 
-  // Intelligence Gathering Flow
-  INTELLIGENCE_AGENT: INTELLIGENCE_GATHERING_NODES.INTELLIGENCE_AGENT,
+  // Intelligence Gathering Flow - ReAct pattern with ToolNode
+  RESEARCH_AGENT: INTELLIGENCE_GATHERING_NODES.RESEARCH_AGENT,
+  INTELLIGENCE_TOOLS: INTELLIGENCE_GATHERING_NODES.TOOLS,
+  INTELLIGENCE_FORMATTER: INTELLIGENCE_GATHERING_NODES.FORMATTER,
+  
+  // HITL and processing nodes
   COMPANY_INFO_HITL: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_HITL,
   COMPANY_INFO_PROCESSOR: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_PROCESSOR,
-  INTELLIGENCE_SYNTHESIS: INTELLIGENCE_GATHERING_NODES.SYNTHESIS,
   INTELLIGENCE_HITL_REVIEW: INTELLIGENCE_GATHERING_NODES.HITL_REVIEW,
   INTELLIGENCE_FEEDBACK_ROUTER: INTELLIGENCE_GATHERING_NODES.FEEDBACK_ROUTER,
   INTELLIGENCE_MODIFICATION: INTELLIGENCE_GATHERING_NODES.MODIFICATION_AGENT,
@@ -186,7 +192,7 @@ proposalGenerationGraph.addNode(
   NODES.RFP_APPROVAL,
   rfpAnalysisApprovalHandler,
   {
-    ends: [NODES.INTELLIGENCE_AGENT],
+    ends: [NODES.RESEARCH_AGENT],
   }
 );
 
@@ -199,13 +205,29 @@ proposalGenerationGraph.addNode(
   }
 );
 
-// Intelligence Gathering System
-// =============================
+// Intelligence Gathering System - ReAct Pattern with ToolNode
+// ===========================================================
 
-// Intelligence Gathering Agent - Core research agent
+// Research Agent - Makes decisions about what to search
 proposalGenerationGraph.addNode(
-  NODES.INTELLIGENCE_AGENT,
-  intelligenceGatheringAgent
+  NODES.RESEARCH_AGENT,
+  researchAgent,
+  {
+    ends: [NODES.INTELLIGENCE_TOOLS, NODES.INTELLIGENCE_FORMATTER, NODES.COMPANY_INFO_HITL]
+  }
+);
+
+// Tool Node - Executes web searches
+const intelligenceToolNode = new ToolNode([getIntelligenceSearchTool()]);
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_TOOLS,
+  intelligenceToolNode
+);
+
+// Intelligence Formatter - Formats research into human-readable briefing
+proposalGenerationGraph.addNode(
+  NODES.INTELLIGENCE_FORMATTER,
+  intelligenceFormatter
 );
 
 // Company Info HITL - Collects missing company/industry information
@@ -220,11 +242,6 @@ proposalGenerationGraph.addNode(
   companyInfoProcessor
 );
 
-// Intelligence Synthesis - Synthesizes research results
-proposalGenerationGraph.addNode(
-  NODES.INTELLIGENCE_SYNTHESIS,
-  intelligenceGatheringSynthesis
-);
 
 // Intelligence Human Review - HITL checkpoint for intelligence validation
 proposalGenerationGraph.addNode(
@@ -255,7 +272,7 @@ proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_MODIFICATION,
   intelligenceModificationAgent,
   {
-    ends: [NODES.INTELLIGENCE_SYNTHESIS],
+    ends: [NODES.INTELLIGENCE_FORMATTER],
   }
 );
 
@@ -264,7 +281,7 @@ proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_CUSTOM_RESEARCH,
   customResearcherNode,
   {
-    ends: [NODES.INTELLIGENCE_SYNTHESIS],
+    ends: [NODES.INTELLIGENCE_FORMATTER],
   }
 );
 
@@ -291,7 +308,7 @@ proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_REJECTION,
   intelligenceGatheringRejectionHandler,
   {
-    ends: [NODES.INTELLIGENCE_AGENT],
+    ends: [NODES.RESEARCH_AGENT],
   }
 );
 
@@ -302,7 +319,7 @@ proposalGenerationGraph.addNode(
     // Transition message for intelligence gathering
     console.log("Starting intelligence gathering phase");
     return new Command({
-      goto: NODES.INTELLIGENCE_AGENT,
+      goto: NODES.RESEARCH_AGENT,
       update: {
         intelligenceGatheringStatus: ProcessingStatus.RUNNING,
         currentPhase: "planning" as const,
@@ -326,9 +343,6 @@ Starting intelligence gathering now...`,
         ],
       },
     });
-  },
-  {
-    ends: [NODES.INTELLIGENCE_AGENT],
   }
 );
 
@@ -394,16 +408,28 @@ proposalGenerationGraph.addNode(
   NODES.COMPANY_INFO_PROCESSOR
 );
 
-// Connect intelligence agent to synthesis (when company/industry present)
-// Note: Intelligence agent uses Command routing to go to COMPANY_INFO_HITL when needed
+// Company info processor returns to research agent
 (proposalGenerationGraph as any).addEdge(
-  NODES.INTELLIGENCE_AGENT,
-  NODES.INTELLIGENCE_SYNTHESIS
+  NODES.COMPANY_INFO_PROCESSOR,
+  NODES.RESEARCH_AGENT
 );
 
-// Connect synthesis to HITL review
+// Intelligence Gathering Flow - ReAct Pattern
+// Research agent decides whether to use tools or format results
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.RESEARCH_AGENT,
+  intelligenceGatheringRouter
+);
+
+// Tools always return to research agent
 (proposalGenerationGraph as any).addEdge(
-  NODES.INTELLIGENCE_SYNTHESIS,
+  NODES.INTELLIGENCE_TOOLS,
+  NODES.RESEARCH_AGENT
+);
+
+// Formatter goes directly to HITL review (synthesis is redundant)
+(proposalGenerationGraph as any).addEdge(
+  NODES.INTELLIGENCE_FORMATTER,
   NODES.INTELLIGENCE_HITL_REVIEW
 );
 

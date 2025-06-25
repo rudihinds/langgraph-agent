@@ -119,6 +119,52 @@ agent-name/
 └── prompts/       # Agent-specific prompts
 ```
 
+### Human-in-the-Loop (HITL) Pattern
+**Important**: Follow this pattern to ensure messages display correctly in the frontend:
+
+#### Correct Pattern:
+1. **Content/Synthesis Node** → Updates state with content + adds AI message to messages array
+2. **HITL Review Node** → Reads content from state + creates simple interrupt with question only
+3. **Frontend** → Displays messages as chat bubbles, interrupt question in blue notification box
+
+#### Example Implementation:
+```typescript
+// 1. Synthesis Node (CORRECT)
+export async function synthesisNode(state) {
+  const synthesisContent = await generateSynthesis(state);
+  
+  return {
+    synthesisField: synthesisContent,        // Store in state
+    messages: [{                              // Display to user
+      role: "assistant",
+      content: synthesisContent
+    }]
+  };
+}
+
+// 2. HITL Review Node (CORRECT)
+export function hitlReviewNode(state) {
+  const userInput = interrupt({
+    type: "review_required",
+    question: "Please review the analysis above. How would you like to proceed?",  // Simple question only
+    options: ["approve", "modify", "reject"],
+    data: { /* optional metadata */ }
+  });
+  
+  return new Command({
+    goto: "feedbackRouter",
+    update: { userFeedback: userInput }
+  });
+}
+```
+
+#### Common Mistakes to Avoid:
+- ❌ Don't put synthesis content in interrupt `question` field
+- ❌ Don't create messages in HITL nodes (unless it's a processor after interrupt)
+- ❌ Don't duplicate content in both state and interrupt payload
+- ✅ Always display content via messages before interrupting
+- ✅ Keep interrupt questions simple and action-oriented
+
 ### Adding New API Endpoints
 1. Create route handler in `apps/backend/api/`
 2. Add authentication check if needed

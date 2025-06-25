@@ -5,7 +5,7 @@
  * when the automated extraction from RFP fails.
  */
 
-import { interrupt, Command } from "@langchain/langgraph";
+import { interrupt } from "@langchain/langgraph";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { AIMessage } from "@langchain/core/messages";
@@ -65,7 +65,7 @@ This information will help me conduct more targeted intelligence gathering for y
  */
 export async function companyInfoProcessor(
   state: typeof OverallProposalStateAnnotation.State
-): Promise<Command> {
+) {
   console.log("[Company Info Processor] Processing user response");
   
   try {
@@ -90,35 +90,30 @@ Manufacturing, Retail, Non-profit, Energy, Transportation, Telecommunications, e
     
     console.log(`[Company Info Processor] Extracted - Company: "${extraction.company}", Industry: "${extraction.industry}"`);
     
-    // Return command to go to intelligence gathering with updated info
-    return new Command({
-      goto: "intelligenceGatheringAgent",
-      update: {
-        company: extraction.company,
-        industry: extraction.industry,
-        currentStatus: `Starting intelligence gathering for ${extraction.company} in ${extraction.industry} sector`,
-        messages: [new AIMessage({
-          content: `Thank you! I'll now begin intelligence gathering for ${extraction.company} in the ${extraction.industry} sector.`,
-          name: "companyInfoProcessor"
-        })],
-        userFeedback: undefined, // Clear user feedback after processing
-      }
-    });
+    // Return updated state - edge will route to research agent
+    return {
+      company: extraction.company,
+      industry: extraction.industry,
+      currentStatus: `Starting intelligence gathering for ${extraction.company} in ${extraction.industry} sector`,
+      messages: [new AIMessage({
+        content: `Thank you! I'll now begin intelligence gathering for ${extraction.company} in the ${extraction.industry} sector.`,
+        name: "companyInfoProcessor"
+      })],
+      userFeedback: undefined, // Clear user feedback after processing
+    };
     
   } catch (error) {
     console.error("[Company Info Processor] Error processing user response:", error);
     
-    // Fallback: route back to HITL to try again
-    return new Command({
-      goto: "companyInfoHitlCollection",
-      update: {
-        currentStatus: "Error processing response - please try again",
-        messages: [new AIMessage({
-          content: "I had trouble understanding your response. Could you please provide the company name and industry again?",
-          name: "companyInfoProcessor"
-        })],
-        userFeedback: undefined
-      }
-    });
+    // Fallback: return error state
+    return {
+      currentStatus: "Error processing response - please try again",
+      messages: [new AIMessage({
+        content: "I had trouble understanding your response. Could you please provide the company name and industry again?",
+        name: "companyInfoProcessor"
+      })],
+      userFeedback: undefined,
+      errors: [error instanceof Error ? error.message : "Failed to process company info"]
+    };
   }
 }
