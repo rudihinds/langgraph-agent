@@ -8,6 +8,7 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+import { Command } from "@langchain/langgraph";
 import { createWebSearchTool } from "@/tools/web-search.js";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
@@ -23,33 +24,6 @@ const model = new ChatAnthropic({
   maxTokens: 8000,
 });
 
-/**
- * Extract company name and industry from RFP document
- */
-function extractCompanyInfo(rfpText: string): { company: string; industry: string } {
-  // Simple extraction logic - can be enhanced with more sophisticated parsing
-  const lines = rfpText.split('\n').slice(0, 20); // Check first 20 lines
-  
-  let company = "Unknown Organization";
-  let industry = "Unknown Industry";
-  
-  // Look for common patterns
-  for (const line of lines) {
-    const lowerLine = line.toLowerCase();
-    
-    // Company name patterns
-    if (lowerLine.includes('organization:') || lowerLine.includes('agency:') || lowerLine.includes('company:')) {
-      company = line.split(':')[1]?.trim() || company;
-    }
-    
-    // Industry patterns
-    if (lowerLine.includes('industry:') || lowerLine.includes('sector:') || lowerLine.includes('department:')) {
-      industry = line.split(':')[1]?.trim() || industry;
-    }
-  }
-  
-  return { company, industry };
-}
 
 /**
  * Intelligence Gathering Agent Node
@@ -68,19 +42,37 @@ export async function intelligenceGatheringAgent(
   currentStatus?: string;
   messages?: any[];
   errors?: string[];
-}> {
+} | Command> {
   console.log("[Intelligence Agent] Starting intelligence gathering");
   
   try {
-    // Extract company information from RFP
+    // Get company and industry from state (extracted by parallelDispatcherNode)
+    const company = state.company || "";
+    const industry = state.industry || "";
     const rfpText = state.rfpDocument?.text || "";
-    const { company, industry } = extractCompanyInfo(rfpText);
     
     if (!rfpText) {
       throw new Error("No RFP document available for intelligence gathering");
     }
     
-    console.log(`[Intelligence Agent] Researching ${company} in ${industry} sector`);
+    // Check if company or industry are missing or have default values
+    const needsCompanyInfo = !company || company === "Unknown Organization" || company === "";
+    const needsIndustryInfo = !industry || industry === "Unknown Industry" || industry === "General" || industry === "";
+    
+    if (needsCompanyInfo || needsIndustryInfo) {
+      console.log(`[Intelligence Agent] Missing required information - Company: ${company || 'MISSING'}, Industry: ${industry || 'MISSING'}`);
+      
+      // Route to HITL to collect missing information
+      return new Command({
+        goto: "companyInfoHitlCollection",
+        update: {
+          currentStatus: "Need company/industry information to proceed with intelligence gathering",
+          intelligenceGatheringStatus: ProcessingStatus.AWAITING_REVIEW
+        }
+      });
+    }
+    
+    console.log(`[Intelligence Agent] Researching ${company} in ${industry} sector (from state)`);
     
     // Create model with web search tool
     const modelWithTools = model.bindTools([createWebSearchTool()]);

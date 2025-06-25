@@ -158,6 +158,16 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     default: () => undefined,
     value: lastValueReducer,
   }),
+  
+  // Company and industry information extracted from RFP
+  company: Annotation<string>({
+    default: () => "",
+    value: lastValueReducer,
+  }),
+  industry: Annotation<string>({
+    default: () => "",
+    value: lastValueReducer,
+  }),
   createdAt: Annotation<string>({
     default: () => new Date().toISOString(),
     value: createdAtReducer,

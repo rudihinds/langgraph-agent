@@ -8,9 +8,25 @@
  */
 
 import { Send } from "@langchain/langgraph";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
+
+// Schema for extracting company and industry information
+const CompanyIndustrySchema = z.object({
+  company: z.string().describe("The name of the company or organization issuing the RFP"),
+  industry: z.string().describe("The industry or sector this RFP belongs to (e.g., Healthcare, Technology, Education, Government, Non-profit, etc.)"),
+  confidence: z.number().min(0).max(1).describe("Confidence level in the extraction (0-1)")
+});
+
+// Initialize LLM for extraction
+const extractionModel = new ChatAnthropic({
+  modelName: "claude-3-5-sonnet-20241022",
+  temperature: 0.1,
+  maxTokens: 500,
+});
 
 /**
  * Validates and processes RFP document, then dispatches to parallel analysis agents
@@ -28,6 +44,8 @@ export async function parallelDispatcherNode(
   isAnalyzingRfp?: boolean;
   currentStatus?: string;
   errors?: string[];
+  company?: string;
+  industry?: string;
 }> {
   console.log("[RFP Parallel Dispatcher] Starting multi-agent RFP analysis");
 
@@ -64,6 +82,45 @@ export async function parallelDispatcherNode(
     console.log(`[RFP Parallel Dispatcher] Document analysis: ${wordCount} words, ${sectionCount} sections, ${complexity} complexity`);
     console.log(`[RFP Parallel Dispatcher] Generated analysis ID: ${analysisId}`);
 
+    // Extract company and industry information
+    console.log("[RFP Parallel Dispatcher] Extracting company and industry information");
+    
+    let company = "";
+    let industry = "";
+    
+    try {
+      const llmWithSchema = extractionModel.withStructuredOutput(CompanyIndustrySchema);
+      
+      // Take first 3000 characters of RFP for extraction (usually contains key info)
+      const rfpSample = rfpText.substring(0, 3000);
+      
+      const extractionResult = await llmWithSchema.invoke([{
+        role: "system",
+        content: `Extract the company/organization name and industry from this RFP document. 
+Look for:
+- Company names in headers, titles, or "issued by" sections
+- Industry context from the project description and requirements
+- Government agency names if it's a government RFP
+- Non-profit organization names if applicable
+
+If unsure about the exact company name, use the most specific organization mentioned.
+If unsure about industry, infer from the context and type of work requested.`
+      }, {
+        role: "human",
+        content: rfpSample
+      }]);
+      
+      company = extractionResult.company;
+      industry = extractionResult.industry;
+      
+      console.log(`[RFP Parallel Dispatcher] Extracted - Company: "${company}", Industry: "${industry}" (confidence: ${extractionResult.confidence})`);
+      
+    } catch (extractionError) {
+      console.warn("[RFP Parallel Dispatcher] Failed to extract company/industry, using defaults:", extractionError);
+      company = "Unknown Organization";
+      industry = "General";
+    }
+
     console.log(`[RFP Parallel Dispatcher] Prepared for dispatching to 4 parallel analysis agents`);
 
     // Return state updates - parallel dispatching will be handled by router function
@@ -72,7 +129,9 @@ export async function parallelDispatcherNode(
       documentMetadata,
       rfpProcessingStatus: ProcessingStatus.RUNNING,
       isAnalyzingRfp: true,
-      currentStatus: `Analyzing RFP document (${complexity} complexity, ${wordCount} words)...`
+      currentStatus: `Analyzing RFP document (${complexity} complexity, ${wordCount} words)...`,
+      company,
+      industry
     };
 
   } catch (error) {

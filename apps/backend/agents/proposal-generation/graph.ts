@@ -55,6 +55,8 @@ import {
   intelligenceGatheringSynthesis,
   customResearcherNode,
   intelligenceModificationAgent,
+  companyInfoHitlCollection,
+  companyInfoProcessor,
   intelligenceGatheringHumanReview,
   intelligenceGatheringFeedbackRouter,
   intelligenceGatheringApprovalHandler,
@@ -84,6 +86,8 @@ const NODES = {
 
   // Intelligence Gathering Flow
   INTELLIGENCE_AGENT: INTELLIGENCE_GATHERING_NODES.INTELLIGENCE_AGENT,
+  COMPANY_INFO_HITL: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_HITL,
+  COMPANY_INFO_PROCESSOR: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_PROCESSOR,
   INTELLIGENCE_SYNTHESIS: INTELLIGENCE_GATHERING_NODES.SYNTHESIS,
   INTELLIGENCE_HITL_REVIEW: INTELLIGENCE_GATHERING_NODES.HITL_REVIEW,
   INTELLIGENCE_FEEDBACK_ROUTER: INTELLIGENCE_GATHERING_NODES.FEEDBACK_ROUTER,
@@ -182,7 +186,7 @@ proposalGenerationGraph.addNode(
   NODES.RFP_APPROVAL,
   rfpAnalysisApprovalHandler,
   {
-    ends: [NODES.RESEARCH_PLANNING],
+    ends: [NODES.INTELLIGENCE_AGENT],
   }
 );
 
@@ -202,6 +206,18 @@ proposalGenerationGraph.addNode(
 proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_AGENT,
   intelligenceGatheringAgent
+);
+
+// Company Info HITL - Collects missing company/industry information
+proposalGenerationGraph.addNode(
+  NODES.COMPANY_INFO_HITL,
+  companyInfoHitlCollection
+);
+
+// Company Info Processor - Processes user response and routes back
+proposalGenerationGraph.addNode(
+  NODES.COMPANY_INFO_PROCESSOR,
+  companyInfoProcessor
 );
 
 // Intelligence Synthesis - Synthesizes research results
@@ -372,7 +388,14 @@ proposalGenerationGraph.addNode(
 // Intelligence Gathering Flow Edges
 // =================================
 
-// Connect intelligence agent to synthesis
+// Company info collection edges (when missing company/industry)
+(proposalGenerationGraph as any).addEdge(
+  NODES.COMPANY_INFO_HITL,
+  NODES.COMPANY_INFO_PROCESSOR
+);
+
+// Connect intelligence agent to synthesis (when company/industry present)
+// Note: Intelligence agent uses Command routing to go to COMPANY_INFO_HITL when needed
 (proposalGenerationGraph as any).addEdge(
   NODES.INTELLIGENCE_AGENT,
   NODES.INTELLIGENCE_SYNTHESIS

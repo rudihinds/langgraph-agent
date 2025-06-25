@@ -765,6 +765,10 @@ export interface OverallProposalState {
   // Metadata
   projectName?: string;
   lastUpdatedAt: string;
+  
+  // Company and industry information extracted from RFP
+  company?: string;
+  industry?: string;
 
   // Overall status
   status?: ProcessingStatus;
@@ -777,6 +781,23 @@ export interface OverallProposalState {
     autoStarted?: boolean;
     [key: string]: any;
   };
+  
+  // RFP Analysis fields
+  rfpAnalysisId?: string;
+  documentMetadata?: {
+    wordCount: number;
+    sectionCount: number;
+    complexity: "Simple" | "Medium" | "Complex";
+  };
+  linguisticAnalysis?: any;
+  requirementsAnalysis?: any;
+  structureAnalysis?: any;
+  strategicAnalysis?: any;
+  synthesisAnalysis?: any;
+  
+  // HITL state management
+  feedbackIntent?: "approve" | "refine" | "reject" | undefined;
+  isInHitlReview?: boolean;
 
   // Legacy fields for backward compatibility (will be removed)
   researchResults?: any;

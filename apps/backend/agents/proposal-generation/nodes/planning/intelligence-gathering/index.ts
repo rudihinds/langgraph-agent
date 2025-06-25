@@ -11,6 +11,9 @@ export { intelligenceGatheringSynthesis } from "./synthesis.js";
 export { customResearcherNode } from "./custom-researcher.js";
 export { intelligenceModificationAgent } from "./modification-agent.js";
 
+// Company info collection nodes
+export { companyInfoHitlCollection, companyInfoProcessor } from "./company-info-hitl.js";
+
 // Human-in-the-loop review nodes
 export {
   intelligenceGatheringHumanReview,
@@ -26,6 +29,10 @@ export {
 export const INTELLIGENCE_GATHERING_NODES = {
   // Core flow
   INTELLIGENCE_AGENT: "intelligenceGatheringAgent",
+  
+  // Company info collection
+  COMPANY_INFO_HITL: "companyInfoHitlCollection",
+  COMPANY_INFO_PROCESSOR: "companyInfoProcessor",
 
   // Synthesis and review
   SYNTHESIS: "intelligenceGatheringSynthesis",

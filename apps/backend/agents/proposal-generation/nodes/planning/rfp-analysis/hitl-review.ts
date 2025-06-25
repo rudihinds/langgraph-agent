@@ -49,18 +49,20 @@ export const rfpAnalysisQuestionAnswering = rfpAnalysisReviewFlow.qaNode;
  * Approval Handler for RFP Analysis
  * Confirms approval and routes to next phase of proposal generation
  */
-export const rfpAnalysisApprovalHandler = createApprovalNode<typeof OverallProposalStateAnnotation.State>({
+export const rfpAnalysisApprovalHandler = createApprovalNode<
+  typeof OverallProposalStateAnnotation.State
+>({
   nodeName: "rfpAnalysisApprovalHandler",
   llm: model,
   responsePrompt: `Generate an enthusiastic, professional confirmation that the comprehensive RFP analysis has been approved.
     Reference the key strategic insights discovered and express readiness to begin the proposal development phase.
     Mention that the analysis will guide strategy throughout proposal creation. Keep it concise and forward-looking.`,
-  nextNode: "researchPlanning", // Continue to next phase of proposal generation
+  nextNode: "intelligenceGatheringAgent", // Continue to next phase of proposal generation
   stateUpdates: {
     rfpProcessingStatus: ProcessingStatus.COMPLETE,
     isAnalyzingRfp: false,
-    currentStatus: "RFP analysis approved - proceeding to proposal development"
-  }
+    currentStatus: "RFP analysis approved - proceeding to proposal development",
+  },
 });
 
 /**
