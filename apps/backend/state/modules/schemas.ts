@@ -432,6 +432,56 @@ export const SolutionSpecSchema = z.object({
   solutionConfidence: z.number(),
 });
 
+// Intelligence Briefing schema - Customer intelligence gathering results
+export const IntelligenceBriefingSchema = z.object({
+  customer_context: z.object({
+    company: z.string(),
+    industry: z.string(),
+    recent_initiatives: z.array(
+      z.object({
+        name: z.string(),
+        date: z.string(),
+        source: z.string(),
+        priority_level: z.enum(["High", "Medium", "Low"]),
+      })
+    ),
+  }),
+  vendor_landscape: z.object({
+    current_vendors: z.array(
+      z.object({
+        vendor_name: z.string(),
+        solution_area: z.string(),
+        contract_status: z.enum(["Active", "Expiring", "Unknown"]),
+        source: z.string(),
+      })
+    ),
+  }),
+  procurement_history: z.object({
+    recent_rfps: z.array(
+      z.object({
+        title: z.string(),
+        date: z.string(),
+        value: z.string(),
+        winner: z.string(),
+        source: z.string(),
+      })
+    ),
+    buying_patterns: z.string(),
+  }),
+  decision_makers: z.array(
+    z.object({
+      name: z.string(),
+      title: z.string(),
+      mentioned_in_rfp: z.string(),
+      background: z.string(),
+    })
+  ),
+  metadata: z.object({
+    research_completed: z.string(),
+    gaps: z.array(z.string()),
+  }),
+});
+
 // Full Planning Intelligence schema - Built from component schemas
 export const PlanningIntelligenceSchema = z.object({
   rfpCharacteristics: RFPCharacteristicsSchema,
@@ -584,6 +634,10 @@ export const OverallProposalStateSchema = z.object({
   userCollaboration: UserCollaborationSchema.optional(),
   adaptiveWorkflow: AdaptiveWorkflowSchema.optional(),
   currentPhase: z.enum(["planning", "writing", "complete"]).optional(),
+
+  // Intelligence Gathering
+  intelligenceBriefing: IntelligenceBriefingSchema.optional(),
+  intelligenceGatheringStatus: z.nativeEnum(ProcessingStatus).optional(),
 
   // Proposal sections
   requiredSections: z.array(z.nativeEnum(SectionType)),

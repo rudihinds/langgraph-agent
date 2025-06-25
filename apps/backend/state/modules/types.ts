@@ -472,6 +472,50 @@ export interface SolutionSpecification {
 }
 
 /**
+ * Intelligence Briefing structure for customer intelligence gathering
+ */
+export interface IntelligenceBriefing {
+  customer_context: {
+    company: string;
+    industry: string;
+    recent_initiatives: Array<{
+      name: string;
+      date: string;
+      source: string;
+      priority_level: "High" | "Medium" | "Low";
+    }>;
+  };
+  vendor_landscape: {
+    current_vendors: Array<{
+      vendor_name: string;
+      solution_area: string;
+      contract_status: "Active" | "Expiring" | "Unknown";
+      source: string;
+    }>;
+  };
+  procurement_history: {
+    recent_rfps: Array<{
+      title: string;
+      date: string;
+      value: string;
+      winner: string;
+      source: string;
+    }>;
+    buying_patterns: string;
+  };
+  decision_makers: Array<{
+    name: string;
+    title: string;
+    mentioned_in_rfp: string;
+    background: string;
+  }>;
+  metadata: {
+    research_completed: string;
+    gaps: string[];
+  };
+}
+
+/**
  * Consolidated planning intelligence interface
  */
 export interface PlanningIntelligence {
@@ -671,6 +715,10 @@ export interface OverallProposalState {
   userCollaboration?: UserCollaboration;
   adaptiveWorkflow?: AdaptiveWorkflow;
   currentPhase?: "planning" | "writing" | "complete";
+
+  // Intelligence Gathering
+  intelligenceBriefing?: IntelligenceBriefing;
+  intelligenceGatheringStatus?: ProcessingStatus;
 
   // Section processing
   sections?: Record<string, ProposalSection>;
