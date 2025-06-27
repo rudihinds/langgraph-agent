@@ -14,12 +14,14 @@
  * 7. Research Planning (Prepare for next phase)
  */
 
-import { StateGraph, END, START } from "@langchain/langgraph";
+import { StateGraph, END, START, GraphRecursionError } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ProcessingStatus } from "../../state/modules/constants.js";
 import { OverallProposalStateAnnotation } from "../../state/modules/annotations.js";
 import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
 import { getIntelligenceSearchTool } from "../../tools/intelligence-search.js";
+import { getIntelligenceExtractTool } from "../../tools/intelligence-extract.js";
+import { createTopicTools } from "./tools/parallel-intelligence-tools.js";
 
 // Core infrastructure nodes (retained)
 import { documentLoaderNode } from "./nodes.js";
@@ -42,6 +44,7 @@ import {
   requirementsExtractionNode,
   documentStructureNode,
   strategicSignalsNode,
+  rfpAnalysisSynchronizer,
   synthesisNode,
   rfpAnalysisHumanReview,
   rfpAnalysisFeedbackRouter,
@@ -56,7 +59,6 @@ import {
   researchPlanningNode,
   researchAgent,
   intelligenceFormatter,
-  intelligenceGatheringRouter,
   customResearcherNode,
   intelligenceModificationAgent,
   companyInfoHitlCollection,
@@ -68,6 +70,22 @@ import {
   intelligenceGatheringQuestionAnswering,
   INTELLIGENCE_GATHERING_NODES,
 } from "./nodes/planning/intelligence-gathering/index.js";
+
+// Parallel Intelligence Gathering nodes
+import {
+  intelligenceDispatcher,
+  intelligenceSynchronizer,
+  strategicInitiativesAgent,
+  vendorRelationshipsAgent,
+  procurementPatternsAgent,
+  decisionMakersAgent,
+  parallelIntelligenceRouter,
+  strategicInitiativesShouldContinue,
+  vendorRelationshipsShouldContinue,
+  procurementPatternsShouldContinue,
+  decisionMakersShouldContinue,
+  PARALLEL_INTELLIGENCE_NODES,
+} from "./nodes/planning/parallel-intelligence/index.js";
 
 // Define node name constants for type safety and clarity
 const NODES = {
@@ -81,6 +99,7 @@ const NODES = {
   RFP_REQUIREMENTS: RFP_ANALYSIS_NODES.REQUIREMENTS,
   RFP_STRUCTURE: RFP_ANALYSIS_NODES.STRUCTURE,
   RFP_STRATEGIC: RFP_ANALYSIS_NODES.STRATEGIC,
+  RFP_SYNCHRONIZER: RFP_ANALYSIS_NODES.SYNCHRONIZER,
   RFP_SYNTHESIS: RFP_ANALYSIS_NODES.SYNTHESIS,
   RFP_HITL_REVIEW: RFP_ANALYSIS_NODES.HITL_REVIEW,
   RFP_FEEDBACK_ROUTER: RFP_ANALYSIS_NODES.FEEDBACK_ROUTER,
@@ -113,6 +132,21 @@ const NODES = {
 
   // Future Integration Points (Placeholder for next development phases)
   RESEARCH_PLANNING: "researchPlanning",
+
+  // Parallel Intelligence Gathering Flow
+  PARALLEL_INTEL_DISPATCHER: PARALLEL_INTELLIGENCE_NODES.DISPATCHER,
+  PARALLEL_INTEL_ROUTER: "parallelIntelligenceRouter",
+  PARALLEL_INTEL_SYNCHRONIZER: PARALLEL_INTELLIGENCE_NODES.SYNCHRONIZER,
+  
+  // Parallel Intelligence Agents
+  PARALLEL_STRATEGIC_AGENT: PARALLEL_INTELLIGENCE_NODES.STRATEGIC_AGENT,
+  PARALLEL_STRATEGIC_TOOLS: PARALLEL_INTELLIGENCE_NODES.STRATEGIC_TOOLS,
+  PARALLEL_VENDOR_AGENT: PARALLEL_INTELLIGENCE_NODES.VENDOR_AGENT,
+  PARALLEL_VENDOR_TOOLS: PARALLEL_INTELLIGENCE_NODES.VENDOR_TOOLS,
+  PARALLEL_PROCUREMENT_AGENT: PARALLEL_INTELLIGENCE_NODES.PROCUREMENT_AGENT,
+  PARALLEL_PROCUREMENT_TOOLS: PARALLEL_INTELLIGENCE_NODES.PROCUREMENT_TOOLS,
+  PARALLEL_DECISION_AGENT: PARALLEL_INTELLIGENCE_NODES.DECISION_AGENT,
+  PARALLEL_DECISION_TOOLS: PARALLEL_INTELLIGENCE_NODES.DECISION_TOOLS,
 
   // Completion
   COMPLETE: "complete",
@@ -161,6 +195,9 @@ proposalGenerationGraph.addNode(NODES.RFP_STRUCTURE, documentStructureNode);
 
 proposalGenerationGraph.addNode(NODES.RFP_STRATEGIC, strategicSignalsNode);
 
+// Synchronizer - Ensures all agents complete before synthesis
+proposalGenerationGraph.addNode(NODES.RFP_SYNCHRONIZER, rfpAnalysisSynchronizer);
+
 // Synthesis - Integrates all agent outputs
 proposalGenerationGraph.addNode(NODES.RFP_SYNTHESIS, synthesisNode);
 
@@ -193,7 +230,7 @@ proposalGenerationGraph.addNode(
   NODES.RFP_APPROVAL,
   rfpAnalysisApprovalHandler,
   {
-    ends: [NODES.RESEARCH_PLANNING],
+    ends: [NODES.PARALLEL_INTEL_DISPATCHER], // Changed to parallel intelligence
   }
 );
 
@@ -214,12 +251,15 @@ proposalGenerationGraph.addNode(
   NODES.RESEARCH_AGENT,
   researchAgent,
   {
-    ends: [NODES.INTELLIGENCE_TOOLS, NODES.INTELLIGENCE_FORMATTER, NODES.COMPANY_INFO_HITL]
+    ends: [NODES.RESEARCH_AGENT, NODES.INTELLIGENCE_TOOLS, NODES.INTELLIGENCE_FORMATTER, NODES.COMPANY_INFO_HITL]
   }
 );
 
-// Tool Node - Executes web searches
-const intelligenceToolNode = new ToolNode([getIntelligenceSearchTool()]);
+// Tool Node - Executes web searches and extractions
+const intelligenceToolNode = new ToolNode([
+  getIntelligenceSearchTool(),
+  getIntelligenceExtractTool()
+]);
 proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_TOOLS,
   intelligenceToolNode
@@ -313,13 +353,83 @@ proposalGenerationGraph.addNode(
   }
 );
 
-// Research Planning - Entry point to intelligence gathering
+// Research Planning - Entry point to intelligence gathering (kept for backward compatibility)
 proposalGenerationGraph.addNode(
   NODES.RESEARCH_PLANNING,
   researchPlanningNode,
   {
     ends: [NODES.RESEARCH_AGENT]
   }
+);
+
+// ===== PARALLEL INTELLIGENCE GATHERING NODES =====
+
+// Parallel Intelligence Dispatcher
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_INTEL_DISPATCHER,
+  intelligenceDispatcher
+);
+
+// Parallel Intelligence Router (virtual node for routing)
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_INTEL_ROUTER,
+  async (state) => state // Pass-through node
+);
+
+// Strategic Initiatives Agent and Tools
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_STRATEGIC_AGENT,
+  strategicInitiativesAgent
+);
+const strategicTools = createTopicTools("strategic_initiatives");
+console.log("[Graph Setup] Strategic Tools:", strategicTools.map(t => ({ name: t.name, description: t.description })));
+const strategicToolNode = new ToolNode(strategicTools);
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_STRATEGIC_TOOLS,
+  strategicToolNode
+);
+
+// Vendor Relationships Agent and Tools
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_VENDOR_AGENT,
+  vendorRelationshipsAgent
+);
+const vendorTools = createTopicTools("vendor_relationships");
+const vendorToolNode = new ToolNode(vendorTools);
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_VENDOR_TOOLS,
+  vendorToolNode
+);
+
+// Procurement Patterns Agent and Tools
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_PROCUREMENT_AGENT,
+  procurementPatternsAgent
+);
+const procurementTools = createTopicTools("procurement_patterns");
+const procurementToolNode = new ToolNode(procurementTools);
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_PROCUREMENT_TOOLS,
+  procurementToolNode
+);
+
+// Decision Makers Agent and Tools
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_DECISION_AGENT,
+  decisionMakersAgent
+);
+const decisionTools = createTopicTools("decision_makers");
+console.log("[Graph Setup] Decision Makers Tools:", decisionTools.map(t => ({ name: t.name, description: t.description })));
+const decisionToolNode = new ToolNode(decisionTools);
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_DECISION_TOOLS,
+  decisionToolNode
+);
+
+// Parallel Intelligence Synchronizer
+proposalGenerationGraph.addNode(
+  NODES.PARALLEL_INTEL_SYNCHRONIZER,
+  intelligenceSynchronizer
 );
 
 // Complete - Final state
@@ -350,22 +460,28 @@ proposalGenerationGraph.addNode(
   parallelAnalysisRouter
 );
 
-// Critical: Connect all 4 parallel analysis agents to synthesis node
-// This ensures synthesis waits for ALL agents to complete before executing
+// Critical: Connect all 4 parallel analysis agents to synchronizer
+// This ensures synchronizer checks all agents before synthesis
 (proposalGenerationGraph as any).addEdge(
   NODES.RFP_LINGUISTIC,
-  NODES.RFP_SYNTHESIS
+  NODES.RFP_SYNCHRONIZER
 );
 (proposalGenerationGraph as any).addEdge(
   NODES.RFP_REQUIREMENTS,
-  NODES.RFP_SYNTHESIS
+  NODES.RFP_SYNCHRONIZER
 );
 (proposalGenerationGraph as any).addEdge(
   NODES.RFP_STRUCTURE,
-  NODES.RFP_SYNTHESIS
+  NODES.RFP_SYNCHRONIZER
 );
 (proposalGenerationGraph as any).addEdge(
   NODES.RFP_STRATEGIC,
+  NODES.RFP_SYNCHRONIZER
+);
+
+// Connect synchronizer to synthesis
+(proposalGenerationGraph as any).addEdge(
+  NODES.RFP_SYNCHRONIZER,
   NODES.RFP_SYNTHESIS
 );
 
@@ -390,12 +506,9 @@ proposalGenerationGraph.addNode(
   NODES.RESEARCH_AGENT
 );
 
-// Intelligence Gathering Flow - ReAct Pattern
-// Research agent decides whether to use tools or format results
-(proposalGenerationGraph as any).addConditionalEdges(
-  NODES.RESEARCH_AGENT,
-  intelligenceGatheringRouter
-);
+// Intelligence Gathering Flow - Using Command Pattern
+// Research agent uses Command with goto for explicit routing
+// No conditional edges needed - agent handles its own routing
 
 // Tools always return to research agent
 (proposalGenerationGraph as any).addEdge(
@@ -419,6 +532,82 @@ proposalGenerationGraph.addNode(
 
 // Research Planning now uses Command pattern for routing - no edges needed
 
+// ===== PARALLEL INTELLIGENCE GATHERING EDGES =====
+
+// Dispatcher uses Command to route to parallel router
+(proposalGenerationGraph as any).addEdge(
+  NODES.PARALLEL_INTEL_DISPATCHER,
+  NODES.PARALLEL_INTEL_ROUTER
+);
+
+// Parallel router dispatches to all 4 agents
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.PARALLEL_INTEL_ROUTER,
+  parallelIntelligenceRouter
+);
+
+// Strategic Initiatives ReAct Loop
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.PARALLEL_STRATEGIC_AGENT,
+  strategicInitiativesShouldContinue,
+  {
+    [NODES.PARALLEL_STRATEGIC_TOOLS]: NODES.PARALLEL_STRATEGIC_TOOLS,
+    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
+  }
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.PARALLEL_STRATEGIC_TOOLS,
+  NODES.PARALLEL_STRATEGIC_AGENT
+);
+
+// Vendor Relationships ReAct Loop
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.PARALLEL_VENDOR_AGENT,
+  vendorRelationshipsShouldContinue,
+  {
+    [NODES.PARALLEL_VENDOR_TOOLS]: NODES.PARALLEL_VENDOR_TOOLS,
+    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
+  }
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.PARALLEL_VENDOR_TOOLS,
+  NODES.PARALLEL_VENDOR_AGENT
+);
+
+// Procurement Patterns ReAct Loop
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.PARALLEL_PROCUREMENT_AGENT,
+  procurementPatternsShouldContinue,
+  {
+    [NODES.PARALLEL_PROCUREMENT_TOOLS]: NODES.PARALLEL_PROCUREMENT_TOOLS,
+    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
+  }
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.PARALLEL_PROCUREMENT_TOOLS,
+  NODES.PARALLEL_PROCUREMENT_AGENT
+);
+
+// Decision Makers ReAct Loop
+(proposalGenerationGraph as any).addConditionalEdges(
+  NODES.PARALLEL_DECISION_AGENT,
+  decisionMakersShouldContinue,
+  {
+    [NODES.PARALLEL_DECISION_TOOLS]: NODES.PARALLEL_DECISION_TOOLS,
+    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
+  }
+);
+(proposalGenerationGraph as any).addEdge(
+  NODES.PARALLEL_DECISION_TOOLS,
+  NODES.PARALLEL_DECISION_AGENT
+);
+
+// Synchronizer routes to formatter (reusing existing formatter)
+(proposalGenerationGraph as any).addEdge(
+  NODES.PARALLEL_INTEL_SYNCHRONIZER,
+  NODES.INTELLIGENCE_FORMATTER
+);
+
 // Compiled graph instance
 let compiledGraph: any = null;
 
@@ -437,12 +626,14 @@ export async function createProposalGenerationGraph() {
     // Initialize the checkpointer for state persistence
     const checkpointer = await getInitializedCheckpointer();
 
-    // Compile the graph with checkpointer and interrupt handling
+    // Compile the graph with checkpointer, interrupt handling, and recursion limit
     compiledGraph = (proposalGenerationGraph as any).compile({
       checkpointer,
       // Configure interrupt handling for nodes that use interrupt() calls
       interruptBefore: [], // Empty since we use interrupt() within nodes, not before nodes
       interruptAfter: [], // Empty since other interrupts are handled differently
+      // Set recursion limit to prevent infinite loops
+      recursionLimit: 50, // Allows for complex flows while preventing runaway execution
     });
 
     console.log(

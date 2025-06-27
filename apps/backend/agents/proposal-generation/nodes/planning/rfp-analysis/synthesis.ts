@@ -10,6 +10,7 @@ import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
+import { LangGraphRunnableConfig } from "@langchain/langgraph";
 
 // Initialize LLM for synthesis analysis
 const model = new ChatAnthropic({
@@ -152,7 +153,8 @@ const SynthesisSchema = z.object({
  * Synthesis Analysis Node
  */
 export async function synthesisNode(
-  state: typeof OverallProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State,
+  config?: LangGraphRunnableConfig
 ): Promise<{
   synthesisAnalysis?: any;
   rfpProcessingStatus?: ProcessingStatus;
@@ -161,15 +163,48 @@ export async function synthesisNode(
   errors?: string[];
 }> {
   console.log("[Synthesis Agent] Starting competitive intelligence synthesis");
+  
+  // Emit status
+  if (config?.writer) {
+    config.writer({
+      message: "Synthesizing analysis results into competitive intelligence..."
+    });
+  }
 
   try {
-    // Check all analyses are complete
-    if (!state.linguisticAnalysis || !state.requirementsAnalysis || 
-        !state.structureAnalysis || !state.strategicAnalysis) {
+    // Check if we have partial synthesis metadata
+    const partialSynthesis = state.synthesisAnalysis?.partial;
+    const partialMetadata = state.synthesisAnalysis?.metadata;
+    
+    // Count available analyses
+    const availableAnalyses = [
+      state.linguisticAnalysis,
+      state.requirementsAnalysis,
+      state.structureAnalysis,
+      state.strategicAnalysis
+    ].filter(Boolean);
+    
+    // If we're in partial synthesis mode, check if we have enough data
+    if (partialSynthesis && availableAnalyses.length < 2) {
+      console.log("[Synthesis Agent] Not enough data for partial synthesis (need at least 2 analyses)");
+      return {
+        synthesisAnalysis: {
+          type: "insufficient_data",
+          availableCount: availableAnalyses.length,
+          message: "Insufficient analysis data for synthesis",
+          recommendation: "Manual review required"
+        },
+        currentStatus: "Synthesis skipped - insufficient data"
+      };
+    }
+    
+    // Original check for complete synthesis
+    if (!partialSynthesis && (!state.linguisticAnalysis || !state.requirementsAnalysis || 
+        !state.structureAnalysis || !state.strategicAnalysis)) {
       throw new Error("Not all analysis agents have completed. Cannot perform synthesis.");
     }
 
-    console.log("[Synthesis Agent] All 4 agent analyses found. Beginning synthesis");
+    console.log(`[Synthesis Agent] ${partialSynthesis ? 'Partial' : 'Full'} synthesis with ${availableAnalyses.length}/4 analyses`);
 
     // Create system prompt with synthesis instructions
     const systemPrompt = `You are an elite competitive intelligence strategist with 15+ years of experience in procurement strategy synthesis and win-loss analysis.
@@ -191,19 +226,24 @@ Your task is to synthesize multi-agent intelligence outputs into actionable comp
 
 Synthesize intelligence systematically to create actionable competitive strategies.`;
 
-    const humanPrompt = `Please synthesize the following multi-agent RFP analysis results into comprehensive competitive intelligence:
+    // Adjust prompt based on partial vs full synthesis
+    const synthesisContext = partialSynthesis 
+      ? `\n\nNOTE: This is a PARTIAL SYNTHESIS. Only ${availableAnalyses.length} out of 4 analyses completed successfully:\n${partialMetadata?.completedAnalyses?.join(', ') || 'Unknown'}.\n\nAdapt your synthesis accordingly and note any limitations due to missing data.`
+      : '';
+    
+    const humanPrompt = `Please synthesize the following multi-agent RFP analysis results into comprehensive competitive intelligence:${synthesisContext}
 
 ## Agent 1 - Linguistic Analysis:
-${JSON.stringify(state.linguisticAnalysis, null, 2)}
+${state.linguisticAnalysis ? JSON.stringify(state.linguisticAnalysis, null, 2) : '[ANALYSIS FAILED OR NOT AVAILABLE]'}
 
 ## Agent 2 - Requirements Analysis:
-${JSON.stringify(state.requirementsAnalysis, null, 2)}
+${state.requirementsAnalysis ? JSON.stringify(state.requirementsAnalysis, null, 2) : '[ANALYSIS FAILED OR NOT AVAILABLE]'}
 
 ## Agent 3 - Document Structure Analysis:
-${JSON.stringify(state.structureAnalysis, null, 2)}
+${state.structureAnalysis ? JSON.stringify(state.structureAnalysis, null, 2) : '[ANALYSIS FAILED OR NOT AVAILABLE]'}
 
 ## Agent 4 - Strategic Signals Analysis:
-${JSON.stringify(state.strategicAnalysis, null, 2)}
+${state.strategicAnalysis ? JSON.stringify(state.strategicAnalysis, null, 2) : '[ANALYSIS FAILED OR NOT AVAILABLE]'}
 
 Provide a comprehensive synthesis that integrates all insights into actionable competitive strategy with elimination risk mitigation and scoring opportunity optimization.`;
 
@@ -222,8 +262,15 @@ Provide a comprehensive synthesis that integrates all insights into actionable c
 
     console.log(`[Synthesis Agent] Synthesis complete. Identified ${synthesis.critical_elimination_risks.length} critical risks, ${synthesis.highest_scoring_opportunities.length} high-scoring opportunities`);
 
+    // Add partial synthesis indicator if applicable
+    const synthesisStatus = partialSynthesis 
+      ? `⚠️ PARTIAL ANALYSIS (${availableAnalyses.length}/4 agents completed)`
+      : '✅ COMPLETE ANALYSIS';
+    
     // Create AI message with synthesis summary for user review
-    const synthesisDisplayText = `## 🎯 RFP Analysis Complete
+    const synthesisDisplayText = `## 🎯 RFP Analysis ${partialSynthesis ? 'Partial Results' : 'Complete'}
+
+**Status:** ${synthesisStatus}
 
 **Executive Summary:**
 ${synthesis.executive_summary.strategic_recommendation}
@@ -245,7 +292,11 @@ ${synthesis.implementation_roadmap.immediate_actions.slice(0, 3).map(action => `
 Ready for your review and feedback on this comprehensive analysis.`;
 
     return {
-      synthesisAnalysis: synthesis,
+      synthesisAnalysis: {
+        ...synthesis,
+        partial: partialSynthesis,
+        metadata: partialSynthesis ? partialMetadata : undefined
+      },
       rfpProcessingStatus: ProcessingStatus.AWAITING_REVIEW,
       currentStatus: "RFP analysis synthesis complete - ready for human review",
       messages: [new AIMessage(synthesisDisplayText)]

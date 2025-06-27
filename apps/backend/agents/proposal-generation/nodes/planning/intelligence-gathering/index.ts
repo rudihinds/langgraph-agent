@@ -9,7 +9,7 @@
 export { researchPlanningNode } from "./research-planning.js";
 export { researchAgent } from "./research-agent.js";
 export { intelligenceFormatter } from "./intelligence-formatter.js";
-export { intelligenceGatheringRouter } from "./intelligence-router.js";
+// Router no longer needed - research agent uses Command with goto for explicit routing
 export { customResearcherNode } from "./custom-researcher.js";
 export { intelligenceModificationAgent } from "./modification-agent.js";
 

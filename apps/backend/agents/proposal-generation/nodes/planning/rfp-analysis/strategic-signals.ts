@@ -204,14 +204,17 @@ Analyze decision-making styles, organizational culture, win themes, and competit
 
     return {
       strategicAnalysis: analysis,
-      currentStatus: "Strategic signals analysis complete"
+      currentStatus: "Strategic signals analysis complete",
+      rfpAnalysisCompletion: { strategic: true }
     };
 
   } catch (error) {
     console.error("[Strategic Signals Agent] Analysis failed:", error);
     return {
       errors: [`Strategic signals analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
-      currentStatus: "Strategic signals analysis failed"
+      currentStatus: "Strategic signals analysis failed",
+      rfpAnalysisCompletion: { strategic: false },
+      rfpAnalysisFailures: [`Strategic signals analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
     };
   }
 }

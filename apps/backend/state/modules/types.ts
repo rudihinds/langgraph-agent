@@ -516,6 +516,62 @@ export interface IntelligenceBriefing {
 }
 
 /**
+ * Search strategy types for adaptive intelligence gathering
+ */
+export type SearchStrategy = 
+  | "standard"           // Default search approach
+  | "discovery"         // Find organization pages
+  | "expanded"          // Broader terms, wider scope
+  | "refined"           // More specific, targeted
+  | "alternative"       // Different phrasing/synonyms
+  | "source_specific"   // Target specific domains
+  | "temporal_extended" // Expand date ranges
+  | "inferential"       // Look for related/indirect info
+  | "individual";       // Search for specific person
+
+/**
+ * Search attempt tracking for adaptive retries
+ */
+export interface SearchAttempt {
+  query: string;
+  strategy: SearchStrategy;
+  topic: string;
+  attemptNumber: number;
+  resultQuality: SearchQualityScore;
+  timestamp: string;
+  error?: string;
+}
+
+/**
+ * Quality assessment for search results
+ */
+export interface SearchQualityScore {
+  overall: number;        // 0-1 score
+  resultCount: number;
+  relevance: number;      // 0-1 score
+  sourceCredibility: number; // 0-1 score
+  completeness: number;   // 0-1 score
+  breakdown?: {
+    hasOfficialSources: boolean;
+    hasRecentInfo: boolean;
+    coversKeyAspects: boolean;
+    meetsMinimumThreshold: boolean;
+  };
+}
+
+/**
+ * Enhanced research topic with adaptive search support
+ */
+export interface AdaptiveResearchTopic {
+  topic: string;
+  priority: "critical" | "high" | "medium" | "low";
+  minimumQualityThreshold: number;
+  preferredStrategies: SearchStrategy[];
+  maxAttempts: number;
+  fallbackApproach?: string;
+}
+
+/**
  * Consolidated planning intelligence interface
  */
 export interface PlanningIntelligence {
@@ -795,6 +851,17 @@ export interface OverallProposalState {
   structureAnalysis?: any;
   strategicAnalysis?: any;
   synthesisAnalysis?: any;
+  
+  // RFP Analysis completion and retry tracking
+  rfpAnalysisCompletion?: {
+    linguistic: boolean;
+    requirements: boolean;
+    structure: boolean;
+    strategic: boolean;
+  };
+  rfpAnalysisFailures?: string[];
+  rfpAnalysisRetryCount?: number;
+  rfpAnalysisRetryAgents?: string[];
   
   // HITL state management
   feedbackIntent?: "approve" | "refine" | "reject" | undefined;

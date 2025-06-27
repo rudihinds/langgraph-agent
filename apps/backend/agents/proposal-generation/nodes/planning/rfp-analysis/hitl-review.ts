@@ -57,7 +57,7 @@ export const rfpAnalysisApprovalHandler = createApprovalNode<
   responsePrompt: `Generate an enthusiastic, professional confirmation that the comprehensive RFP analysis has been approved.
     Reference the key strategic insights discovered and express readiness to begin the proposal development phase.
     Mention that the analysis will guide strategy throughout proposal creation. Keep it concise and forward-looking.`,
-  nextNode: "researchAgent", // Continue to next phase of proposal generation
+  nextNode: "parallelIntelligenceDispatcher", // Continue to next phase of proposal generation
   stateUpdates: {
     rfpProcessingStatus: ProcessingStatus.COMPLETE,
     isAnalyzingRfp: false,

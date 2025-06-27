@@ -10,6 +10,7 @@ import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
+import { LangGraphRunnableConfig } from "@langchain/langgraph";
 
 // Initialize LLM for linguistic analysis
 const model = new ChatAnthropic({
@@ -109,13 +110,21 @@ const LinguisticAnalysisSchema = z.object({
  * Linguistic Patterns Analysis Node
  */
 export async function linguisticPatternsNode(
-  state: typeof OverallProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State,
+  config?: LangGraphRunnableConfig
 ): Promise<{
   linguisticAnalysis?: any;
   currentStatus?: string;
   errors?: string[];
 }> {
   console.log("[Linguistic Patterns Agent] Starting analysis");
+  
+  // Emit status
+  if (config?.writer) {
+    config.writer({
+      message: "Analyzing linguistic patterns and evaluation priorities..."
+    });
+  }
 
   try {
     const rfpText = state.rfpDocument?.text;
@@ -166,14 +175,17 @@ Provide a comprehensive linguistic analysis following the framework outlined in 
 
     return {
       linguisticAnalysis: analysis,
-      currentStatus: "Linguistic pattern analysis complete"
+      currentStatus: "Linguistic pattern analysis complete",
+      rfpAnalysisCompletion: { linguistic: true }
     };
 
   } catch (error) {
     console.error("[Linguistic Patterns Agent] Analysis failed:", error);
     return {
       errors: [`Linguistic pattern analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
-      currentStatus: "Linguistic pattern analysis failed"
+      currentStatus: "Linguistic pattern analysis failed",
+      rfpAnalysisCompletion: { linguistic: false },
+      rfpAnalysisFailures: [`Linguistic analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
     };
   }
 }

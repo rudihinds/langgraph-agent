@@ -7,7 +7,7 @@
  * Replaces the simple rfp_analyzer_v2.ts with a sophisticated multi-agent approach.
  */
 
-import { Send } from "@langchain/langgraph";
+import { Send, LangGraphRunnableConfig } from "@langchain/langgraph";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
@@ -32,7 +32,8 @@ const extractionModel = new ChatAnthropic({
  * Validates and processes RFP document, then dispatches to parallel analysis agents
  */
 export async function parallelDispatcherNode(
-  state: typeof OverallProposalStateAnnotation.State
+  state: typeof OverallProposalStateAnnotation.State,
+  config?: LangGraphRunnableConfig
 ): Promise<{
   rfpAnalysisId?: string;
   documentMetadata?: {
@@ -48,6 +49,13 @@ export async function parallelDispatcherNode(
   industry?: string;
 }> {
   console.log("[RFP Parallel Dispatcher] Starting multi-agent RFP analysis");
+  
+  // Emit initial status
+  if (config?.writer) {
+    config.writer({
+      message: "Initializing RFP analysis..."
+    });
+  }
 
   try {
     // Validate RFP document exists and has content
@@ -81,9 +89,23 @@ export async function parallelDispatcherNode(
 
     console.log(`[RFP Parallel Dispatcher] Document analysis: ${wordCount} words, ${sectionCount} sections, ${complexity} complexity`);
     console.log(`[RFP Parallel Dispatcher] Generated analysis ID: ${analysisId}`);
+    
+    // Emit document analysis status
+    if (config?.writer) {
+      config.writer({
+        message: `Analyzing ${complexity.toLowerCase()} RFP document (${wordCount.toLocaleString()} words)...`
+      });
+    }
 
     // Extract company and industry information
     console.log("[RFP Parallel Dispatcher] Extracting company and industry information");
+    
+    // Emit extraction status
+    if (config?.writer) {
+      config.writer({
+        message: "Identifying organization and industry context..."
+      });
+    }
     
     let company = "";
     let industry = "";
@@ -122,6 +144,13 @@ If unsure about industry, infer from the context and type of work requested.`
     }
 
     console.log(`[RFP Parallel Dispatcher] Prepared for dispatching to 4 parallel analysis agents`);
+    
+    // Emit dispatch status
+    if (config?.writer) {
+      config.writer({
+        message: `Dispatching to specialized analysis agents for ${company}...`
+      });
+    }
 
     // Return state updates - parallel dispatching will be handled by router function
     return {

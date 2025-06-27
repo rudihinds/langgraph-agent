@@ -13,6 +13,7 @@ import {
 } from "../../state/proposal.state.js";
 import { Logger } from "../../lib/logger.js";
 import { ENV } from "../../lib/config/env.js";
+import { GraphRecursionError } from "@langchain/langgraph";
 
 const logger = Logger.getInstance();
 
@@ -55,7 +56,18 @@ export async function runStreamingProposalAgent(query: string): Promise<any> {
 
     return result;
   } catch (error) {
-    // Log any errors that occur
+    // Handle recursion limit errors specifically
+    if (error instanceof GraphRecursionError) {
+      logger.error("Graph recursion limit reached - agent ran too many iterations", {
+        error: error.message,
+        recursionLimit: 50,
+      });
+      throw new Error(
+        "The research process exceeded the maximum number of iterations. This usually happens when search quality thresholds cannot be met. Please try with simpler requirements or contact support."
+      );
+    }
+    
+    // Log any other errors that occur
     logger.error("Error in streaming proposal agent:", error);
     throw error;
   }

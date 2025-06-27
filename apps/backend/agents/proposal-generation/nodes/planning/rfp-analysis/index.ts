@@ -26,6 +26,7 @@ export { strategicSignalsNode } from "./strategic-signals.js";
 
 // Synthesis and integration
 export { synthesisNode } from "./synthesis.js";
+export { rfpAnalysisSynchronizer } from "./synchronizer.js";
 
 // Human-in-the-loop review
 export {
@@ -51,7 +52,8 @@ export const RFP_ANALYSIS_NODES = {
   STRUCTURE: "rfpDocumentStructure",
   STRATEGIC: "rfpStrategicSignals",
   
-  // Synthesis and review
+  // Synchronization and synthesis
+  SYNCHRONIZER: "rfpAnalysisSynchronizer",
   SYNTHESIS: "rfpAnalysisSynthesis",
   HITL_REVIEW: "rfpAnalysisHumanReview",
   FEEDBACK_ROUTER: "rfpAnalysisFeedbackRouter",

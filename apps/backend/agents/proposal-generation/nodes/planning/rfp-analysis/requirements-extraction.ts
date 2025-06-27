@@ -166,14 +166,17 @@ Analyze across all four levels (explicit, derived, unstated, stakeholder-inferre
 
     return {
       requirementsAnalysis: analysis,
-      currentStatus: "Requirements extraction complete"
+      currentStatus: "Requirements extraction complete",
+      rfpAnalysisCompletion: { requirements: true }
     };
 
   } catch (error) {
     console.error("[Requirements Extraction Agent] Analysis failed:", error);
     return {
       errors: [`Requirements extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
-      currentStatus: "Requirements extraction failed"
+      currentStatus: "Requirements extraction failed",
+      rfpAnalysisCompletion: { requirements: false },
+      rfpAnalysisFailures: [`Requirements extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
     };
   }
 }

@@ -171,14 +171,17 @@ Focus on uncovering section weight discrepancies, cross-reference patterns, hidd
 
     return {
       structureAnalysis: analysis,
-      currentStatus: "Document structure analysis complete"
+      currentStatus: "Document structure analysis complete",
+      rfpAnalysisCompletion: { structure: true }
     };
 
   } catch (error) {
     console.error("[Document Structure Agent] Analysis failed:", error);
     return {
       errors: [`Document structure analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
-      currentStatus: "Document structure analysis failed"
+      currentStatus: "Document structure analysis failed",
+      rfpAnalysisCompletion: { structure: false },
+      rfpAnalysisFailures: [`Document structure analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
     };
   }
 }

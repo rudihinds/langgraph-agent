@@ -385,6 +385,40 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     value: (existing, newValue) => newValue ?? existing,
   }),
 
+  // RFP Analysis completion tracking
+  rfpAnalysisCompletion: Annotation<{
+    linguistic: boolean;
+    requirements: boolean;
+    structure: boolean;
+    strategic: boolean;
+  }>({
+    default: () => ({
+      linguistic: false,
+      requirements: false,
+      structure: false,
+      strategic: false,
+    }),
+    value: (existing, newValue) => ({ ...existing, ...newValue }),
+  }),
+
+  // RFP Analysis failure tracking
+  rfpAnalysisFailures: Annotation<string[]>({
+    default: () => [],
+    value: (existing, newValue) => [...(existing || []), ...(newValue || [])],
+  }),
+
+  // RFP Analysis retry tracking
+  rfpAnalysisRetryCount: Annotation<number>({
+    default: () => 0,
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // Agents to retry (if any failed)
+  rfpAnalysisRetryAgents: Annotation<string[]>({
+    default: () => [],
+    value: (existing, newValue) => newValue ?? existing,
+  }),
+
   // ===== INTELLIGENCE GATHERING FIELDS =====
 
   // Intelligence briefing result
@@ -406,6 +440,96 @@ export const OverallProposalStateAnnotation = Annotation.Root({
     default: () => ProcessingStatus.QUEUED,
     value: lastValueWinsReducerStrict,
   }),
+  
+  // Track search queries without bloating messages
+  searchQueries: Annotation<string[]>({
+    default: () => [],
+    value: (existing, newValue) => [...(existing || []), ...(newValue || [])]
+  }),
+
+  // Store search results separately from messages
+  searchResults: Annotation<Array<{
+    query: string;
+    results: any[];
+    answer: string | null;
+    timestamp: string;
+  }>>({
+    default: () => [],
+    value: (existing, newValue) => [...(existing || []), ...(newValue || [])]
+  }),
+
+  // Track research topics dynamically
+  researchTopics: Annotation<{
+    needed: string[];
+    covered: string[];
+  }>({
+    default: () => ({ needed: [], covered: [] }),
+    value: (existing, newValue) => ({ ...existing, ...newValue })
+  }),
+
+  // Track search attempts for adaptive retry logic
+  searchAttempts: Annotation<Array<{
+    query: string;
+    strategy: "standard" | "discovery" | "expanded" | "refined" | "alternative" | "source_specific" | "temporal_extended" | "inferential" | "individual";
+    topic: string;
+    attemptNumber: number;
+    resultQuality: {
+      overall: number;
+      resultCount: number;
+      relevance: number;
+      sourceCredibility: number;
+      completeness: number;
+    };
+    timestamp: string;
+    error?: string;
+  }>>({
+    default: () => [],
+    value: (existing, newValue) => [...(existing || []), ...(newValue || [])]
+  }),
+
+  // Track adaptive research configuration
+  adaptiveResearchConfig: Annotation<{
+    topics: Array<{
+      topic: string;
+      priority: "critical" | "high" | "medium" | "low";
+      minimumQualityThreshold: number;
+      preferredStrategies: string[];
+      maxAttempts: number;
+      fallbackApproach?: string;
+    }>;
+    qualityThresholds: {
+      minimum: number;
+      preferred: number;
+    };
+  }>({
+    default: () => ({
+      topics: [],
+      qualityThresholds: {
+        minimum: 0.3,
+        preferred: 0.6
+      }
+    }),
+    value: (existing, newValue) => ({ ...existing, ...newValue })
+  }),
+
+  // Track URLs that have been extracted to avoid duplicates
+  extractedUrls: Annotation<string[]>({
+    default: () => [],
+    value: (existing, newValue) => [...new Set([...(existing || []), ...(newValue || [])])]
+  }),
+
+  // Track extracted entities for deep-dive searches
+  extractedEntities: Annotation<Array<{
+    name: string;
+    type: "person" | "organization" | "product";
+    title?: string;
+    topic: string;
+    sourceUrl: string;
+    searched?: boolean;
+  }>>({
+    default: () => [],
+    value: (existing, newValue) => [...(existing || []), ...(newValue || [])]
+  }),
 
   // Human review data for intelligence gathering
   intelligenceHumanReview: Annotation<
@@ -423,6 +547,92 @@ export const OverallProposalStateAnnotation = Annotation.Root({
   >({
     default: () => undefined,
     value: (existing, newValue) => newValue ?? existing,
+  }),
+
+  // ===== PARALLEL INTELLIGENCE GATHERING FIELDS =====
+
+  // Parallel intelligence state tracking
+  parallelIntelligenceState: Annotation<{
+    strategicInitiatives: {
+      status: "pending" | "running" | "complete" | "error";
+      quality?: number;
+      errorMessage?: string;
+    };
+    vendorRelationships: {
+      status: "pending" | "running" | "complete" | "error";
+      quality?: number;
+      errorMessage?: string;
+    };
+    procurementPatterns: {
+      status: "pending" | "running" | "complete" | "error";
+      quality?: number;
+      errorMessage?: string;
+    };
+    decisionMakers: {
+      status: "pending" | "running" | "complete" | "error";
+      quality?: number;
+      errorMessage?: string;
+    };
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => ({ ...existing, ...newValue })
+  }),
+
+  // Individual topic research states
+  strategicInitiativesResearch: Annotation<{
+    iteration: number;
+    searchQueries: string[];
+    searchResults: any[];
+    extractedUrls: string[];
+    extractedEntities: any[];
+    quality: number;
+    attempts: number;
+    lastAction?: "discovery" | "extraction" | "deepDive";
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => ({ ...existing, ...newValue })
+  }),
+
+  vendorRelationshipsResearch: Annotation<{
+    iteration: number;
+    searchQueries: string[];
+    searchResults: any[];
+    extractedUrls: string[];
+    extractedEntities: any[];
+    quality: number;
+    attempts: number;
+    lastAction?: "discovery" | "extraction" | "deepDive";
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => ({ ...existing, ...newValue })
+  }),
+
+  procurementPatternsResearch: Annotation<{
+    iteration: number;
+    searchQueries: string[];
+    searchResults: any[];
+    extractedUrls: string[];
+    extractedEntities: any[];
+    quality: number;
+    attempts: number;
+    lastAction?: "discovery" | "extraction" | "deepDive";
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => ({ ...existing, ...newValue })
+  }),
+
+  decisionMakersResearch: Annotation<{
+    iteration: number;
+    searchQueries: string[];
+    searchResults: any[];
+    extractedUrls: string[];
+    extractedEntities: any[];
+    quality: number;
+    attempts: number;
+    lastAction?: "discovery" | "extraction" | "deepDive";
+  } | undefined>({
+    default: () => undefined,
+    value: (existing, newValue) => ({ ...existing, ...newValue })
   }),
 });
 

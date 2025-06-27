@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { ReactNode, useRef, useEffect } from "react";
-import { useStreamContext } from "../providers/StreamProvider";
+import { useStreamWithStatus } from "../hooks/useStreamWithStatus";
 import { cn } from "@/lib/utils/utils";
 import { useState, FormEvent } from "react";
 import { Button } from "@/features/ui/components/button";
@@ -8,12 +8,11 @@ import { Message } from "@langchain/langgraph-sdk";
 import { AIMessage } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
 import { Textarea } from "@/features/ui/components/textarea";
-import { LayoutGrid, FileText } from "lucide-react";
+import { LayoutGrid, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAgentActivity } from "../hooks/useAgentActivity";
 import { AgentLoadingState } from "./AgentLoadingState";
 import { BaseInterruptPayload } from "../providers/StreamProvider";
-import { SearchStatusIndicator } from "./SearchStatusIndicator";
 
 interface NoMessagesViewProps {
   rfpId?: string | null;
@@ -67,7 +66,7 @@ const ChatMessage = ({ message, isLoading }: ChatMessageProps) => {
 };
 
 export function Thread() {
-  // Use the streamContext directly from our provider
+  // Use the stream hook with automatic status handling
   const {
     messages = [],
     threadId = "",
@@ -76,7 +75,8 @@ export function Thread() {
     stop,
     values, // Get the complete graph state
     interrupt, // Get interrupt state for HITL handling
-  } = useStreamContext();
+    status, // Status message from our hook
+  } = useStreamWithStatus();
 
   // Extract RFP context from graph state
   const rfpId = values?.metadata?.rfpId;
@@ -85,7 +85,6 @@ export function Thread() {
   const { isAgentWorking } = useAgentActivity(isLoading, messages);
 
   const [inputValue, setInputValue] = useState("");
-  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
 
   // Ref for the scrollable messages container
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -133,71 +132,20 @@ export function Thread() {
         return;
       }
 
-      // Use the submit method from our context for normal messages
+      // Use the submit method from our hook - status handling is automatic
       if (submit) {
         console.log("[Thread] Using submit to send message");
-
-        // Check if we're in intelligence gathering mode by looking at state
-        const isIntelligenceGathering = values?.intelligenceGatheringStatus === "RUNNING";
         
-        if (isIntelligenceGathering) {
-          console.log("[Thread] Using custom streaming for intelligence gathering");
-          // Clear any existing status
-          setCurrentStatus(null);
-          
-          // Pass message with custom streaming mode to capture status events
-          await submit(
+        // Simple submit - status handling is now automatic via the hook
+        await submit({
+          messages: [
             {
-              messages: [
-                {
-                  type: "human",
-                  content: messageContent,
-                  id: uuidv4(),
-                },
-              ],
+              type: "human",
+              content: messageContent,
+              id: uuidv4(),
             },
-            {
-              streamMode: ["custom", "updates"],
-              onChunk: (chunk: any) => {
-                // Handle different chunk types based on streamMode
-                if (Array.isArray(chunk) && chunk.length === 2) {
-                  const [mode, data] = chunk;
-                  
-                  if (mode === "custom") {
-                    // Handle custom events (status messages)
-                    try {
-                      const event = typeof data === 'string' ? JSON.parse(data) : data;
-                      
-                      if (event.type === "search_status" || event.type === "agent_status") {
-                        console.log("[Thread] Received status:", event.message);
-                        setCurrentStatus(event.message);
-                        
-                        // Clear status after delay
-                        setTimeout(() => {
-                          setCurrentStatus(prev => prev === event.message ? null : prev);
-                        }, 5000);
-                      }
-                    } catch (error) {
-                      console.warn("[Thread] Failed to parse custom event:", error);
-                    }
-                  }
-                  // State updates are handled by the provider
-                }
-              },
-            }
-          );
-        } else {
-          // Normal submit without custom streaming
-          await submit({
-            messages: [
-              {
-                type: "human",
-                content: messageContent,
-                id: uuidv4(),
-              },
-            ],
-          });
-        }
+          ],
+        });
       } else {
         console.error("[Thread] No method available to send messages");
         toast.error("Failed to send message", {
@@ -275,12 +223,17 @@ export function Thread() {
               );
             })}
 
-            {/* Show status indicator when there's an active status */}
-            {currentStatus && <SearchStatusIndicator status={currentStatus} />}
+            {/* Simple status display */}
+            {status && (
+              <div className="flex items-center gap-2 px-4 py-2">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <span className="text-sm text-gray-600">{status}</span>
+              </div>
+            )}
             
             {/* Show loading state at bottom when agent is working but no status */}
             <AgentLoadingState
-              isWorking={isAgentWorking && !currentStatus}
+              isWorking={isAgentWorking && !status}
               context={rfpId ? "rfp" : "general"}
               className="justify-center py-4"
             />
