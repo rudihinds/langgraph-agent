@@ -25,6 +25,16 @@ export {
   decisionMakersShouldContinue,
 } from "./routers.js";
 
+// Intelligence formatter and HITL review (moved from sequential system)
+export { intelligenceFormatter } from "./intelligence-formatter.js";
+export {
+  intelligenceGatheringHumanReview,
+  intelligenceGatheringFeedbackRouter,
+  intelligenceGatheringApprovalHandler,
+  intelligenceGatheringRejectionHandler,
+  intelligenceGatheringQuestionAnswering,
+} from "./hitl-review.js";
+
 // Node name constants
 export const PARALLEL_INTELLIGENCE_NODES = {
   // Main orchestration
@@ -46,6 +56,21 @@ export const PARALLEL_INTELLIGENCE_NODES = {
   // Decision Makers
   DECISION_AGENT: "decisionMakersAgent",
   DECISION_TOOLS: "decisionMakersTools",
+} as const;
+
+// HITL node names (for backward compatibility)
+export const INTELLIGENCE_GATHERING_NODES = {
+  // Core flow
+  FORMATTER: "intelligenceFormatter",
+  
+  // HITL review
+  HITL_REVIEW: "intelligenceGatheringHumanReview",
+  FEEDBACK_ROUTER: "intelligenceGatheringFeedbackRouter",
+  
+  // HITL handlers
+  APPROVAL: "intelligenceGatheringApprovalHandler",
+  REJECTION: "intelligenceGatheringRejectionHandler",
+  QA: "intelligenceGatheringQuestionAnswering",
 } as const;
 
 // Re-export types

@@ -54,24 +54,7 @@ import {
   RFP_ANALYSIS_NODES,
 } from "./nodes/planning/rfp-analysis/index.js";
 
-// Intelligence Gathering flow nodes - Multi-agent intelligence system
-import {
-  researchPlanningNode,
-  researchAgent,
-  intelligenceFormatter,
-  customResearcherNode,
-  intelligenceModificationAgent,
-  companyInfoHitlCollection,
-  companyInfoProcessor,
-  intelligenceGatheringHumanReview,
-  intelligenceGatheringFeedbackRouter,
-  intelligenceGatheringApprovalHandler,
-  intelligenceGatheringRejectionHandler,
-  intelligenceGatheringQuestionAnswering,
-  INTELLIGENCE_GATHERING_NODES,
-} from "./nodes/planning/intelligence-gathering/index.js";
-
-// Parallel Intelligence Gathering nodes
+// Parallel Intelligence Gathering nodes - Complete intelligence system
 import {
   intelligenceDispatcher,
   intelligenceSynchronizer,
@@ -84,7 +67,14 @@ import {
   vendorRelationshipsShouldContinue,
   procurementPatternsShouldContinue,
   decisionMakersShouldContinue,
+  intelligenceFormatter,
+  intelligenceGatheringHumanReview,
+  intelligenceGatheringFeedbackRouter,
+  intelligenceGatheringApprovalHandler,
+  intelligenceGatheringRejectionHandler,
+  intelligenceGatheringQuestionAnswering,
   PARALLEL_INTELLIGENCE_NODES,
+  INTELLIGENCE_GATHERING_NODES,
 } from "./nodes/planning/parallel-intelligence/index.js";
 
 // Define node name constants for type safety and clarity
@@ -107,31 +97,13 @@ const NODES = {
   RFP_APPROVAL: RFP_ANALYSIS_NODES.APPROVAL,
   RFP_REJECTION: RFP_ANALYSIS_NODES.REJECTION,
 
-  // Intelligence Gathering Flow - ReAct pattern with ToolNode
-  RESEARCH_AGENT: INTELLIGENCE_GATHERING_NODES.RESEARCH_AGENT,
-  INTELLIGENCE_TOOLS: INTELLIGENCE_GATHERING_NODES.TOOLS,
+  // Intelligence Formatter and HITL nodes (shared by parallel system)
   INTELLIGENCE_FORMATTER: INTELLIGENCE_GATHERING_NODES.FORMATTER,
-  
-  // HITL and processing nodes
-  COMPANY_INFO_HITL: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_HITL,
-  COMPANY_INFO_PROCESSOR: INTELLIGENCE_GATHERING_NODES.COMPANY_INFO_PROCESSOR,
   INTELLIGENCE_HITL_REVIEW: INTELLIGENCE_GATHERING_NODES.HITL_REVIEW,
   INTELLIGENCE_FEEDBACK_ROUTER: INTELLIGENCE_GATHERING_NODES.FEEDBACK_ROUTER,
-  INTELLIGENCE_MODIFICATION: INTELLIGENCE_GATHERING_NODES.MODIFICATION_AGENT,
-  INTELLIGENCE_CUSTOM_RESEARCH: INTELLIGENCE_GATHERING_NODES.CUSTOM_RESEARCHER,
   INTELLIGENCE_APPROVAL: INTELLIGENCE_GATHERING_NODES.APPROVAL,
   INTELLIGENCE_REJECTION: INTELLIGENCE_GATHERING_NODES.REJECTION,
   INTELLIGENCE_QA: INTELLIGENCE_GATHERING_NODES.QA,
-
-  // Legacy RFP Analysis V2 Flow (deprecated)
-  LEGACY_RFP_ANALYZER: "rfpAnalyzer",
-  LEGACY_HUMAN_REVIEW: "humanReview",
-  LEGACY_FEEDBACK_ROUTER: "feedbackRouter",
-  LEGACY_APPROVAL_HANDLER: "approvalHandler",
-  LEGACY_REJECTION_HANDLER: "rejectionHandler",
-
-  // Future Integration Points (Placeholder for next development phases)
-  RESEARCH_PLANNING: "researchPlanning",
 
   // Parallel Intelligence Gathering Flow
   PARALLEL_INTEL_DISPATCHER: PARALLEL_INTELLIGENCE_NODES.DISPATCHER,
@@ -243,46 +215,14 @@ proposalGenerationGraph.addNode(
   }
 );
 
-// Intelligence Gathering System - ReAct Pattern with ToolNode
-// ===========================================================
-
-// Research Agent - Makes decisions about what to search
-proposalGenerationGraph.addNode(
-  NODES.RESEARCH_AGENT,
-  researchAgent,
-  {
-    ends: [NODES.RESEARCH_AGENT, NODES.INTELLIGENCE_TOOLS, NODES.INTELLIGENCE_FORMATTER, NODES.COMPANY_INFO_HITL]
-  }
-);
-
-// Tool Node - Executes web searches and extractions
-const intelligenceToolNode = new ToolNode([
-  getIntelligenceSearchTool(),
-  getIntelligenceExtractTool()
-]);
-proposalGenerationGraph.addNode(
-  NODES.INTELLIGENCE_TOOLS,
-  intelligenceToolNode
-);
+// Intelligence Formatter and HITL Review System
+// ==============================================
 
 // Intelligence Formatter - Formats research into human-readable briefing
 proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_FORMATTER,
   intelligenceFormatter
 );
-
-// Company Info HITL - Collects missing company/industry information
-proposalGenerationGraph.addNode(
-  NODES.COMPANY_INFO_HITL,
-  companyInfoHitlCollection
-);
-
-// Company Info Processor - Processes user response and routes back
-proposalGenerationGraph.addNode(
-  NODES.COMPANY_INFO_PROCESSOR,
-  companyInfoProcessor
-);
-
 
 // Intelligence Human Review - HITL checkpoint for intelligence validation
 proposalGenerationGraph.addNode(
@@ -300,29 +240,9 @@ proposalGenerationGraph.addNode(
   {
     ends: [
       NODES.INTELLIGENCE_APPROVAL,
-      NODES.INTELLIGENCE_MODIFICATION,
-      NODES.INTELLIGENCE_CUSTOM_RESEARCH,
       NODES.INTELLIGENCE_QA,
       NODES.INTELLIGENCE_REJECTION,
     ],
-  }
-);
-
-// Intelligence Modification Agent - Handles user feedback modifications
-proposalGenerationGraph.addNode(
-  NODES.INTELLIGENCE_MODIFICATION,
-  intelligenceModificationAgent,
-  {
-    ends: [NODES.INTELLIGENCE_FORMATTER],
-  }
-);
-
-// Custom Researcher - Handles additional research requests
-proposalGenerationGraph.addNode(
-  NODES.INTELLIGENCE_CUSTOM_RESEARCH,
-  customResearcherNode,
-  {
-    ends: [NODES.INTELLIGENCE_FORMATTER],
   }
 );
 
@@ -335,30 +255,21 @@ proposalGenerationGraph.addNode(
   }
 );
 
-// Intelligence Approval Handler - Proceed to team assembly
+// Intelligence Approval Handler - Proceed to next phase
 proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_APPROVAL,
   intelligenceGatheringApprovalHandler,
   {
-    ends: [NODES.COMPLETE], // TODO: Replace with team assembly node when implemented
+    ends: [NODES.COMPLETE], // TODO: Replace with next phase when implemented
   }
 );
 
-// Intelligence Rejection Handler - Return to intelligence gathering
+// Intelligence Rejection Handler - Return to parallel intelligence
 proposalGenerationGraph.addNode(
   NODES.INTELLIGENCE_REJECTION,
   intelligenceGatheringRejectionHandler,
   {
-    ends: [NODES.RESEARCH_AGENT],
-  }
-);
-
-// Research Planning - Entry point to intelligence gathering (kept for backward compatibility)
-proposalGenerationGraph.addNode(
-  NODES.RESEARCH_PLANNING,
-  researchPlanningNode,
-  {
-    ends: [NODES.RESEARCH_AGENT]
+    ends: [NODES.PARALLEL_INTEL_DISPATCHER],
   }
 );
 
@@ -491,46 +402,14 @@ proposalGenerationGraph.addNode(
   NODES.RFP_HITL_REVIEW
 );
 
-// Intelligence Gathering Flow Edges
-// =================================
+// Intelligence Formatter and HITL Review Edges
+// ============================================
 
-// Company info collection edges (when missing company/industry)
-(proposalGenerationGraph as any).addEdge(
-  NODES.COMPANY_INFO_HITL,
-  NODES.COMPANY_INFO_PROCESSOR
-);
-
-// Company info processor returns to research agent
-(proposalGenerationGraph as any).addEdge(
-  NODES.COMPANY_INFO_PROCESSOR,
-  NODES.RESEARCH_AGENT
-);
-
-// Intelligence Gathering Flow - Using Command Pattern
-// Research agent uses Command with goto for explicit routing
-// No conditional edges needed - agent handles its own routing
-
-// Tools always return to research agent
-(proposalGenerationGraph as any).addEdge(
-  NODES.INTELLIGENCE_TOOLS,
-  NODES.RESEARCH_AGENT
-);
-
-// Formatter goes directly to HITL review (synthesis is redundant)
+// Formatter goes directly to HITL review
 (proposalGenerationGraph as any).addEdge(
   NODES.INTELLIGENCE_FORMATTER,
   NODES.INTELLIGENCE_HITL_REVIEW
 );
-
-// V2 Chat flow - Clean routing without recursion
-// All routing decisions are handled within nodes using Command pattern
-// No conditional edges needed for chat flow - nodes handle their own routing
-
-// Document loader now uses Command pattern for routing - no conditional edges needed
-
-// No direct edge needed - RFP Analyzer routes through the multi-agent flow
-
-// Research Planning now uses Command pattern for routing - no edges needed
 
 // ===== PARALLEL INTELLIGENCE GATHERING EDGES =====
 
