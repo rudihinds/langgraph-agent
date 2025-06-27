@@ -1,8 +1,11 @@
 /**
  * Intelligence Synchronizer Node
  * 
- * Waits for all parallel agents to complete and consolidates their results.
- * Routes to the intelligence formatter once all agents are done.
+ * Consolidates results from all parallel agents and routes to the formatter.
+ * 
+ * IMPORTANT: LangGraph's execution model (Bulk Synchronous Parallel) ensures
+ * this node only runs AFTER all parallel agents have completed. We don't need
+ * to manually check completion status - LangGraph handles the synchronization.
  */
 
 import { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
@@ -13,17 +16,21 @@ import { ParallelIntelligenceState } from "./types.js";
 /**
  * Intelligence Synchronizer Node
  * 
- * This node:
- * 1. Checks if all parallel agents have completed
- * 2. Consolidates quality scores and status
- * 3. Routes to formatter when ready
- * 4. Handles timeouts and partial results
+ * This node aggregates results from all 4 parallel agents:
+ * - Strategic Initiatives
+ * - Vendor Relationships  
+ * - Procurement Patterns
+ * - Decision Makers
+ * 
+ * Since all agents route to this synchronizer, LangGraph ensures they've all
+ * completed before this node executes. This is similar to a "sink" node in
+ * the fan-out/fan-in pattern.
  */
 export async function intelligenceSynchronizer(
   state: typeof OverallProposalStateAnnotation.State,
   config?: LangGraphRunnableConfig
 ): Promise<Command> {
-  console.log("[Intelligence Synchronizer] Checking parallel agent status");
+  console.log("[Intelligence Synchronizer] Aggregating results from all parallel agents");
   
   const parallelState = state.parallelIntelligenceState as ParallelIntelligenceState;
   
@@ -38,47 +45,17 @@ export async function intelligenceSynchronizer(
     });
   }
   
-  // Check status of all agents
+  // Log final status of all agents (they've all completed at this point)
   const agentStatuses = {
-    strategic: parallelState.strategicInitiatives?.status || "pending",
-    vendor: parallelState.vendorRelationships?.status || "pending",
-    procurement: parallelState.procurementPatterns?.status || "pending",
-    decision: parallelState.decisionMakers?.status || "pending",
+    strategic: parallelState.strategicInitiatives?.status || "unknown",
+    vendor: parallelState.vendorRelationships?.status || "unknown",
+    procurement: parallelState.procurementPatterns?.status || "unknown",
+    decision: parallelState.decisionMakers?.status || "unknown",
   };
   
-  console.log("[Intelligence Synchronizer] Agent statuses:", agentStatuses);
+  console.log("[Intelligence Synchronizer] Final agent statuses:", agentStatuses);
   
-  // Count completed agents
-  const completedAgents = Object.values(agentStatuses).filter(
-    status => status === "complete" || status === "error"
-  ).length;
-  
-  const runningAgents = Object.values(agentStatuses).filter(
-    status => status === "running"
-  ).length;
-  
-  console.log(`[Intelligence Synchronizer] ${completedAgents}/4 agents completed, ${runningAgents} still running`);
-  
-  // Check if all agents are done (complete or error)
-  const allAgentsComplete = completedAgents === 4;
-  
-  // Check for timeout (if we've been running for too many iterations)
-  const totalIterations = [
-    state.strategicInitiativesResearch?.iteration || 0,
-    state.vendorRelationshipsResearch?.iteration || 0,
-    state.procurementPatternsResearch?.iteration || 0,
-    state.decisionMakersResearch?.iteration || 0,
-  ].reduce((sum, iter) => sum + iter, 0);
-  
-  const timeout = totalIterations > 40; // Total iteration limit across all agents
-  
-  if (!allAgentsComplete && !timeout) {
-    console.log("[Intelligence Synchronizer] Waiting for agents to complete...");
-    // In a real implementation, this would wait or return to check again
-    // For now, we'll proceed to avoid blocking
-  }
-  
-  // Calculate overall quality
+  // Calculate overall quality metrics
   const qualityScores = [
     parallelState.strategicInitiatives?.quality || 0,
     parallelState.vendorRelationships?.quality || 0,
@@ -95,6 +72,16 @@ export async function intelligenceSynchronizer(
     procurement: parallelState.procurementPatterns?.quality?.toFixed(2) || "0.00",
     decision: parallelState.decisionMakers?.quality?.toFixed(2) || "0.00",
   });
+  
+  // Log total iterations for monitoring
+  const totalIterations = [
+    state.strategicInitiativesResearch?.iteration || 0,
+    state.vendorRelationshipsResearch?.iteration || 0,
+    state.procurementPatternsResearch?.iteration || 0,
+    state.decisionMakersResearch?.iteration || 0,
+  ].reduce((sum, iter) => sum + iter, 0);
+  
+  console.log(`[Intelligence Synchronizer] Total iterations across all agents: ${totalIterations}`);
   
   // Emit status
   if (config?.writer) {

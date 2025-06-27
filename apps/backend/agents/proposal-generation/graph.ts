@@ -412,6 +412,12 @@ proposalGenerationGraph.addNode(
 );
 
 // ===== PARALLEL INTELLIGENCE GATHERING EDGES =====
+// 
+// The parallel intelligence system uses LangGraph's Send API to dispatch
+// 4 agents in parallel. LangGraph's Bulk Synchronous Parallel (BSP) execution
+// model ensures that the synchronizer node only runs AFTER all 4 agents have
+// completed their work. This is automatic - we don't need to manually check
+// completion status.
 
 // Dispatcher uses Command to route to parallel router
 (proposalGenerationGraph as any).addEdge(
@@ -419,7 +425,8 @@ proposalGenerationGraph.addNode(
   NODES.PARALLEL_INTEL_ROUTER
 );
 
-// Parallel router dispatches to all 4 agents
+// Parallel router dispatches to all 4 agents using Send API
+// All agents run concurrently in the same superstep
 (proposalGenerationGraph as any).addConditionalEdges(
   NODES.PARALLEL_INTEL_ROUTER,
   parallelIntelligenceRouter
@@ -481,7 +488,10 @@ proposalGenerationGraph.addNode(
   NODES.PARALLEL_DECISION_AGENT
 );
 
-// Synchronizer routes to formatter (reusing existing formatter)
+// The synchronizer acts as a "sink" node in the fan-out/fan-in pattern.
+// All 4 agents route to the synchronizer when they complete. LangGraph ensures
+// the synchronizer only executes once ALL agents have finished, similar to how
+// Promise.all() works. No manual synchronization needed!
 (proposalGenerationGraph as any).addEdge(
   NODES.PARALLEL_INTEL_SYNCHRONIZER,
   NODES.INTELLIGENCE_FORMATTER
