@@ -580,56 +580,48 @@ export const OverallProposalStateAnnotation = Annotation.Root({
 
   // Individual topic research states
   strategicInitiativesResearch: Annotation<{
-    iteration: number;
     searchQueries: string[];
     searchResults: any[];
     extractedUrls: string[];
     extractedEntities: any[];
-    quality: number;
-    attempts: number;
-    lastAction?: "discovery" | "extraction" | "deepDive";
+    insights?: any[];
+    complete?: boolean;
   } | undefined>({
     default: () => undefined,
     value: (existing, newValue) => ({ ...existing, ...newValue })
   }),
 
   vendorRelationshipsResearch: Annotation<{
-    iteration: number;
     searchQueries: string[];
     searchResults: any[];
     extractedUrls: string[];
     extractedEntities: any[];
-    quality: number;
-    attempts: number;
-    lastAction?: "discovery" | "extraction" | "deepDive";
+    insights?: any[];
+    complete?: boolean;
   } | undefined>({
     default: () => undefined,
     value: (existing, newValue) => ({ ...existing, ...newValue })
   }),
 
   procurementPatternsResearch: Annotation<{
-    iteration: number;
     searchQueries: string[];
     searchResults: any[];
     extractedUrls: string[];
     extractedEntities: any[];
-    quality: number;
-    attempts: number;
-    lastAction?: "discovery" | "extraction" | "deepDive";
+    insights?: any[];
+    complete?: boolean;
   } | undefined>({
     default: () => undefined,
     value: (existing, newValue) => ({ ...existing, ...newValue })
   }),
 
   decisionMakersResearch: Annotation<{
-    iteration: number;
     searchQueries: string[];
     searchResults: any[];
     extractedUrls: string[];
     extractedEntities: any[];
-    quality: number;
-    attempts: number;
-    lastAction?: "discovery" | "extraction" | "deepDive";
+    insights?: any[];
+    complete?: boolean;
   } | undefined>({
     default: () => undefined,
     value: (existing, newValue) => ({ ...existing, ...newValue })

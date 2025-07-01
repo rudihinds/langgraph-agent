@@ -9,14 +9,12 @@ export interface TopicState {
 }
 
 export interface TopicResearch {
-  iteration: number;
   searchQueries: string[];
   searchResults: any[];
   extractedUrls: string[];
   extractedEntities: ExtractedEntity[];
-  quality: number;
-  attempts: number;
-  lastAction?: "discovery" | "extraction" | "deepDive"; // For debugging only
+  insights?: any[];
+  complete?: boolean;
 }
 
 export interface ExtractedEntity {

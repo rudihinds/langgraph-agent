@@ -73,15 +73,15 @@ export async function intelligenceSynchronizer(
     decision: parallelState.decisionMakers?.quality?.toFixed(2) || "0.00",
   });
   
-  // Log total iterations for monitoring
-  const totalIterations = [
-    state.strategicInitiativesResearch?.iteration || 0,
-    state.vendorRelationshipsResearch?.iteration || 0,
-    state.procurementPatternsResearch?.iteration || 0,
-    state.decisionMakersResearch?.iteration || 0,
-  ].reduce((sum, iter) => sum + iter, 0);
+  // Log total searches for monitoring
+  const totalSearches = [
+    state.strategicInitiativesResearch?.searchQueries.length || 0,
+    state.vendorRelationshipsResearch?.searchQueries.length || 0,
+    state.procurementPatternsResearch?.searchQueries.length || 0,
+    state.decisionMakersResearch?.searchQueries.length || 0,
+  ].reduce((sum, count) => sum + count, 0);
   
-  console.log(`[Intelligence Synchronizer] Total iterations across all agents: ${totalIterations}`);
+  console.log(`[Intelligence Synchronizer] Total searches across all agents: ${totalSearches}`);
   
   // Emit status
   if (config?.writer) {
@@ -100,16 +100,16 @@ export async function intelligenceSynchronizer(
       
       switch (topicConfig.topic) {
         case "strategic initiatives and priorities":
-          topicQuality = state.strategicInitiativesResearch?.quality || 0;
+          topicQuality = parallelState.strategicInitiatives?.quality || 0;
           break;
         case "current vendor relationships":
-          topicQuality = state.vendorRelationshipsResearch?.quality || 0;
+          topicQuality = parallelState.vendorRelationships?.quality || 0;
           break;
         case "procurement patterns and history":
-          topicQuality = state.procurementPatternsResearch?.quality || 0;
+          topicQuality = parallelState.procurementPatterns?.quality || 0;
           break;
         case "key decision makers and leadership":
-          topicQuality = state.decisionMakersResearch?.quality || 0;
+          topicQuality = parallelState.decisionMakers?.quality || 0;
           break;
       }
       

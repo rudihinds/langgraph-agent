@@ -36,24 +36,13 @@ export async function decisionMakersAgent(
   const company = state.company;
   const industry = state.industry;
   const research = state.decisionMakersResearch || {
-    iteration: 0,
     searchQueries: [],
     searchResults: [],
     extractedUrls: [],
     extractedEntities: [],
-    quality: 0,
-    attempts: 0,
   };
   
-  // Increment iteration
-  const iteration = research.iteration + 1;
-  console.log(`[Decision Makers Agent] Iteration ${iteration}`);
-  
-  // Get configuration
-  const topicConfig = state.adaptiveResearchConfig?.topics?.find(
-    t => t.topic === topic
-  );
-  const minimumQualityThreshold = topicConfig?.minimumQualityThreshold || 0.3;
+  console.log(`[Decision Makers Agent] Starting autonomous research`);
   
   // Build dynamic agent prompt
   const systemPrompt = `You are a decision makers researcher for ${company} in the ${industry} sector.
@@ -124,35 +113,12 @@ ${research.extractedEntities
       : 'Choose the most appropriate tool based on your current progress.'
   }`;
   
-  // Check completion conditions BEFORE generating tool calls
-  const completionConfig = state.adaptiveResearchConfig?.topics?.find(
-    t => t.topic === "key decision makers and leadership"
-  );
-  
-  // If we've met completion conditions, return without tool calls
-  if (research.quality >= (completionConfig?.minimumQualityThreshold || 0.3) || 
-      research.attempts >= (completionConfig?.maxAttempts || 4)) {
-    
-    console.log(`[Decision Makers Agent] Completion criteria met - Quality: ${research.quality}, Attempts: ${research.attempts}`);
-    
-    return {
-      messages: [], // No user-visible messages from agents
-      decisionMakersResearch: { ...research, complete: true },
-      parallelIntelligenceState: {
-        ...state.parallelIntelligenceState,
-        decisionMakers: {
-          status: "complete" as const,
-          quality: research.quality,
-        },
-      },
-    };
-  }
 
   try {
     // Emit status
     if (config?.writer) {
       config.writer({
-        message: `Decision makers research: iteration ${iteration}...`,
+        message: `Decision makers research in progress...`,
       });
     }
     

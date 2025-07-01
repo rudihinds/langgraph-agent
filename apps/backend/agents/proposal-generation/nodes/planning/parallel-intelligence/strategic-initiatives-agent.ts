@@ -31,8 +31,6 @@ export async function strategicInitiativesAgent(
   errors?: string[];
 }> {
   const topic = "strategic initiatives and priorities";
-  console.log(`[Strategic Initiatives Agent] Starting autonomous research`);
-  
   const company = state.company;
   const industry = state.industry;
   const research = state.strategicInitiativesResearch || {
@@ -40,9 +38,31 @@ export async function strategicInitiativesAgent(
     searchResults: [],
     extractedUrls: [],
     extractedEntities: [],
+    insights: []
   };
   
-  // Build autonomous agent prompt
+  console.log(`[Strategic Initiatives Agent] Starting autonomous research`);
+  
+  // Process context data outside the prompt for better formatting
+  const previousSearches = research.searchQueries.length > 0 
+    ? research.searchQueries.map((query: string, index: number) => {
+        const result = research.searchResults[index];
+        const resultCount = result?.results?.length || 0;
+        return `${index + 1}. "${query}" (found ${resultCount} results)`;
+      }).join('\n')
+    : 'None yet';
+    
+  const extractedUrls = research.extractedUrls.length > 0
+    ? research.extractedUrls.map((url: string) => `- ${url}`).join('\n')
+    : 'None yet';
+    
+  const extractedEntities = research.extractedEntities.length > 0
+    ? research.extractedEntities.map((e: any) => 
+        `- ${e.name} (${e.type}) - ${e.searched ? 'RESEARCHED' : 'NEEDS RESEARCH'}${e.description ? '\n  ' + e.description.slice(0, 100) + '...' : ''}`
+      ).join('\n')
+    : 'None yet';
+
+  // Build autonomous agent prompt with processed variables
   const systemPrompt = `You are an autonomous strategic initiatives researcher for ${company} in the ${industry} sector.
 
 RESEARCH STRATEGY - Follow this approach:
@@ -74,11 +94,14 @@ COMPLETION CRITERIA - Stop when you have:
 - Found specific details about implementation timelines or goals
 - Gathered information from multiple authoritative sources
 
-PREVIOUS WORK:
-Queries made: ${research.searchQueries.length}
-URLs found: ${research.extractedUrls.length}  
-Entities extracted: ${research.extractedEntities.length}
-Recent queries: ${research.searchQueries.slice(-3).join(', ') || 'None'}
+PREVIOUS SEARCHES (Don't repeat these):
+${previousSearches}
+
+EXTRACTED URLS (Already processed):
+${extractedUrls}
+
+EXTRACTED ENTITIES (Research status):
+${extractedEntities}
 
 IMPORTANT: 
 - Don't repeat similar searches - build on previous results
@@ -86,30 +109,29 @@ IMPORTANT:
 - If you determine you have sufficient information, simply respond without tool calls
 - Use parallel tool calling when exploring multiple sources simultaneously`;
 
-  const humanPrompt = `Research strategic initiatives for ${company}. Use your judgment to determine the best tools and when you have sufficient information. Follow the research strategy outlined above.`;
-  
+  const humanPrompt = `Continue researching strategic initiatives for ${company}. Use your judgment to determine the best tools and when you have sufficient information. Follow the research strategy outlined above.`;
 
   try {
     // Emit status
     if (config?.writer) {
       config.writer({
-        message: `Strategic initiatives research in progress...`,
+        message: `Strategic initiatives research: analyzing previous work...`,
       });
     }
     
-    // Bind tools
+    // Bind tools and generate response
     const tools = createTopicTools("strategic_initiatives");
     const modelWithTools = model.bindTools(tools);
     
-    // Generate response with tool calls
     const response = await modelWithTools.invoke([
       new SystemMessage(systemPrompt),
       new HumanMessage(humanPrompt)
     ], config);
     
-    // Check if agent made tool calls - no calls means agent decided it's complete
+    // Check if agent decided to complete (no tool calls)
     const isComplete = !response.tool_calls || response.tool_calls.length === 0;
     
+    // Log tool calls made by the agent
     if (response.tool_calls && response.tool_calls.length > 0) {
       console.log(`[Strategic Agent] Tool calls made:`, 
         response.tool_calls.map((tc: any) => ({ 
@@ -118,7 +140,7 @@ IMPORTANT:
         }))
       );
     } else {
-      console.log(`[Strategic Agent] No tool calls - agent has determined research is complete`);
+      console.log(`[Strategic Agent] No tool calls - agent determined research is complete`);
     }
     
     // Process tool results if any were made
@@ -128,8 +150,11 @@ IMPORTANT:
       const toolResults = extractToolResults(allMessages);
       updatedResearch = mergeToolResults(research, toolResults);
       
-      // Mark entities as searched if processed
-      const searchedEntityNames = toolResults.insights.map((insight: any) => insight.entity).filter(Boolean);
+      // Mark entities as searched if they were processed by deep-dive tools
+      const searchedEntityNames = toolResults.insights
+        .map((insight: any) => insight.entity)
+        .filter(Boolean);
+        
       if (searchedEntityNames.length > 0) {
         updatedResearch.extractedEntities = markEntitiesAsSearched(
           updatedResearch.extractedEntities, 
@@ -142,7 +167,7 @@ IMPORTANT:
     const quality = updatedResearch.extractedEntities.length > 0 ? 0.8 : 0.3;
     
     return {
-      messages: [], 
+      messages: [],
       strategicInitiativesResearch: { ...updatedResearch, complete: isComplete },
       parallelIntelligenceState: {
         ...state.parallelIntelligenceState,
@@ -156,21 +181,18 @@ IMPORTANT:
   } catch (error) {
     console.error("[Strategic Initiatives Agent] Error:", error);
     
-    // Update state with error
-    const errorState = {
-      ...state.parallelIntelligenceState,
-      strategicInitiatives: {
-        status: "error" as const,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-        quality: 0,
-      },
-    };
-    
     return {
-      messages: [], // No error messages in UI
+      messages: [],
       errors: [`Strategic initiatives agent error: ${error instanceof Error ? error.message : "Unknown error"}`],
-      strategicInitiativesResearch: { ...research, complete: true }, // Mark as complete on error
-      parallelIntelligenceState: errorState,
+      strategicInitiativesResearch: { ...research, complete: true },
+      parallelIntelligenceState: {
+        ...state.parallelIntelligenceState,
+        strategicInitiatives: {
+          status: "error" as const,
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+          quality: 0,
+        },
+      },
     };
   }
 }

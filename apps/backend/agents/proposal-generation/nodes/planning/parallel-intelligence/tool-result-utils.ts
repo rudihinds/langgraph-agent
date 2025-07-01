@@ -93,9 +93,46 @@ export function markEntitiesAsSearched(entities: any[], searchedEntityNames: str
 }
 
 /**
- * Merge tool results into existing research state
+ * Merge tool results into existing research state with deduplication
  */
 export function mergeToolResults(currentResearch: any, toolResults: any) {
+  // Merge URLs with deduplication
+  const existingUrls = currentResearch.extractedUrls || [];
+  const newUrls = toolResults.urls || [];
+  const mergedUrls = [...existingUrls];
+  
+  newUrls.forEach((url: string) => {
+    if (!mergedUrls.includes(url)) {
+      mergedUrls.push(url);
+    }
+  });
+  
+  // Merge entities with deduplication by name
+  const existingEntities = currentResearch.extractedEntities || [];
+  const newEntities = toolResults.entities || [];
+  const mergedEntities = [...existingEntities];
+  
+  newEntities.forEach((newEntity: any) => {
+    const existingIndex = mergedEntities.findIndex(
+      (existing: any) => existing.name.toLowerCase() === newEntity.name.toLowerCase()
+    );
+    
+    if (existingIndex >= 0) {
+      // Merge with existing entity, preserving both old and new data
+      mergedEntities[existingIndex] = {
+        ...mergedEntities[existingIndex],
+        ...newEntity,
+        // Preserve description if it exists in either
+        description: newEntity.description || mergedEntities[existingIndex].description,
+        // Preserve searched status if already searched
+        searched: mergedEntities[existingIndex].searched || newEntity.searched
+      };
+    } else {
+      // Add new entity
+      mergedEntities.push(newEntity);
+    }
+  });
+  
   return {
     ...currentResearch,
     searchQueries: [
@@ -104,15 +141,13 @@ export function mergeToolResults(currentResearch: any, toolResults: any) {
     ],
     searchResults: [
       ...(currentResearch.searchResults || []), 
-      ...toolResults.searchResults // Use the formatted searchResults
+      ...toolResults.searchResults
     ],
-    extractedUrls: [
-      ...(currentResearch.extractedUrls || []), 
-      ...toolResults.urls
-    ],
-    extractedEntities: [
-      ...(currentResearch.extractedEntities || []), 
-      ...toolResults.entities
+    extractedUrls: mergedUrls,
+    extractedEntities: mergedEntities,
+    insights: [
+      ...(currentResearch.insights || []),
+      ...(toolResults.insights || [])
     ]
   };
 }
