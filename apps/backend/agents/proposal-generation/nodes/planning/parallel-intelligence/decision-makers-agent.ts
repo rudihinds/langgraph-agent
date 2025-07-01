@@ -73,6 +73,14 @@ AVAILABLE TOOLS:
 YOUR GOAL:
 Gather comprehensive intelligence about key decision makers and leadership until you reach a quality score of ${minimumQualityThreshold} or higher.
 
+IMPORTANT SEARCH GUIDELINES:
+- Before making any search, check PREVIOUS SEARCHES section below
+- DO NOT repeat searches with similar queries
+- Build upon previous results rather than duplicating efforts
+- If a search has already been done, use deep-dive or extraction tools instead
+- Each search should add NEW information, not repeat existing findings
+- Quality over quantity - make each search count
+
 DECISION MAKING:
 - If you need to find team/leadership pages → use decision_makers_discovery
 - If you have promising URLs (team pages, about us, etc.) → use decision_makers_extract
@@ -128,10 +136,7 @@ ${research.extractedEntities
     console.log(`[Decision Makers Agent] Completion criteria met - Quality: ${research.quality}, Attempts: ${research.attempts}`);
     
     return {
-      messages: [new AIMessage({
-        content: `Decision makers research complete. Quality score: ${research.quality.toFixed(2)}, Attempts: ${research.attempts}. Moving to synchronization.`,
-        name: "decisionMakersAgent"
-      })],
+      messages: [], // No user-visible messages from agents
       decisionMakersResearch: { ...research, complete: true },
       parallelIntelligenceState: {
         ...state.parallelIntelligenceState,
@@ -210,7 +215,7 @@ ${research.extractedEntities
     };
     
     return {
-      messages: [response],
+      messages: [], // No user-visible messages from agents - only state updates
       decisionMakersResearch: updatedResearch,
       parallelIntelligenceState: updatedParallelState,
     };
@@ -228,12 +233,8 @@ ${research.extractedEntities
     };
     
     return {
-      messages: [
-        new AIMessage({
-          content: `Error researching decision makers: ${error instanceof Error ? error.message : "Unknown error"}`,
-          name: "decisionMakersAgent",
-        })
-      ],
+      messages: [], // No error messages in UI
+      errors: [`Decision makers agent error: ${error instanceof Error ? error.message : "Unknown error"}`],
       parallelIntelligenceState: errorState,
     };
   }

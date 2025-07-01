@@ -8,9 +8,7 @@
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
-import { ProcessingStatus } from "@/state/modules/types.js";
 import { createTopicTools } from "@/agents/proposal-generation/tools/parallel-intelligence-tools.js";
-import { calculateTopicQuality } from "./utils.js";
 import { extractToolResults, mergeToolResults, markEntitiesAsSearched } from "./tool-result-utils.js";
 import { createModel } from "@/lib/llm/model-factory.js";
 
@@ -30,102 +28,72 @@ export async function strategicInitiativesAgent(
   messages: AIMessage[]; 
   strategicInitiativesResearch?: any;
   parallelIntelligenceState?: any;
+  errors?: string[];
 }> {
   const topic = "strategic initiatives and priorities";
-  console.log(`[Strategic Initiatives Agent] Starting research iteration`);
+  console.log(`[Strategic Initiatives Agent] Starting autonomous research`);
   
   const company = state.company;
   const industry = state.industry;
   const research = state.strategicInitiativesResearch || {
-    iteration: 0,
     searchQueries: [],
     searchResults: [],
     extractedUrls: [],
     extractedEntities: [],
-    quality: 0,
-    attempts: 0,
   };
   
-  // Increment iteration
-  const iteration = research.iteration + 1;
-  console.log(`[Strategic Initiatives Agent] Iteration ${iteration}`);
-  
-  // Get configuration
-  const topicConfig = state.adaptiveResearchConfig?.topics?.find(
-    t => t.topic === topic
-  );
-  const minimumQualityThreshold = topicConfig?.minimumQualityThreshold || 0.5;
-  
-  // Build dynamic agent prompt
-  const systemPrompt = `You are a strategic initiatives researcher for ${company} in the ${industry} sector.
+  // Build autonomous agent prompt
+  const systemPrompt = `You are an autonomous strategic initiatives researcher for ${company} in the ${industry} sector.
 
-CURRENT STATE:
-- Iteration: ${iteration}
-- URLs discovered: ${research.extractedUrls.length}
-- Entities extracted: ${research.extractedEntities.length}
-- Current quality score: ${research.quality.toFixed(2)}
-- Minimum quality threshold: ${minimumQualityThreshold}
+RESEARCH STRATEGY - Follow this approach:
+1. START WIDE: Begin with broad, short queries about strategic initiatives
+2. EVALUATE LANDSCAPE: Assess what types of information are available  
+3. NARROW DOWN: Progressively focus on specific initiatives and priorities
+4. DEEP DIVE: Research individual initiatives in detail once identified
 
 AVAILABLE TOOLS:
-- strategic_initiatives_discovery: Find pages about strategy and initiatives
-- strategic_initiatives_extract: Extract initiatives from specific URLs  
-- strategic_initiatives_deepdive: Research specific initiatives in detail
+- strategic_initiatives_discovery: Find pages about strategy and initiatives (use for broad exploration)
+- strategic_initiatives_extract: Extract initiatives from specific URLs (use when you have promising sources)
+- strategic_initiatives_deepdive: Research specific initiatives in detail (use for final deep analysis)
 
-YOUR GOAL:
-Gather comprehensive intelligence about strategic initiatives until you reach a quality score of ${minimumQualityThreshold} or higher.
+TOOL USAGE HEURISTICS:
+- Start with discovery for broad landscape understanding
+- Use extraction when you find promising URLs 
+- Use deep-dive when you have specific initiatives to research
+- Use 3+ tools in parallel when beneficial for speed
 
-DECISION MAKING:
-- If you need to find sources → use strategic_initiatives_discovery
-- If you have promising URLs → use strategic_initiatives_extract to get structured data
-- If you have extracted entities → use strategic_initiatives_deepdive to research them individually
-- You decide the best approach based on what you've gathered so far
+SELF-EVALUATION - After each tool use, assess:
+- Have I found the key strategic initiatives for this company?
+- Do I understand their priorities and strategic direction?
+- Have I covered both current initiatives and future strategic plans?
+- Is my information from high-quality, recent sources?
 
-The system will stop you after ${topicConfig?.maxAttempts || 3} attempts or when quality threshold is met.
-Make each search count - quality over quantity.
+COMPLETION CRITERIA - Stop when you have:
+- Identified 3-5 major strategic initiatives
+- Understood the company's strategic priorities and direction
+- Found specific details about implementation timelines or goals
+- Gathered information from multiple authoritative sources
 
-PREVIOUS SEARCHES:
-${research.searchQueries.slice(-3).join('\n') || 'None yet'}
+PREVIOUS WORK:
+Queries made: ${research.searchQueries.length}
+URLs found: ${research.extractedUrls.length}  
+Entities extracted: ${research.extractedEntities.length}
+Recent queries: ${research.searchQueries.slice(-3).join(', ') || 'None'}
 
-EXTRACTED URLS:
-${research.extractedUrls.slice(-3).join('\n') || 'None yet'}
+IMPORTANT: 
+- Don't repeat similar searches - build on previous results
+- Make each search count - quality over quantity
+- If you determine you have sufficient information, simply respond without tool calls
+- Use parallel tool calling when exploring multiple sources simultaneously`;
 
-EXTRACTED ENTITIES:
-${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`).join('\n') || 'None yet'}`;
-
-  const humanPrompt = `Continue researching ${topic} for ${company}. Choose the most appropriate tool based on your current progress.`;
+  const humanPrompt = `Research strategic initiatives for ${company}. Use your judgment to determine the best tools and when you have sufficient information. Follow the research strategy outlined above.`;
   
-  // Check completion conditions BEFORE generating tool calls
-  const completionConfig = state.adaptiveResearchConfig?.topics?.find(
-    t => t.topic === "strategic initiatives and priorities"
-  );
-  
-  // If we've met completion conditions, return without tool calls
-  if (research.quality >= (completionConfig?.minimumQualityThreshold || 0.5) || 
-      research.attempts >= (completionConfig?.maxAttempts || 3)) {
-    
-    console.log(`[Strategic Initiatives Agent] Completion criteria met - Quality: ${research.quality}, Attempts: ${research.attempts}`);
-    
-    return {
-      messages: [new AIMessage({
-        content: `Strategic initiatives research complete. Quality score: ${research.quality.toFixed(2)}, Attempts: ${research.attempts}. Moving to synchronization.`,
-        name: "strategicInitiativesAgent"
-      })],
-      strategicInitiativesResearch: { ...research, complete: true },
-      parallelIntelligenceState: {
-        ...state.parallelIntelligenceState,
-        strategicInitiatives: {
-          status: "complete" as const,
-          quality: research.quality,
-        },
-      },
-    };
-  }
 
   try {
     // Emit status
     if (config?.writer) {
       config.writer({
-        message: `Strategic initiatives research: iteration ${iteration}...`,
+        message: `Strategic initiatives research in progress...`,
       });
     }
     
@@ -139,7 +107,9 @@ ${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`
       new HumanMessage(humanPrompt)
     ], config);
     
-    // Log tool calls made by the agent
+    // Check if agent made tool calls - no calls means agent decided it's complete
+    const isComplete = !response.tool_calls || response.tool_calls.length === 0;
+    
     if (response.tool_calls && response.tool_calls.length > 0) {
       console.log(`[Strategic Agent] Tool calls made:`, 
         response.tool_calls.map((tc: any) => ({ 
@@ -148,49 +118,39 @@ ${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`
         }))
       );
     } else {
-      console.log(`[Strategic Agent] No tool calls made in this iteration`);
+      console.log(`[Strategic Agent] No tool calls - agent has determined research is complete`);
     }
     
-    // Extract tool results from any ToolMessages in recent messages
-    const allMessages = [...(state.messages || []), response];
-    const toolResults = extractToolResults(allMessages);
-    
-    // Merge tool results into research state
-    const researchWithToolResults = mergeToolResults(research, toolResults);
-    
-    // Mark entities as searched if they were processed by deep-dive tools
-    const searchedEntityNames = toolResults.insights.map((insight: any) => insight.entity).filter(Boolean);
-    if (searchedEntityNames.length > 0) {
-      researchWithToolResults.extractedEntities = markEntitiesAsSearched(
-        researchWithToolResults.extractedEntities, 
-        searchedEntityNames
-      );
+    // Process tool results if any were made
+    let updatedResearch = research;
+    if (response.tool_calls && response.tool_calls.length > 0) {
+      const allMessages = [...(state.messages || []), response];
+      const toolResults = extractToolResults(allMessages);
+      updatedResearch = mergeToolResults(research, toolResults);
+      
+      // Mark entities as searched if processed
+      const searchedEntityNames = toolResults.insights.map((insight: any) => insight.entity).filter(Boolean);
+      if (searchedEntityNames.length > 0) {
+        updatedResearch.extractedEntities = markEntitiesAsSearched(
+          updatedResearch.extractedEntities, 
+          searchedEntityNames
+        );
+      }
     }
     
-    // Calculate quality based on updated research data
-    const quality = calculateTopicQuality(researchWithToolResults);
-    
-    // Update research state
-    const updatedResearch = {
-      ...researchWithToolResults,
-      iteration,
-      attempts: research.attempts + 1,
-      quality,
-    };
-    
-    // Update parallel intelligence state
-    const updatedParallelState = {
-      ...state.parallelIntelligenceState,
-      strategicInitiatives: {
-        status: "running" as const,
-        quality,
-      },
-    };
+    // Simple quality heuristic based on results
+    const quality = updatedResearch.extractedEntities.length > 0 ? 0.8 : 0.3;
     
     return {
-      messages: [response],
-      strategicInitiativesResearch: updatedResearch,
-      parallelIntelligenceState: updatedParallelState,
+      messages: [], 
+      strategicInitiativesResearch: { ...updatedResearch, complete: isComplete },
+      parallelIntelligenceState: {
+        ...state.parallelIntelligenceState,
+        strategicInitiatives: {
+          status: isComplete ? "complete" : "running",
+          quality: quality,
+        },
+      },
     };
     
   } catch (error) {
@@ -202,16 +162,14 @@ ${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`
       strategicInitiatives: {
         status: "error" as const,
         errorMessage: error instanceof Error ? error.message : "Unknown error",
+        quality: 0,
       },
     };
     
     return {
-      messages: [
-        new AIMessage({
-          content: `Error researching strategic initiatives: ${error instanceof Error ? error.message : "Unknown error"}`,
-          name: "strategicInitiativesAgent",
-        })
-      ],
+      messages: [], // No error messages in UI
+      errors: [`Strategic initiatives agent error: ${error instanceof Error ? error.message : "Unknown error"}`],
+      strategicInitiativesResearch: { ...research, complete: true }, // Mark as complete on error
       parallelIntelligenceState: errorState,
     };
   }

@@ -72,6 +72,14 @@ AVAILABLE TOOLS:
 YOUR GOAL:
 Gather comprehensive intelligence about vendor relationships, technology partners, and integrations until you reach a quality score of ${minimumQualityThreshold} or higher.
 
+IMPORTANT SEARCH GUIDELINES:
+- Before making any search, check PREVIOUS SEARCHES section below
+- DO NOT repeat searches with similar queries
+- Build upon previous results rather than duplicating efforts
+- If a search has already been done, use deep-dive or extraction tools instead
+- Each search should add NEW information, not repeat existing findings
+- Quality over quantity - make each search count
+
 DECISION MAKING:
 - If you need to find sources → use vendor_relationships_discovery
 - If you have promising URLs → use vendor_relationships_extract to get structured data
@@ -107,10 +115,7 @@ ${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`
     console.log(`[Vendor Relationships Agent] Completion criteria met - Quality: ${research.quality}, Attempts: ${research.attempts}`);
     
     return {
-      messages: [new AIMessage({
-        content: `Vendor relationships research complete. Quality score: ${research.quality.toFixed(2)}, Attempts: ${research.attempts}. Moving to synchronization.`,
-        name: "vendorRelationshipsAgent"
-      })],
+      messages: [], // No user-visible messages from agents
       vendorRelationshipsResearch: { ...research, complete: true },
       parallelIntelligenceState: {
         ...state.parallelIntelligenceState,
@@ -177,7 +182,7 @@ ${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`
     };
     
     return {
-      messages: [response],
+      messages: [], // No user-visible messages from agents - only state updates
       vendorRelationshipsResearch: updatedResearch,
       parallelIntelligenceState: updatedParallelState,
     };
@@ -195,12 +200,8 @@ ${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`
     };
     
     return {
-      messages: [
-        new AIMessage({
-          content: `Error researching vendor relationships: ${error instanceof Error ? error.message : "Unknown error"}`,
-          name: "vendorRelationshipsAgent",
-        })
-      ],
+      messages: [], // No error messages in UI
+      errors: [`Vendor relationships agent error: ${error instanceof Error ? error.message : "Unknown error"}`],
       parallelIntelligenceState: errorState,
     };
   }
