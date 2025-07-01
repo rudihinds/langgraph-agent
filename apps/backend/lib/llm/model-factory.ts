@@ -29,7 +29,17 @@ export function createModel(
   modelName?: string, 
   overrides?: ModelOverrides
 ): BaseChatModel {
-  const model = modelName || DEFAULT_MODEL;
+  let model = modelName || DEFAULT_MODEL;
+  
+  // Handle provider-prefixed model names (e.g., "anthropic/claude-3-5-sonnet")
+  if (model.includes('/')) {
+    const parts = model.split('/');
+    if (parts.length === 2) {
+      // Remove the provider prefix
+      model = parts[1];
+    }
+  }
+  
   const config = MODEL_CONFIGS[model];
   
   if (!config) {

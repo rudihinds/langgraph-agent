@@ -48,6 +48,14 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxTokens: 4000,
     description: "GPT-4 Turbo - optimized for speed"
   },
+  "gpt-3.5-turbo": {
+    provider: "openai",
+    contextWindow: 16385,
+    maxOutputTokens: 4096,
+    temperature: 0.3,
+    maxTokens: 4000,
+    description: "GPT-3.5 Turbo - fast and efficient"
+  },
   
   // Anthropic Models
   "claude-3-5-sonnet-20241022": {
@@ -56,7 +64,15 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     maxOutputTokens: 8192,
     temperature: 0.3,
     maxTokens: 4000,
-    description: "Claude 3.5 Sonnet - balanced performance"
+    description: "Claude 3.5 Sonnet - latest version"
+  },
+  "claude-3-5-sonnet-20240620": {
+    provider: "anthropic", 
+    contextWindow: 200000,
+    maxOutputTokens: 8192,
+    temperature: 0.3,
+    maxTokens: 4000,
+    description: "Claude 3.5 Sonnet - older version"
   },
   "claude-3-haiku-20240307": {
     provider: "anthropic",
@@ -77,7 +93,17 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
 };
 
 // Default model from environment variable or fallback
-export const DEFAULT_MODEL = process.env.DEFAULT_MODEL || "gpt-4.1-nano-2025-04-14";
+let defaultModel = process.env.DEFAULT_MODEL || "gpt-4.1-nano-2025-04-14";
+
+// Handle provider-prefixed default model (e.g., "anthropic/claude-3-5-sonnet")
+if (defaultModel.includes('/')) {
+  const parts = defaultModel.split('/');
+  if (parts.length === 2) {
+    defaultModel = parts[1];
+  }
+}
+
+export const DEFAULT_MODEL = defaultModel;
 
 // Validate that the default model exists
 if (!MODEL_CONFIGS[DEFAULT_MODEL]) {
