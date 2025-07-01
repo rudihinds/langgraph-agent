@@ -5,20 +5,16 @@
  * Uses 3 tools (discovery, extraction, deep-dive) based on its own judgment.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { createTopicTools } from "@/agents/proposal-generation/tools/parallel-intelligence-tools.js";
 import { calculateTopicQuality } from "./utils.js";
 import { extractToolResults, mergeToolResults, markEntitiesAsSearched } from "./tool-result-utils.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
-// Initialize model
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
-  temperature: 0.3,
-  maxTokens: 4000,
-});
+// Initialize model using factory
+const model = createModel();
 
 /**
  * Procurement Patterns Agent
@@ -26,6 +22,7 @@ const model = new ChatAnthropic({
  * This agent autonomously researches procurement patterns, contract history,
  * and spending patterns, with special focus on government databases.
  */
+
 export async function procurementPatternsAgent(
   state: typeof OverallProposalStateAnnotation.State,
   config?: LangGraphRunnableConfig

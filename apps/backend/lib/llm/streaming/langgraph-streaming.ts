@@ -5,10 +5,7 @@
  * This replaces the custom streaming implementation for better compatibility.
  */
 
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatMistralAI } from "@langchain/mistralai";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import {
   BaseMessage,
   AIMessage,
@@ -20,15 +17,7 @@ import { RunnableConfig, RunnableSequence } from "@langchain/core/runnables";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
 // Model name type for strongly typed model selection
-export type SupportedModel =
-  | "gpt-4o"
-  | "gpt-4o-mini"
-  | "gpt-3.5-turbo"
-  | "claude-3-7-sonnet"
-  | "claude-3-opus"
-  | "mistral-large"
-  | "mistral-medium"
-  | "gemini-pro";
+export type SupportedModel = string; // Now supports all models in model factory
 
 /**
  * Creates a streaming model with the specified configuration
@@ -43,34 +32,13 @@ function createStreamingModel(
   temperature: number = 0.7,
   streaming: boolean = true
 ) {
-  // Model instances are created based on the model name prefix
-  if (modelName.startsWith("gpt-")) {
-    return new ChatOpenAI({
-      modelName,
-      temperature,
-      streaming,
-    }).withRetry({ stopAfterAttempt: 3 });
-  } else if (modelName.startsWith("claude-")) {
-    return new ChatAnthropic({
-      modelName,
-      temperature,
-      streaming,
-    }).withRetry({ stopAfterAttempt: 3 });
-  } else if (modelName.startsWith("mistral-")) {
-    return new ChatMistralAI({
-      modelName,
-      temperature,
-      streaming,
-    }).withRetry({ stopAfterAttempt: 3 });
-  } else if (modelName.startsWith("gemini-")) {
-    return new ChatGoogleGenerativeAI({
-      model: modelName,
-      temperature,
-      streaming,
-    }).withRetry({ stopAfterAttempt: 3 });
-  } else {
-    throw new Error(`Unsupported model: ${modelName}`);
-  }
+  // Use the model factory to create the model
+  const model = createModel(modelName, {
+    temperature,
+    streaming,
+  });
+  
+  return model.withRetry({ stopAfterAttempt: 3 });
 }
 
 /**
@@ -83,7 +51,7 @@ function createStreamingModel(
  */
 export function createStreamingLLMChain(
   prompt: ChatPromptTemplate | PromptTemplate,
-  modelName: SupportedModel = "gpt-4o",
+  modelName: SupportedModel = "gpt-4.1-nano-2025-04-14",
   temperature: number = 0.7
 ) {
   const model = createStreamingModel(modelName, temperature);
@@ -99,7 +67,7 @@ export function createStreamingLLMChain(
  * @returns A chat model configured for streaming
  */
 export function createStreamingChatModel(
-  modelName: SupportedModel = "gpt-4o",
+  modelName: SupportedModel = "gpt-4.1-nano-2025-04-14",
   temperature: number = 0.7
 ) {
   return createStreamingModel(modelName, temperature, true);

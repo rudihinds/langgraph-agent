@@ -7,7 +7,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { Logger } from "@/lib/logger.js";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { createWebSearchTool } from "@/tools/web-search.js";
 
 const logger = Logger.getInstance();
@@ -71,9 +71,8 @@ async function performDeepResearch(
       focus_areas,
     });
 
-    // Initialize Claude 3.5 Sonnet with web search capabilities
-    const model = new ChatAnthropic({
-      model: "claude-3-5-sonnet-20241022",
+    // Initialize model with web search capabilities
+    const model = createModel(undefined, {
       temperature: 0.3, // Lower temperature for more focused research
     }).bindTools([createWebSearchTool()]);
 
@@ -160,9 +159,8 @@ async function structureResearchOutput(
   focus_areas: string[],
   toolCallsCount: number
 ): Promise<DeepResearchOutput> {
-  // Use Claude to structure the research into the required format
-  const structuringModel = new ChatAnthropic({
-    model: "claude-3-5-sonnet-20241022",
+  // Use model to structure the research into the required format
+  const structuringModel = createModel(undefined, {
     temperature: 0.1, // Very low temperature for consistent structuring
   });
 

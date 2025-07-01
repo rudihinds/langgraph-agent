@@ -22,7 +22,7 @@ import {
   SystemMessage,
   ToolMessage,
 } from "@langchain/core/messages";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { Annotation, Command } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "../../../state/modules/annotations.js";
 import {
@@ -171,8 +171,7 @@ export async function chatAgentNode(
   if (last instanceof HumanMessage) {
     console.log("Processing human message:", last.content);
 
-    const model = new ChatOpenAI({
-      modelName: "gpt-4o-mini",
+    const model = createModel("gpt-4o-mini", {
       temperature: 0,
     }).bindTools([interpretIntentTool]);
 

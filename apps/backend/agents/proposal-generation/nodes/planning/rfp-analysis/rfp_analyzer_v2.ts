@@ -4,7 +4,6 @@
  */
 
 import { z } from "zod";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { BaseMessage, AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import {
   MessagesAnnotation,
@@ -20,10 +19,10 @@ import {
 import { 
   createRFPSynthesisReviewFlow
 } from "@/lib/langgraph/common/enhanced-hitl-nodes.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLMs
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.3,
   maxTokens: 4000,
 });

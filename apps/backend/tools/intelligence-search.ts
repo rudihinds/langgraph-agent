@@ -9,7 +9,7 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { TavilySearch } from "@langchain/tavily";
 import { LangGraphRunnableConfig, Command } from "@langchain/langgraph";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { ToolMessage } from "@langchain/core/messages";
 import { assessSearchQuality } from "@/agents/proposal-generation/nodes/planning/intelligence-gathering/adaptive-search-utils.js";
 
@@ -22,8 +22,7 @@ const tavilySearch = new TavilySearch({
 });
 
 // Initialize Haiku model for status generation (cheap and fast)
-const statusModel = new ChatAnthropic({
-  modelName: "claude-3-haiku-20240307",
+const statusModel = createModel("claude-3-haiku-20240307", {
   temperature: 0.3,
   maxTokens: 50,
 });

@@ -22,7 +22,7 @@ import { z } from "zod";
 import { AgentExecutor } from "@langchain/core/agents";
 import { StateGraph, END } from "@langchain/langgraph";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { v4 as uuidv4 } from "uuid";
 
 import { ANALYZE_USER_QUERY_PROMPT } from "./prompt-templates.js";

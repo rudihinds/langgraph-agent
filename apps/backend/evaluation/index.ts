@@ -12,7 +12,7 @@ import {
   InterruptMetadata,
   InterruptReason,
 } from "../state/proposal.state.js";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { HumanMessage } from "@langchain/core/messages";
 
 /**
@@ -406,8 +406,7 @@ export function createEvaluationNode(
         }
 
         // Proceed with evaluation
-        const llm = new ChatOpenAI({
-          modelName: "gpt-4o-2024-05-13",
+        const llm = createModel("gpt-4o-2024-05-13", {
           temperature: 0,
           timeout: timeoutSeconds * 1000, // Convert to ms
         }).withRetry({ stopAfterAttempt: 3 });

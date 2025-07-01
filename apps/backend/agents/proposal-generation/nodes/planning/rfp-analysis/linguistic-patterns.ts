@@ -5,16 +5,15 @@
  * from RFP language that reveal evaluator priorities and decision-making styles.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM for linguistic analysis
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.2, // Lower temperature for analytical consistency
   maxTokens: 8000,
 });

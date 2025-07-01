@@ -1,6 +1,6 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 /**
@@ -42,7 +42,7 @@ export const deepResearchTool = tool(
   async ({ query }) => {
     try {
       // Implementation using o3-mini for deeper research
-      const research = await new ChatOpenAI({ model: "gpt-3.5-turbo" })
+      const research = await createModel("gpt-3.5-turbo")
         .withRetry({ stopAfterAttempt: 3 })
         .invoke([
           new SystemMessage(

@@ -5,14 +5,13 @@
  * derived, unstated, and stakeholder-inferred requirements for complete compliance.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM for requirements analysis
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.1, // Very low temperature for systematic requirement extraction
   maxTokens: 8000,
 });

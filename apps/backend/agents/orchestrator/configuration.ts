@@ -1,8 +1,7 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { ENV } from "../../lib/config/env.js";
 import { AgentType } from "./state.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 /**
  * Configuration options for the workflow orchestrator
@@ -69,25 +68,14 @@ interface LLMOptions {
  * Create the default LLM based on environment and configuration
  */
 function createDefaultLLM(options?: Partial<LLMOptions>): BaseLanguageModel {
-  const provider =
-    options?.provider ||
-    (ENV.DEFAULT_MODEL.includes("anthropic") ? "anthropic" : "openai");
-
-  switch (provider) {
-    case "anthropic":
-      return new ChatAnthropic({
-        temperature: options?.temperature ?? 0.1,
-        modelName: options?.model ?? "claude-3-5-sonnet-20240620",
-        maxTokens: options?.maxTokens,
-      }).withRetry({ stopAfterAttempt: 3 });
-    case "openai":
-    default:
-      return new ChatOpenAI({
-        temperature: options?.temperature ?? 0.1,
-        modelName: options?.model ?? "gpt-4o",
-        maxTokens: options?.maxTokens,
-      }).withRetry({ stopAfterAttempt: 3 });
-  }
+  const modelName = options?.model || ENV.DEFAULT_MODEL;
+  
+  const llm = createModel(modelName, {
+    temperature: options?.temperature ?? 0.1,
+    maxTokens: options?.maxTokens,
+  });
+  
+  return llm.withRetry({ stopAfterAttempt: 3 });
 }
 
 /**
@@ -101,7 +89,7 @@ export function createDefaultConfig(): OrchestratorConfig {
     workflowTimeoutMs: 600000, // 10 minutes
     persistState: true,
     debug: false,
-    llmModel: "gpt-4-turbo",
+    llmModel: ENV.DEFAULT_MODEL || "gpt-4.1-nano-2025-04-14",
     agentConfigs: {},
   };
 }

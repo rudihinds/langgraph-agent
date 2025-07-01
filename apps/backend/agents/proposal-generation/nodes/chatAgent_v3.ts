@@ -10,17 +10,16 @@
  */
 
 import { z } from "zod";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { BaseMessage, AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import {
   Command,
   END
 } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "../../../state/modules/annotations.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.3,
   maxTokens: 2000,
 });

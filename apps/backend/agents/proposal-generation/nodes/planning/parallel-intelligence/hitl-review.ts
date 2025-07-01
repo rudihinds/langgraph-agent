@@ -6,14 +6,13 @@
  */
 
 import { interrupt, Command } from "@langchain/langgraph";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM for response generation and parsing
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.3,
   maxTokens: 2000,
 });

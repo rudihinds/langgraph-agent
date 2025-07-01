@@ -1,4 +1,4 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { webSearchTool, deepResearchTool } from "./tools.js";
 // Prompts are now handled within the node that invokes the agent
@@ -12,7 +12,7 @@ import { webSearchTool, deepResearchTool } from "./tools.js";
  */
 export const createDeepResearchAgent = () => {
   return createReactAgent({
-    llm: new ChatOpenAI({ model: "gpt-3.5-turbo" }).withRetry({
+    llm: createModel("gpt-3.5-turbo").withRetry({
       stopAfterAttempt: 3,
     }),
     tools: [webSearchTool],
@@ -28,7 +28,7 @@ export const createDeepResearchAgent = () => {
  */
 export const createSolutionSoughtAgent = () => {
   return createReactAgent({
-    llm: new ChatOpenAI({ model: "gpt-3.5-turbo" }).withRetry({
+    llm: createModel("gpt-3.5-turbo").withRetry({
       stopAfterAttempt: 3,
     }),
     tools: [deepResearchTool],

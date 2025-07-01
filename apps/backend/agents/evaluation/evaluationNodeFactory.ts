@@ -1,4 +1,5 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { LangChainTracer } from "langchain/callbacks";
 import { ConsoleCallbackHandler } from "langchain/callbacks";
 import { withRetry } from "@langchain/core/runnables";
@@ -89,10 +90,9 @@ export class EvaluationNodeFactory {
   /**
    * Create a model instance with the specified options
    */
-  private static getModel(options: EvaluationNodeOptions): ChatOpenAI {
+  private static getModel(options: EvaluationNodeOptions): BaseChatModel {
     const modelName = options.modelName || "gpt-4-turbo";
-    const model = new ChatOpenAI({
-      modelName,
+    const model = createModel(modelName, {
       temperature: 0,
       callbacks: [new LangChainTracer(), new ConsoleCallbackHandler()],
     });

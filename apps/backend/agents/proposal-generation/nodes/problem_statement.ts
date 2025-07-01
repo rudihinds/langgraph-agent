@@ -13,7 +13,7 @@ import {
   BaseMessage,
 } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { z } from "zod";
 import { Logger } from "../../../lib/logger.js";
 import { ENV } from "../../../lib/config/env.js";
@@ -256,11 +256,8 @@ async function executeProblemStatementGraph(
   });
 
   // Set up the model with tools
-  const model = new ChatOpenAI({
+  const model = createModel(undefined, {
     temperature: 0.7,
-    modelName: ENV.DEFAULT_MODEL.includes("openai")
-      ? ENV.DEFAULT_MODEL.split("/")[1]
-      : "gpt-4-1106-preview",
   }).bindTools(tools);
 
   // Create the model node function

@@ -6,7 +6,7 @@
  */
 
 import { BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
 /**
  * Configuration for token management
@@ -23,9 +23,18 @@ export interface TokenConfig {
  * Default token limits for different models
  */
 export const TOKEN_LIMITS = {
+  // Anthropic models
   "claude-3-5-sonnet-20241022": 200000,
   "claude-3-haiku-20240307": 200000,
   "claude-3-opus-20240229": 200000,
+  
+  // OpenAI models
+  "gpt-4.1-nano-2025-04-14": 1000000, // 1M tokens!
+  "gpt-4o": 128000,
+  "gpt-4o-mini": 128000,
+  "gpt-4-turbo": 128000,
+  "gpt-4": 8192,
+  "gpt-3.5-turbo": 16385,
 } as const;
 
 /**
@@ -127,7 +136,7 @@ export function trimMessagesToTokenLimit(
  */
 export async function compressToolMessages(
   toolMessages: ToolMessage[],
-  model: ChatAnthropic
+  model: BaseChatModel
 ): Promise<AIMessage> {
   const toolContents = toolMessages.map(msg => {
     const content = typeof msg.content === 'string' 

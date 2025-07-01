@@ -3,13 +3,13 @@
  * Part of Phase 2.2 planning agents implementation
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { HumanMessage } from "@langchain/core/messages";
 import { createWebSearchTool } from "@/tools/web-search.js";
 import { deepResearchTool } from "@/tools/deep-research.js";
 import { Logger } from "@/lib/logger.js";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/constants.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 const logger = Logger.getInstance();
 
@@ -222,10 +222,9 @@ export async function enhancedResearchNode(
   logger.info("Enhanced Research Agent starting");
 
   try {
-    // Create Claude 3.5 model with BOTH web search and deep research tools
+    // Create model with BOTH web search and deep research tools
     // Phase 1.2: Enhanced Tool Binding - Dual tool strategy
-    const model = new ChatAnthropic({
-      model: "claude-3-5-sonnet-20241022",
+    const model = createModel(undefined, {
       temperature: 0.7,
     }).bindTools([createWebSearchTool(), deepResearchTool]);
 

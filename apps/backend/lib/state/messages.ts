@@ -5,7 +5,7 @@ import {
 } from "@langchain/core/language_models/count_tokens";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { logger } from "../../agents/logger.js";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 interface PruneMessageHistoryOptions {
   /**
@@ -179,8 +179,7 @@ async function summarizeConversation(
   try {
     // If llm wasn't passed, create one with withRetry
     if (!llm) {
-      llm = new ChatOpenAI({
-        modelName: "gpt-3.5-turbo",
+      llm = createModel("gpt-3.5-turbo", {
         temperature: 0,
       }).withRetry({ stopAfterAttempt: 3 });
     }

@@ -19,6 +19,15 @@ import { env } from "../config/env.js";
  */
 const OPENAI_MODELS: LLMModel[] = [
   {
+    id: "gpt-4.1-nano-2025-04-14",
+    name: "GPT-4.1 Nano",
+    provider: "openai",
+    contextWindow: 1000000, // 1M tokens
+    inputCostPer1000Tokens: 0.0001, // $0.10 per 1M tokens
+    outputCostPer1000Tokens: 0.0004, // $0.40 per 1M tokens
+    supportsStreaming: true,
+  },
+  {
     id: "gpt-4o",
     name: "GPT-4o",
     provider: "openai",

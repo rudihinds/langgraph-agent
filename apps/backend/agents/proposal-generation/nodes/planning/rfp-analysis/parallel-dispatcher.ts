@@ -8,11 +8,11 @@
  */
 
 import { Send, LangGraphRunnableConfig } from "@langchain/langgraph";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Schema for extracting company and industry information
 const CompanyIndustrySchema = z.object({
@@ -22,8 +22,7 @@ const CompanyIndustrySchema = z.object({
 });
 
 // Initialize LLM for extraction
-const extractionModel = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const extractionModel = createModel(undefined, {
   temperature: 0.1,
   maxTokens: 500,
 });

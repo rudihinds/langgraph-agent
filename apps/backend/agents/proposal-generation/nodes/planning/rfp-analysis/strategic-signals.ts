@@ -5,14 +5,13 @@
  * and competitive positioning opportunities to enable culturally-aligned proposals.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM for strategic signal analysis
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.3, // Moderate temperature for strategic interpretation
   maxTokens: 8000,
 });

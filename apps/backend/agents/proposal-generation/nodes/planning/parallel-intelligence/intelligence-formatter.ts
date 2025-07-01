@@ -5,18 +5,14 @@
  * into a human-readable executive briefing.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM for formatting
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
-  temperature: 0.3,
-  maxTokens: 4000,
-});
+const model = createModel();
 
 /**
  * Intelligence Formatter Node

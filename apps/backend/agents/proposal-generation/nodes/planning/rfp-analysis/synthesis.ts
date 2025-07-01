@@ -5,16 +5,15 @@
  * intelligence strategies, identifying critical risks and high-impact opportunities.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { ProcessingStatus } from "@/state/modules/types.js";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLM for synthesis analysis
-const model = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const model = createModel(undefined, {
   temperature: 0.2, // Lower temperature for consistent strategic synthesis
   maxTokens: 8000,
 });

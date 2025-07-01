@@ -6,8 +6,6 @@
  */
 
 import { z } from "zod";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatOpenAI } from "@langchain/openai";
 import { BaseMessage, AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import {
   Command,
@@ -15,16 +13,16 @@ import {
 } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "../../../state/modules/annotations.js";
 import { interpretIntentTool, CommandSchemaType } from "../../../tools/interpretIntentTool.js";
+import { createModel } from "@/lib/llm/model-factory.js";
 
 // Initialize LLMs
-const chatModel = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const chatModel = createModel(undefined, {
   temperature: 0.3,
   maxTokens: 2000,
 });
 
-const toolModel = new ChatOpenAI({
-  modelName: "gpt-4o-mini",
+// Tool model can use a specific fast model for tool operations
+const toolModel = createModel("gpt-4o-mini", {
   temperature: 0,
 }).bindTools([interpretIntentTool]);
 

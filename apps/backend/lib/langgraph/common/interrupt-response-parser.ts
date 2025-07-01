@@ -6,12 +6,11 @@
  */
 
 import { z } from "zod";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 // Initialize LLM for response parsing
-const parsingModel = new ChatAnthropic({
-  modelName: "claude-3-5-sonnet-20241022",
+const parsingModel = createModel(undefined, {
   temperature: 0.1, // Very low temperature for consistent parsing
   maxTokens: 1000,
 });

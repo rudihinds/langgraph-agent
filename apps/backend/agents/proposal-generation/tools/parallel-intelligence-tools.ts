@@ -8,11 +8,10 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { TavilySearch } from "@langchain/tavily";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { createModel } from "@/lib/llm/model-factory.js";
 
-// Initialize Haiku for helper functions
-const helperModel = new ChatAnthropic({
-  modelName: "claude-3-haiku-20240307",
+// Initialize Haiku for helper functions - using a faster model for tool operations
+const helperModel = createModel("claude-3-haiku-20240307", {
   temperature: 0,
 });
 

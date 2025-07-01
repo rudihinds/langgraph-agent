@@ -13,7 +13,7 @@ import {
   BaseMessage,
 } from "@langchain/core/messages";
 import { DynamicStructuredTool } from "@langchain/core/tools";
-import { ChatOpenAI } from "@langchain/openai";
+import { createModel } from "@/lib/llm/model-factory.js";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { StateGraph, END } from "@langchain/langgraph";
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
@@ -265,11 +265,8 @@ async function executeSectionGenerationGraph(
   toolsNode: ToolNode
 ): Promise<{ content: string; messages: BaseMessage[] }> {
   // Set up the model with tools
-  const model = new ChatOpenAI({
+  const model = createModel(undefined, {
     temperature: 0.7,
-    modelName: ENV.DEFAULT_MODEL.includes("openai")
-      ? ENV.DEFAULT_MODEL.split("/")[1]
-      : "gpt-4",
   }).bindTools(tools);
 
   // Node name constants for readability
