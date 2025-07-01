@@ -9,7 +9,6 @@ import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
 import { createTopicTools } from "@/agents/proposal-generation/tools/parallel-intelligence-tools.js";
-import { calculateTopicQuality } from "./utils.js";
 import { extractToolResults, mergeToolResults, markEntitiesAsSearched } from "./tool-result-utils.js";
 import { createModel } from "@/lib/llm/model-factory.js";
 
@@ -28,181 +27,204 @@ export async function vendorRelationshipsAgent(
   messages: AIMessage[]; 
   vendorRelationshipsResearch?: any;
   parallelIntelligenceState?: any;
+  errors?: string[];
 }> {
   const topic = "current vendor relationships";
-  console.log(`[Vendor Relationships Agent] Starting research iteration`);
-  
   const company = state.company;
   const industry = state.industry;
   const research = state.vendorRelationshipsResearch || {
-    iteration: 0,
     searchQueries: [],
     searchResults: [],
     extractedUrls: [],
     extractedEntities: [],
-    quality: 0,
-    attempts: 0,
+    insights: []
   };
   
-  // Increment iteration
-  const iteration = research.iteration + 1;
-  console.log(`[Vendor Relationships Agent] Iteration ${iteration}`);
+  console.log(`[Vendor Relationships Agent] Starting autonomous research`);
   
-  // Get configuration
-  const topicConfig = state.adaptiveResearchConfig?.topics?.find(
-    t => t.topic === topic
-  );
-  const minimumQualityThreshold = topicConfig?.minimumQualityThreshold || 0.4;
-  
-  // Build dynamic agent prompt
-  const systemPrompt = `You are a vendor relationships researcher for ${company} in the ${industry} sector.
+  // Process context data outside the prompt for better formatting
+  const previousSearches = research.searchQueries.length > 0 
+    ? research.searchQueries.map((query: string, index: number) => {
+        const result = research.searchResults[index];
+        const resultCount = result?.results?.length || 0;
+        return `${index + 1}. "${query}" (found ${resultCount} results)`;
+      }).join('\n')
+    : 'None yet';
+    
+  const extractedUrls = research.extractedUrls.length > 0
+    ? research.extractedUrls.map((url: string) => `- ${url}`).join('\n')
+    : 'None yet';
+    
+  // Format extracted vendors with detailed information
+  const extractedVendors = research.extractedEntities
+    .filter((e: any) => e.type === 'organization')
+    .map((vendor: any) => {
+      const status = vendor.searched ? 'RESEARCHED' : 'NEEDS RESEARCH';
+      let info = `- ${vendor.name} - ${status}`;
+      if (vendor.relationship) info += `\n  Relationship: ${vendor.relationship}`;
+      if (vendor.products && vendor.products.length > 0) {
+        info += `\n  Products/Services: ${vendor.products.slice(0, 3).join(', ')}`;
+        if (vendor.products.length > 3) info += ` (+${vendor.products.length - 3} more)`;
+      }
+      if (vendor.description && vendor.searched) {
+        info += `\n  Details: ${vendor.description.slice(0, 100)}...`;
+      }
+      return info;
+    });
+    
+  const extractedVendorsFormatted = extractedVendors.length > 0 
+    ? extractedVendors.join('\n') 
+    : 'None yet';
+    
+  // Get unsearched vendors for agent guidance
+  const unsearchedVendors = research.extractedEntities
+    .filter((e: any) => e.type === 'organization' && !e.searched)
+    .slice(0, 5)
+    .map((vendor: any) => `- ${vendor.name}${vendor.relationship ? ` (${vendor.relationship})` : ''}`)
+    .join('\n');
 
-CURRENT STATE:
-- Iteration: ${iteration}
-- URLs discovered: ${research.extractedUrls.length}
-- Entities extracted: ${research.extractedEntities.length}
-- Current quality score: ${research.quality.toFixed(2)}
-- Minimum quality threshold: ${minimumQualityThreshold}
+  // Build autonomous agent prompt with processed variables
+  const systemPrompt = `You are an autonomous vendor relationships researcher for ${company} in the ${industry} sector.
+
+RESEARCH STRATEGY - Follow this approach:
+1. DISCOVERY: Find partner pages, integration lists, and customer success stories
+2. TECHNOLOGY SCAN: Search for technology stack and vendor mentions
+3. EXTRACTION: Extract vendor names and relationship types from URLs
+4. DEEP RESEARCH: Research specific vendors and partnerships in detail
 
 AVAILABLE TOOLS:
 - vendor_relationships_discovery: Find pages about partners and vendors
 - vendor_relationships_extract: Extract vendor/partner information from URLs  
 - vendor_relationships_deepdive: Research specific vendors or partnerships
 
-YOUR GOAL:
-Gather comprehensive intelligence about vendor relationships, technology partners, and integrations until you reach a quality score of ${minimumQualityThreshold} or higher.
+TOOL USAGE HEURISTICS:
+- Start with discovery to find partner directories and integration pages
+- Use extraction on promising URLs (partners, integrations, case studies)
+- Use deep-dive for specific vendors to understand the relationship depth
+- Use 3+ tools in parallel when exploring multiple vendor categories
 
-IMPORTANT SEARCH GUIDELINES:
-- Before making any search, check PREVIOUS SEARCHES section below
-- DO NOT repeat searches with similar queries
-- Build upon previous results rather than duplicating efforts
-- If a search has already been done, use deep-dive or extraction tools instead
-- Each search should add NEW information, not repeat existing findings
-- Quality over quantity - make each search count
+SELF-EVALUATION - After each tool use, assess:
+- Have I found the key technology partners and vendors?
+- Do I understand what products/services each vendor provides?
+- Have I identified strategic vs. tactical partnerships?
+- Is my information from recent, authoritative sources?
 
-DECISION MAKING:
-- If you need to find sources → use vendor_relationships_discovery
-- If you have promising URLs → use vendor_relationships_extract to get structured data
-- If you have extracted entities → use vendor_relationships_deepdive to research them individually
-- You decide the best approach based on what you've gathered so far
+COMPLETION CRITERIA - Stop when you have:
+- Identified 5-10 key vendors/partners
+- Understood the type of relationship (integration, reseller, strategic partner)
+- Found specific products or services being used
+- Gathered recent evidence of active partnerships
 
-The system will stop you after ${topicConfig?.maxAttempts || 3} attempts or when quality threshold is met.
-Make each search count - quality over quantity.
+PREVIOUS SEARCHES (Don't repeat these):
+${previousSearches}
 
-FOCUS AREAS:
-- Technology partners and integrations
-- Solution providers and vendors
-- Strategic partnerships
-- Ecosystem relationships
+EXTRACTED URLS (Already processed):
+${extractedUrls}
 
-PREVIOUS SEARCHES:
-${research.searchQueries.slice(-3).join('\n') || 'None yet'}
+EXTRACTED VENDORS (Research status):
+${extractedVendorsFormatted}
 
-EXTRACTED VENDORS:
-${research.extractedEntities.slice(-5).map((e: any) => `- ${e.name} (${e.type})`).join('\n') || 'None yet'}`;
+${unsearchedVendors ? `VENDORS NEEDING RESEARCH:
+${unsearchedVendors}` : ''}
 
-  const humanPrompt = `Continue researching vendor relationships for ${company}. Choose the most appropriate tool based on your current progress.`;
-  
-  // Check completion conditions BEFORE generating tool calls
-  const completionConfig = state.adaptiveResearchConfig?.topics?.find(
-    t => t.topic === "current vendor relationships"
-  );
-  
-  // If we've met completion conditions, return without tool calls
-  if (research.quality >= (completionConfig?.minimumQualityThreshold || 0.4) || 
-      research.attempts >= (completionConfig?.maxAttempts || 3)) {
-    
-    console.log(`[Vendor Relationships Agent] Completion criteria met - Quality: ${research.quality}, Attempts: ${research.attempts}`);
-    
-    return {
-      messages: [], // No user-visible messages from agents
-      vendorRelationshipsResearch: { ...research, complete: true },
-      parallelIntelligenceState: {
-        ...state.parallelIntelligenceState,
-        vendorRelationships: {
-          status: "complete" as const,
-          quality: research.quality,
-        },
-      },
-    };
-  }
+IMPORTANT: 
+- Don't repeat similar searches - build on previous results
+- Focus on current, active vendor relationships
+- Look for both technology vendors and service providers
+- If you have unsearched vendors, prioritize researching them
+- If you determine you have sufficient information, simply respond without tool calls
+- Use parallel tool calling when exploring multiple vendor categories`;
+
+  const humanPrompt = `Continue researching vendor relationships for ${company}. ${
+    unsearchedVendors 
+      ? 'You have extracted vendors that haven\'t been researched yet - consider using deepdive on them.' 
+      : 'Use your judgment to determine the best tools and when you have sufficient information.'
+  } Follow the research strategy outlined above.`;
 
   try {
     // Emit status
     if (config?.writer) {
       config.writer({
-        message: `Vendor relationships research: iteration ${iteration}...`,
+        message: `Vendor relationships research: analyzing previous work...`,
       });
     }
     
-    // Bind tools
+    // Bind tools and generate response
     const tools = createTopicTools("vendor_relationships");
     const modelWithTools = model.bindTools(tools);
     
-    // Generate response with tool calls
     const response = await modelWithTools.invoke([
       new SystemMessage(systemPrompt),
       new HumanMessage(humanPrompt)
     ], config);
     
-    // Extract tool results from any ToolMessages in recent messages
-    const allMessages = [...(state.messages || []), response];
-    const toolResults = extractToolResults(allMessages);
+    // Check if agent decided to complete (no tool calls)
+    const isComplete = !response.tool_calls || response.tool_calls.length === 0;
     
-    // Merge tool results into research state
-    const researchWithToolResults = mergeToolResults(research, toolResults);
-    
-    // Mark entities as searched if they were processed by deep-dive tools
-    const searchedEntityNames = toolResults.insights.map((insight: any) => insight.entity).filter(Boolean);
-    if (searchedEntityNames.length > 0) {
-      researchWithToolResults.extractedEntities = markEntitiesAsSearched(
-        researchWithToolResults.extractedEntities, 
-        searchedEntityNames
+    // Log tool calls made by the agent
+    if (response.tool_calls && response.tool_calls.length > 0) {
+      console.log(`[Vendor Relationships Agent] Tool calls made:`, 
+        response.tool_calls.map((tc: any) => ({ 
+          name: tc.name, 
+          args: tc.args 
+        }))
       );
+    } else {
+      console.log(`[Vendor Relationships Agent] No tool calls - agent determined research is complete`);
     }
     
-    // Calculate quality based on updated research data
-    const quality = calculateTopicQuality(researchWithToolResults);
+    // Process tool results if any were made
+    let updatedResearch = research;
+    if (response.tool_calls && response.tool_calls.length > 0) {
+      const allMessages = [...(state.messages || []), response];
+      const toolResults = extractToolResults(allMessages);
+      updatedResearch = mergeToolResults(research, toolResults);
+      
+      // Mark entities as searched if they were processed by deep-dive tools
+      const searchedEntityNames = toolResults.insights
+        .map((insight: any) => insight.entity)
+        .filter(Boolean);
+        
+      if (searchedEntityNames.length > 0) {
+        updatedResearch.extractedEntities = markEntitiesAsSearched(
+          updatedResearch.extractedEntities, 
+          searchedEntityNames
+        );
+      }
+    }
     
-    // Update research state
-    const updatedResearch = {
-      ...researchWithToolResults,
-      iteration,
-      attempts: research.attempts + 1,
-      quality,
-    };
-    
-    // Update parallel intelligence state
-    const updatedParallelState = {
-      ...state.parallelIntelligenceState,
-      vendorRelationships: {
-        status: "running" as const,
-        quality,
-      },
-    };
+    // Simple quality heuristic based on results
+    const vendorCount = updatedResearch.extractedEntities.filter((e: any) => e.type === 'organization').length;
+    const researchedCount = updatedResearch.extractedEntities.filter((e: any) => e.type === 'organization' && e.searched).length;
+    const quality = researchedCount >= 5 ? 0.9 : (vendorCount > 0 ? 0.6 : 0.3);
     
     return {
-      messages: [], // No user-visible messages from agents - only state updates
-      vendorRelationshipsResearch: updatedResearch,
-      parallelIntelligenceState: updatedParallelState,
+      messages: [],
+      vendorRelationshipsResearch: { ...updatedResearch, complete: isComplete },
+      parallelIntelligenceState: {
+        ...state.parallelIntelligenceState,
+        vendorRelationships: {
+          status: isComplete ? "complete" : "running",
+          quality: quality,
+        },
+      },
     };
     
   } catch (error) {
     console.error("[Vendor Relationships Agent] Error:", error);
     
-    // Update state with error
-    const errorState = {
-      ...state.parallelIntelligenceState,
-      vendorRelationships: {
-        status: "error" as const,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-      },
-    };
-    
     return {
-      messages: [], // No error messages in UI
+      messages: [],
       errors: [`Vendor relationships agent error: ${error instanceof Error ? error.message : "Unknown error"}`],
-      parallelIntelligenceState: errorState,
+      vendorRelationshipsResearch: { ...research, complete: true },
+      parallelIntelligenceState: {
+        ...state.parallelIntelligenceState,
+        vendorRelationships: {
+          status: "error" as const,
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+          quality: 0,
+        },
+      },
     };
   }
 }
