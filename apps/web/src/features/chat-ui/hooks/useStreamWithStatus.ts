@@ -1,5 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useStreamContext } from "../providers/StreamProvider";
+import { StatusInfo, extractStatusFromChunk } from "../types/status";
 
 /**
  * Custom hook that extends the StreamProvider functionality with automatic
@@ -11,10 +12,11 @@ import { useStreamContext } from "../providers/StreamProvider";
  * - Manages status state and auto-clearing after 5 seconds
  * - Handles correct event structure from LangGraph (["custom", data])
  * - Preserves existing onChunk handlers
+ * - Supports enhanced status format with agent info
  */
 export function useStreamWithStatus() {
   const { submit: baseSubmit, ...streamData } = useStreamContext();
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<StatusInfo | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
 
   // Clean up timeout on unmount
@@ -28,13 +30,13 @@ export function useStreamWithStatus() {
 
   const submit = useCallback(async (values: any, options?: any) => {
     // Clear previous status
-    setStatus("");
+    setStatus(null);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     
-    // Ensure streamMode includes "custom" for status events
-    const streamMode = options?.streamMode || ["messages"];
+    // Ensure streamMode includes "custom" for status events and "updates" for node updates only
+    const streamMode = options?.streamMode || ["updates"];
     const customStreamMode = Array.isArray(streamMode) 
       ? (streamMode.includes("custom") ? streamMode : [...streamMode, "custom"])
       : [streamMode, "custom"];
@@ -47,24 +49,25 @@ export function useStreamWithStatus() {
         options?.onChunk?.(chunk);
         
         // Handle custom status events from LangGraph
-        // LangGraph sends custom events as ["custom", data] arrays
-        if (Array.isArray(chunk) && chunk[0] === "custom") {
-          const data = chunk[1];
+        const statusMessage = extractStatusFromChunk(chunk);
+        
+        if (statusMessage) {
+          const statusInfo: StatusInfo = {
+            ...statusMessage,
+            timestamp: new Date()
+          };
           
-          // Check if the data has a message property (our status format)
-          if (data && typeof data === 'object' && 'message' in data && data.message) {
-            console.log("[useStreamWithStatus] Received status:", data.message);
-            setStatus(data.message);
-            
-            // Auto-clear status after 5 seconds
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-            }
-            
-            timeoutRef.current = setTimeout(() => {
-              setStatus("");
-            }, 5000);
+          console.log("[useStreamWithStatus] Received status:", statusInfo);
+          setStatus(statusInfo);
+          
+          // Auto-clear status after 5 seconds
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
           }
+          
+          timeoutRef.current = setTimeout(() => {
+            setStatus(null);
+          }, 5000);
         }
       }
     });

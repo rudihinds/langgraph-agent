@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useAgentActivity } from "../hooks/useAgentActivity";
 import { AgentLoadingState } from "./AgentLoadingState";
 import { BaseInterruptPayload } from "../providers/StreamProvider";
+import { StatusMessage } from "./StatusMessage";
 
 interface NoMessagesViewProps {
   rfpId?: string | null;
@@ -223,12 +224,9 @@ export function Thread() {
               );
             })}
 
-            {/* Simple status display */}
+            {/* Enhanced status display */}
             {status && (
-              <div className="flex items-center gap-2 px-4 py-2">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                <span className="text-sm text-gray-600">{status}</span>
-              </div>
+              <StatusMessage status={status} className="mx-4" />
             )}
             
             {/* Show loading state at bottom when agent is working but no status */}

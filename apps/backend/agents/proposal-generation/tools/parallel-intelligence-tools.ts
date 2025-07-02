@@ -10,8 +10,8 @@ import { z } from "zod";
 import { TavilySearch } from "@langchain/tavily";
 import { createModel } from "@/lib/llm/model-factory.js";
 
-// Initialize Haiku for helper functions - using a faster model for tool operations
-const helperModel = createModel("claude-3-haiku-20240307", {
+// Initialize Sonnet 3.5 for helper functions - using latest model for tool operations
+const helperModel = createModel("claude-3-5-sonnet-20241022", {
   temperature: 0,
 });
 
@@ -28,7 +28,7 @@ export function createTopicTools(topic: string) {
       const tavily = new TavilySearch({
         maxResults: 8,
         includeAnswer: true,
-        includeRawContent: true,
+        includeRawContent: false,
         searchDepth: "basic",
       });
       
@@ -67,7 +67,7 @@ export function createTopicTools(topic: string) {
       // Use targeted search on the specific URL
       const tavily = new TavilySearch({
         maxResults: 1,
-        includeRawContent: true,
+        includeRawContent: false,
         includeDomains: [new URL(url).hostname]
       });
       

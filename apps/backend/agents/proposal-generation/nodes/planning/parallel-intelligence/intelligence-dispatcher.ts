@@ -23,7 +23,16 @@ export async function intelligenceDispatcher(
   state: typeof OverallProposalStateAnnotation.State,
   config?: LangGraphRunnableConfig
 ): Promise<Command | { errors: string[]; intelligenceGatheringStatus: ProcessingStatus }> {
-  console.log("[Intelligence Dispatcher] Starting parallel intelligence gathering");
+  const timestamp = new Date().toISOString();
+  console.log(`[Intelligence Dispatcher] Starting parallel intelligence gathering at ${timestamp}`);
+  console.log(`[Intelligence Dispatcher] Current status: ${state.intelligenceGatheringStatus}`);
+  console.log(`[Intelligence Dispatcher] Message count: ${state.messages?.length || 0}`);
+  
+  // Check if intelligence gathering is already running to prevent duplicate dispatches
+  if (state.intelligenceGatheringStatus === ProcessingStatus.RUNNING) {
+    console.warn("[Intelligence Dispatcher] Intelligence gathering is already running - skipping duplicate dispatch");
+    return { errors: [], intelligenceGatheringStatus: ProcessingStatus.RUNNING };
+  }
   
   const company = state.company;
   const industry = state.industry;
@@ -179,11 +188,14 @@ export async function intelligenceDispatcher(
     parallelIntelligenceState,
     researchTopics,
     adaptiveResearchConfig,
+    company,  // Pass company to subgraphs
+    industry, // Pass industry to subgraphs
     ...topicResearchStates,
   };
   
   // Return Command with goto to parallelIntelligenceRouter
   // The router will return Send commands for all 4 agents
+  console.log(`[Intelligence Dispatcher] Dispatching to parallel router with ${Object.keys(stateUpdates).length} state updates`);
   return new Command({
     goto: "parallelIntelligenceRouter",
     update: stateUpdates,

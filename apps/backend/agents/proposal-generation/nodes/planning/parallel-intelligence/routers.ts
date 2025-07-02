@@ -5,7 +5,7 @@
 import { Send } from "@langchain/langgraph";
 import { AIMessage } from "@langchain/core/messages";
 import { OverallProposalStateAnnotation } from "@/state/modules/annotations.js";
-import { PARALLEL_INTELLIGENCE_NODES } from "./index.js";
+import { PARALLEL_INTELLIGENCE_NODES, PARALLEL_INTELLIGENCE_SUBGRAPH_NODES } from "./index.js";
 
 /**
  * Parallel Intelligence Router
@@ -16,14 +16,27 @@ import { PARALLEL_INTELLIGENCE_NODES } from "./index.js";
 export function parallelIntelligenceRouter(
   state: typeof OverallProposalStateAnnotation.State
 ): Send[] {
-  console.log("[Parallel Intelligence Router] Dispatching 4 agents in parallel");
+  console.log("[Parallel Intelligence Router] Dispatching 4 subgraphs in parallel");
+  console.log(`[Parallel Intelligence Router] Company: "${state.company}", Industry: "${state.industry}"`);
+  console.log(`[Parallel Intelligence Router] RFP Document exists: ${!!state.rfpDocument}`);
+  console.log(`[Parallel Intelligence Router] State keys:`, Object.keys(state));
   
-  // Return Send commands for all 4 agents
+  // Validation - ensure we have required data
+  if (!state.company || !state.industry) {
+    console.error("[Parallel Intelligence Router] ❌ Missing company or industry data!", {
+      company: state.company,
+      industry: state.industry,
+      hasRfpDocument: !!state.rfpDocument
+    });
+  }
+  
+  // Return Send commands for all 4 subgraph wrapper nodes
+  // Each subgraph has its own isolated message handling
   return [
-    new Send(PARALLEL_INTELLIGENCE_NODES.STRATEGIC_AGENT, state),
-    new Send(PARALLEL_INTELLIGENCE_NODES.VENDOR_AGENT, state),
-    new Send(PARALLEL_INTELLIGENCE_NODES.PROCUREMENT_AGENT, state),
-    new Send(PARALLEL_INTELLIGENCE_NODES.DECISION_AGENT, state),
+    new Send(PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.STRATEGIC_SUBGRAPH, state),
+    new Send(PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.VENDOR_SUBGRAPH, state),
+    new Send(PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.PROCUREMENT_SUBGRAPH, state),
+    new Send(PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.DECISION_SUBGRAPH, state),
   ];
 }
 
@@ -40,7 +53,10 @@ export function strategicInitiativesShouldContinue(
   
   // Check tool calls first (mandatory ReAct pattern)
   if (lastMessage && 'tool_calls' in lastMessage && (lastMessage as AIMessage).tool_calls?.length > 0) {
-    console.log(`[Strategic Router] Agent made ${(lastMessage as AIMessage).tool_calls.length} tool calls - executing tools`);
+    const toolCalls = (lastMessage as AIMessage).tool_calls;
+    console.log(`[Strategic Router] Agent made ${toolCalls.length} tool calls:`, 
+      toolCalls.map((tc: any) => ({ name: tc.name, id: tc.id }))
+    );
     return PARALLEL_INTELLIGENCE_NODES.STRATEGIC_TOOLS;
   }
   
@@ -60,7 +76,10 @@ export function vendorRelationshipsShouldContinue(
   
   // Check tool calls first (mandatory ReAct pattern)
   if (lastMessage && 'tool_calls' in lastMessage && (lastMessage as AIMessage).tool_calls?.length > 0) {
-    console.log(`[Vendor Router] Agent made ${(lastMessage as AIMessage).tool_calls.length} tool calls - executing tools`);
+    const toolCalls = (lastMessage as AIMessage).tool_calls;
+    console.log(`[Vendor Router] Agent made ${toolCalls.length} tool calls:`, 
+      toolCalls.map((tc: any) => ({ name: tc.name, id: tc.id }))
+    );
     return PARALLEL_INTELLIGENCE_NODES.VENDOR_TOOLS;
   }
   
@@ -80,7 +99,10 @@ export function procurementPatternsShouldContinue(
   
   // Check tool calls first (mandatory ReAct pattern)
   if (lastMessage && 'tool_calls' in lastMessage && (lastMessage as AIMessage).tool_calls?.length > 0) {
-    console.log(`[Procurement Router] Agent made ${(lastMessage as AIMessage).tool_calls.length} tool calls - executing tools`);
+    const toolCalls = (lastMessage as AIMessage).tool_calls;
+    console.log(`[Procurement Router] Agent made ${toolCalls.length} tool calls:`, 
+      toolCalls.map((tc: any) => ({ name: tc.name, id: tc.id }))
+    );
     return PARALLEL_INTELLIGENCE_NODES.PROCUREMENT_TOOLS;
   }
   
@@ -100,7 +122,10 @@ export function decisionMakersShouldContinue(
   
   // Check tool calls first (mandatory ReAct pattern)
   if (lastMessage && 'tool_calls' in lastMessage && (lastMessage as AIMessage).tool_calls?.length > 0) {
-    console.log(`[Decision Router] Agent made ${(lastMessage as AIMessage).tool_calls.length} tool calls - executing tools`);
+    const toolCalls = (lastMessage as AIMessage).tool_calls;
+    console.log(`[Decision Router] Agent made ${toolCalls.length} tool calls:`, 
+      toolCalls.map((tc: any) => ({ name: tc.name, id: tc.id }))
+    );
     return PARALLEL_INTELLIGENCE_NODES.DECISION_TOOLS;
   }
   

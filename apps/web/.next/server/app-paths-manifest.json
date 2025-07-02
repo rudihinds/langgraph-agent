@@ -1,4 +1,3 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/dashboard/chat/page": "app/dashboard/chat/page.js"
 }

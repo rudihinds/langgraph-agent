@@ -16,13 +16,13 @@ import { assessSearchQuality } from "@/agents/proposal-generation/nodes/planning
 // Initialize Tavily search tool with enhanced configuration
 const tavilySearch = new TavilySearch({
   maxResults: 10, // Increased for better coverage
-  includeRawContent: true,
+  includeRawContent: false,
   includeAnswer: true,
   includeImages: false, // Reduce response size for text analysis
 });
 
-// Initialize Haiku model for status generation (cheap and fast)
-const statusModel = createModel("claude-3-haiku-20240307", {
+// Initialize Sonnet 3.5 model for status generation
+const statusModel = createModel("claude-3-5-sonnet-20241022", {
   temperature: 0.3,
   maxTokens: 50,
 });

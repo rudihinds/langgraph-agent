@@ -75,3 +75,12 @@ export const INTELLIGENCE_GATHERING_NODES = {
 
 // Re-export types
 export type { TopicResearch, TopicState } from "./types.js";
+
+// Export subgraph wrapper nodes
+export {
+  vendorRelationshipsSubgraphNode,
+  strategicInitiativesSubgraphNode,
+  procurementPatternsSubgraphNode,
+  decisionMakersSubgraphNode,
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES
+} from "./subgraphs/index.js";

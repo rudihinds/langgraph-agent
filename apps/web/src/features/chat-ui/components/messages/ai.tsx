@@ -42,10 +42,20 @@ export function AIMessage({
   const toolCalls = (message as any).tool_calls as ToolCall[] | undefined;
   const isToolCalls = toolCalls?.length ?? 0 > 0;
 
+  // Filter out AI messages that contain only tool calls
+  // When agents make tool calls, they should not include conversational text
+  // This helps clean up the UI by hiding unnecessary "Certainly!" type messages
+  const shouldShowContent = !isToolCalls || (contentString && contentString.trim().length > 50);
+
+  // Don't render anything if this is just a tool call message with no meaningful content
+  if (isToolCalls && !shouldShowContent && !contentString) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col gap-2 group">
       <div className="flex flex-col max-w-xl gap-2 p-4 mr-auto text-black bg-gray-100 rounded-3xl">
-        <MarkdownText>{contentString}</MarkdownText>
+        {shouldShowContent && contentString && <MarkdownText>{contentString}</MarkdownText>}
         {isToolCalls ? <ToolCalls toolCalls={toolCalls!} /> : null}
       </div>
 

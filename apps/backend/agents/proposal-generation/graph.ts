@@ -21,7 +21,6 @@ import { OverallProposalStateAnnotation } from "../../state/modules/annotations.
 import { getInitializedCheckpointer } from "../../lib/persistence/robust-checkpointer.js";
 import { getIntelligenceSearchTool } from "../../tools/intelligence-search.js";
 import { getIntelligenceExtractTool } from "../../tools/intelligence-extract.js";
-import { createTopicTools } from "./tools/parallel-intelligence-tools.js";
 
 // Core infrastructure nodes (retained)
 import { documentLoaderNode } from "./nodes.js";
@@ -58,15 +57,7 @@ import {
 import {
   intelligenceDispatcher,
   intelligenceSynchronizer,
-  strategicInitiativesAgent,
-  vendorRelationshipsAgent,
-  procurementPatternsAgent,
-  decisionMakersAgent,
   parallelIntelligenceRouter,
-  strategicInitiativesShouldContinue,
-  vendorRelationshipsShouldContinue,
-  procurementPatternsShouldContinue,
-  decisionMakersShouldContinue,
   intelligenceFormatter,
   intelligenceGatheringHumanReview,
   intelligenceGatheringFeedbackRouter,
@@ -75,6 +66,12 @@ import {
   intelligenceGatheringQuestionAnswering,
   PARALLEL_INTELLIGENCE_NODES,
   INTELLIGENCE_GATHERING_NODES,
+  // Import subgraph wrapper nodes
+  vendorRelationshipsSubgraphNode,
+  strategicInitiativesSubgraphNode,
+  procurementPatternsSubgraphNode,
+  decisionMakersSubgraphNode,
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES,
 } from "./nodes/planning/parallel-intelligence/index.js";
 
 // Define node name constants for type safety and clarity
@@ -287,54 +284,28 @@ proposalGenerationGraph.addNode(
   async (state) => state // Pass-through node
 );
 
-// Strategic Initiatives Agent and Tools
+// Strategic Initiatives Subgraph
 proposalGenerationGraph.addNode(
-  NODES.PARALLEL_STRATEGIC_AGENT,
-  strategicInitiativesAgent
-);
-const strategicTools = createTopicTools("strategic_initiatives");
-console.log("[Graph Setup] Strategic Tools:", strategicTools.map(t => ({ name: t.name, description: t.description })));
-const strategicToolNode = new ToolNode(strategicTools);
-proposalGenerationGraph.addNode(
-  NODES.PARALLEL_STRATEGIC_TOOLS,
-  strategicToolNode
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.STRATEGIC_SUBGRAPH,
+  strategicInitiativesSubgraphNode
 );
 
-// Vendor Relationships Agent and Tools
+// Vendor Relationships Subgraph
 proposalGenerationGraph.addNode(
-  NODES.PARALLEL_VENDOR_AGENT,
-  vendorRelationshipsAgent
-);
-const vendorTools = createTopicTools("vendor_relationships");
-const vendorToolNode = new ToolNode(vendorTools);
-proposalGenerationGraph.addNode(
-  NODES.PARALLEL_VENDOR_TOOLS,
-  vendorToolNode
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.VENDOR_SUBGRAPH,
+  vendorRelationshipsSubgraphNode
 );
 
-// Procurement Patterns Agent and Tools
+// Procurement Patterns Subgraph
 proposalGenerationGraph.addNode(
-  NODES.PARALLEL_PROCUREMENT_AGENT,
-  procurementPatternsAgent
-);
-const procurementTools = createTopicTools("procurement_patterns");
-const procurementToolNode = new ToolNode(procurementTools);
-proposalGenerationGraph.addNode(
-  NODES.PARALLEL_PROCUREMENT_TOOLS,
-  procurementToolNode
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.PROCUREMENT_SUBGRAPH,
+  procurementPatternsSubgraphNode
 );
 
-// Decision Makers Agent and Tools
+// Decision Makers Subgraph
 proposalGenerationGraph.addNode(
-  NODES.PARALLEL_DECISION_AGENT,
-  decisionMakersAgent
-);
-const decisionTools = createTopicTools("decision_makers");
-console.log("[Graph Setup] Decision Makers Tools:", decisionTools.map(t => ({ name: t.name, description: t.description })));
-const decisionToolNode = new ToolNode(decisionTools);
-proposalGenerationGraph.addNode(
-  NODES.PARALLEL_DECISION_TOOLS,
-  decisionToolNode
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.DECISION_SUBGRAPH,
+  decisionMakersSubgraphNode
 );
 
 // Parallel Intelligence Synchronizer
@@ -432,60 +403,27 @@ proposalGenerationGraph.addNode(
   parallelIntelligenceRouter
 );
 
-// Strategic Initiatives ReAct Loop
-(proposalGenerationGraph as any).addConditionalEdges(
-  NODES.PARALLEL_STRATEGIC_AGENT,
-  strategicInitiativesShouldContinue,
-  {
-    [NODES.PARALLEL_STRATEGIC_TOOLS]: NODES.PARALLEL_STRATEGIC_TOOLS,
-    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
-  }
-);
+// Connect subgraphs to synchronizer
+// Each subgraph handles its own ReAct loop internally
+// When complete, they route to the synchronizer
 (proposalGenerationGraph as any).addEdge(
-  NODES.PARALLEL_STRATEGIC_TOOLS,
-  NODES.PARALLEL_STRATEGIC_AGENT
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.STRATEGIC_SUBGRAPH,
+  NODES.PARALLEL_INTEL_SYNCHRONIZER
 );
 
-// Vendor Relationships ReAct Loop
-(proposalGenerationGraph as any).addConditionalEdges(
-  NODES.PARALLEL_VENDOR_AGENT,
-  vendorRelationshipsShouldContinue,
-  {
-    [NODES.PARALLEL_VENDOR_TOOLS]: NODES.PARALLEL_VENDOR_TOOLS,
-    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
-  }
-);
 (proposalGenerationGraph as any).addEdge(
-  NODES.PARALLEL_VENDOR_TOOLS,
-  NODES.PARALLEL_VENDOR_AGENT
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.VENDOR_SUBGRAPH,
+  NODES.PARALLEL_INTEL_SYNCHRONIZER
 );
 
-// Procurement Patterns ReAct Loop
-(proposalGenerationGraph as any).addConditionalEdges(
-  NODES.PARALLEL_PROCUREMENT_AGENT,
-  procurementPatternsShouldContinue,
-  {
-    [NODES.PARALLEL_PROCUREMENT_TOOLS]: NODES.PARALLEL_PROCUREMENT_TOOLS,
-    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
-  }
-);
 (proposalGenerationGraph as any).addEdge(
-  NODES.PARALLEL_PROCUREMENT_TOOLS,
-  NODES.PARALLEL_PROCUREMENT_AGENT
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.PROCUREMENT_SUBGRAPH,
+  NODES.PARALLEL_INTEL_SYNCHRONIZER
 );
 
-// Decision Makers ReAct Loop
-(proposalGenerationGraph as any).addConditionalEdges(
-  NODES.PARALLEL_DECISION_AGENT,
-  decisionMakersShouldContinue,
-  {
-    [NODES.PARALLEL_DECISION_TOOLS]: NODES.PARALLEL_DECISION_TOOLS,
-    [NODES.PARALLEL_INTEL_SYNCHRONIZER]: NODES.PARALLEL_INTEL_SYNCHRONIZER
-  }
-);
 (proposalGenerationGraph as any).addEdge(
-  NODES.PARALLEL_DECISION_TOOLS,
-  NODES.PARALLEL_DECISION_AGENT
+  PARALLEL_INTELLIGENCE_SUBGRAPH_NODES.DECISION_SUBGRAPH,
+  NODES.PARALLEL_INTEL_SYNCHRONIZER
 );
 
 // The synchronizer acts as a "sink" node in the fan-out/fan-in pattern.
